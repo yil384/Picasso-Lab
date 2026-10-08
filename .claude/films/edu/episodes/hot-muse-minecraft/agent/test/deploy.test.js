@@ -131,7 +131,7 @@ test('push.sh: staging by default; production only with --prod and only after th
   assert.match(after.join('\n'), /cd deploy && docker compose up -d --build 2>&1 \| tail -4 && docker compose ps --format "\{\{\.Service\}\}: \{\{\.Status\}\}"$/m);
   // after the build: our own dangling images only (ROADMAP M0 item 8), and a note while the trusted proxy is unset (item 6)
   assert.match(after.join('\n'), /^ {2}docker image prune -f --filter "label=org\.picasso-lab\.app=muse-minecraft" \| tail -1$/m);
-  assert.match(after.at(-1), /grep -q "\^WEB_TRUSTED_PROXIES=" \.env \|\| echo "note: deploy\/\.env has no WEB_TRUSTED_PROXIES/);
+  assert.match(after.at(-1), /grep -q "\^WEB_PROXY_SECRET=" \.env \|\| echo "note: deploy\/\.env has no WEB_PROXY_SECRET/);
   assert.match(after.join('\n'), /if \[ -f deploy\/stream\.env \]; then chmod 600 deploy\/stream\.env; P=stream; fi/);
 
   const failed = push(['--prod'], { nodeExit: 1 });

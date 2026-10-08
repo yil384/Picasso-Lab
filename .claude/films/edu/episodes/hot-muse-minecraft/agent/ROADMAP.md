@@ -919,6 +919,18 @@ changed:
 - **E1 (RAM over target):** the arithmetic is accepted, but the 160 GB cap was our own on a 1.5 TB machine. The answer
   is a 200 GB ask and shorter freezing, not a design change.
 - **B1 and A4** keep their causes marked UNVERIFIED (a script; injection filters), but their fixes are adopted.
+- **Code review of M0 and M2 (2026-10-07), fixed on `claude/edu-series`, not deployed:** M0 item 6 cannot work by
+  address on picasso (every connection to a published port comes from the Docker gateway): the proxy now proves itself
+  with a shared secret (`WEB_PROXY_SECRET`, Caddy `header_up`), to be set in Caddy and `.env` together. Item 7: only
+  different unknown view ids count as misses, and a live game's view is always served. Paper on the compose network
+  is reachable by every user on picasso: whitelist on, players hidden from the server list, bots listed by the agent
+  under names nobody can guess (`MC_WHITELIST`). S4 never retires a busy furnace or a station in use. S1 sweeps the
+  drops of chance blocks and of a try a reflex interrupted; a block another bot took is not counted. Forced head
+  turns (the reviewer measured the scripted route at 35.8 -> 23.0 s; the "12 stone <= 15 s" target needs them). B4: a
+  reply counts as delivered only once its HTTP response was written out, and the same call without a `request_id` is
+  a repeat only until its results reached the client. B1: cancelled calls carry the cause's code, a repeat keeps the
+  first call's failure code, a reused `request_id` and the SDK's own input errors are `BAD_ARGS`. The dry-run check
+  follows `go_to` and warns about stations and furnace output left behind; replies leave within 45 s with the state.
 
 ## 9. Open questions (UNVERIFIED)
 

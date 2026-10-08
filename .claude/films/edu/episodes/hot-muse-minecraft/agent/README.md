@@ -17,7 +17,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
                                   | per-session token, quotas, $ cap, kill switch, operator-only log
                     mc-body (Node, mineflayer 4.39.0): 10 bounded skills + text state
                                   |
-                    Paper 1.21.4, online-mode=false, bound to localhost/LAN only
+                    Paper 1.21.4, online-mode=false, localhost/LAN only (on picasso: whitelisted bots only)
                     prismarine-viewer watch page | JSONL decision log | user's client in /spectate
 ```
 
@@ -33,7 +33,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/mc.js` | vec3 and the prismarine libraries, resolved through mineflayer (one copy each) |
 | `src/body.js`, `src/skills/`, `src/state.js` | the mineflayer body, the 10 skills (plus `craft_batch` for MCP: `src/skills/craft-batch.js`) and the plain-text state (the block scan cached per bot) |
 | `src/reflexes.js` | what the body does on its own, with no model turn: fight back a mob that hits the bot (run below 8 health, or from a creeper close by), eat at food 14 or less; the body interrupts the skill for it, runs the skill on afterwards and reports it in the next result |
-| `src/stations.js`, `src/skills/station.js` | crafting tables and furnaces stay where a bot put them and belong to it: reused within 24 blocks, never used or mined by another bot, at most 4 per bot, removed (server console) when its game ends |
+| `src/stations.js`, `src/skills/station.js` | crafting tables and furnaces stay where a bot put them and belong to it: reused within 24 blocks, never used or mined by another bot, at most 4 per bot (never retiring a furnace still smelting or one the running skill uses), removed (server console) when its game ends |
 | `src/skills/tunnel.js` | collecting stone without walking about: what is in reach and in view first, then a 1x2 passage dug one block into the stone, only into blocks the chunk data shows are safe |
 | `scripts/bench-body.mjs` | the body's speed on a real server with no model: one bot per run at a fixed spot (console), the iron route from an empty inventory or a list of calls; every call's time, result and phases (path, dig, pickup, sync, reflex...), and every block broken (the game's dig time, how long it took), as JSONL |
 | `src/walk-watch.js` | is a walk still getting closer? Ends one that is not (digging by hand, pillaring, going in circles) with what held it up, where the bot is and what to try |
@@ -151,7 +151,7 @@ second Ctrl-C exits at once.
 | `GET /log?n=50` | the operator's JSONL tail, `Authorization: Bearer $WEB_ADMIN_TOKEN` (404 without one configured; wrong tokens count toward the lock-out); session tokens and the admin token scrubbed, no IP addresses |
 | `POST /admin/stop` | kill switch, `Authorization: Bearer $WEB_ADMIN_TOKEN`; stops every skill and clears the queue, `{"end":true}` also ends every session; 5 wrong tokens lock an address out for the hour |
 | `/mcp` | MCP (streamable HTTP) for a connector such as Muse: `start_game {adult: true}`, `play`, `play_sequence`, `get_state`, `stop`, `end_game`, `live_view {format}` (src/mcp.js) |
-| `GET /watch/<view id>/`, `GET /eyes/<view id>/` | a guest bot's live 3D views under the game's view id (128 random bits, not the game id; never logged), prismarine-viewer, read-only: clicks from the page are ignored; with src/live-view-fx.js added (`muse-fx.js`): eased first-person turns (the bot is not slowed: the picture turns, at most 360 degrees a second), the game's crack textures on the block being broken (`muse-fx/events`, server-sent), no magenta boxes for dropped items. A view of a game that ended answers 410; an address that asks for 60 views that never existed in an hour gets 429 for every live view until the hour rolls on |
+| `GET /watch/<view id>/`, `GET /eyes/<view id>/` | a guest bot's live 3D views under the game's view id (128 random bits, not the game id; never logged), prismarine-viewer, read-only: clicks from the page are ignored; with src/live-view-fx.js added (`muse-fx.js`): eased first-person turns (the bot is not slowed: the picture turns, at most 360 degrees a second), the game's crack textures on the block being broken (`muse-fx/events`, server-sent), no magenta boxes for dropped items. A view of a game that ended answers 410; an address that asks for 60 different views that never existed in an hour gets 429 for unknown views until the hour rolls on (the same unknown id again, a tab still reconnecting to a view from before an agent restart, counts once; the views of live games are always served) |
 
 MCP: one game per MCP session (connector users share the agent's egress addresses); per address at most
 `WEB_MCP_GAMES_PER_ADDRESS` live MCP games (default `max(2, WEB_MAX_SESSIONS / 2)`; set it from probe T8, up to
@@ -188,10 +188,16 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
 `play` (one step) and `play_sequence` (up to 32) go through these stages (ROADMAP M2):
 
 1. Every step's skill and arguments are validated; one bad step refuses the whole call (`BAD_ARGS`), nothing runs.
-2. A repeat of an accepted call returns that call's steps and runs nothing (`DUPLICATE`): the same `request_id`
-   (kept for the game's life, the newest 256), or without one the same call with the same arguments until 60 s after
-   its last step ended (never while it runs). The same `request_id` for a different call is refused. `stop` forgets
-   the calls without a `request_id`, so a deliberate repeat after a stop runs.
+   That holds for what the SDK's schema check catches first too (an unknown skill, more than 32 steps, `args` that is
+   not an object, a `request_id` over 64 characters): the same `BAD_ARGS` reply with `structuredContent` and the state.
+2. A repeat of an accepted call returns that call's steps and runs nothing: the same `request_id` (kept for the game's
+   life, the newest 256), or without one the same call with the same arguments while its steps run or wait and until
+   a reply carrying all their results has reached the client (at most until 60 s after its last step ended). Once
+   the client has its results, the same call again is a deliberate repeat (a retry after a failure, the same collect
+   after a go_to) and runs. A repeat's `code` is the first call's outcome (`HOSTILE_CONTACT`, `DIED`, ...) when one of
+   its steps failed, else `DUPLICATE`; `structuredContent.duplicate` marks it either way. The same `request_id` for a
+   different call is refused (`BAD_ARGS`: nothing of it ran). `stop` forgets the calls without a `request_id`, so a
+   deliberate repeat after a stop runs.
 3. The dry-run check (`src/plan.js`) simulates the inventory through the steps, after the steps already queued (taken
    to work in full): the craft variants of minecraft-data 1.21.4, the smelt skill as the body runs it (24-item cap,
    up to 3 furnaces with extra ones made from spare cobblestone, each with its own fuel), collect's drops and harvest
@@ -200,18 +206,27 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
    is missing the call is refused with a list per step (`NEED_ITEMS`, `structuredContent.missing`); planks (from logs,
    one cut per wood), sticks, a crafting table (none carried, and none of the bot's own or nobody's within 24 blocks)
    and a furnace that can be made are added as craft steps instead, or into a `craft_batch`'s list. `dry_run: true`
-   only returns the plan. If the check itself fails, the call is not refused.
+   only returns the plan. If the check itself fails, the call is not refused. It follows `go_to` steps from where the
+   bot stands: a table left more than 16 blocks (or 4 up or down) behind is replaced by a new one from 4 spare planks
+   or a log, as the body does (counted); when there is no wood to spare and the old table is past 24 blocks, or a craft
+   needs furnace output left more than 28 blocks behind, or a smelt has no furnace left within 24, the call is not
+   refused (where the bot ends up is only roughly known; `collect` walks are not followed) but the reply says so
+   (`structuredContent.warnings`, "The check warns ...").
 4. The steps go into the game's queue (`src/mcp-queue.js`, at most 64 waiting, else `QUEUE_FULL`) and run one after
    another past the reply. Each step is `pending` (waiting or running), `confirmed`, `failed` or `cancelled`; a failed
    step cancels everything queued after it, in every call; `stop` stops the running step and clears the queue.
-5. The reply (within 45 s) has the text as before plus `structuredContent`: `code` (null, or `NEED_ITEMS`,
+5. The reply (within 45 s, the state text included: a call waits for its steps until 2 s before that) has the text as
+   before plus `structuredContent`: `code` (null, or `NEED_ITEMS`,
    `HOSTILE_CONTACT`, `RETREATED_LOW_HEALTH`, `INVENTORY_FULL`, `DIED`, `NOT_STARTED`, `DUPLICATE`, `BAD_ARGS`,
-   `QUEUE_FULL`, `TIMED_OUT`, `STOPPED`, `FAILED`), `steps`, `earlier` (steps that finished since the last delivered
+   `QUEUE_FULL`, `TIMED_OUT`, `STOPPED`, `FAILED`; for a call whose steps were all cancelled, what cancelled them: the
+   failed step's code, or `STOPPED`), `steps`, `earlier` (steps that finished since the last delivered
    reply), `queue`, `changed` (the inventory change) and a short `state` (health, food, position, inventory, seconds
    left; no scan of the blocks around). `get_state {full: true}` adds the whole state as `full`. A step's code comes
    from its result text (`codeOf` in src/contracts.js): the body's "retreated: ..." is `RETREATED_LOW_HEALTH`, and
    "stopped: a zombie hit you ..." or "stopped: mobs kept attacking ..." (a fight it could not go on from) is
-   `HOSTILE_CONTACT`.
+   `HOSTILE_CONTACT`. A reply counts as delivered only once its HTTP response was written out in full: one whose
+   connection dropped, that a proxy gave up on, or that the client cancelled, delivers nothing, so its results come
+   again in the next reply (and a re-send of the call is a repeat).
 
 `craft_batch {items: [{item, n}, ...]}` (MCP only; the brain's tools and the web page keep the 10 skills) crafts a
 list in order at one crafting table: the bot's own nearby, or the carried one put down once; the table stays (as
@@ -260,9 +275,10 @@ each station lookup it needs (the body's `stationNear`, within 24 blocks); the s
    and tell the server where client addresses come from: `WEB_TRUST_PROXY=cloudflare` for a Cloudflare Tunnel (the
    `CF-Connecting-IP` header), or the number of proxies that each append to `X-Forwarded-For` for another tunnel that
    does. Left `off`, every visitor through the tunnel shares one address for the limits. Behind a proxy that is not on
-   this machine (Caddy on picasso), also set `WEB_TRUSTED_PROXIES` to its address or range: forwarded headers then count
-   only on its connections, and any other peer that is not loopback gets 403 (logged once an hour per peer as
-   `proxy_refused`).
+   this machine (Caddy on picasso), also give the proxy a secret to send (`WEB_PROXY_SECRET`, section "Deploy on
+   picasso"): forwarded headers then count only on requests that carry it, and any other request from a peer that is
+   not loopback gets 403 (logged once an hour per peer as `proxy_refused`). `WEB_TRUSTED_PROXIES` (the proxy's
+   address) does the same where the agent really sees the proxy's address, which a published Docker port hides.
 6. Watch page (optional): `npm install prismarine-viewer`, then `npm start` serves the house bot's view on
    `http://WEB_HOST:MC_VIEWER_PORT/` (bound to `WEB_HOST`, like the page). `MC_VIEWER_PORT=0` turns it off.
 7. After a world reset, delete `notes.json` and `notes-ask.json` (or their `places`): the known crafting tables and
@@ -299,15 +315,17 @@ Measured on picasso (2026-10-07, n = 2, natural: a fresh world and no console co
 first push built staging and started a fresh world (Paper ready 14 s after its start; `start_game` refused for 11 s,
 then worked) and passed in 85 s, the wooden pickaxe 60.6 s after the first action (the collect walk outlived its 45 s
 call); a second `--check` passed in 37 s, the pickaxe in 34.1 s. (Both before the queued MCP calls of M2 and the
-day-0 fixes were merged; the check now sends the route as one call.) Staging leaves `WEB_TRUSTED_PROXIES` unset, so its
-`proxy_peer` log rows show the address Caddy forwards from: the value production's `deploy/.env` needs. The first push from the Mac also uploads the 51 MB
+day-0 fixes were merged; the check now sends the route as one call.) On picasso every connection to the published
+ports arrives from the Docker bridge gateway (docker-proxy), Caddy's and any local user's alike (checked read-only
+with `ss`, 2026-10-07), so the address cannot single out Caddy: use `WEB_PROXY_SECRET` (section "Deploy on picasso").
+The first push from the Mac also uploads the 51 MB
 paper.jar (a few minutes); later pushes skip it.
 
 `test/deploy.test.js` keeps this honest without picasso: `staging.compose.yaml` must keep production's Paper and
 agent settings (only `MC_HOST` and `WEB_PUBLIC_URL` differ) and every service production always runs; and push.sh,
 run with stand-ins for ssh, rsync and node, must reach production only with `--prod` and only after a passing check,
 with production's commands as before staging existed (plus, after the build, the prune of our own dangling images and
-the note while `WEB_TRUSTED_PROXIES` is unset, ROADMAP M0 items 8 and 6; staging prunes the same way).
+the note while `WEB_PROXY_SECRET` is unset, ROADMAP M0 items 8 and 6; staging prunes the same way).
 
 Caddy: the block was added to `~/workspace/FRAS/caddy-config/Caddyfile` after a backup
 (`Caddyfile.bak-20261007-222723`), validated as a separate file inside the container, moved into place, then
@@ -508,11 +526,23 @@ server is offline-mode; that is the operator's call, not a default).
   rebuild replaced), never another user's, never one a container uses. Images built before the label carry none and
   stay until removed by hand: list them with `docker images -f dangling=true`, check each is ours with
   `docker image inspect <id>`, then `docker rmi <id>`.
-- `deploy/.env` on picasso (made by push.sh with `WEB_ADMIN_TOKEN`) should also hold `WEB_TRUSTED_PROXIES`: the Caddy
-  container's address, or its network's range so a Caddy restart with a new address keeps working (`docker inspect -f
-  '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' <caddy container>`). Check it first: while it is unset,
-  the log has a `proxy_peer` row (once an hour per peer) with the address the forwarded requests really come from; a
-  wrong value would refuse every visitor with 403. push.sh prints a note while it is missing. Set `WEB_MCP_GAMES_PER_ADDRESS` there once probe T8 has measured how many Muse users share an address.
+- `deploy/.env` on picasso (made by push.sh with `WEB_ADMIN_TOKEN`) should also hold `WEB_PROXY_SECRET` (ROADMAP M0
+  item 6): a secret Caddy adds to every request it forwards, so the agent can tell Caddy's requests from anyone
+  else's. The peer address cannot: the published ports go through docker-proxy, so Caddy, other containers and every
+  user on picasso all reach the agent from the bridge gateway (10.77.77.1; staging 10.77.79.1), and setting
+  `WEB_TRUSTED_PROXIES` to Caddy's address would refuse every visitor with 403 while the gateway's address would let
+  any local user pick their own address for the limits. Make one (`openssl rand -hex 24`), keep it in
+  `caddy-config/priv` and in the stack's `deploy/.env`, and add it to the site's block in the Caddyfile, in the same
+  change (one without the other refuses every visitor with 403; push.sh prints a note while `.env` has none):
+  ```
+  play.picasso-lab.com {
+      reverse_proxy 172.24.0.1:7850 {
+          header_up X-Muse-Proxy <the secret>
+      }
+  }
+  ```
+  The agent compares it in constant time, never logs it, and strips it before a request goes on to the live views.
+  Staging the same way (its own secret, port 7851). Set `WEB_MCP_GAMES_PER_ADDRESS` there once probe T8 has measured how many Muse users share an address.
 
 ## Configuration
 
@@ -530,10 +560,12 @@ server is offline-mode; that is the operator's call, not a default).
 | `MODEL_TIMEOUT_MS`, `MODEL_MAX_RETRIES` | `120000`, `2` | deadline for one whole call, stream included (retries inside it); retries of HTTP errors |
 | `MC_HOST`, `MC_PORT`, `MC_VERSION`, `MC_USERNAME` | `127.0.0.1`, `25565`, `1.21.4`, `Muse` | the server; a public host is refused |
 | `MC_VIEWER_PORT` | `3007` | prismarine-viewer for the house bot, if installed; `0` is off |
+| `MC_WHITELIST` | `false` | the server lets in only listed players (the Paper container on picasso: `white-list`, `enforce-whitelist` and `hide-online-players` on): each guest bot gets a name nobody can guess (`MC_USERNAME`, at most 8 characters of it, and random letters and digits up to 16: `Muse_` and 11; not the game id; the log's `bot_name` row maps it to the game) and goes on the list through `MC_CONSOLE` just before it joins, off when it leaves; the house bot `MC_USERNAME` stays on it while the Ask queue is open, and the real-client camera lists itself |
 | `MC_CONSOLE`, `SPREAD_RANGE` | (none), `400` | the server console FIFO (`server/start.sh` and the Paper container make one): a new guest bot is spread to a fresh spot up to `SPREAD_RANGE` blocks from spawn, the real-client camera is put in place, and a bot's crafting tables and furnaces are removed when its game ends (without it they stay in the world) |
 | `WEB_HOST`, `WEB_PORT`, `WEB_PUBLIC_URL` | `127.0.0.1`, `8787`, (none) | the viewer page; the public URL goes into links and `openapi.json` (unset: the forwarded host behind a trusted proxy, else the listen address) |
 | `WEB_TRUST_PROXY` | `off` | where the client address for the limits comes from: `off` (the socket), `cloudflare` (`CF-Connecting-IP`), or 1-5 proxies appending to `X-Forwarded-For` |
-| `WEB_TRUSTED_PROXIES` | (none) | the proxy's addresses or ranges (`172.24.0.5`, `172.24.0.0/16`, comma-separated; needs `WEB_TRUST_PROXY`): forwarded headers count only on its connections, and any other non-loopback peer is refused. Unset: believed from any peer (the agent prints a note) |
+| `WEB_PROXY_SECRET` | (none) | a secret of at least 24 characters the proxy sends in `X-Muse-Proxy` (Caddy: `header_up`; needs `WEB_TRUST_PROXY`): forwarded headers count only on requests that carry it, and any other non-loopback request is refused. Use it on picasso, where every peer is the Docker gateway. Never logged or printed |
+| `WEB_TRUSTED_PROXIES` | (none) | the proxy's addresses or ranges (`172.24.0.5`, `172.24.0.0/16`, comma-separated; needs `WEB_TRUST_PROXY`): forwarded headers count only on its connections, and any other non-loopback peer is refused. Only where the agent sees the proxy's own address (not behind a published Docker port). With neither set: believed from any peer (the agent prints a note) |
 | `WEB_MCP_GAMES_PER_ADDRESS` | `max(2, WEB_MAX_SESSIONS / 2)` | live MCP games one address may hold (probe T8 decides; `WEB_MAX_SESSIONS` caps MCP games only globally) |
 | `WEB_LEASE_MS`, `WEB_MAX_SESSIONS` | `600000`, `4` | one bot per guest for 10 minutes |
 | `WEB_ASK_PER_HOUR`, `WEB_ASK_MAX_CHARS`, `WEB_MAX_BODY` | `3`, `300`, `8192` | `/ask` limits per address, request body cap |
@@ -590,7 +622,8 @@ server is offline-mode; that is the operator's call, not a default).
   the bot; `viewer_stop` has the `reason`: the /play button, the API or MCP), `view_close` (a live 3D view closed:
   `view`, `why`, seconds `s`, `mb` sent), `ask_*`, `admin_stop`, `mcp_client` (`protocolVersion`, `negotiated`,
   `client` {name, version}), `mcp_game`, `proxy_refused` (`peer`), `proxy_peer` (`peer`: who sends forwarded headers
-  while `WEB_TRUSTED_PROXIES` is unset).
+  while neither `WEB_PROXY_SECRET` nor `WEB_TRUSTED_PROXIES` is set), `bot_name` (`session`, `username`, with
+  `MC_WHITELIST`), `whitelist_error`.
 - Where a skill's time went: every `viewer_action` row and every `decision` row (`skillMs`) has `phases`, in ms: `path`
   (walking, path search included), `dig`, `drop` (the ticks after a dig for its drops to appear), `sync` (inventory
   syncs with the server), `place`, `open` (a window opening), `clicks` (window clicks and their answers), `pickup`
@@ -611,7 +644,9 @@ What the body does without a model turn, and how it saves time (roadmap M2, the 
   before it blows. At food 14 or less with no hostile mob within 12 blocks the bot eats before the next skill, while
   it waits, or by interrupting a go_to, collect or build. The interrupted skill goes on afterwards from where it was
   (collect and craft only do what is left, build keeps its spot, go_to and place are simply called again); at most 4
-  fights or runs (and 8 meals) per skill, then the hit stops it as before. The skill's time limit stops while a reflex runs. The next result
+  fights or runs (and 8 meals) per skill, then the hit stops it as before. One meal at a time: a meal asked for while
+  another is eaten is dropped when food is above 14 by then. A mob in its death animation (mineflayer keeps it in its
+  entity list for about a second) is neither fought again nor taken as `attack`'s target. The skill's time limit stops while a reflex runs. The next result
   says what happened: `mined 5 oak_log [on its own: fought back a zombie and killed it (2 swings)]`, and lists it in
   `reflexes`; the log has `attacked`, `reflex` (what it did, health before and after, ms) and `reflex_idle` rows.
   `createBody({reflexes: false})` keeps the old behaviour (a hit stops the skill and says what to do).
@@ -620,7 +655,10 @@ What the body does without a model turn, and how it saves time (roadmap M2, the 
   blocks and 4 up or down), else puts down the one carried, else makes one from 4 planks when the planks pay for it
   and the recipe, else walks to one up to 24 blocks away. Other bots never use, open or mine a bot's stations (craft,
   smelt and `collect crafting_table` / `collect furnace` skip them; pathfinder never breaks stations). A bot owns at
-  most 4; a fifth retires the oldest. When the game ends (`close()`, or the bot leaves) its stations are removed
+  most 4; a fifth retires the oldest one not in use: never a furnace still smelting or holding output not yet taken,
+  never one the running skill works at (it may be about to load it). While every station is in use the bot keeps more
+  (a second smelt while the first cooks puts down three more furnaces), up to 8, and is refused a ninth; the extra
+  ones are retired at the next placement once idle. When the game ends (`close()`, or the bot leaves) its stations are removed
   through the server console (`MC_CONSOLE`): `execute if block X Y Z minecraft:furnace run setblock X Y Z air`, which
   drops nothing and leaves any other block alone. The state lists `your stations: ...`.
 - Background smelting (S5). `smelt` loads the furnaces and returns at once ("... ready in about 10 s"); the output is
@@ -629,9 +667,17 @@ What the body does without a model turn, and how it saves time (roadmap M2, the 
   furnaces close by, the ones it carries, and extra ones crafted from spare cobblestone (8 each) when a table is close
   or the planks pay for one. Each furnace of a split load burns planks first (one plank is 1.5 items, so no coal burns
   for one item), never sticks. A furnace nobody owns is held for the bot while its items are in it. The state shows
-  `furnaces: 3 iron_ingot ready in about 7 s in your furnaces at ...`.
+  `furnaces: 3 iron_ingot ready in about 7 s in your furnaces at ...`. A craft (or eat, place, build) that needs output
+  from furnaces more than 28 blocks away says where it is ("1 iron_ingot is still in your furnace at X Y Z, 50 blocks
+  away (too far to fetch: go_to there first)"), and every furnace that is gone is named.
 - Mining (S1, S2, S6, S8). No 10-tick wait after a dig and no detour to each drop: `collect` sweeps its drops up once
-  at the end, nearest first, only the wanted items, within 8 s. Targets go by an approximate path cost, not by
+  at the end, nearest first, only the wanted items, within 8 s; for blocks that drop by chance (gravel, leaves,
+  grass) every drop seen where they broke, with a note when some stay on the ground. A collect a reflex interrupted
+  hands the drops still lying on to the try that finishes it, and what was picked up counts from the first try. Only
+  blocks this bot broke count: when a block goes while the bot walks to it (another bot mined it), the walk ends at
+  once and the block is skipped (it was counted as mined, after a 22 s walk). The head turns at once for a dig, a
+  placement or a block opened (the server needs no turn; mineflayer turns at 3 rad/s and waits for it, up to about
+  1 s an action; measured on the local Paper by the reviewer: the same scripted route 35.8 s before, 23.0 s after). Targets go by an approximate path cost, not by
   straight-line distance: an open block before a buried one, climbing at 1.5 a block. A walk to a block gets a 2 s
   path search and a search radius of its distance + 64; a block no spot can see (buried) is then dug to, if it is
   within 7 blocks (4 s search, 12 s walk). Stone (and deepslate, andesite, ...) is tunnelled: what is in reach and in
@@ -731,8 +777,9 @@ craft (12).
   while `craft stone_pickaxe` tried to place it, 15.5 s in `place`, and the run went on without a stone pickaxe; two
   simultaneous starts; the live views under view ids, recorded through the streamer). Not yet: the agent image build
   (no Docker here; the slimming was run on a copy of node_modules and the suite and a live game passed on it), the
-  prune in push.sh, and `WEB_TRUSTED_PROXIES` behind the real Caddy (that the agent sees Caddy's container address, not
-  the Docker gateway, on the published port is UNVERIFIED: check the `proxy_refused` rows after setting it).
+  prune in push.sh, and the proxy secret behind the real Caddy (the agent sees the Docker gateway, not Caddy's
+  container address, on the published port: checked read-only on picasso; `WEB_PROXY_SECRET` and Caddy's `header_up`
+  are not deployed yet).
 - Real server (Paper 1.21.4, 2026-10-06): the body without a model, driven by scripts. Crafting by clicks (2x2 and
   at a table, placed or found, birch / spruce / dark oak / oak), many batches at once, collect (logs, stone, coal and
   iron ore), smelt (coal and planks), go_to (surface trips, spiral descents), a hit by a zombie interrupting a skill,
@@ -781,8 +828,10 @@ craft (12).
   for it).
 - Viewer text never reaches long-term memory: the Ask brain has its own notes file and lessons hold only tool names,
   fixed block and item names and numbers. Viewer text goes to the Standard tier unless the operator opts in.
-- Minecraft stays on localhost/LAN (any other `MC_HOST` is refused); only the web port is meant to be exposed, and
-  with `WEB_TRUSTED_PROXIES` only the proxy (and this machine) may talk to it.
+- Minecraft stays on localhost/LAN (any other `MC_HOST` is refused); on picasso, where every local user can reach the
+  compose network, Paper lets in only the bots the agent lists (`MC_WHITELIST`), under names nobody can guess, and
+  shows no names in the server list. Only the web port is meant to be exposed, and with `WEB_PROXY_SECRET` only the
+  proxy (and this machine) may talk to it.
 - Strangers' text stays out: other players' chat never reaches a page, reply or API, the log is the operator's, and an
   `/ask` request's text is shown only to its sender. Replies to agents carry no links and no tokens; resume handles and
   live-view ids are 128-bit and separate from the control token.

@@ -8,7 +8,9 @@
 //   bot.fake.counts(), bot.fake.calls, bot.fake.chat   // what happened
 //
 // Simplifications: terrain below y=64 (stone/dirt/grass) exists for blockAt but only blocks set explicitly (scenes,
-// setBlock) are found by findBlocks; drops and mob loot go straight into the inventory; mobs never move or fight back.
+// setBlock) are found by findBlocks; drops and mob loot go straight into the inventory (groundDrops: drops lie as item
+// entities until the bot stands within a block of one); mobs never move or fight back (corpseMs: a mob killed stays
+// in bot.entities, valid, that long, as mineflayer keeps one for its death animation).
 
 import { EventEmitter } from 'node:events';
 import { requireMc, Vec3, registryFor } from '../src/mc.js';
@@ -62,6 +64,11 @@ export const SCENES = {
  * @param {number} [opts.digMs]           time per dig (default instant)
  * @param {number} [opts.moveMsPerBlock]  walking time (default instant)
  * @param {number} [opts.smeltMsPerItem]  furnace time per item (default instant)
+ * @param {boolean} [opts.groundDrops]    a dug block's drops lie on the ground as item entities (itemDrop) until the bot
+ *   walks over them (playerCollect, entityGone), instead of going straight into the inventory
+ * @param {Record<string, string>} [opts.dropAs]  block -> the item it drops instead (gravel: flint), for groundDrops
+ * @param {number} [opts.consumeMs]       how long eating takes (default instant)
+ * @param {number} [opts.corpseMs]        how long a killed mob stays in bot.entities before entityGone (default 0)
  * @param {{lagMs?: number, deaf?: boolean, noOpen?: boolean}} [opts.clickServer]  a protocol client (bot._client) and a
  *   server-side model of windows: crafting goes through window clicks the way it does on a real server (see below)
  */
@@ -76,6 +83,9 @@ export function createFakeBot(opts = {}) {
   const digMs = opts.digMs ?? 0;
   const moveMsPerBlock = opts.moveMsPerBlock ?? 0;
   const smeltMsPerItem = opts.smeltMsPerItem ?? 0;
+  const groundDrops = Boolean(opts.groundDrops);
+  const consumeMs = opts.consumeMs ?? 0;
+  const corpseMs = opts.corpseMs ?? 0;
 
   const bot = new EventEmitter();
   const world = new Map();
@@ -236,9 +246,28 @@ export function createFakeBot(opts = {}) {
   // ---- digging and placing ------------------------------------------------------------------------------------
   let digging = null;
   bot.targetDigBlock = null;
-  bot.dig = async (block) => {
+  // item entities on the ground (groundDrops): picked up when the bot stands within a block of one
+  function dropItem(id, pos) {
+    const e = { id: nextEntityId++, name: 'item', type: 'object', position: pos.clone(), velocity: at(0, 0, 0), isValid: true, getDroppedItem: () => new Item(id, 1) };
+    bot.entities[e.id] = e;
+    bot.emit('entitySpawn', e);
+    bot.emit('itemDrop', e);
+    return e;
+  }
+  function pickUp() {
+    for (const e of Object.values(bot.entities)) {
+      if (e.name !== 'item' || !e.isValid || e.position.distanceTo(bot.entity.position) > 1) continue;
+      const it = e.getDroppedItem();
+      give(it.type, it.count);
+      bot.emit('playerCollect', bot.entity, e);
+      e.isValid = false;
+      delete bot.entities[e.id];
+      bot.emit('entityGone', e);
+    }
+  }
+  bot.dig = async (block, forceLook) => {
     const b = bot.blockAt(block.position);
-    record('dig', { block: b.name, pos: b.position.toString() });
+    record('dig', { block: b.name, pos: b.position.toString(), forceLook: forceLook === true });
     if (b.name === 'air' || !b.diggable) throw new Error(`dig: cannot dig ${b.name}`);
     if (!inReach(b.position)) throw new Error(`dig: ${b.name} at ${b.position} is out of reach`);
     bot.targetDigBlock = b;
@@ -250,7 +279,8 @@ export function createFakeBot(opts = {}) {
     const held = bot.heldItem?.type ?? null;
     if (!b.harvestTools || b.canHarvest(held)) {
       for (const d of b.drops ?? []) {
-        const id = typeof d === 'number' ? d : d.drop?.id ?? d.id;
+        const id = opts.dropAs?.[b.name] ? registry.itemsByName[opts.dropAs[b.name]].id : typeof d === 'number' ? d : d.drop?.id ?? d.id;
+        if (groundDrops) { dropItem(id, centre(b.position).offset(0, 0, 1)); continue; } // it rolls a block south
         give(id, 1);
         // the pickup as the server reports it (mineflayer's playerCollect with the item entity)
         bot.emit('playerCollect', bot.entity, { name: 'item', getDroppedItem: () => new Item(id, 1) });
@@ -380,6 +410,7 @@ export function createFakeBot(opts = {}) {
     const food = held && registry.foodsByName[held.name];
     if (!food) throw new Error('Consuming cancelled: not holding food');
     if (bot.food >= 20 && !ALWAYS_EDIBLE.includes(held.name)) throw new Error('Food is full');
+    if (consumeMs > 0) await wait(consumeMs);
     take(held.type, 1);
     bot.food = Math.min(20, bot.food + food.foodPoints);
     bot.foodSaturation = Math.min(bot.food, bot.foodSaturation + food.saturation);
@@ -413,10 +444,22 @@ export function createFakeBot(opts = {}) {
     if (!hit) return;
     entity.health -= dmg;
     bot.emit('entityHurt', entity);
-    if (entity.health <= 0) {
+    if (entity.health <= 0 && !entity.dying) {
+      for (const [item, n] of Object.entries(LOOT[entity.name] ?? {})) give(item, n);
+      const gone = () => {
+        entity.isValid = false;
+        delete bot.entities[entity.id];
+        bot.emit('entityGone', entity);
+      };
+      if (corpseMs > 0) {
+        // as mineflayer has it: dead (entityDead) but still in bot.entities, valid, until the server destroys it
+        entity.dying = true;
+        bot.emit('entityDead', entity);
+        setTimeout(gone, corpseMs);
+        return;
+      }
       entity.isValid = false;
       delete bot.entities[entity.id];
-      for (const [item, n] of Object.entries(LOOT[entity.name] ?? {})) give(item, n);
       bot.emit('entityDead', entity);
       bot.emit('entityGone', entity);
     }
@@ -489,6 +532,7 @@ export function createFakeBot(opts = {}) {
       moving = null;
       pathfinder.goal = null;
       bot.entity.position = at(Math.floor(dest.x) + 0.5, Math.floor(dest.y), Math.floor(dest.z) + 0.5);
+      if (groundDrops) pickUp();
       bot.emit('move');
       bot.emit('goal_reached', goal);
     },
@@ -544,7 +588,7 @@ export function createFakeBot(opts = {}) {
   };
 
   // ---- misc mineflayer surface ---------------------------------------------------------------------------------
-  bot.lookAt = async (point) => { record('lookAt', { at: point?.toString?.() }); };
+  bot.lookAt = async (point, force) => { record('lookAt', { at: point?.toString?.(), force: force === true }); };
   bot.look = async () => {};
   bot.setControlState = (control, state) => { bot.controlState[control] = state; };
   bot.clearControlStates = () => { bot.controlState = {}; };
@@ -588,7 +632,9 @@ export function createFakeBot(opts = {}) {
     },
     setFood(f) { bot.food = f; bot.emit('health'); },
     kill() { bot.health = 0; bot.emit('health'); bot.emit('death'); },
-    moveTo(pos) { bot.entity.position = at(pos.x, pos.y, pos.z); bot.emit('move'); },
+    moveTo(pos) { bot.entity.position = at(pos.x, pos.y, pos.z); if (groundDrops) pickUp(); bot.emit('move'); },
+    /** Item entities lying on the ground (groundDrops): [{name, pos}]. */
+    lying: () => Object.values(bot.entities).filter((e) => e.name === 'item' && e.isValid).map((e) => ({ name: e.getDroppedItem().name, pos: e.position })),
   };
   bot.fake = fake;
 

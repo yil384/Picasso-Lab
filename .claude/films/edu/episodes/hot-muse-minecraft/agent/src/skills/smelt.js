@@ -12,7 +12,7 @@ import { Vec3 } from '../mc.js';
 import { SMELT, FUEL, PLANKS, LOGS } from '../game.js';
 import { SMELT_PER_CALL } from '../contracts.js';
 import { REUSE_RADIUS } from '../stations.js';
-import { done, fail, countOf, fmt, walkNear, eyeDistance, describeError, SkillStop, REACH, timed } from './util.js';
+import { done, fail, countOf, fmt, walkNear, eyeDistance, describeError, SkillStop, REACH, timed, faceAt } from './util.js';
 import { findStations, placeStation, isClose, planksCarried } from './station.js';
 import { craftItem } from './craft.js';
 
@@ -83,6 +83,7 @@ const click = (ctx, fn) => timed(ctx, 'clicks', () => ctx.wait(fn()));
 async function withFurnace(ctx, block, fn) {
   const { bot } = ctx;
   if (eyeDistance(bot, block.position) > REACH) await walkNear(ctx, block.position);
+  await faceAt(ctx, block.position.offset(0.5, 0.5, 0.5)); // where mineflayer's activateBlock looks, at once
   const furnace = await timed(ctx, 'open', () => ctx.wait(bot.openFurnace(block)));
   let open = true;
   const close = () => { if (open) { open = false; try { furnace.close(); } catch { /* already closed */ } } };
@@ -107,17 +108,23 @@ export async function fetchSmelted(ctx, { only = null, wait = false, walk = REUS
   const problems = [];
   const todo = jobs.filter((j) => (!only || only.has(j.output)) && (wait || Date.now() >= j.readyAt));
   todo.sort((a, b) => a.readyAt - b.readyAt);
+  // a step that needs the output (wait) is told where the furnaces it could not reach are
+  const tooFar = (job) => {
+    if (!wait) return;
+    const d = Math.round(bot.entity.position.distanceTo(job.pos));
+    problems.push(`${job.n} ${job.output} ${job.n === 1 ? 'is' : 'are'} still in your furnace at ${fmt(job.pos)}, ${d} blocks away (too far to fetch: go_to there first)`);
+  };
   for (const job of todo) {
     ctx.check();
     const block = bot.blockAt(job.pos);
-    if (!block) continue; // not loaded: too far
+    if (!block) { tooFar(job); continue; } // not loaded: too far
     const drop = () => {
       jobs.splice(jobs.indexOf(job), 1);
       if (job.temp) ctx.stations?.release(job.pos);
     };
     if (block.name !== 'furnace') { drop(); problems.push(`the furnace at ${fmt(job.pos)} is gone`); continue; }
     const far = eyeDistance(bot, block.position);
-    if (far > REACH && (walk <= 0 || far > walk + REACH)) continue;
+    if (far > REACH && (walk <= 0 || far > walk + REACH)) { tooFar(job); continue; }
     try {
       if (wait && Date.now() < job.readyAt) {
         if (far > REACH) await walkNear(ctx, block.position);
@@ -156,7 +163,7 @@ export async function fetchSmelted(ctx, { only = null, wait = false, walk = REUS
   }
   const parts = [];
   if (took.size) parts.push(`took ${[...took].map(([k, v]) => `${v} ${k}`).join(', ')} from your furnace${todo.length > 1 ? 's' : ''}`);
-  if (problems.length) parts.push(problems[0]);
+  parts.push(...problems);
   return parts.length ? ` (${parts.join('; ')})` : '';
 }
 
@@ -190,6 +197,7 @@ async function furnacesFor(ctx, want, item) {
           continue;
         }
       }
+      ctx.stations?.use?.(b.position);
       list.push({ block: b, placed: false });
     }
   };

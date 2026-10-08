@@ -1,7 +1,9 @@
 // src/stations.js - crafting tables and furnaces a bot placed stay where they stand (roadmap M2, S4): the bot that
 // placed one owns it and reuses it while it works within REUSE_RADIUS of it; no other bot uses it, mines it or takes
-// what is in it; a bot owns at most MAX_PER_BOT (placing one more retires its oldest); and when its game ends its
-// stations are removed. One registry per world: per Minecraft server for real bots (every bot of this process on that
+// what is in it; a bot owns at most MAX_PER_BOT (placing one more retires its oldest idle one: never a furnace that is
+// still smelting or holds output not taken yet, never one the running skill works at; while every station is in use
+// the bot may keep more, up to HARD_MAX, and is refused a new one after that); and when its game ends its stations are
+// removed. One registry per world: per Minecraft server for real bots (every bot of this process on that
 // server shares it), per world object for a stand-in bot (tests). The blocks are removed through the server console
 // (MC_CONSOLE) with "execute if block ... run setblock ... air", which drops nothing and leaves any other block alone;
 // with no console a retired station is only forgotten (and logged).
@@ -11,8 +13,10 @@ import fs from 'node:fs';
 export const STATION_BLOCKS = Object.freeze(['crafting_table', 'furnace']);
 /** A bot walks back to its own station (or to one nobody owns) when it is at most this far away. */
 export const REUSE_RADIUS = 24;
-/** Stations one bot may own at once; one more retires the oldest. */
+/** Stations one bot may own at once; one more retires the oldest idle one. */
 export const MAX_PER_BOT = 4;
+/** Stations one bot may own while every one is in use (furnaces smelting): no more is placed past this. */
+export const HARD_MAX = 2 * MAX_PER_BOT;
 
 const keyOf = (p) => `${Math.floor(p.x)},${Math.floor(p.y)},${Math.floor(p.z)}`;
 const xyz = (p) => ({ x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) });
@@ -41,22 +45,32 @@ export function createStationRegistry() {
     held(owner) { return list(owner, null); },
     /**
      * Record a station `owner` placed (or holds for a while: temp). Returns the stations retired to stay within
-     * MAX_PER_BOT (already dropped from the registry; the caller removes the blocks).
+     * MAX_PER_BOT (already dropped from the registry; the caller removes the blocks): the oldest first, never the new
+     * one and never one keep(station) is true for (a furnace still smelting or holding output, a station the running
+     * skill works at). While no other can go, the owner keeps more than MAX_PER_BOT.
      */
-    add(owner, name, pos, { temp = false } = {}) {
+    add(owner, name, pos, { temp = false, keep = null } = {}) {
       const k = keyOf(pos);
       const cur = byKey.get(k);
       if (cur && cur.owner !== owner) return [];
       byKey.set(k, { owner, name, pos: xyz(pos), at: ++seq, temp: Boolean(temp && !(cur && !cur.temp)) });
       if (temp) return [];
       const mine = this.owned(owner);
+      let over = mine.length - MAX_PER_BOT;
       const retired = [];
-      while (mine.length > MAX_PER_BOT) {
-        const s = mine.shift();
+      for (const s of mine) {
+        if (over <= 0) break;
+        if (keyOf(s.pos) === k || keep?.(s)) continue;
         byKey.delete(keyOf(s.pos));
         retired.push(s);
+        over -= 1;
       }
       return retired;
+    },
+    /** May `owner` put down one more station? No only at HARD_MAX with every station kept (see add). */
+    room(owner, keep = null) {
+      const mine = this.owned(owner);
+      return mine.length < HARD_MAX || mine.some((s) => !keep?.(s));
     },
     /** Drop the entry at pos (mined, gone, or a temporary hold that ended). */
     remove(pos) { return byKey.delete(keyOf(pos)); },
@@ -88,6 +102,12 @@ export function registryForWorld(key) {
   return registries.get(k);
 }
 
+/** The only console commands this module writes: remove a station, put a player on the whitelist or take it off. */
+const CONSOLE_SHAPES = [
+  /^execute if block -?\d+ -?\d+ -?\d+ minecraft:[a-z_]+ run setblock -?\d+ -?\d+ -?\d+ air$/,
+  /^whitelist (add|remove) [A-Za-z0-9_]{3,16}$/,
+];
+
 /**
  * One line to the server console FIFO, opened non-blocking (with no server reading it, it fails instead of hanging).
  * Only the fixed command shapes this module builds are written.
@@ -95,7 +115,7 @@ export function registryForWorld(key) {
 export function consoleLine(file, line) {
   return new Promise((resolve, reject) => {
     if (!file) { reject(new Error('no server console (MC_CONSOLE)')); return; }
-    if (!/^execute if block -?\d+ -?\d+ -?\d+ minecraft:[a-z_]+ run setblock -?\d+ -?\d+ -?\d+ air$/.test(line)) {
+    if (!CONSOLE_SHAPES.some((re) => re.test(line))) {
       reject(new Error('refused console line'));
       return;
     }

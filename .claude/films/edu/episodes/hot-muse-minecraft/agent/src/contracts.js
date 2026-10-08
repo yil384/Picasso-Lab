@@ -270,7 +270,7 @@ export const RESULT_CODES = Object.freeze([
   'INVENTORY_FULL',
   'DIED',
   'NOT_STARTED', // no game (start_game first), the game ended, or the bot is not in the world yet
-  'DUPLICATE', // a re-sent play / play_sequence: the first call's result, nothing run again
+  'DUPLICATE', // a re-sent play / play_sequence: the first call's result (none of its steps failed), nothing run again
   'BAD_ARGS', // a step's skill or arguments are not valid: nothing was run
   'QUEUE_FULL', // too many steps waiting: nothing was run
   'TIMED_OUT', // the skill ran into its time limit
@@ -560,7 +560,9 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {number} [ms]
  *
  * @typedef {object} McpReply  structuredContent of play, play_sequence, get_state and stop
- * @property {string|null} code          the typed outcome of the call (RESULT_CODES), null when nothing went wrong
+ * @property {string|null} code          the typed outcome of the call (RESULT_CODES), null when nothing went wrong; for
+ *   steps all cancelled, what cancelled them (the failed step's code, or STOPPED); for a repeat, the first call's
+ *   failure code, else DUPLICATE
  * @property {string|null} game          the game id
  * @property {McpStepReport[]} steps     this call's steps
  * @property {McpStepReport[]} earlier   steps of earlier calls that finished since the last delivered reply
@@ -568,7 +570,9 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {InventoryDelta} changed    inventory change of every finished step this reply carries
  * @property {{timeLeftS: number, health?: number, food?: number, pos?: {x: number, y: number, z: number}, day?: boolean, inventory?: Record<string, number>, joining?: true}|null} state
  * @property {Array<{step: number, item: string, need: number, for?: string, anyWood?: true, note?: string}>} [missing]  NEED_ITEMS
- * @property {{ageS: number, by: 'request_id'|'same call'}} [duplicate]   DUPLICATE
+ * @property {{ageS: number, by: 'request_id'|'same call'}} [duplicate]   a repeat of an earlier call (nothing ran again)
+ * @property {Array<{step: number, text: string}>} [warnings]  what the check could not be sure of (a station or furnace
+ *   output a go_to leaves far behind): the call was not refused for it
  * @property {Array<object>} [plan]      dry_run: the steps as they would run
  * @property {StateSnapshot} [full]      get_state {full: true}
  *

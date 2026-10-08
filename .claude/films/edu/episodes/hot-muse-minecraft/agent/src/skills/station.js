@@ -3,10 +3,12 @@
 // nearest one they may use within REUSE_RADIUS (their own, or one nobody owns) before they put down another, never
 // use one another bot owns, and say where the stations are.
 
-import { REUSE_RADIUS } from '../stations.js';
-import { fmt, countOf, walkNear, placeNearby, describeError, SkillStop } from './util.js';
+import { REUSE_RADIUS, HARD_MAX } from '../stations.js';
+import { fmt, fail, countOf, walkNear, placeNearby, describeError, SkillStop } from './util.js';
 
 const pretty = (name) => name.replace(/_/g, ' ');
+/** Why no more station may be put down (src/stations.js HARD_MAX, every station in use). */
+export const noRoom = () => `you already keep ${HARD_MAX} crafting tables and furnaces and every one is in use (furnaces still smelting): wait until they finish, or take one back with collect`;
 /**
  * A station is walked back to when it is at most WALK_BACK blocks away and at most CLIMB above or below the bot; one
  * farther, or up out of a mine, only when the bot carries none to put down and cannot make one: that walk costs more
@@ -49,6 +51,7 @@ export function findStations(ctx, name, radius = REUSE_RADIUS) {
 
 /** Put a carried station down next to the bot and claim it. {ok, result, block, note} (note: a retired station). */
 export async function placeStation(ctx, name) {
+  if (ctx.stations?.room && !ctx.stations.room()) return fail(noRoom());
   const r = await placeNearby(ctx, name);
   if (!r.ok) return r;
   const note = ctx.stations?.claim(name, r.block.position) ?? '';
@@ -75,6 +78,7 @@ export async function useStation(ctx, name, { make = null, avoid = null } = {}) 
         await walkNear(ctx, b.position);
         const now = bot.blockAt(b.position);
         if (now?.name === name) {
+          ctx.stations?.use?.(now.position);
           const own = ctx.stations?.owns(now.position);
           return { ok: true, block: now, placed: false, note: own ? ` (at your ${what} at ${fmt(now.position)})` : '' };
         }

@@ -23,6 +23,7 @@ import { createBrain } from './brain.js';
 import { createWeb } from './web.js';
 import { createStreamManager, createRemoteStreamManager, managerConfig } from './stream.js';
 import { createCameraManager } from './camera.js';
+import { consoleLine } from './stations.js';
 
 const require = createRequire(import.meta.url);
 
@@ -48,6 +49,22 @@ export function usernameFor(base, sessionId) {
   const id = String(sessionId).replace(/[^A-Za-z0-9_]/g, '').slice(0, 7) || 'guest';
   return `${base.slice(0, 16 - id.length - 1)}_${id}`;
 }
+
+const NAME_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+/**
+ * A guest bot's name on a server that lets in only listed players (MC_WHITELIST): MC_USERNAME (its first 8
+ * characters) and random letters and digits up to 16 characters ("Muse_" and 11: 65 bits; at least 7, 41 bits),
+ * never the game id, so nobody who learns a game id (logs, a reply) can join under its bot's name and take it over
+ * (the server runs in offline mode).
+ */
+export function privateName(base) {
+  const head = String(base).slice(0, 8);
+  const bytes = crypto.randomBytes(16 - head.length - 1);
+  return `${head}_${[...bytes].map((b) => NAME_CHARS[b % NAME_CHARS.length]).join('')}`;
+}
+
+/** How long Paper gets to read a whitelist line from its console before the bot it lets in connects. */
+const LIST_SETTLE_MS = 400;
 
 /**
  * Run fn while every http server it starts listens on `host` only. prismarine-viewer calls listen(port, cb) itself and
@@ -249,8 +266,26 @@ export async function startAgent(opts = {}) {
     : config.stream.serviceUrl ? createRemoteStreamManager({ url: config.stream.serviceUrl, log })
       : config.stream.source === 'client' ? createCameraManager({ config, log })
         : createStreamManager({ config: managerConfig(config.stream), log });
+  // player names: MC_USERNAME_<game id>, or with MC_WHITELIST a private one (privateName) kept for the game's life
+  const names = new Map(); // session id -> player name
+  const nameOf = (sessionId) => {
+    if (!names.has(sessionId)) {
+      names.set(sessionId, config.mc.whitelist && sessionId !== 'house' ? privateName(config.mc.username) : usernameFor(config.mc.username, sessionId));
+    }
+    return names.get(sessionId);
+  };
+  const consolePath = process.env.MC_CONSOLE || null;
+  /** On a whitelisted server: put a player on the list (or take it off) through the console. Never throws. */
+  const listPlayer = async (how, name) => {
+    if (!config.mc.whitelist || !consolePath || createFakeBot) return;
+    try { await consoleLine(consolePath, `whitelist ${how} ${name}`); } catch (err) {
+      log.event('whitelist_error', { how, name, message: String(err?.message ?? err).slice(0, 200) });
+    }
+  };
+  // the house bot (only with the Ask queue open: it needs the model) keeps MC_USERNAME and stays on the list
+  if (llm && config.mc.whitelist && consolePath && !createFakeBot) await listPlayer('add', config.mc.username);
   const streamFrom = (body, sessionId) => (streams
-    ? (port, eyesPath) => streams.start(sessionId, { source: `http://127.0.0.1:${port}${eyesPath}`, body, player: usernameFor(config.mc.username, sessionId) })
+    ? (port, eyesPath) => streams.start(sessionId, { source: `http://127.0.0.1:${port}${eyesPath}`, body, player: nameOf(sessionId) })
     : null);
   // live_view {format: "embed"}: the Facebook player of the live video a game's stream feeds (STREAM_VIDEO_URL, in the
   // order of the output URLs), while that stream runs
@@ -262,9 +297,23 @@ export async function startAgent(opts = {}) {
     return videoUrl ? { videoUrl, embedUrl: facebookEmbedUrl(videoUrl) } : null;
   };
   function newBody(sessionId, { viewId = null } = {}) {
-    const username = usernameFor(config.mc.username, sessionId);
+    const username = nameOf(sessionId);
     const cfg = Object.freeze({ ...config, mc: Object.freeze({ ...config.mc, username }) });
     if (createFakeBot) return createBody({ bot: createFakeBot({ scene: 'forest', username }), config: cfg, log });
+    if (config.mc.whitelist && consolePath && sessionId !== 'house') {
+      // on the list first, then join (Paper checks the list at login); off the list once the bot has left
+      log.event('bot_name', { session: sessionId, username });
+      return listPlayer('add', username)
+        .then(() => new Promise((r) => { setTimeout(r, LIST_SETTLE_MS); }))
+        .then(() => {
+          const body = joinBody(sessionId, username, cfg, viewId);
+          body.on('end', () => { names.delete(sessionId); listPlayer('remove', username); });
+          return body;
+        });
+    }
+    return joinBody(sessionId, username, cfg, viewId);
+  }
+  function joinBody(sessionId, username, cfg, viewId) {
     const body = createBody({ config: cfg, log });
     // Every guest bot starts on fresh ground: the server console (MC_CONSOLE, the FIFO server/start.sh makes) spreads
     // it to a random dry spot up to SPREAD_RANGE blocks from the world spawn, so earlier guests never leave a new one
@@ -355,8 +404,8 @@ export async function startAgent(opts = {}) {
   if (config.web.trustProxy === 'off' && isLoopbackHost(config.web.host)) {
     print('note: WEB_TRUST_PROXY=off, so behind a tunnel every visitor shares one address for the limits; set it to cloudflare or the number of proxies');
   }
-  if (config.web.trustProxy !== 'off' && !config.web.trustedProxies.length) {
-    print('note: WEB_TRUSTED_PROXIES is not set, so forwarded headers are believed from any peer that reaches this port; set it to the proxy\'s address');
+  if (config.web.trustProxy !== 'off' && !config.web.trustedProxies.length && !config.web.proxySecret) {
+    print('note: neither WEB_PROXY_SECRET nor WEB_TRUSTED_PROXIES is set, so forwarded headers are believed from any peer that reaches this port; give the proxy a secret to send (README, Deploy on picasso)');
   }
   if (log.path) {
     const rel = path.relative(process.cwd(), log.path);

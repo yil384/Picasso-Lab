@@ -13,7 +13,7 @@ import { createBody, VIEW_DISTANCE } from '../src/body.js';
 import { loadConfig } from '../src/config.js';
 import { createLogger } from '../src/log.js';
 import { Vec3 } from '../src/mc.js';
-import { createStationRegistry, removeLine, MAX_PER_BOT } from '../src/stations.js';
+import { createStationRegistry, removeLine, MAX_PER_BOT, HARD_MAX } from '../src/stations.js';
 import { pathCost } from '../src/skills/collect.js';
 import { safeToDig, minableHere, tunnelAhead } from '../src/skills/tunnel.js';
 import { snapshotOf, scanCount } from '../src/state.js';
@@ -210,4 +210,107 @@ test('tunnel (S2): only blocks the chunk data shows are safe; stone in reach fir
   assert.deepEqual(r.delta, { cobblestone: 6 });
   assert.equal(called(b2, 'goto').length, 0, 'everything from where it stood');
   assert.ok(called(b2, 'dig').every((c) => c.block === 'stone'));
+});
+
+test('stations: the cap never retires a furnace still smelting or holding output, nor the table the skill works at; the craft gets every ingot', async () => {
+  const file = tmpFile();
+  fs.writeFileSync(file, '');
+  const { bot, body } = await setup(
+    { inventory: { raw_iron: 6, coal: 8, furnace: 3, crafting_table: 1, cobblestone: 24, stick: 2 }, smeltMsPerItem: 150 },
+    { timing: { smeltMs: 150, pollMs: 5 }, console: file, stations: createStationRegistry() },
+  );
+  const first = await body.run('smelt', { item: 'raw_iron', n: 3 });
+  assert.equal(first.ok, true, first.result);
+  // all three furnaces busy: the second load crafts three more at the table, and none of the busy ones is removed
+  const second = await body.run('smelt', { item: 'raw_iron', n: 3 });
+  assert.equal(second.ok, true, second.result);
+  assert.doesNotMatch(second.result, /removed your oldest/);
+  await new Promise((r) => setTimeout(r, 30));
+  assert.deepEqual(lines(file), [], 'nothing went through the console');
+  assert.equal(body.snapshot().stations.length, 7, 'over the cap while every station is in use');
+  const pick = await body.run('craft', { item: 'iron_pickaxe', n: 1 });
+  assert.equal(pick.ok, true, pick.result);
+  assert.deepEqual(pick.delta, { iron_ingot: 3, iron_pickaxe: 1, stick: -2 }, 'all six ingots came out');
+  assert.deepEqual(body.smelting(), {});
+  // idle again: the next station retires the oldest down to the cap
+  bot.fake.give('furnace', 1);
+  const at = bot.entity.position.floored().offset(0, 0, 3);
+  const p = await body.run('place', { block: 'furnace', pos: { x: at.x, y: at.y, z: at.z } });
+  assert.equal(p.ok, true, p.result);
+  assert.match(p.result, /removed your oldest furnace at .* and crafting table at /);
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(lines(file).length, 4);
+  assert.equal(body.snapshot().stations.length, MAX_PER_BOT);
+  // a registry where every station is in use refuses one more past HARD_MAX
+  const reg = createStationRegistry();
+  for (let i = 0; i < HARD_MAX; i++) reg.add('a', 'furnace', { x: i, y: 64, z: 0 }, { keep: () => true });
+  assert.equal(reg.owned('a').length, HARD_MAX);
+  assert.equal(reg.room('a', () => true), false);
+  assert.equal(reg.room('a', (s) => s.pos.x !== 0), true, 'one idle station can go');
+});
+
+test('collect: the drops a reflex interrupted are swept up after it, and counted against all mined', async () => {
+  const { bot, body } = await setup({ groundDrops: true, digMs: 60, moveMsPerBlock: 5, inventory: { stone_pickaxe: 1, stone_sword: 1 } });
+  for (const x of [8, 10, 12, -8, -10, -12]) bot.fake.setBlock(new Vec3(x, 64, 0), 'iron_ore');
+  const c = body.run('collect', { block: 'iron_ore', n: 6 });
+  for (let i = 0; i < 100 && bot.fake.lying().length < 2; i++) await new Promise((r) => setTimeout(r, 10));
+  assert.ok(bot.fake.lying().length >= 2, 'drops lie where the first try mined');
+  const zombie = bot.fake.spawnMob('zombie', bot.entity.position.offset(2, 0, 0));
+  bot.fake.hurt(4, zombie);
+  const r = await c;
+  assert.equal(r.ok, true, r.result);
+  assert.match(r.result, /^mined 6 iron_ore \[on its own: fought back a zombie and killed it/);
+  assert.equal(r.delta.raw_iron, 6, 'the drops from before the fight too');
+  assert.deepEqual(bot.fake.lying(), []);
+});
+
+test('collect: blocks that drop by chance (gravel) are swept up too; a block another bot takes first is not counted', async () => {
+  const { bot, body } = await setup({ groundDrops: true, moveMsPerBlock: 5, dropAs: { gravel: 'flint' } });
+  for (const x of [3, 5, 7, 9, 11, 13]) bot.fake.setBlock(new Vec3(x, 64, 2), 'gravel');
+  const r = await body.run('collect', { block: 'gravel', n: 6 });
+  assert.equal(r.ok, true, r.result);
+  assert.equal(r.result, 'mined 6 gravel');
+  assert.deepEqual(r.delta, { flint: 6 });
+  assert.deepEqual(bot.fake.lying(), []);
+
+  // the far ore goes (another bot mined it) while this bot walks to it: the walk ends at once, and it is not counted
+  const { bot: b2, body: other } = await setup({ moveMsPerBlock: 20, inventory: { stone_pickaxe: 1 } });
+  const near = new Vec3(2, 64, 0);
+  const far = new Vec3(16, 64, 0);
+  b2.fake.setBlock(near, 'iron_ore');
+  b2.fake.setBlock(far, 'iron_ore');
+  b2.on('blockUpdate', (old, now) => {
+    if (now.position.equals(near) && now.name === 'air') setTimeout(() => b2.fake.setBlock(far, 'air'), 60);
+  });
+  const t0 = Date.now();
+  const s = await other.run('collect', { block: 'iron_ore', n: 2 });
+  assert.equal(s.ok, false, s.result);
+  assert.match(s.result, /^mined 1 of 2 iron_ore: no more iron_ore within 32 blocks that you can reach/);
+  assert.deepEqual(s.delta, { raw_iron: 1 });
+  assert.ok(Date.now() - t0 < 1_500, 'no long walk toward a block that is gone');
+});
+
+test('speed: digs, placements and opened blocks turn the head at once (the server needs no turn)', async () => {
+  const { bot, body } = await setup({ scene: 'forest', inventory: { oak_planks: 8, stick: 2, raw_iron: 1, coal: 1, furnace: 1 } });
+  assert.equal((await body.run('collect', { block: 'oak_log', n: 2 })).ok, true);
+  assert.equal((await body.run('craft', { item: 'wooden_pickaxe', n: 1 })).ok, true);
+  assert.equal((await body.run('smelt', { item: 'raw_iron', n: 1 })).ok, true);
+  assert.ok(called(bot, 'dig').length >= 2 && called(bot, 'dig').every((c) => c.forceLook), 'every dig with a forced look');
+  // each placement (the table, the furnace) and each furnace opened comes right after a forced look
+  const calls = bot.fake.calls;
+  for (const fn of ['placeBlock', 'openFurnace']) {
+    const idx = calls.map((c, i) => (c.fn === fn ? i : -1)).filter((i) => i >= 0);
+    assert.ok(idx.length, fn);
+    for (const i of idx) assert.ok(calls.slice(Math.max(0, i - 3), i).some((c) => c.fn === 'lookAt' && c.force), `${fn} at ${i} faced first`);
+  }
+});
+
+test('smelt: a craft that needs output from furnaces too far away says where it is', async () => {
+  const { body } = await setup({ inventory: { raw_iron: 3, coal: 3, furnace: 3, stick: 2, crafting_table: 1 }, smeltMsPerItem: 40 }, { timing: { smeltMs: 40, pollMs: 5 } });
+  assert.equal((await body.run('smelt', { item: 'raw_iron', n: 3 })).ok, true);
+  assert.equal((await body.run('go_to', { x: 50, y: 64, z: 0 })).ok, true);
+  await new Promise((r) => setTimeout(r, 200));
+  const r = await body.run('craft', { item: 'iron_pickaxe', n: 1 });
+  assert.equal(r.ok, false);
+  assert.match(r.result, /^not enough ingredients for iron_pickaxe: missing 3 iron_ingot \(1 iron_ingot is still in your furnace at -?\d+ 64 -?\d+, \d+ blocks away \(too far to fetch: go_to there first\); 1 iron_ingot is still/);
 });

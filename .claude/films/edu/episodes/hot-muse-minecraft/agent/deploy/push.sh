@@ -47,7 +47,7 @@ staging() {
   chmod 600 deploy/.env
   cd deploy && docker compose -p muse-staging -f staging.compose.yaml up -d --build 2>&1 | tail -4 && docker compose -p muse-staging -f staging.compose.yaml ps --format "staging {{.Service}}: {{.Status}}"
   docker image prune -f --filter "label=org.picasso-lab.app=muse-minecraft" | tail -1
-  grep -q "^WEB_TRUSTED_PROXIES=" .env || echo "note: staging deploy/.env has no WEB_TRUSTED_PROXIES: its proxy_peer log rows show the address Caddy forwards from"'
+  grep -q "^WEB_PROXY_SECRET=" .env || echo "note: staging deploy/.env has no WEB_PROXY_SECRET: forwarded headers are believed from any local peer on 7851 (README, Deploy on picasso)"'
 }
 
 check() {
@@ -72,7 +72,7 @@ prod() {
   cd deploy && docker compose up -d --build 2>&1 | tail -4 && docker compose ps --format "{{.Service}}: {{.Status}}"
   # the images this build replaced: dangling, ours only (an image a container still uses is never removed)
   docker image prune -f --filter "label=org.picasso-lab.app=muse-minecraft" | tail -1
-  grep -q "^WEB_TRUSTED_PROXIES=" .env || echo "note: deploy/.env has no WEB_TRUSTED_PROXIES: forwarded headers are believed from any peer on 7850 (README, Configuration)"'
+  grep -q "^WEB_PROXY_SECRET=" .env || echo "note: deploy/.env has no WEB_PROXY_SECRET: forwarded headers are believed from any local peer on 7850 (README, Deploy on picasso)"'
 }
 
 if (( CHECK_ONLY )); then check; exit; fi

@@ -76,6 +76,6 @@ export async function digHere(ctx, block) {
   if (bot.tool?.equipForBlock) await ctx.wait(bot.tool.equipForBlock(block, { requireHarvest: true }));
   if (block.harvestTools && !(bot.heldItem && block.canHarvest(bot.heldItem.type))) return false;
   await landed(ctx);
-  await timed(ctx, 'dig', () => ctx.wait(bot.dig(block)));
+  await timed(ctx, 'dig', () => ctx.wait(bot.dig(block, true))); // the head turns at once (util.js faceAt)
   return bot.blockAt(block.position)?.type !== block.type;
 }

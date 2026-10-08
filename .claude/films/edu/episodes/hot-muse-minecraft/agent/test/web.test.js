@@ -707,14 +707,20 @@ test('live views: 128-bit ids; a game that ended answers 410; guessing ids is cu
   // the game ends: a watcher still asking gets 410, and that is not a miss
   await call(`${url}/api/${a.token}`, 'DELETE');
   for (let i = 0; i < 5; i++) assert.equal((await fetch(`${url}/watch/${ids[0]}/x`, { headers: from('198.51.100.7') })).status, 410);
-  // made-up ids: 3 misses an hour, then every live view from that address is refused (a hit would tell a guess apart)
+  // a tab still open on a view from before an agent restart asks for the same unknown id again and again: one miss
+  const stale = crypto.randomBytes(16).toString('base64url');
+  for (let i = 0; i < 10; i++) assert.equal((await fetch(`${url}/eyes/${stale}/socket.io/?EIO=4&transport=polling&t=${i}`, { headers: from('198.51.100.7') })).status, 404);
+  // made-up ids: 3 different ones an hour (the stale one included), then unknown ids from that address are refused
   const guess = () => crypto.randomBytes(16).toString('base64url');
   const misses = [];
   for (let i = 0; i < 3; i++) misses.push((await fetch(`${url}/eyes/${guess()}/`, { headers: from('198.51.100.7') })).status);
-  assert.deepEqual(misses, [404, 404, 404]);
-  const cut = await fetch(`${url}/watch/${ids[1]}/x`, { headers: from('198.51.100.7') });
+  assert.deepEqual(misses, [404, 404, 429]);
+  const cut = await fetch(`${url}/watch/${guess()}/x`, { headers: from('198.51.100.7') });
   assert.equal(cut.status, 429);
   assert.match(await cut.text(), /too many requests for live views that do not exist/i);
+  assert.equal((await fetch(`${url}/eyes/${stale}/`, { headers: from('198.51.100.7') })).status, 404, 'an id already counted is not refused');
+  // the live view of a running game is never refused (its id was handed out, not guessed)
+  assert.equal((await fetch(`${url}/watch/${ids[1]}/x`, { headers: from('198.51.100.7') })).status, 200);
   assert.equal((await fetch(`${url}/watch/${ids[1]}/x`, { headers: from('198.51.100.8') })).status, 200, 'another address is not affected');
   // a WebSocket upgrade is held to the same rule
   const { port } = new URL(url);
@@ -762,4 +768,48 @@ test('trusted proxy: forwarded headers only on its connections; any other peer t
   const unset = await serve(t, { env: { WEB_HOST: '0.0.0.0' }, trustProxy: 1 });
   for (let i = 0; i < 2; i++) await fetch(`http://${lan}:${new URL(unset.url).port}/`, { headers: { 'x-forwarded-for': '192.0.2.9' } });
   assert.deepEqual(unset.log.tail(50).filter((row) => row.kind === 'proxy_peer').map((row) => row.peer), [lan]);
+});
+
+test('proxy secret: only requests that carry it have their forwarded headers believed; every other non-loopback request is refused; the live views never see it', async (t) => {
+  const SECRET = 'a'.repeat(20) + 'b'.repeat(12);
+  assert.throws(() => loadConfig({ WEB_PROXY_SECRET: SECRET }), /WEB_PROXY_SECRET needs WEB_TRUST_PROXY/);
+  assert.throws(() => loadConfig({ WEB_TRUST_PROXY: '1', WEB_PROXY_SECRET: 'short' }), /at least 24 printable characters/);
+  const cfg = loadConfig({ WEB_TRUST_PROXY: '1', WEB_PROXY_SECRET: SECRET });
+  assert.equal(cfg.web.proxySecret, SECRET);
+  assert.equal(JSON.stringify(cfg).includes(SECRET), false, 'never printed with the config');
+
+  // the proxy and every local client arrive from the same address (on picasso: the docker gateway); the secret tells them apart
+  const { url, log } = await serve(t, { env: { WEB_MAX_SESSIONS: '8' }, trustProxy: 1, proxySecret: SECRET });
+  const via = (ip) => ({ 'x-forwarded-for': ip, 'x-muse-proxy': SECRET });
+  assert.equal((await post(`${url}/session`, { adult: 'yes' }, via('192.0.2.1'))).status, 303);
+  assert.equal((await post(`${url}/session`, { adult: 'yes' }, via('192.0.2.2'))).status, 303, 'two addresses through the proxy');
+  // loopback without the secret: served, but its forwarded header counts for nothing (it cannot pick its address)
+  assert.equal((await post(`${url}/session`, { adult: 'yes' }, { 'x-forwarded-for': '192.0.2.3' })).status, 303);
+  assert.equal((await post(`${url}/session`, { adult: 'yes' }, { 'x-forwarded-for': '192.0.2.4' })).status, 429, 'one address: the header was ignored');
+  assert.equal((await post(`${url}/session`, { adult: 'yes' }, { 'x-forwarded-for': '192.0.2.5', 'x-muse-proxy': `${SECRET.slice(1)}x` })).status, 429, 'a wrong secret is no secret');
+  assert.equal(JSON.stringify(log.tail(200)).includes(SECRET), false, 'never in the log');
+
+  // a peer that is not this machine and has no secret is refused; with the secret it is served
+  const lan = Object.values(os.networkInterfaces()).flat().find((i) => i && i.family === 'IPv4' && !i.internal)?.address;
+  if (!lan) { t.diagnostic('no LAN address here: the refusal of other peers is not exercised'); return; }
+  const open = await serve(t, { env: { WEB_HOST: '0.0.0.0' }, trustProxy: 1, proxySecret: SECRET });
+  const port = new URL(open.url).port;
+  const r = await fetch(`http://${lan}:${port}/`, { headers: { 'x-forwarded-for': '203.0.113.9' } });
+  assert.equal(r.status, 403);
+  assert.equal((await fetch(`http://${lan}:${port}/`, { headers: via('203.0.113.9') })).status, 200);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 200, 'loopback (health checks, docker exec) is fine');
+
+  // the live view behind the agent gets every header but the secret
+  const seen = [];
+  const upstream = http.createServer((req, res) => { seen.push(req.headers); res.end('ok'); });
+  await new Promise((res) => upstream.listen(0, '127.0.0.1', res));
+  t.after(() => { upstream.closeAllConnections?.(); upstream.close(); });
+  const g = await guest(open.url, via('198.51.100.1'));
+  const game = (await (await fetch(`${open.url}/api/${g.token}/state`, { headers: via('198.51.100.1') })).json()).session.id;
+  open.bodies.get(game).viewerPort = upstream.address().port;
+  const id = /href="\/watch\/([A-Za-z0-9_-]{22})\/"/.exec(await text(g.page))[1];
+  assert.equal((await fetch(`${open.url}/watch/${id}/x`, { headers: via('198.51.100.1') })).status, 200);
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0]['x-muse-proxy'], undefined);
+  assert.equal(seen[0]['x-forwarded-for'], '198.51.100.1');
 });

@@ -7,7 +7,9 @@
 // queue with a place and an ETA. The live 3D views live under unguessable 128-bit view ids. Viewer input is data: every
 // argument is checked against the tool whitelist before a body sees it, every string is HTML-escaped, tokens never
 // reach the log, other players' chat never reaches a page or reply, and state-changing requests from other sites are
-// refused. Behind a proxy, forwarded headers count only from the proxy's own address (WEB_TRUSTED_PROXIES).
+// refused. Behind a proxy, forwarded headers count only on requests that carry the proxy's shared secret
+// (WEB_PROXY_SECRET, header X-Muse-Proxy) and/or come from the proxy's own address (WEB_TRUSTED_PROXIES); with either
+// set, any other peer that is not loopback is refused.
 
 import fs from 'node:fs';
 import http from 'node:http';
@@ -44,8 +46,14 @@ const opensView = (url) => /\/socket\.io\/?\?/.test(url) && !/[?&]sid=/.test(url
 const FX_PING_MS = 20_000;
 /** A live view's id: 128 random bits (base64url), separate from the game id that logs and bot names show. */
 const VIEW_ID_BYTES = 16;
-/** Requests for live views that do not exist, per address and hour, before every live-view request of it gets 429. */
+/**
+ * Different live-view ids that do not exist, asked for by one address in an hour, before its requests for unknown ids
+ * get 429 (a guesser needs many different ids; a tab left open on an old view repeats one, and counts once).
+ */
 const VIEW_MISSES_PER_HOUR = 60;
+const MISSED_KEPT = 20_000; // (address, unknown view id) pairs remembered for the hour
+/** The header the proxy in front adds with WEB_PROXY_SECRET (never passed on to the live views). */
+export const PROXY_HEADER = 'x-muse-proxy';
 /** A place in the queue for a bot is kept this long after its caller last asked. */
 const QUEUE_HOLD_MS = 90_000;
 /** The Mojang brand guidelines' line for anything that is not theirs. */
@@ -443,6 +451,9 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
  * @param {string[]} [opts.trustedProxies]   the proxy's addresses or ranges (default config.web.trustedProxies,
  *   WEB_TRUSTED_PROXIES): when set, forwarded headers count only on connections from there, and any other peer that is
  *   not loopback is refused
+ * @param {string} [opts.proxySecret]        the secret the proxy sends in X-Muse-Proxy (default config.web.proxySecret,
+ *   WEB_PROXY_SECRET): when set, forwarded headers count only on requests that carry it, and any other request from a
+ *   peer that is not loopback is refused
  * @param {number} [opts.apiWaitMs]          how long an /api action call waits for its result before answering 202
  * @param {number} [opts.formWaitMs]         how long a form post waits before redirecting back
  * @param {number} [opts.startTimeoutMs]     how long a bot may take to join
@@ -493,6 +504,7 @@ export function createWeb(opts = {}) {
   const viewLimiter = createLimiter(opts.viewsPerHour ?? 120, now);
   const viewMisses = createLimiter(opts.viewMissesPerHour ?? VIEW_MISSES_PER_HOUR, now);
   const endedViews = new Map(); // view id -> when its game ended: a watcher still asking gets 410, not a counted miss
+  const missedViews = new Map(); // 'address id' -> when first asked: an unknown id counts as a miss once per hour
   const waiting = []; // the queue for a bot when all are in use: [{key, since, seen}], first come first served
   const proxyRefusals = createLimiter(1, now); // one log row per refused peer and hour
   const proxySeen = createLimiter(1, now); // without WEB_TRUSTED_PROXIES: one row per peer and hour that forwards
@@ -518,16 +530,26 @@ export function createWeb(opts = {}) {
     const family = net.isIPv4(r[0]) ? 'ipv4' : 'ipv6';
     if (r[1] === null) proxies.addAddress(r[0], family); else proxies.addSubnet(r[0], r[1], family);
   }
+  // The proxy's shared secret (WEB_PROXY_SECRET): proof that a request came through it, whatever the peer address.
+  const proxySecret = Buffer.from(String(opts.proxySecret ?? web.proxySecret ?? ''));
+  const hasSecret = (req) => {
+    const v = req.headers[PROXY_HEADER];
+    if (!proxySecret.length || typeof v !== 'string') return false;
+    const got = Buffer.from(v);
+    return got.length === proxySecret.length && crypto.timingSafeEqual(got, proxySecret);
+  };
   const peerOf = (req) => {
     const a = String(req.socket?.remoteAddress ?? '');
     const mapped = a.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i);
     return mapped ? mapped[1] : a;
   };
   const isLoopbackPeer = (ip) => ip === '::1' || /^127\./.test(ip);
-  /** May this connection's forwarded headers be believed? Only with WEB_TRUST_PROXY on, and only from the proxy. */
+  /** May this request's forwarded headers be believed? Only with WEB_TRUST_PROXY on, and only from the proxy. */
   function forwarded(req) {
     if (trustProxy === 'off') return false;
+    if (proxySecret.length && !hasSecret(req)) return false;
     if (!proxies) {
+      if (proxySecret.length) return true;
       // which peer sends forwarded headers: the address WEB_TRUSTED_PROXIES should name (on picasso, Caddy's)
       const ip = peerOf(req);
       if (!isLoopbackPeer(ip) && (req.headers['x-forwarded-for'] || req.headers['cf-connecting-ip']) && proxySeen.take(ip).ok) log.event('proxy_peer', { peer: ip.slice(0, 64) });
@@ -536,9 +558,9 @@ export function createWeb(opts = {}) {
     const ip = peerOf(req);
     return net.isIP(ip) ? proxies.check(ip, net.isIPv4(ip) ? 'ipv4' : 'ipv6') : false;
   }
-  /** With WEB_TRUSTED_PROXIES set, a peer that is neither the proxy nor this machine is refused. */
+  /** With WEB_PROXY_SECRET or WEB_TRUSTED_PROXIES set, a request that is neither the proxy's nor this machine's is refused. */
   function refusedPeer(req) {
-    if (!proxies || forwarded(req)) return false;
+    if ((!proxies && !proxySecret.length) || forwarded(req)) return false;
     const ip = peerOf(req);
     if (isLoopbackPeer(ip)) return false;
     if (proxyRefusals.take(ip).ok) log.event('proxy_refused', { peer: ip.slice(0, 64) });
@@ -683,6 +705,7 @@ export function createWeb(opts = {}) {
     mcpInitLimiter.prune();
     viewLimiter.prune();
     viewMisses.prune();
+    for (const [k, at] of missedViews) { if (t - at < HOUR) break; missedViews.delete(k); }
     proxyRefusals.prune();
     proxySeen.prune();
   }
@@ -1152,20 +1175,27 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
   const portOf = (s, kind) => (s ? (kind === 'eyes' ? s.body?.eyesPort : s.body?.viewerPort) ?? null : null);
 
   /**
-   * A live-view request: the session and its view's local port, or why not ({status, message}). An address that asked
-   * for VIEW_MISSES_PER_HOUR views that do not exist gets 429 for every live view until the hour rolls on (no guessing
-   * ids); a view of a game that ended (a watcher still reconnecting) answers 410 and is not counted.
+   * A live-view request: the session and its view's local port, or why not ({status, message}). The view of a live
+   * game is always served (its 128-bit id was handed out, not guessed). An address that asked for
+   * VIEW_MISSES_PER_HOUR different ids that do not exist gets 429 for unknown ids until the hour rolls on (no guessing
+   * ids); the same unknown id again (a tab still reconnecting to a view from before the agent restarted) counts once,
+   * and a view of a game that ended answers 410 and is not counted.
    */
   function findView(req, viewId, kind) {
-    const addr = clientKey(req);
-    const blocked = viewMisses.blocked(addr);
-    if (!blocked.ok) return { status: 429, message: `too many requests for live views that do not exist from your address; try again in ${duration(blocked.retryMs)}` };
     const s = sessionByView(viewId);
     const port = portOf(s, kind);
     if (port) return { s, port };
     if (s) return { status: 404, message: 'no live view yet: the bot is still joining' };
     if (endedViews.has(viewId)) return { status: 410, message: 'this game has ended, and its live view with it' };
-    viewMisses.take(addr);
+    const addr = clientKey(req);
+    const k = `${addr} ${viewId}`;
+    if (!missedViews.has(k)) {
+      const blocked = viewMisses.blocked(addr);
+      if (!blocked.ok) return { status: 429, message: `too many requests for live views that do not exist from your address; try again in ${duration(blocked.retryMs)}` };
+      viewMisses.take(addr);
+      missedViews.set(k, now());
+      while (missedViews.size > MISSED_KEPT) missedViews.delete(missedViews.keys().next().value);
+    }
     return { status: 404, message: 'no live view here' };
   }
 
@@ -1228,7 +1258,9 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (why) { req.resume(); send(res, 429, why, {}); return; }
     const release = holdView([`http@${clientKey(req)}`]);
     res.on('close', release);
-    const up = http.request({ host: '127.0.0.1', port, method: req.method, path: req.url, headers: { ...req.headers, host: `127.0.0.1:${port}` } }, (r) => {
+    const headers = { ...req.headers, host: `127.0.0.1:${port}` };
+    delete headers[PROXY_HEADER]; // the proxy's secret stays here
+    const up = http.request({ host: '127.0.0.1', port, method: req.method, path: req.url, headers }, (r) => {
       res.writeHead(r.statusCode ?? 502, r.headers);
       r.pipe(res);
     });
@@ -1261,7 +1293,9 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     socket.setTimeout(VIEW_IDLE_MS, () => { because('idle'); socket.destroy(); });
     const up = net.connect(port, '127.0.0.1', () => {
       const lines = [`${req.method} ${req.url} HTTP/${req.httpVersion}`];
-      for (let i = 0; i < req.rawHeaders.length; i += 2) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
+      for (let i = 0; i < req.rawHeaders.length; i += 2) {
+        if (String(req.rawHeaders[i]).toLowerCase() !== PROXY_HEADER) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
+      }
       up.write(`${lines.join('\r\n')}\r\n\r\n`);
       if (head?.length) up.write(head);
       socket.pipe(up);
@@ -1454,7 +1488,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       url = `http://${web.host.includes(':') ? `[${web.host}]` : web.host}:${port}`;
       sweeper = setInterval(sweep, Math.max(1_000, Math.min(5_000, Math.floor(web.leaseMs / 4))));
       sweeper.unref();
-      log.event('web_start', { url, publicUrl: web.publicUrl || null, maxSessions: web.maxSessions, leaseMs: web.leaseMs, trustedProxies: proxyList.length });
+      log.event('web_start', { url, publicUrl: web.publicUrl || null, maxSessions: web.maxSessions, leaseMs: web.leaseMs, trustedProxies: proxyList.length, proxySecret: proxySecret.length > 0 });
       return { url, publicUrl: web.publicUrl || url };
     },
 

@@ -167,6 +167,9 @@ export async function openBlockWindow(ctx, block, typePrefix, what) {
   tracker(bot);
   closeCurrent(bot);
   const ms = ctx.timing?.openMs ?? OPEN_MS;
+  // face the block at once (util.js faceAt): activateBlock's own look then has nothing left to turn and does not wait
+  // for a turn at 3 rad/s before it uses the block
+  if (typeof bot.lookAt === 'function' && block?.position) await ctx.wait(bot.lookAt(block.position.offset(0.5, 0.5, 0.5), true));
   const opened = eventWithin(bot, 'windowOpen', ms, `the ${what} did not open (no answer from the server within ${ms / 1000} s)`);
   opened.catch(() => {});
   Promise.resolve().then(() => bot.activateBlock(block)).catch(() => {});

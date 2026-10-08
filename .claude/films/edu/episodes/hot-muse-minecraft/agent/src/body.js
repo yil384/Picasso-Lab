@@ -13,7 +13,7 @@ import { config as defaultConfig, isLanHost } from './config.js';
 import { validateArgs, inventoryDelta, TOOL_TIMEOUTS_MS, BODY_EVENTS } from './contracts.js';
 import { snapshotOf, renderState, inventoryOf, describeCall, describeDelta, nearbyMobs } from './state.js';
 import { SKILLS } from './skills/index.js';
-import { SkillStop, describeError, fmt } from './skills/util.js';
+import { SkillStop, describeError, fmt, trackDeaths } from './skills/util.js';
 import { syncInventory, inventoryFresh } from './skills/window.js';
 import { fetchSmelted, describeSmelting, smeltJobs } from './skills/smelt.js';
 import { bestSafeFood } from './skills/basic.js';
@@ -222,6 +222,7 @@ export function createBody(opts = {}) {
   const consolePath = opts.console !== undefined ? opts.console : (cfg.stream?.camera?.console || process.env.MC_CONSOLE || null);
   const registry = opts.stations ?? registryForWorld(injected ? bot : `${cfg.mc.host}:${cfg.mc.port}`);
   loadPlugins(bot);
+  trackDeaths(bot);
 
   const listeners = new Map(BODY_EVENTS.map((e) => [e, new Set()]));
   const emit = (event, data) => {
@@ -249,12 +250,26 @@ export function createBody(opts = {}) {
   const me = () => bot.username ?? cfg.mc.username;
 
   // ---- stations the bot placed (src/stations.js) --------------------------------------------------------------
+  const posKey = (p) => `${Math.floor(p.x)},${Math.floor(p.y)},${Math.floor(p.z)}`;
+  /**
+   * A station that must not be retired to stay within the cap: a furnace still smelting for the bot or holding output
+   * it has not taken (src/skills/smelt.js), or one the running skill works at (it may be about to load it).
+   */
+  const inUse = (s) => {
+    const k = posKey(s.pos);
+    return smeltJobs(bot).some((j) => posKey(j.pos) === k) || Boolean(current?.touched?.has(k));
+  };
   const stations = {
     owns: (pos) => registry.ownerOf(pos) === me(),
     usable: (pos) => registry.usableBy(me(), pos),
+    /** The running skill works at the station at pos: it is not retired while that skill runs. */
+    use(pos) { current?.touched?.add(posKey(pos)); },
+    /** May the bot put down one more station (false: it keeps HARD_MAX and every one is in use)? */
+    room: () => registry.room(me(), inUse),
     /** Claim a station; returns a note naming any station retired to stay within the cap. */
     claim(name, pos, { temp = false } = {}) {
-      const retired = registry.add(me(), name, pos, { temp });
+      if (!temp) stations.use(pos);
+      const retired = registry.add(me(), name, pos, { temp, keep: inUse });
       if (!retired.length) return '';
       removeStations(consolePath, retired).then((n) => logEvent('stations_retired', { owner: me(), n, removed: Boolean(consolePath && n) }), () => {});
       return `; removed your oldest ${retired.map((s) => `${s.name.replace(/_/g, ' ')} at ${fmt(s.pos)}`).join(' and ')} (a bot keeps at most ${MAX_PER_BOT})`;
@@ -705,10 +720,15 @@ export function createBody(opts = {}) {
       } catch (err) { if (!(err instanceof SkillStop)) out.push(`could not empty a furnace: ${describeError(err)}`); }
     }
     if (tool !== 'eat' && tool !== 'attack' && wantsToEat()) {
+      // marked as a reflex in progress: the watcher must not queue a second meal while this one is eaten
+      job.inReflex = { kind: 'eat' };
       try {
         const rx = await job.phases.run('reflex', () => reflexRound(job, job.controller, { kind: 'eat', why: `food is ${bot.food}/20` }));
         out.push(...rx.notes);
-      } catch { /* stopped */ }
+      } catch { /* stopped */ } finally {
+        job.inReflex = null;
+        if (job.reflex?.kind === 'eat') job.reflex = null;
+      }
     }
     return out;
   }
@@ -749,9 +769,11 @@ export function createBody(opts = {}) {
       clearTimeout(timer);
       job.inReflex = reflex;
       let rx = { notes: [], retreated: false };
+      // a meal asked for a moment ago may have been eaten since (food above FOOD_LOW): not eaten twice
+      const fed = reflex.kind === 'eat' && (bot.food ?? 20) > FOOD_LOW;
       try {
         // the reflex's own walking and fighting count as reflex (a phase inside another counts toward the outer one)
-        rx = await job.phases.run('reflex', () => reflexRound(job, controller, reflex));
+        if (!fed) rx = await job.phases.run('reflex', () => reflexRound(job, controller, reflex));
       } catch { /* stopped or died during the reflex: handled below */ }
       job.inReflex = null;
       job.reflex = null;
@@ -847,7 +869,7 @@ export function createBody(opts = {}) {
     if (current) return Promise.resolve({ ok: false, result: `busy: ${current.call} is still running`, delta: {}, ms: 0 });
     const job = {
       tool, call: describeCall(tool, checked.args), controller: new AbortController(), cleanups: new Set(), done: null, stopNote: null,
-      progress: {}, resumed: null, reflex: null, inReflex: null, attempt: null, phases: createPhases(),
+      progress: {}, resumed: null, reflex: null, inReflex: null, attempt: null, phases: createPhases(), touched: new Set(),
     };
     current = job;
     job.done = execute(job, checked.args);

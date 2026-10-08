@@ -7,6 +7,7 @@ import { Vec3 } from '../mc.js';
 import { STATION_BLOCKS } from '../stations.js';
 import { done, fail, countOf, fmt, placeAt } from './util.js';
 import { pendingFor, fetchSmelted } from './smelt.js';
+import { noRoom } from './station.js';
 
 /** place {block, pos: {x, y, z}} */
 export async function place(ctx, { block, pos }) {
@@ -20,6 +21,7 @@ export async function place(ctx, { block, pos }) {
   const far = bot.entity.position.distanceTo(target);
   const max = ctx.config.body.maxTravel;
   if (far > max) return fail(`${fmt(target)} is ${Math.round(far)} blocks away; place works within ${max}`);
+  if (STATION_BLOCKS.includes(block) && ctx.stations?.room && !ctx.stations.room()) return fail(noRoom());
   const r = await placeAt(ctx, block, target);
   if (r.ok && STATION_BLOCKS.includes(block)) r.result += ctx.stations?.claim(block, target) ?? '';
   if (fetched) r.result += fetched;

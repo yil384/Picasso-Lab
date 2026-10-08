@@ -26,6 +26,7 @@ services:
     environment:
       MC_HOST: 10.77.79.10
       MC_CONSOLE: /console/console.in
+      MC_WHITELIST: "true"
       WEB_PUBLIC_URL: https://play-staging.picasso-lab.com
       WEB_TRUST_PROXY: "1"
       WEB_MAX_SESSIONS: "8"

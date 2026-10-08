@@ -391,6 +391,8 @@ export function createCameraRig(o = {}) {
 
   async function launchClient() {
     profile = await (c.profile ?? cameraProfile)(c);
+    // a server that lets in only listed players (the Paper container, MC_WHITELIST) must list the camera first
+    if (c.console) await command(`whitelist add ${profile.name}`);
     const launch = c.launch ?? readLaunch(c.mcDir);
     const cmd = clientLaunch(c, launch, profile);
     fs.mkdirSync(cmd.gameDir, { recursive: true });

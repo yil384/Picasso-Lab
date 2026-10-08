@@ -2,7 +2,7 @@
 // hostile mob) with the best weapon carried, until it dies, gets away or the swing limit is reached. Players are never
 // targets: the filter rejects them before the name is even compared.
 
-import { done, fail, goals, describeError, SkillStop, vec } from './util.js';
+import { done, fail, goals, describeError, SkillStop, vec, isDead } from './util.js';
 
 const FIND_RADIUS = 16;
 const ESCAPE_RADIUS = 24;
@@ -30,7 +30,7 @@ function cooldownTicks(held) {
 /** The entity filter for a target name. Only mobs from the registry's mob categories; never players. */
 function matcher(bot, target) {
   return (e) => {
-    if (!e || e === bot.entity || e.type === 'player' || e.isValid === false || !e.position) return false;
+    if (!e || e === bot.entity || e.type === 'player' || e.isValid === false || !e.position || isDead(bot, e)) return false;
     const category = bot.registry.entitiesByName[e.name]?.category;
     if (category !== 'Hostile mobs' && category !== 'Passive mobs') return false;
     if (target === 'nearest_hostile' ? category !== 'Hostile mobs' : e.name !== target) return false;
@@ -60,7 +60,8 @@ export async function fightEntity(ctx, mob, { maxSwings = MAX_SWINGS, loot = tru
   let dead = false;
   const onDead = (e) => { if (e === mob || e?.id === mob.id) dead = true; };
   bot.on('entityDead', onDead);
-  const gone = () => dead || mob.isValid === false || !bot.entities[mob.id] || (Number.isFinite(mob.health) && mob.health <= 0);
+  // a mob that died before this fight began (in its death animation) is gone too: its entityDead came already
+  const gone = () => dead || isDead(bot, mob) || mob.isValid === false || !bot.entities[mob.id] || (Number.isFinite(mob.health) && mob.health <= 0);
   let swings = 0;
   let stuck = 0;
   let lastPos = mob.position.clone();

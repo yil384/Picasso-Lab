@@ -163,8 +163,9 @@ test('rig on stand-in programs: joins, spectator and park on the console, F1 onc
     await until(() => fs.existsSync(path.join(out, 'keys')));
     assert.equal(fs.readFileSync(path.join(out, 'keys'), 'utf8'), 'key F1\n');
     const lines = () => fs.readFileSync(consoleFile, 'utf8').trim().split('\n');
-    await until(() => lines().length >= 2);
-    assert.deepEqual(lines(), ['gamemode spectator MuseCam', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
+    await until(() => lines().length >= 3);
+    // on the server's whitelist before it joins (the Paper container lets in only listed players)
+    assert.deepEqual(lines(), ['whitelist add MuseCam', 'gamemode spectator MuseCam', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
     assert.equal(fs.readFileSync(path.join(out, 'token0'), 'utf8'), 'yes\n', 'the client got its token');
     assert.equal(fs.readFileSync(path.join(out, 'args0'), 'utf8').includes(TOKEN), false, 'and not on its command line');
     assert.match(fs.readFileSync(path.join(dir, 'home', 'game', 'options.txt'), 'utf8'), /renderDistance:8/);

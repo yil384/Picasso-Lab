@@ -165,6 +165,9 @@ export function loadConfig(env = process.env) {
     port: r.int('MC_PORT', 25565, 1, 65535),
     version: r.str('MC_VERSION', '1.21.4'),
     username: r.str('MC_USERNAME', 'Muse'),
+    // the server lets in only listed players (the Paper container on picasso): each guest bot gets a name nobody can
+    // guess and is put on the list through the console (MC_CONSOLE) just before it joins, and taken off when it leaves
+    whitelist: r.bool('MC_WHITELIST', false),
     auth: 'offline',
     viewerPort: r.int('MC_VIEWER_PORT', 3007, 0, 65535),
   };
@@ -209,6 +212,15 @@ export function loadConfig(env = process.env) {
     problems.push('WEB_ADMIN_TOKEN must be at least 24 characters (make one with: openssl rand -base64 24)');
   }
   hidden(web, 'adminToken', adminToken);
+  // A secret the proxy in front adds to every request it forwards (X-Muse-Proxy; Caddy: header_up). On picasso the
+  // published port goes through docker-proxy, so every connection arrives from the bridge gateway, Caddy's and any
+  // local user's alike: the address cannot tell them apart, the secret can.
+  const proxySecret = r.str('WEB_PROXY_SECRET', '');
+  if (proxySecret && (proxySecret.length < 24 || !/^[\x21-\x7e]+$/.test(proxySecret))) {
+    problems.push('WEB_PROXY_SECRET must be at least 24 printable characters without spaces (make one with: openssl rand -hex 24)');
+  }
+  if (proxySecret && trustProxy === 'off') problems.push('WEB_PROXY_SECRET needs WEB_TRUST_PROXY (cloudflare, or the number of proxies that append to X-Forwarded-For)');
+  hidden(web, 'proxySecret', proxySecret);
 
   const body = {
     maxTravel: r.int('BODY_MAX_TRAVEL', 256, 8, 10_000),

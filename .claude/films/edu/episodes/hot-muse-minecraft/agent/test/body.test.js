@@ -769,3 +769,31 @@ test('collect: says how many drops were really picked up when some stay on the g
   assert.equal(r.result, 'mined 2 oak_log; picked up 0 oak_log, the rest lies on the ground nearby');
   assert.deepEqual(r.delta, {});
 });
+
+test('reflexes: one meal when hungry at the start of a skill, though the meal takes longer than the watcher\'s look', async () => {
+  const { body, log } = await setup({ scene: 'flat', moveMsPerBlock: 20, consumeMs: 700, inventory: { bread: 6 }, food: 13 });
+  const r = await body.run('go_to', { x: 20, y: 64, z: 0 });
+  assert.equal(r.ok, true, r.result);
+  assert.match(r.result, /^arrived at 20 64 0 \[on its own: ate bread \(food 13 -> 18\)\]$/);
+  assert.equal(r.delta.bread, -1);
+  assert.equal(log.tail().filter((x) => x.kind === 'reflex').length, 1);
+});
+
+test('reflexes: a mob killed in a fight is not fought again during its death animation', async () => {
+  const { bot, body } = await setup({ scene: 'flat', moveMsPerBlock: 20, corpseMs: 400, inventory: { stone_sword: 1 } });
+  const walk = body.run('go_to', { x: 30, y: 64, z: 0 });
+  await new Promise((r) => setTimeout(r, 50));
+  const zombie = bot.fake.spawnMob('zombie', bot.entity.position.offset(2, 0, 0));
+  bot.fake.hurt(3, zombie);
+  const r = await walk;
+  assert.equal(r.ok, true, r.result);
+  assert.deepEqual(r.reflexes, ['fought back a zombie and killed it (2 swings)'], 'one kill, not a second one of the corpse');
+  assert.equal(called(bot, 'attack').length, 2, 'no swing at the corpse');
+  // nor does attack pick the corpse
+  const z2 = bot.fake.spawnMob('zombie', bot.entity.position.offset(2, 0, 0));
+  z2.health = 1;
+  assert.equal((await body.run('attack', { target: 'zombie' })).ok, true);
+  const again = await body.run('attack', { target: 'zombie' });
+  assert.equal(again.ok, false, 'its corpse is no target');
+  assert.match(again.result, /^no zombie within 16 blocks/);
+});

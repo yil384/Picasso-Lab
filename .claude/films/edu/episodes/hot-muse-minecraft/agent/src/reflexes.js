@@ -4,7 +4,7 @@
 // the running skill, runs these, then runs the skill on from where it was; each reflex goes into the next result. The
 // actions take a skill context (ctx) like any skill, so a stop cancels them too.
 
-import { goals, describeError, SkillStop, equip, fmt, countOf } from './skills/util.js';
+import { goals, describeError, SkillStop, equip, fmt, countOf, isDead } from './skills/util.js';
 import { fightEntity } from './skills/attack.js';
 import { bestSafeFood } from './skills/basic.js';
 
@@ -23,7 +23,8 @@ const FIGHT_SWINGS = 24;
 const UNREACHABLE_FLEE = 12;
 
 const isHostile = (bot, e) => bot.registry.entitiesByName[e?.name]?.category === 'Hostile mobs';
-const alive = (bot, e) => Boolean(e && e.isValid !== false && bot.entities[e.id] && e.position);
+// a mob in its death animation is not alive: it is never fought again (src/skills/util.js trackDeaths)
+const alive = (bot, e) => Boolean(e && e.isValid !== false && bot.entities[e.id] && e.position && !isDead(bot, e));
 
 /** The nearest hostile mob within radius (not the bot, never a player), or null. */
 export function nearestHostile(bot, radius, test = () => true) {

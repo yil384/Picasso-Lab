@@ -220,3 +220,32 @@ test('craft_batch: a table within reach is used and none placed; it stops at the
   assert.deepEqual(r2.delta, { oak_log: -2, oak_planks: 1, oak_slab: 6 });
   assert.equal(called(plain, 'placeBlock').length, 1);
 });
+
+test('check: after a go_to it knows a table or furnace output may be out of reach: a new table from spare wood, else a warning', () => {
+  const at = { x: 0, y: 64, z: 0 };
+  const steps = [craft('wooden_pickaxe'), { skill: 'go_to', args: { x: 60, y: 64, z: 0 } }, craft('wooden_axe')];
+  // planks budgeted to the plank: the body cannot make a new table 60 blocks on, nor walk back to the old one
+  const tight = planner.check(steps, { inventory: { oak_log: 3 }, table: false, position: at });
+  assert.equal(tight.ok, true, 'not refused: where the bot ends up is only roughly known');
+  assert.deepEqual(tight.warnings, [{ step: 3, text: 'step 3 needs a crafting table, but after step 2 (go_to) yours is about 60 blocks away and you will have no 4 planks or a log to spare for a new one: carry a crafting table or one more log' }]);
+  // a log to spare: the body makes a table there (the log is counted as used), no warning
+  const spare = planner.check([...steps, craft('stick', 4)], { inventory: { oak_log: 4 }, table: false, position: at });
+  assert.deepEqual(spare.warnings, []);
+  assert.equal(spare.ok, false, 'the spare log went into the new table: no planks left for the sticks');
+  assert.deepEqual(spare.missing.map((m) => [m.step, m.item]), [[4, 'oak_log']]);
+  // a short walk: the table is walked back to
+  assert.deepEqual(planner.check([craft('wooden_pickaxe'), { skill: 'go_to', args: { x: 10, y: 64, z: 0 } }, craft('wooden_axe')], { inventory: { oak_log: 3 }, table: false, position: at }).warnings, []);
+  // no position given: go_to is not followed (as before)
+  assert.deepEqual(planner.check(steps, { inventory: { oak_log: 3 }, table: false }).warnings, []);
+
+  // the ingots still in furnaces left 50 blocks behind
+  const iron = planner.check([{ skill: 'smelt', args: { item: 'raw_iron', n: 3 } }, { skill: 'go_to', args: { x: 50, y: 64, z: 0 } }, craft('iron_pickaxe')],
+    { inventory: { raw_iron: 3, coal: 1, stick: 2, furnace: 1, crafting_table: 1 }, table: false, furnace: false, position: at });
+  assert.equal(iron.ok, true);
+  assert.deepEqual(iron.warnings.map((w) => w.text), ['step 3 needs the iron_ingot still in your furnaces, but after step 2 (go_to) they are about 50 blocks away (it fetches within 24): go_to back there first']);
+  // output a background smelt is still making, near where the bot stands now
+  const queued = planner.check([{ skill: 'go_to', args: { x: 0, y: 64, z: 40 } }, craft('iron_pickaxe')],
+    { inventory: { iron_ingot: 3, stick: 2, crafting_table: 1 }, smelting: { iron_ingot: 3 }, table: false, position: at });
+  assert.equal(queued.warnings.length, 1);
+  assert.match(queued.warnings[0].text, /^step 2 needs the iron_ingot still in your furnaces, but after step 1 \(go_to\) they are about 40 blocks away/);
+});

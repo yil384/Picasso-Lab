@@ -4,7 +4,10 @@
 // of collect. A step that cannot work is found before anything runs, with what is missing; planks (from logs), sticks
 // (from planks), and a crafting table or a furnace a step needs, are added as craft steps instead when what the bot
 // carries (or what earlier steps bring) can make them. It reads no game state itself: the inventory and the station
-// lookups are passed in.
+// lookups are passed in. Given the bot's position, it follows go_to steps: a table or furnace left more than WALK_BACK
+// blocks behind is not walked back to, so the body makes a new table there from spare planks (counted), and when it
+// cannot (and the station is past REUSE_RADIUS) or a craft needs furnace output left that far behind, the check warns
+// (warnings) instead of refusing: where the bot ends up is only roughly known.
 
 import { registryFor, requireMc } from './mc.js';
 import { SMELT, FUEL, PLANKS, LOGS, WOODS, blueprintBlockCount } from './game.js';
@@ -26,6 +29,13 @@ const CHANCE = /^(short_grass|.*_leaves)$/;
 // ingredients a missing-items hint should name first, as the craft skill does
 const COMMON = /^(oak_|cobblestone$|stick$|iron_ingot$)/;
 const TIERS = ['wooden', 'stone', 'golden', 'iron', 'diamond', 'netherite'];
+// the body's station rules (src/skills/station.js WALK_BACK and CLIMB, src/stations.js REUSE_RADIUS, the reach of
+// src/skills/util.js): a station is walked back to within 16 blocks and 4 up or down, found within 24, and a furnace's
+// output is fetched within 24 blocks plus reach
+const WALK_BACK = 16;
+const CLIMB = 4;
+const REUSE_RADIUS = 24;
+const FETCH_RADIUS = 28;
 
 /**
  * @typedef {{skill: string, args: object}} Step
@@ -68,8 +78,56 @@ export function createPlanner({ version = '1.21.4' } = {}) {
   }
 
   const have = (st, item) => st.inv.get(item) ?? 0;
+  const dist = (a, b) => Math.round(Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z));
+  /**
+   * Where a station of this kind stands, if the check knows: where the bot put one down, or where it was at the start
+   * when one was found near (null: unknown, or none).
+   */
+  const stationAt = (st, key) => st.at[key] ?? (st[key]() === true ? st.start : null);
+  /** How far the known station of this kind is after a go_to, or null when the body would use it where it is. */
+  function leftBehind(st, key) {
+    if (!st.moved || !st.pos) return null;
+    const at = stationAt(st, key);
+    if (!at) return null;
+    const d = dist(at, st.pos);
+    return d <= WALK_BACK && Math.abs(at.y - st.pos.y) <= CLIMB ? null : { d, at };
+  }
+  const warn = (st, text) => { if (!st.warnings.some((w) => w.step === st.step && w.text === text)) st.warnings.push({ step: st.step, text }); };
+  /** Planks carried, a log counted as 4 (as the body's tableAffordable counts them). */
+  const planksEquiv = (st) => [...st.inv].reduce((k, [name, c]) => k + (/_planks$/.test(name) ? c : /_log$/.test(name) ? 4 * c : 0), 0);
+  /**
+   * A table-needing craft after a go_to took the bot away from its table: the body makes a new one from 4 planks (or a
+   * log) when it carries that many beyond what the craft takes, and puts it down here; else it walks back within
+   * REUSE_RADIUS; else the craft fails, which the check can only warn about.
+   */
+  function tableAfterMove(st, plankNeed) {
+    if (have(st, 'crafting_table') > 0) return;
+    const far = leftBehind(st, 'table');
+    if (!far) return;
+    if (planksEquiv(st) - plankNeed >= 4) {
+      const wood = [...st.inv].find(([name, c]) => /_planks$/.test(name) && c >= 4)?.[0];
+      if (wood) add(st, wood, -4);
+      else { const log = [...st.inv].find(([name, c]) => /_log$/.test(name) && c > 0)?.[0]; if (log) add(st, log, -1); }
+      st.at.table = st.pos;
+      return;
+    }
+    if (far.d > REUSE_RADIUS) {
+      warn(st, `needs a crafting table, but after ${st.moved} yours is about ${far.d} blocks away and you will have no 4 planks or a log to spare for a new one: carry a crafting table or one more log`);
+    }
+  }
+  /** Ingredients still in the bot's furnaces when a go_to took it far from them: warned about once. */
+  function ovenAfterMove(st, names) {
+    for (const name of names) {
+      const o = st.oven.get(name);
+      if (!o) continue;
+      st.oven.delete(name); // the craft that needs it takes it all out (or fails)
+      if (!st.moved || !st.pos || !o.at) continue;
+      const d = dist(o.at, st.pos);
+      if (d > FETCH_RADIUS) warn(st, `needs the ${name} still in your furnaces, but after ${st.moved} they are about ${d} blocks away (it fetches within ${REUSE_RADIUS}): go_to back there first`);
+    }
+  }
   const add = (st, item, k) => { if (k) st.inv.set(item, have(st, item) + k); };
-  const clone = (st) => ({ ...st, inv: new Map(st.inv) });
+  const clone = (st) => ({ ...st, inv: new Map(st.inv), at: { ...st.at }, oven: new Map(st.oven), warnings: [] });
   // a station carried counts at once; one standing within reach is looked up only when a step needs it (a scan)
   const hasTable = (st) => have(st, 'crafting_table') > 0 || st.table() !== false;
   const hasFurnace = (st) => have(st, 'furnace') > 0 || st.furnace() !== false;
@@ -78,9 +136,10 @@ export function createPlanner({ version = '1.21.4' } = {}) {
    * carried is put down and stays there (src/stations.js), so it leaves the inventory and stands nearby from then on.
    */
   function useStation(st, name, key) {
-    if (have(st, name) <= 0 || st[key]() !== false) return;
+    if (have(st, name) <= 0 || (st[key]() !== false && !leftBehind(st, key))) return;
     add(st, name, -1);
     st[key] = () => true;
+    st.at[key] = st.pos;
   }
   /** The wood the bot holds most of (planks, or logs that make 4 each); oak when none. */
   function bestWood(st) {
@@ -184,7 +243,11 @@ export function createPlanner({ version = '1.21.4' } = {}) {
       ops?.push(...best.o);
       for (const x of best.m) miss(x);
     }
-    if (pick.table) useStation(st, 'crafting_table', 'table');
+    if (pick.table) {
+      tableAfterMove(st, pick.need.filter(([ing]) => /_planks$/.test(ing)).reduce((k, [, c]) => k + c * batches(pick), 0));
+      useStation(st, 'crafting_table', 'table');
+    }
+    ovenAfterMove(st, pick.need.map(([ing]) => ing));
     craftOp(st, insert ? ops : null, item, pick.out * batches(pick), pick.need.map(([ing, c]) => [ing, c * batches(pick)]), forItem);
   }
 
@@ -215,7 +278,9 @@ export function createPlanner({ version = '1.21.4' } = {}) {
     if (!hasFurnace(st)) simCraft(st, 'furnace', 1, ops, (x) => miss({ ...x, for: 'a furnace' }), 'a furnace', true);
     const pieces = SMALL_ORDER.filter((name) => name !== item).reduce((k, name) => k + have(st, name), 0);
     const target = Math.max(1, Math.min(want, MAX_PARALLEL, pieces));
-    const near = st.furnace() !== false ? 1 : 0;
+    // a furnace a go_to left behind is used only when the bot can put down or make none (and finds it within 24)
+    const behind = leftBehind(st, 'furnace');
+    const near = st.furnace() !== false && !behind ? 1 : 0;
     const extra = target - near - have(st, 'furnace');
     const planks = PLANKS.reduce((k, p) => k + have(st, p), 0);
     if (extra > 0 && (hasTable(st) || (planks >= 4 && pieces - 4 >= target))) {
@@ -226,9 +291,12 @@ export function createPlanner({ version = '1.21.4' } = {}) {
         craftOp(st, null, 'furnace', make, [['cobblestone', make * COBBLE_PER_FURNACE]], 'a furnace');
       }
     }
+    if (behind && !have(st, 'furnace') && behind.d > REUSE_RADIUS) {
+      warn(st, `smelts, but after ${st.moved} your furnace is about ${behind.d} blocks away and you will carry none: carry a furnace or 8 cobblestone more`);
+    }
     const used = Math.max(1, Math.min(target, near + have(st, 'furnace')));
     add(st, 'furnace', -Math.min(have(st, 'furnace'), used - near)); // put down; they stay
-    if (have(st, 'furnace') === 0 && used > near) st.furnace = () => true;
+    if (have(st, 'furnace') === 0 && used > near) { st.furnace = () => true; st.at.furnace = st.pos; }
     const shares = Array.from({ length: used }, (_, i) => Math.floor(want / used) + (i < want % used ? 1 : 0)).filter((x) => x > 0);
     let covered = 0;
     for (const share of shares) {
@@ -241,6 +309,8 @@ export function createPlanner({ version = '1.21.4' } = {}) {
     if (left > 0) miss({ item: 'coal', need: Math.ceil(left / FUEL.coal), note: `fuel for ${left} more ${item}: coal or charcoal (1 per 8 items), or planks or logs (2 per 3 items)` });
     add(st, item, -want);
     add(st, SMELT[item], want);
+    // the output waits in the furnaces here until a craft that needs it takes it
+    st.oven.set(SMELT[item], { at: st.pos });
   }
 
   /** Collect: the harvest tool must be carried; the drops come in (the most a block gives). */
@@ -274,6 +344,12 @@ export function createPlanner({ version = '1.21.4' } = {}) {
       return addedItems.length ? { skill, args: { items }, addedItems } : null;
     } else if (skill === 'smelt') simSmelt(st, args, ops, miss);
     else if (skill === 'collect') simCollect(st, args, miss);
+    else if (skill === 'go_to') {
+      // where it ends up (roughly): stations and furnace output left behind are judged from there
+      const to = { x: Math.floor(args.x), y: Math.floor(args.y), z: Math.floor(args.z) };
+      if (st.pos && dist(to, st.pos) > 1) st.moved = st.label;
+      st.pos = to;
+    }
     else if (skill === 'place') { ensureAll(st, [[args.block, 1]], ops, miss); add(st, args.block, -1); }
     else if (skill === 'build') {
       const need = blueprintBlockCount(args.blueprint);
@@ -328,12 +404,24 @@ export function createPlanner({ version = '1.21.4' } = {}) {
     };
   };
 
-  function check(steps, { inventory = {}, table = null, furnace = null, before = [] } = {}) {
-    const st = { inv: new Map(Object.entries(inventory).filter(([, v]) => v > 0)), table: once(table), furnace: once(furnace) };
+  /**
+   * position: the bot's block position (optional; without it go_to steps are not followed); smelting: what the bot's
+   * furnaces are still making ({item: n}, already counted in inventory), taken to be near that position.
+   */
+  function check(steps, { inventory = {}, table = null, furnace = null, before = [], position = null, smelting = {} } = {}) {
+    const start = position && [position.x, position.y, position.z].every(Number.isFinite)
+      ? { x: Math.floor(position.x), y: Math.floor(position.y), z: Math.floor(position.z) } : null;
+    const st = {
+      inv: new Map(Object.entries(inventory).filter(([, v]) => v > 0)), table: once(table), furnace: once(furnace),
+      start, pos: start, at: {}, moved: null, oven: new Map(), warnings: [], step: null, label: null,
+    };
+    for (const [k, v] of Object.entries(smelting ?? {})) if (v > 0) st.oven.set(k, { at: start });
     // steps queued or running already: assumed to work in full (never a reason to refuse the new ones)
     for (const step of before) {
+      st.label = `a step still queued (${describeStep(step)})`;
       try { simStep(st, step, [], () => {}); } catch { /* a step the check does not know changes nothing */ }
     }
+    st.warnings.length = 0; // only this call's steps are warned about
     const out = [];
     const missing = [];
     let added = 0;
@@ -341,6 +429,8 @@ export function createPlanner({ version = '1.21.4' } = {}) {
       const ops = [];
       const lacking = [];
       const label = `step ${i + 1} (${describeStep(step)})`;
+      st.step = i + 1;
+      st.label = label;
       const replaced = simStep(st, step, ops, (m) => lacking.push(m));
       missing.push(...sumUp(lacking).map((m) => ({ step: i + 1, ...m })));
       for (const o of tidy(ops)) {
@@ -359,7 +449,7 @@ export function createPlanner({ version = '1.21.4' } = {}) {
         out.push({ skill: step.skill, args: step.args, step: i + 1 });
       }
     });
-    return { ok: missing.length === 0, steps: out, missing, added };
+    return { ok: missing.length === 0, steps: out, missing, added, warnings: st.warnings.map((w) => ({ step: w.step, text: `step ${w.step} ${w.text}` })) };
   }
 
   return { check, variants };

@@ -4,8 +4,11 @@
 // cancelled; a step that fails cancels every step queued after it (they were planned on its result), and stop clears
 // the queue. Each accepted call is remembered under a key: its request_id, or else the call and its arguments for
 // REPEAT_MS after its last step ended. A repeat gets the first call's steps back and never runs anything twice (the
-// 2026-07-28 protocol makes clients re-send a call after a broken stream). A finished step waits in the outbox until
-// a delivered reply has carried its result.
+// 2026-07-28 protocol makes clients re-send a call after a broken stream). A call without a request_id is forgotten as
+// soon as a delivered reply has carried every one of its results: the client has seen them, so the same call sent
+// again is a deliberate repeat (a retry after a failure, the same collect after a go_to) and runs. A finished step
+// waits in the outbox until a delivered reply has carried its result. A step cancelled before it ran keeps the code of
+// what cancelled it (the failed step's code, or STOPPED), so a reply made only of cancelled steps still says why.
 
 import { codeOf } from './contracts.js';
 
@@ -44,10 +47,13 @@ export function createQueue({ start, now = Date.now }) {
     step.resolve();
   }
 
-  /** Cancel every waiting step; returns them. */
-  function cancelWaiting(why) {
+  /** Cancel every waiting step (cause: the typed code of what cancelled them); returns them. */
+  function cancelWaiting(why, cause = null) {
     const gone = waiting.splice(0);
-    for (const step of gone) settle(step, 'cancelled', null, why);
+    for (const step of gone) {
+      step.cause = cause;
+      settle(step, 'cancelled', null, why);
+    }
     return gone;
   }
 
@@ -55,7 +61,7 @@ export function createQueue({ start, now = Date.now }) {
     if (current === step) current = null;
     const result = { ok: Boolean(r?.ok), result: String(r?.result ?? ''), delta: r?.delta && typeof r.delta === 'object' ? r.delta : {}, ...(r?.ms != null ? { ms: r.ms } : {}) };
     settle(step, result.ok ? 'confirmed' : step.stopping ? 'cancelled' : 'failed', result, step.stopping ? step.stopping : null);
-    if (!result.ok) cancelWaiting(`step ${step.n} of ${step.call.label} (${step.skill}) ${step.stopping ? 'was stopped' : 'failed'}`);
+    if (!result.ok) cancelWaiting(`step ${step.n} of ${step.call.label} (${step.skill}) ${step.stopping ? 'was stopped' : 'failed'}`, step.code ?? (step.stopping ? 'STOPPED' : 'FAILED'));
     pump();
   }
 
@@ -115,7 +121,7 @@ export function createQueue({ start, now = Date.now }) {
         const done = new Promise((r) => { resolve = r; });
         return {
           id: ++seq, call, n: i + 1, skill: p.skill, args: p.args, step: p.step ?? null, added: p.added ?? null,
-          addedItems: p.addedItems ?? null, status: 'queued', result: null, code: null, why: null, startedAt: null,
+          addedItems: p.addedItems ?? null, status: 'queued', result: null, code: null, cause: null, why: null, startedAt: null,
           endedAt: null, delivered: false, stopping: null, done, resolve,
         };
       });
@@ -131,7 +137,7 @@ export function createQueue({ start, now = Date.now }) {
     /** Stop: cancel the waiting steps; the running one ends as cancelled when the body has stopped it. */
     stop(why = 'stop cleared the queue') {
       if (current) current.stopping = why;
-      const gone = cancelWaiting(why);
+      const gone = cancelWaiting(why, 'STOPPED');
       // a deliberate repeat after a stop runs again; calls with a request_id stay remembered
       for (const [key, call] of calls) if (!call.requestId) calls.delete(key);
       return { running: current, cancelled: gone };
@@ -143,10 +149,22 @@ export function createQueue({ start, now = Date.now }) {
       return outbox.filter((x) => !skip.includes(x)).sort((a, b) => a.id - b.id);
     },
 
-    /** A reply carrying these final steps was delivered. */
+    /**
+     * A reply carrying these final steps was delivered. A call without a request_id whose results have all been
+     * delivered is forgotten: the same call sent again runs (a deliberate repeat, not a re-send after a cut stream).
+     */
     delivered(steps) {
-      for (const x of steps) if (isFinal(x)) x.delivered = true;
+      const touched = new Set();
+      for (const x of steps) {
+        if (!isFinal(x)) continue;
+        x.delivered = true;
+        touched.add(x.call);
+      }
       outbox = outbox.filter((x) => !x.delivered);
+      for (const call of touched) {
+        if (call.requestId || calls.get(call.key) !== call) continue;
+        if (call.steps.every((x) => isFinal(x) && x.delivered)) calls.delete(call.key);
+      }
     },
 
     /** Resolves when nothing is running or waiting (at once if so). */

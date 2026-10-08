@@ -39,6 +39,17 @@ export class SkillStop extends Error {
 /** Run fn as one phase of the skill's time (the body's ctx.phase); a plain call where there is none (tests). */
 export const timed = (ctx, name, fn) => (typeof ctx?.phase === 'function' ? ctx.phase(name, fn) : fn());
 
+/**
+ * Turn the head to a point at once. The server needs no turn before a dig, a placement or opening a block, but
+ * mineflayer turns at 3 rad/s and waits for the turn first (up to about 1 s per action); after this its own look at
+ * the same point finds nothing left to turn. The live views smooth the camera themselves.
+ */
+export async function faceAt(ctx, point) {
+  const { bot } = ctx;
+  if (typeof bot.lookAt !== 'function' || !point) return;
+  await ctx.wait(bot.lookAt(point, true));
+}
+
 export const done = (result) => ({ ok: true, result });
 export const fail = (result) => ({ ok: false, result });
 
@@ -172,6 +183,8 @@ export async function placeAt(ctx, name, pos, { move = true, avoid = null } = {}
       if (eyeDistance(bot, p) > REACH + 0.75) return fail(`could not get close enough to ${fmt(p)}`);
     }
     await equip(ctx, name);
+    // the point mineflayer's placeBlock looks at (the middle of the face built on), faced at once
+    await faceAt(ctx, ref.block.position.offset(0.5 + ref.face.x * 0.5, 0.5 + ref.face.y * 0.5, 0.5 + ref.face.z * 0.5));
     await timed(ctx, 'place', () => ctx.wait(bot.placeBlock(ref.block, ref.face)));
     ctx.check();
     const now = bot.blockAt(p);
@@ -256,8 +269,23 @@ export async function landed(ctx, ms = 750) {
   for (let t = 0; t < ms && bot.entity?.onGround === false; t += 50) await ctx.wait(bot.waitForTicks(1));
 }
 
+const deadByBot = new WeakMap();
+/**
+ * Keep the ids of entities the server reported dead: mineflayer leaves a dead mob in bot.entities, still valid, for
+ * its death animation (about a second), so it looks like a live mob until it is gone.
+ */
+export function trackDeaths(bot) {
+  if (deadByBot.has(bot) || typeof bot?.on !== 'function') return;
+  const dead = new Set();
+  deadByBot.set(bot, dead);
+  bot.on('entityDead', (e) => { if (e?.id != null) dead.add(e.id); });
+  bot.on('entityGone', (e) => { if (e?.id != null) dead.delete(e.id); });
+}
+/** True for an entity the server reported dead (trackDeaths) that is still in its death animation. */
+export const isDead = (bot, e) => Boolean(e && deadByBot.get(bot)?.has(e.id));
+
 /** True while an item entity still lies in the world (not picked up, not despawned). */
-const lying = (bot, e) => Boolean(bot.entities[e.id]) && e.isValid !== false && Boolean(e.position);
+export const lying = (bot, e) => Boolean(bot.entities[e.id]) && e.isValid !== false && Boolean(e.position);
 
 /**
  * Walk over item drops to pick them up: at most `ms` in all, so a drop out of reach never holds up a skill. One sweep:
@@ -327,23 +355,43 @@ export async function mineBlock(ctx, block, { walkMs = 0, walk = {}, pickup = tr
   const p = vec(block.position);
   // a block can be within reach but out of sight: let pathfinder settle on a spot that sees it (at once when it does)
   const { digTo = null, ...look } = walk;
+  // the block may go while the bot walks to it (another player or bot mines it, a creeper blows it up): GoalLookAtBlock
+  // can never be met then, so the walk is called off at once instead of re-planning until the progress watch gives up
+  let gone = false;
+  const onUpdate = (oldB, newB) => {
+    if (gone || !newB?.position || !newB.position.equals(p) || newB.type === block.type) return;
+    gone = true;
+    try { bot.pathfinder?.setGoal(null); } catch { /* not walking */ }
+  };
+  const goneResult = () => ({ ok: false, gone: true, result: `the ${block.name} at ${fmt(p)} was gone before you got there` });
+  bot.on('blockUpdate', onUpdate);
   try {
-    await ctx.goto(new goals.GoalLookAtBlock(p, bot.world, { reach: REACH }), { timeoutMs: walkMs, ...look });
-  } catch (err) {
-    // no spot in reach sees it (buried, or behind a wall): that search only ends when it runs out of time or room.
-    // With digTo, dig a way to stand right next to it instead (pathfinder digs; the face it stands at is open)
-    if (err instanceof SkillStop || !digTo || !['Timeout', 'NoPath'].includes(err.name)) throw err;
-    if (eyeDistance(bot, p) > digTo.within) throw err;
-    await ctx.goto(new goals.GoalGetToBlock(p.x, p.y, p.z), { timeoutMs: digTo.timeoutMs, thinkMs: digTo.thinkMs, searchRadius: digTo.searchRadius });
+    try {
+      await ctx.goto(new goals.GoalLookAtBlock(p, bot.world, { reach: REACH }), { timeoutMs: walkMs, ...look });
+    } catch (err) {
+      if (gone && !(err instanceof SkillStop)) return goneResult();
+      // no spot in reach sees it (buried, or behind a wall): that search only ends when it runs out of time or room.
+      // With digTo, dig a way to stand right next to it instead (pathfinder digs; the face it stands at is open)
+      if (err instanceof SkillStop || !digTo || !['Timeout', 'NoPath'].includes(err.name)) throw err;
+      if (eyeDistance(bot, p) > digTo.within) throw err;
+      try {
+        await ctx.goto(new goals.GoalGetToBlock(p.x, p.y, p.z), { timeoutMs: digTo.timeoutMs, thinkMs: digTo.thinkMs, searchRadius: digTo.searchRadius });
+      } catch (err2) {
+        if (gone && !(err2 instanceof SkillStop)) return goneResult();
+        throw err2;
+      }
+    }
+  } finally {
+    bot.removeListener('blockUpdate', onUpdate);
   }
   const b = bot.blockAt(p);
-  if (!b || b.type !== block.type) return fail(`the ${block.name} at ${fmt(p)} is gone`);
+  if (gone || !b || b.type !== block.type) return goneResult();
   if (eyeDistance(bot, p) > REACH + 0.75) return fail(`could not get within reach of ${fmt(p)}`);
   if (bot.tool?.equipForBlock) await ctx.wait(bot.tool.equipForBlock(b, { requireHarvest: true }));
   if (b.harvestTools && !(bot.heldItem && b.canHarvest(bot.heldItem.type))) return fail(`no tool that can harvest ${b.name}`);
   await landed(ctx);
   if (!pickup) {
-    await timed(ctx, 'dig', () => ctx.wait(bot.dig(b)));
+    await timed(ctx, 'dig', () => ctx.wait(bot.dig(b, true)));
     return done(`mined ${b.name} at ${fmt(p)}`);
   }
   const drops = [];
@@ -351,7 +399,7 @@ export async function mineBlock(ctx, block, { walkMs = 0, walk = {}, pickup = tr
   const onDrop = (e) => { if (e?.position && e.position.distanceTo(middle) <= 1.5) drops.push(e); };
   bot.on('itemDrop', onDrop);
   try {
-    await timed(ctx, 'dig', () => ctx.wait(bot.dig(b)));
+    await timed(ctx, 'dig', () => ctx.wait(bot.dig(b, true)));
     await timed(ctx, 'drop', () => ctx.wait(bot.waitForTicks(DROP_TICKS)));
   } finally {
     bot.removeListener('itemDrop', onDrop);
@@ -372,7 +420,7 @@ export async function digAt(ctx, pos) {
     await walkNear(ctx, p);
     if (bot.tool?.equipForBlock) await ctx.wait(bot.tool.equipForBlock(b, {}));
     await landed(ctx);
-    await timed(ctx, 'dig', () => ctx.wait(bot.dig(bot.blockAt(p))));
+    await timed(ctx, 'dig', () => ctx.wait(bot.dig(bot.blockAt(p), true)));
     ctx.check();
     return done(`dug ${b.name} at ${fmt(p)}`);
   } catch (err) {

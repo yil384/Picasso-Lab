@@ -9,12 +9,13 @@ services:
     environment: { DIFFICULTY: easy, DAYLIGHT: locked, SEED: "71811045", MEMORY: 6G }
     volumes: [ "../data:/data", "console:/console" ]
     networks: { mc: { ipv4_address: 10.77.77.10 } }
-  # deploy/.env (made by push.sh, kept on picasso) holds WEB_ADMIN_TOKEN and should hold WEB_TRUSTED_PROXIES: the Caddy
-  # container's address (or its network's range), the only peer whose X-Forwarded-For counts; any other peer that is
-  # not loopback is then refused. Find it with
-  #   docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' <the FRAS caddy container>
-  # (a range such as 172.24.0.0/16 survives Caddy getting a new address on a restart). WEB_MCP_GAMES_PER_ADDRESS (live
-  # MCP games per address; probe T8) may go there too.
+  # deploy/.env (made by push.sh, kept on picasso) holds WEB_ADMIN_TOKEN and should hold WEB_PROXY_SECRET: a secret
+  # (openssl rand -hex 24) that Caddy adds to every request it forwards here (header_up X-Muse-Proxy <secret> in this
+  # site's reverse_proxy block). Only requests carrying it have their X-Forwarded-For believed; any other request that
+  # is not loopback is refused. The peer address cannot do this job: the published port goes through docker-proxy, so
+  # Caddy, other containers and every user on the host all arrive from this network's gateway (10.77.77.1); do not use
+  # WEB_TRUSTED_PROXIES here. Set the secret in .env and in Caddy together (one without the other refuses every
+  # visitor with 403). WEB_MCP_GAMES_PER_ADDRESS (live MCP games per address; probe T8) may go there too.
   agent:
     build: { context: .., dockerfile: deploy/Dockerfile.agent }
     restart: unless-stopped
@@ -23,6 +24,7 @@ services:
     environment:
       MC_HOST: 10.77.77.10
       MC_CONSOLE: /console/console.in
+      MC_WHITELIST: "true"
       WEB_PUBLIC_URL: https://play.picasso-lab.com
       WEB_TRUST_PROXY: "1"
       WEB_MAX_SESSIONS: "8"

@@ -19,8 +19,11 @@ const text = (r) => r.content.map((x) => x.text).join('\n');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const status = (r) => r.structuredContent.steps.map((x) => x.status);
 
-/** A body whose go_to takes x * unit ms and collect n * unit ms; say "fail <text>" fails with that text. */
-function stubBody({ unit = 100 } = {}) {
+/**
+ * A body whose go_to takes x * unit ms and collect n * unit ms; say "fail <text>" fails with that text; its state text
+ * takes stateMs to make (the real one scans the blocks around).
+ */
+function stubBody({ unit = 100, stateMs = 0 } = {}) {
   let busy = false;
   let cur = null;
   const inv = {};
@@ -29,7 +32,10 @@ function stubBody({ unit = 100 } = {}) {
     runs,
     ready: Promise.resolve(),
     get busy() { return busy; },
-    state: () => `inventory: ${Object.entries(inv).map(([k, v]) => `${k} ${v}`).join(', ') || 'empty'}`,
+    state: () => {
+      for (const t = Date.now(); Date.now() - t < stateMs;) { /* a block scan */ }
+      return `inventory: ${Object.entries(inv).map(([k, v]) => `${k} ${v}`).join(', ') || 'empty'}`;
+    },
     snapshot: () => ({ inventory: { ...inv }, nearbyBlocks: [], mobs: [] }),
     inventory: () => ({ ...inv }),
     run(tool, args) {
@@ -222,7 +228,7 @@ test('idempotency: a play_sequence re-sent after a cut stream runs once and the 
   const again = await raw.call('play_sequence', { steps });
   assert.equal(again.structuredContent.code, 'DUPLICATE');
   assert.equal(again.isError, undefined);
-  assert.match(text(again), /^Already received \d+ s ago \(the same call within 60 s\): not run again\. To run it again on purpose, give it a request_id\. Its steps:\n1\. collect/);
+  assert.match(text(again), /^Already received \d+ s ago \(the same call, sent again before its results reached you\): not run again\. To run it again on purpose, give it a request_id\. Its steps:\n1\. collect/);
   assert.deepEqual(again.structuredContent.steps.map((x) => x.status), ['confirmed', 'confirmed', 'confirmed'], 'it waited for the first call\'s steps');
   assert.deepEqual(bodies[0].runs, ['collect {"block":"oak_log","n":2}', 'go_to {"x":1,"y":64,"z":0}', 'say {"text":"once"}'], 'each step ran once');
 
@@ -238,29 +244,138 @@ test('idempotency: a play_sequence re-sent after a cut stream runs once and the 
   assert.equal(bodies[0].runs.length, 6, 'not run again');
   const clash = await other.call('play_sequence', { steps: [say('else')], request_id: 'r-1' });
   assert.equal(clash.isError, true);
-  assert.equal(clash.structuredContent.code, 'DUPLICATE');
+  assert.equal(clash.structuredContent.code, 'BAD_ARGS', 'nothing of it ran: not DUPLICATE, which means "the first call\'s result"');
   assert.match(text(clash), /^request_id "r-1" was already used \d+ s ago for a different call; nothing was run/);
   assert.equal((await other.call('play', { skill: 'say', args: { text: 'once' }, request_id: 'r-2' })).structuredContent.code, null, 'a new request_id runs');
   assert.equal(bodies[0].runs.length, 7);
 });
 
-test('idempotency: the same call counts as a repeat for 60 s after it finished; after a stop it runs again', async (t) => {
+test('idempotency: the same call is a repeat only until its results reached the client; a deliberate repeat runs; after a stop it runs again', async (t) => {
   let clock = Date.now();
-  const { client, bodies } = await serve(t, { now: () => clock });
+  const { url, client, bodies } = await serve(t, { now: () => clock });
   const c = await client();
-  await c.callTool({ name: 'start_game', arguments: START });
+  const started = text(await c.callTool({ name: 'start_game', arguments: START }));
+  const handle = /game: "([A-Za-z0-9_-]{22})"/.exec(started)[1];
   const call = { name: 'play', arguments: { skill: 'collect', args: { block: 'oak_log', n: 1 } } };
   assert.equal((await c.callTool(call)).structuredContent.code, null);
-  clock += 30_000;
+  // the reply reached the client: the same call again is meant, and runs (the same collect after a go_to, a retry)
   const flat = await c.callTool({ name: 'play', arguments: { skill: 'collect', block: 'oak_log', n: 1 } });
-  assert.equal(flat.structuredContent.code, 'DUPLICATE', 'arguments next to skill are the same call');
-  clock += 31_000;
-  assert.equal((await c.callTool(call)).structuredContent.code, null, '61 s after: a new call');
+  assert.equal(flat.structuredContent.code, null, 'arguments next to skill are the same call, run again');
   assert.equal(bodies[0].runs.length, 2);
+  // a failed step tried again runs again, with its own failure
+  const fails = { name: 'play', arguments: { skill: 'say', args: { text: 'fail no zombie within 16 blocks' } } };
+  assert.equal((await c.callTool(fails)).structuredContent.code, 'FAILED');
+  assert.equal((await c.callTool(fails)).structuredContent.code, 'FAILED');
+  assert.equal(bodies[0].runs.length, 4);
+  await c.close();
+
+  // a hand-written client whose connection drops (no cancel notification): the results are not lost
+  const raw = await rawSession(url);
+  await raw.call('start_game', { ...START, game: handle });
+  const cut = (name, args) => {
+    const ctl = new AbortController();
+    setTimeout(() => ctl.abort(), 50);
+    return raw.call(name, args, ctl.signal).then(() => assert.fail('the reply came before the cut'), (e) => assert.match(String(e), /abort/i));
+  };
+  const go = (x, z) => ({ skill: 'go_to', args: { x, y: 64, z } });
+  await cut('play', { skill: 'collect', args: { block: 'oak_log', n: 3 } });
+  await sleep(450);
+  const again = await raw.call('play', { skill: 'collect', args: { block: 'oak_log', n: 3 } });
+  assert.equal(again.structuredContent.code, 'DUPLICATE', 'its reply never arrived: a re-send is a repeat');
+  assert.deepEqual(again.structuredContent.steps.map((x) => x.status), ['confirmed']);
+  assert.equal(bodies[0].runs.length, 5);
+  // that repeat's reply arrived: now the same call runs
+  assert.equal((await raw.call('play', { skill: 'collect', args: { block: 'oak_log', n: 3 } })).structuredContent.code, null);
+  assert.equal(bodies[0].runs.length, 6);
+
+  // the reply of a cut call is never counted as delivered: the next reply reports its step
+  await cut('play', go(3, 1));
+  await sleep(450);
+  const next = await raw.call('get_state', {});
+  assert.deepEqual(next.structuredContent.earlier.map((x) => [x.skill, x.status]), [['go_to', 'confirmed']]);
+  // a step that outlives its reply, then a get_state cut short: the next get_state still reports it
+  const long = await raw.call('play', go(6, 0));
+  assert.deepEqual(long.structuredContent.steps.map((x) => x.status), ['pending']);
+  await cut('get_state', {});
+  const st = await raw.call('get_state', {});
+  assert.deepEqual(st.structuredContent.earlier.map((x) => [x.skill, x.status]), [['go_to', 'confirmed']], 'the go_to result was not lost with the cut reply');
+  assert.match(text(st), /^Finished since your last call:\ngo_to \{"x":6,"y":64,"z":0\}: ok: go_to done/);
+  assert.equal(bodies[0].runs.length, 8);
+
+  // a call whose reply never arrived stays a repeat until 60 s after it ended, then runs
+  await cut('play', go(2, 2));
+  await sleep(250);
+  clock += 61_000;
+  assert.equal((await raw.call('play', go(2, 2))).structuredContent.code, null, '61 s after: a new call');
+  assert.equal(bodies[0].runs.length, 10);
   // a deliberate repeat after stop
+  await cut('play', go(2, 3));
+  await raw.call('stop', {});
+  assert.equal((await raw.call('play', go(2, 3))).structuredContent.code, null);
+  assert.equal(bodies[0].runs.length, 12);
+});
+
+test('typed codes: a call whose steps were cancelled says why; a re-send of a failed call keeps its code; the SDK\'s own input checks answer BAD_ARGS with the state', async (t) => {
+  const { url, client, bodies } = await serve(t, { mcpCallMs: 2_000 });
+  const c = await client();
+  await c.callTool({ name: 'start_game', arguments: START });
+  // a failure in one call cancels the next call's steps before they ran: that reply carries the failure's code
+  const a = c.callTool(seq([goTo(2), say('fail stopped: a zombie hit you (health 12/20, 2 blocks away)')]));
+  await sleep(30);
+  const b = await c.callTool(seq([logs(1)]));
+  assert.deepEqual(b.structuredContent.steps.map((x) => x.status), ['cancelled']);
+  assert.equal(b.structuredContent.code, 'HOSTILE_CONTACT', 'nothing ran, and the code says why');
+  assert.equal((await a).structuredContent.code, 'HOSTILE_CONTACT');
+  // stop: the running step and the queued call both end STOPPED
+  const p1 = c.callTool({ name: 'play', arguments: { skill: 'collect', args: { block: 'oak_log', n: 5 } } });
+  await sleep(30);
+  const p2 = c.callTool({ name: 'play', arguments: { skill: 'collect', args: { block: 'oak_log', n: 2 } } });
+  await sleep(30);
+  assert.equal((await c.callTool({ name: 'stop', arguments: {} })).structuredContent.code, 'STOPPED');
+  const [r1, r2] = await Promise.all([p1, p2]);
+  assert.deepEqual([r1.structuredContent.code, r1.structuredContent.steps[0].status], ['STOPPED', 'cancelled']);
+  assert.deepEqual([r2.structuredContent.code, r2.structuredContent.steps[0].status], ['STOPPED', 'cancelled']);
+  assert.equal(bodies[0].runs.filter((r) => r.startsWith('collect')).length, 1, 'the queued collect never ran');
+
+  // a re-send (same request_id) of a call that failed: the failure's code on top, the repeat marked in duplicate
+  const raw = await rawSession(url);
+  const died = { steps: [say('fail stopped: you died at 1 64 2; your items were dropped there')], request_id: 'd-1' };
+  // (a new connection without a game cannot run it: start one)
+  await raw.call('start_game', START);
+  assert.equal((await raw.call('play_sequence', died)).structuredContent.code, 'DIED');
+  const again = await raw.call('play_sequence', died);
+  assert.equal(again.structuredContent.code, 'DIED');
+  assert.equal(again.structuredContent.duplicate.by, 'request_id');
+  assert.equal(bodies[1].runs.length, 1, 'not run again');
+
+  // calls the SDK's schema check refuses: the same BAD_ARGS reply as any refused call, with the state
+  for (const [args, why] of [
+    [{ steps: [{ skill: 'mine', args: {} }] }, /steps\[0\]\.skill|skill/],
+    [{ steps: Array.from({ length: 33 }, (_, i) => say(`s${i}`)) }, /steps/],
+    [{ steps: [{ skill: 'say', args: [] }] }, /args/],
+    [{ steps: [say('x')], request_id: 'r'.repeat(65) }, /request_id/],
+  ]) {
+    const r = await c.callTool({ name: 'play_sequence', arguments: args });
+    assert.equal(r.isError, true);
+    assert.equal(r.structuredContent?.code, 'BAD_ARGS', text(r));
+    assert.match(text(r), why);
+    assert.match(text(r), /Nothing was run: fix the call and send it again\.\n\nState \(game g[0-9a-f]{6}/);
+    assert.ok(r.structuredContent.state.timeLeftS > 0);
+  }
+  const noSkill = await c.callTool({ name: 'play', arguments: { args: { text: 'x' } } });
+  assert.equal(noSkill.structuredContent?.code, 'BAD_ARGS');
+});
+
+test('replies leave within the call time, the state text included', async (t) => {
+  const { client } = await serve(t, { mcpCallMs: 1_000, body: { stateMs: 40 } });
+  const c = await client();
+  await c.callTool({ name: 'start_game', arguments: START });
+  const t0 = Date.now();
+  const r = await c.callTool({ name: 'play', arguments: { skill: 'go_to', args: { x: 30, y: 64, z: 0 } } });
+  const ms = Date.now() - t0;
+  assert.deepEqual(r.structuredContent.steps.map((x) => x.status), ['pending']);
+  assert.ok(ms < 1_020, `replied after ${ms} ms`);
   await c.callTool({ name: 'stop', arguments: {} });
-  assert.equal((await c.callTool(call)).structuredContent.code, null);
-  assert.equal(bodies[0].runs.length, 3);
 });
 
 test('queue limits, structured replies without a game, get_state {full: true}', async (t) => {
@@ -335,5 +450,23 @@ test('check: refusals before anything runs, crafts added where logs can make the
     await c.close();
     await agent.stop('test over');
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('check: a go_to that leaves the table far behind, with no wood to spare for a new one, passes with a warning', async () => {
+  const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: '', MODEL_API_KEY: '' });
+  const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null });
+  const c = new Client({ name: 'test', version: '1' });
+  await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
+  try {
+    await c.callTool({ name: 'start_game', arguments: START });
+    const far = await c.callTool(seq([logs(3), { skill: 'craft', args: { item: 'wooden_sword', n: 1 } }, { skill: 'go_to', args: { x: 60, y: 64, z: 0 } }, { skill: 'craft', args: { item: 'wooden_axe', n: 1 } }], { dry_run: true }));
+    assert.equal(far.structuredContent.code, null, text(far));
+    assert.equal(far.structuredContent.warnings?.length, 1, text(far));
+    assert.match(far.structuredContent.warnings[0].text, /^step 4 needs a crafting table, but after step 3 \(go_to\) yours is about 60 blocks away/);
+    assert.match(text(far), /^The check warns \(it does not know exactly where you will stand\):\n- step 4 needs a crafting table/m);
+  } finally {
+    await c.close();
+    await agent.stop('test over');
   }
 });

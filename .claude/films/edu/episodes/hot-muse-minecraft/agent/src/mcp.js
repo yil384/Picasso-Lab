@@ -2,11 +2,13 @@
 // of a web page. Built to save the agent's time: every call answers within CALL_MS with the result AND the new state
 // in one reply (no separate state read), and play_sequence runs several skills in one call. The steps of play and
 // play_sequence go into the game's queue (src/mcp-queue.js) and keep running past the reply; a later reply reports
-// them (get_state waits for them), and a result counts as reported only once a reply carrying it was delivered (not
-// cancelled by the client). A call is checked before it is queued (src/plan.js): bad arguments or missing items refuse
-// it whole, and planks, sticks, a table or a furnace it needs are added as crafts. A repeat of a call (same
-// request_id, or the same call within 60 s) returns the first call's steps and runs nothing twice. Replies carry
-// structuredContent too: each step's status and typed code, what changed, and a short state (ROADMAP M2).
+// them (get_state waits for them), and a result counts as reported only once a reply carrying it was delivered: the
+// HTTP response was written out in full (not cut by a dropped connection, a proxy giving up or the client cancelling).
+// A call is checked before it is queued (src/plan.js): bad arguments or missing items refuse it whole (also when the
+// SDK's own input check catches them: BAD_ARGS with the state, like any refusal), and planks, sticks, a table or a
+// furnace it needs are added as crafts. A repeat of a call (same request_id, or the same call while its results have
+// not reached the client, at most 60 s after it ended) returns the first call's steps and runs nothing twice. Replies
+// carry structuredContent too: each step's status and typed code, what changed, and a short state (ROADMAP M2).
 // One MCP session = at most one guest bot, with the same leases and logging as the web page (src/web.js gives the
 // hooks); games are also capped per address, and MCP sessions themselves are capped in number and body size. When
 // every bot is in use, start_game answers with the caller's place in the queue and an estimate.
@@ -17,6 +19,7 @@
 // name and version it reports are logged (mcp_client).
 
 import crypto from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -25,6 +28,8 @@ import { createQueue, isFinal, statusOf, QUEUE_MAX, REPEAT_MS } from './mcp-queu
 import { createPlanner, describeMissing } from './plan.js';
 
 const CALL_MS = 45_000; // every reply within 45 s: MCP clients commonly give up after 60 s (a long skill keeps going)
+/** Of a call's time, what building the reply may take (the state text scans the blocks around: ~850 ms on Paper). */
+const replyBudget = (callMs) => Math.min(2_000, Math.round(callMs / 20));
 const IDLE_MS = 5 * 60_000; // a game nobody has called for 5 minutes (and that runs nothing) is ended, freeing its bot
 const IDLE_SESSION_MS = 10 * 60_000; // an MCP session without a game is dropped after 10 minutes without calls
 const JOIN_WAIT_MS = 30_000;
@@ -106,6 +111,16 @@ export function createMcp(hooks) {
   const SKILLS = skillList();
   const now = hooks.now ?? Date.now; // the web's clock (leases, idle, repeats); call deadlines run on the real one
   const callMs = hooks.callMs ?? CALL_MS;
+  /** How long a call waits for its steps: callMs less the time its reply takes to build, so the reply leaves within callMs. */
+  const waitMs = callMs - replyBudget(callMs);
+  // the HTTP request a tool call came in on ({res, cut}): cut aborts when the connection closed before the reply was
+  // written out (a dropped connection, a proxy that gave up), which the SDK's per-call signal never sees in JSON mode
+  const http = new AsyncLocalStorage();
+  /** The call's abort signal: the client cancelled it, or its HTTP connection is gone. */
+  const signalOf = (extra) => {
+    const list = [extra?.signal, http.getStore()?.cut.signal].filter(Boolean);
+    return list.length > 1 ? AbortSignal.any(list) : list[0];
+  };
   const limits = { sessions: 200, perAddress: 20, ...(hooks.limits ?? {}) };
   const leaseMin = Math.round((hooks.leaseMs ?? 600_000) / 60_000);
   const queues = new WeakMap(); // game (the web's session object) -> its queue; it moves with the game on a resume
@@ -206,19 +221,34 @@ export function createMcp(hooks) {
 
   const describe = (st) => `${st.skill}${Object.keys(st.args ?? {}).length ? ` ${JSON.stringify(st.args)}` : ''}`;
 
+  /** Mark the final steps a reply carries as delivered once its HTTP response was written out in full. */
+  function deliverWhenSent(q, shown, extra) {
+    const call = http.getStore();
+    if (signalOf(extra)?.aborted) return;
+    if (!call?.res) { q.delivered(shown); return; } // not over HTTP (no response to watch)
+    call.res.once('finish', () => { if (!call.cut.signal.aborted && !extra?.signal?.aborted) q.delivered(shown); });
+  }
+
+  /** The code of the first step that failed (cancelled steps aside), or null. */
+  const firstCode = (list) => list.find((st) => st.code && st.status !== 'cancelled')?.code ?? null;
+  /** For cancelled steps: the code a stopped step ended with, else what cancelled it (a failure's code, STOPPED). */
+  const cancelledCode = (list) => {
+    const st = list.find((x) => x.status === 'cancelled');
+    return st ? st.code ?? st.cause ?? 'STOPPED' : null;
+  };
+
   /**
    * The reply to a call (or to get_state / stop): what finished since the last delivered reply, this call's steps,
-   * the state. Marks the final steps it carries as delivered unless the client cancelled the call.
+   * the state. The final steps it carries count as delivered once the reply reached the client (deliverWhenSent).
    */
   function reply(s, extra, { steps = [], numbered = false, lead = '', tail = '', code = null, isError = false, more = {} } = {}) {
     const q = s ? queueOf(s) : null;
     const earlier = q ? q.finished(steps) : [];
     const shown = [...earlier, ...steps.filter(isFinal)];
-    if (q && !extra?.signal?.aborted) q.delivered(shown);
+    if (q) deliverWhenSent(q, shown, extra);
     const changed = {};
     for (const st of shown) for (const [k, v] of Object.entries(st.result?.delta ?? {})) changed[k] = (changed[k] ?? 0) + v;
     for (const k of Object.keys(changed)) if (!changed[k]) delete changed[k];
-    const firstCode = (list) => list.find((st) => st.code && st.status !== 'cancelled')?.code ?? null;
     // steps cancelled before they started are listed once, in the tail ("Not run: ...")
     const lines = steps.filter((st) => st.status !== 'cancelled' || st.result).map((st) => stepLine(st, numbered)).join('\n');
     const main = `${lead.trimEnd()}${lead.trim() && lines ? '\n' : ''}${lines}${tail}`.trim();
@@ -229,7 +259,7 @@ export function createMcp(hooks) {
     ];
     const body = blocks.filter(Boolean).join('\n\n');
     const structured = {
-      code: code ?? firstCode(steps) ?? firstCode(earlier),
+      code: code ?? firstCode(steps) ?? cancelledCode(steps) ?? firstCode(earlier) ?? cancelledCode(earlier),
       game: s?.id ?? null,
       steps: steps.map(report),
       earlier: earlier.map(report),
@@ -261,9 +291,14 @@ export function createMcp(hooks) {
       };
       // what the bot's furnaces are still making counts as carried: a craft that needs it waits for it (src/skills/craft.js)
       const inventory = { ...(safely(() => s.body.inventory?.(), {}) ?? {}) };
-      for (const [k, v] of Object.entries(safely(() => s.body.smelting?.(), {}) ?? {})) inventory[k] = (inventory[k] ?? 0) + v;
+      const smelting = safely(() => s.body.smelting?.(), {}) ?? {};
+      for (const [k, v] of Object.entries(smelting)) inventory[k] = (inventory[k] ?? 0) + v;
+      // where the bot stands: go_to steps are followed, and stations or furnace output they leave far behind are warned about
+      const p = safely(() => bot?.entity?.position, null);
       return planners.get(version).check(steps, {
         inventory,
+        smelting,
+        position: p ? { x: p.x, y: p.y, z: p.z } : null,
         table: near('crafting_table'),
         furnace: near('furnace'),
         before: queueOf(s).open.map((st) => ({ skill: st.skill, args: st.args })),
@@ -279,7 +314,8 @@ export function createMcp(hooks) {
    * until this call's deadline. raw: {steps, request_id?, dry_run?}.
    */
   async function runCall(entry, tool, raw, extra) {
-    const end = Date.now() + callMs;
+    const end = Date.now() + waitMs;
+    const signal = signalOf(extra);
     let s;
     try { s = need(entry); } catch (e) { return refuse(null, extra, 'NOT_STARTED', e.message); }
 
@@ -297,7 +333,7 @@ export function createMcp(hooks) {
     }
 
     if (s.status !== 'ready') {
-      await wait(Promise.resolve(s.ready), end - Date.now(), extra?.signal);
+      await wait(Promise.resolve(s.ready), end - Date.now(), signal);
       if (s.ended || s.status !== 'ready') {
         return refuse(s.ended ? null : s, extra, 'NOT_STARTED', s.ended ? `your game ended: ${s.ended}; call start_game again` : 'the bot is still joining the world: send the call again in a few seconds');
       }
@@ -311,28 +347,35 @@ export function createMcp(hooks) {
     const first = raw.dry_run ? null : q.find(key);
     if (first) {
       if (first.sig !== sig) {
-        return refuse(s, extra, 'DUPLICATE', `request_id "${requestId}" was already used ${Math.round((now() - first.at) / 1000)} s ago for a different call; nothing was run. Use a new request_id for a new call.`);
+        // nothing of this call ran: not DUPLICATE (which says "the first call's result"), a call to fix
+        return refuse(s, extra, 'BAD_ARGS', `request_id "${requestId}" was already used ${Math.round((now() - first.at) / 1000)} s ago for a different call; nothing was run. Use a new request_id for a new call.`);
       }
-      await wait(first.settled, end - Date.now(), extra?.signal);
+      await wait(first.settled, end - Date.now(), signal);
       const ago = Math.round((now() - first.at) / 1000);
       return reply(s, extra, {
         steps: first.steps,
         numbered: tool === 'play_sequence' || first.steps.length > 1,
-        lead: `Already received ${ago} s ago (${requestId ? `same request_id "${requestId}"` : `the same call within ${REPEAT_MS / 1000} s`}): not run again. ${requestId ? 'To run it again, send it with a new request_id.' : 'To run it again on purpose, give it a request_id.'} Its steps:\n`,
+        lead: `Already received ${ago} s ago (${requestId ? `same request_id "${requestId}"` : 'the same call, sent again before its results reached you'}): not run again. ${requestId ? 'To run it again, send it with a new request_id.' : 'To run it again on purpose, give it a request_id.'} Its steps:\n`,
         tail: pendingTail(first.steps),
-        code: 'DUPLICATE',
+        // how the first call went (a failure's code, e.g. HOSTILE_CONTACT or DIED); DUPLICATE when nothing went wrong.
+        // structuredContent.duplicate marks the repeat either way.
+        code: firstCode(first.steps) ?? cancelledCode(first.steps) ?? 'DUPLICATE',
         more: { duplicate: { ageS: ago, by: requestId ? 'request_id' : 'same call' } },
       });
     }
 
     const plan = checkSteps(s, steps);
     const planned = plan?.steps ?? steps.map((st, i) => ({ ...st, step: i + 1 }));
+    // what may still go wrong where the check cannot be sure (a station or furnace output a go_to leaves far behind)
+    const warnings = plan?.warnings ?? [];
+    const warnText = warnings.length ? `The check warns (it does not know exactly where you will stand):\n${warnings.map((w) => `- ${w.text}`).join('\n')}\n` : '';
+    const warnMore = warnings.length ? { warnings } : {};
     if (raw.dry_run) {
       const lines = planned.map((st, i) => `${i + 1}. ${st.skill} ${JSON.stringify(st.args)}${st.added ? ` (added by the check, ${st.added})` : ''}`);
       const verdict = !plan ? 'The check could not run; nothing was checked.'
         : plan.ok ? `The check passed${plan.added ? `, adding ${plan.added} craft${plan.added > 1 ? 's' : ''}` : ''}. Nothing was run (dry_run); send it again without dry_run to run it.`
           : `The check would refuse this: missing ${plan.missing.map((m) => `${describeMissing(m)} (step ${m.step})`).join('; ')}. Nothing was run (dry_run).`;
-      return reply(s, extra, { lead: `${verdict}\nThe steps as they would run:\n${lines.join('\n')}`, code: plan && !plan.ok ? 'NEED_ITEMS' : null, more: { plan: planned, ...(plan && !plan.ok ? { missing: plan.missing } : {}) } });
+      return reply(s, extra, { lead: `${verdict}\n${warnText}The steps as they would run:\n${lines.join('\n')}`, code: plan && !plan.ok ? 'NEED_ITEMS' : null, more: { plan: planned, ...(plan && !plan.ok ? { missing: plan.missing } : {}), ...warnMore } });
     }
     if (plan && !plan.ok) {
       const byStep = new Map();
@@ -345,13 +388,14 @@ export function createMcp(hooks) {
     }
 
     const call = q.submit(key, { sig, requestId, label: `your ${tool}`, planned });
-    await wait(call.settled, end - Date.now(), extra?.signal);
+    await wait(call.settled, end - Date.now(), signal);
     const added = planned.filter((st) => st.added || st.addedItems?.length).length;
     return reply(s, extra, {
       steps: call.steps,
       numbered: tool === 'play_sequence' || call.steps.length > 1,
-      lead: added ? `The check added ${plan.added} craft${plan.added > 1 ? 's' : ''} your steps need (marked below).\n` : '',
+      lead: `${added ? `The check added ${plan.added} craft${plan.added > 1 ? 's' : ''} your steps need (marked below).\n` : ''}${warnText}`,
       tail: pendingTail(call.steps),
+      more: warnMore,
     });
   }
 
@@ -386,6 +430,18 @@ export function createMcp(hooks) {
       instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot.`,
     });
     const sid8 = () => String(entry.transport.sessionId ?? '').slice(0, 8);
+    // a call the SDK's own input check refuses (an unknown skill, too many steps, args that are not an object...) gets
+    // the same reply as any refused call: BAD_ARGS in structuredContent with the state, nothing run
+    const toolError = typeof server.createToolError === 'function' ? server.createToolError.bind(server) : null;
+    if (toolError) {
+      server.createToolError = (message) => {
+        const m = /^(?:MCP error -32602: )?Input validation error: (.*)$/s.exec(String(message));
+        if (!m) return toolError(message);
+        try {
+          return refuse(game(entry), undefined, 'BAD_ARGS', `${clean(m[1], 600)}\nNothing was run: fix the call and send it again.`);
+        } catch { return toolError(message); }
+      };
+    }
     const forget = (why) => {
       if (entry.handle) handles.delete(entry.handle);
       Object.assign(entry, { token: null, handle: null, endedWhy: why });
@@ -438,7 +494,7 @@ export function createMcp(hooks) {
         hooks.log.event('mcp_game', { session: sid8(), game: s.id, client: entry.client ?? null });
       }
       if (!entry.handle) entry.handle = mintHandle(s.token);
-      if (s.status !== 'ready') await wait(Promise.resolve(s.ready), JOIN_WAIT_MS, extra?.signal);
+      if (s.status !== 'ready') await wait(Promise.resolve(s.ready), JOIN_WAIT_MS, signalOf(extra));
       if (s.ended) { forget(null); return fail(`could not start: ${s.ended}; call start_game again in a moment`); }
       return text(`${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\nTo resume this game from a new connection, call start_game with adult: true and game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
     });
@@ -467,15 +523,16 @@ export function createMcp(hooks) {
     }, async ({ full } = {}, extra) => {
       let s;
       try { s = need(entry); } catch (e) { return refuse(null, extra, 'NOT_STARTED', e.message); }
-      const end = Date.now() + callMs;
+      const end = Date.now() + waitMs;
+      const signal = signalOf(extra);
       if (s.status !== 'ready') {
-        await wait(Promise.resolve(s.ready), end - Date.now(), extra?.signal);
+        await wait(Promise.resolve(s.ready), end - Date.now(), signal);
         if (s.ended) { forget(s.ended); return refuse(null, extra, 'NOT_STARTED', `your game ended: ${s.ended}; call start_game again`); }
       }
       const q = queueOf(s);
       let lead = '';
       if (q.busy) {
-        await wait(q.idle(), end - Date.now(), extra?.signal);
+        await wait(q.idle(), end - Date.now(), signal);
         if (q.busy) lead = `${describe(q.running ?? q.waiting[0])} is still running${q.waiting.length ? ` (${q.waiting.length} more queued)` : ''}; call get_state again to keep waiting, or stop.\n`;
       }
       const more = full ? { full: safely(() => s.body.snapshot(), null) } : {};
@@ -492,7 +549,7 @@ export function createMcp(hooks) {
       const q = queueOf(s);
       const { running, cancelled } = q.stop('stop cleared the queue');
       const was = await hooks.stopSession(s, 'stopped through MCP');
-      if (running) await wait(running.done, 3_000, extra?.signal);
+      if (running) await wait(running.done, 3_000, signalOf(extra));
       const what = `${was || running ? 'Stopped.' : 'Nothing was running.'}${cancelled.length ? ` ${cancelled.length} queued step${cancelled.length > 1 ? 's were' : ' was'} cancelled.` : ''}\n`;
       return reply(s, extra, { lead: what, code: was || running || cancelled.length ? 'STOPPED' : null });
     });
@@ -608,7 +665,11 @@ export function createMcp(hooks) {
       const accept = String(req.headers.accept ?? '');
       if (!/application\/json/.test(accept) || !/text\/event-stream/.test(accept)) req.headers.accept = 'application/json, text/event-stream';
     }
-    await entry.transport.handleRequest(req, res);
+    // the tool calls of this request see its response (http store): their results count as delivered only once it is
+    // written out, and a connection that closes first cuts their waits short
+    const cut = new AbortController();
+    res.once('close', () => { if (!res.writableFinished) cut.abort(); });
+    await http.run({ res, cut }, () => entry.transport.handleRequest(req, res));
   }
   /** Live MCP sessions (tests and the operator). */
   handle.count = () => sessions.size;

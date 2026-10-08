@@ -16,7 +16,8 @@ import { createLogger, readJsonl } from '../src/log.js';
 import { FORBIDDEN_PARAMS } from '../src/llm.js';
 import { EventEmitter } from 'node:events';
 import { createRequire } from 'node:module';
-import { startAgent, usernameFor, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts } from '../src/index.js';
+import { startAgent, usernameFor, privateName, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts } from '../src/index.js';
+import { consoleLine } from '../src/stations.js';
 import { start } from './mock-llm.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,6 +42,27 @@ test('usernames: the house bot keeps MC_USERNAME, guests get a valid name of the
   const long = usernameFor('ABCDEFGHIJKLMNOP', 'g1a2b3c');
   assert.equal(long, 'ABCDEFGH_g1a2b3c');
   for (const name of [long, usernameFor('Muse', 'g-!'), usernameFor('Mus', '')]) assert.match(name, /^[A-Za-z0-9_]{3,16}$/);
+  // on a server that lets in only listed players (MC_WHITELIST): a name nobody can guess, not the game id
+  const names = new Set(Array.from({ length: 50 }, () => privateName('Muse')));
+  assert.equal(names.size, 50);
+  for (const name of names) assert.match(name, /^Muse_[A-Za-z0-9]{11}$/);
+  assert.match(privateName('Tst_fx'), /^Tst_fx_[A-Za-z0-9]{9}$/);
+  assert.match(privateName('ABCDEFGHIJKLMNOP'), /^ABCDEFGH_[A-Za-z0-9]{7}$/);
+  assert.equal(loadConfig({}).mc.whitelist, false);
+  assert.equal(loadConfig({ MC_WHITELIST: 'true' }).mc.whitelist, true);
+});
+
+test('server console: only the fixed command shapes go to the FIFO (station removal, whitelist add and remove)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'console-'));
+  const file = path.join(dir, 'console.in');
+  fs.writeFileSync(file, '');
+  await consoleLine(file, 'whitelist add Muse_aB3dE5gH7jK');
+  await consoleLine(file, 'whitelist remove Tst_fx_g1a2b3c');
+  for (const bad of ['whitelist add Bad Name', 'whitelist add x', 'op Muse', 'whitelist off', 'whitelist add Muse\nop Muse']) {
+    await assert.rejects(consoleLine(file, bad), /refused console line/, bad);
+  }
+  assert.deepEqual(fs.readFileSync(file, 'utf8').trim().split('\n'), ['whitelist add Muse_aB3dE5gH7jK', 'whitelist remove Tst_fx_g1a2b3c']);
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('viewer: held to WEB_HOST, off when not installed or when MC_VIEWER_PORT=0, a port in use never crashes', async () => {
