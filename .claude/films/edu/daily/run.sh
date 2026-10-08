@@ -244,10 +244,28 @@ while :; do
   say "producer round ${ROUND}: start ($((SECS / 60)) min until the hard stop${SID:+, resuming $SID})"
   perl -e 'setpgrp(0,0); alarm shift; exec @ARGV' "$SECS" "$AGENT" "${ARGS[@]}" "${FLAGS[@]}" < /dev/null > "$JSONL" 2> "$ERRF" &
   PG=$!; PGIDS+=("$PG")
-  wait "$PG"; RC=$?
+  # Wall-clock watchdog: perl's alarm does not tick while the Mac sleeps (2026-10-08: a run on battery stopped writing
+  # at 02:24 and was still waiting at 10:40), so the deadline and a stall (no new session output for STALL_MIN) are
+  # checked here against the real clock. A stall ends the round; the loop below resumes it if time allows.
+  STALLED=0; HARD=0
+  while kill -0 "$PG" 2>/dev/null; do
+    sleep 30
+    if [ "$(left)" -le 0 ]; then
+      say "wall-clock hard stop"; HARD=1
+      kill -TERM -- "-$PG" 2>/dev/null; sleep 5; kill -KILL -- "-$PG" 2>/dev/null; break
+    fi
+    IDLE=$(( $(date +%s) - $(stat -f %m "$JSONL" 2>/dev/null || date +%s) ))
+    if [ "$IDLE" -gt $(( ${STALL_MIN:-30} * 60 )) ]; then
+      say "stalled: no session output for $((IDLE / 60)) min; stopping round ${ROUND}"; STALLED=1
+      kill -TERM -- "-$PG" 2>/dev/null; sleep 5; kill -KILL -- "-$PG" 2>/dev/null; break
+    fi
+  done
+  wait "$PG" 2>/dev/null; RC=$?
+  [ "$HARD" = 1 ] && RC=142
+  [ "$STALLED" = 1 ] && RC=124
   SUM=$(summary "$JSONL")
   NEWSID=$(printf '%s' "$SUM" | sed -n 's/^session \([^ ]*\).*/\1/p'); [ -n "$NEWSID" ] && SID="$NEWSID"
-  say "producer round ${ROUND}: exit ${RC} (0 ok, 1 error or turn limit, 142 hard stop): ${SUM}"
+  say "producer round ${ROUND}: exit ${RC} (0 ok, 1 error or turn limit, 142 hard stop, 124 stalled): ${SUM}"
   [ -n "${SID}" ] && say "resume it with: cd ${REPO} && ${AGENT} --resume ${SID}"
   if MP4=$(checked_mp4); then break; fi
   WHY="exit $RC; $(printf '%s' "$SUM" | cut -c1-160)"
