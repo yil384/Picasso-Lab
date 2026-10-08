@@ -17,7 +17,7 @@ test.after(async () => { await svc.stop(); });
 
 const idToken = (email, over = {}) => signer.sign(idClaims(email, over, now()));
 
-async function saveFlow(guest, email, tokenEmail = email, { withCode = false } = {}) {
+async function saveFlow(guest, email, tokenEmail = email, { withCode = true } = {}) {
   const start = await api(svc, 'POST', '/v1/email/start', { token: guest.token, body: { email }, headers: { 'x-forwarded-for': randomIp() } });
   assert.equal(start.status, 200, JSON.stringify(start.data));
   const { lid, poll, code } = start.data;
@@ -180,9 +180,10 @@ test('a link someone else started for my saved email: no merge and no token with
   assert.equal(s1.complete.status, 200);
   const attacker = await newGuest(svc, 'Mallory');
   // the victim opens the mail and confirms the address, but does not have the code
-  const s2 = await saveFlow(attacker, 'victim@ucsd.edu');
+  const s2 = await saveFlow(attacker, 'victim@ucsd.edu', 'victim@ucsd.edu', { withCode: false });
   assert.equal(s2.complete.status, 409);
   assert.equal(s2.complete.data.error, 'need_code');
+  assert.equal(s2.complete.data.merge, true);
   assert.deepEqual((await api(svc, 'POST', '/v1/email/poll', { body: { lid: s2.lid, poll: s2.poll } })).data, { status: 'pending' });
   const wrong = String((Number(s2.code) + 1) % 10_000).padStart(4, '0');
   const tryCode = (code) => api(svc, 'POST', '/v1/email/complete', { body: { lid: s2.lid, idToken: idToken('victim@ucsd.edu'), code } });
@@ -191,4 +192,21 @@ test('a link someone else started for my saved email: no merge and no token with
   assert.equal((await tryCode(s2.code)).data.error, 'expired');
   assert.equal((await api(svc, 'POST', '/v1/email/poll', { body: { lid: s2.lid, poll: s2.poll } })).status, 404);
   assert.ok(svc.accounts.get(attacker.id), 'the attacker\'s guest was not merged');
+});
+
+test('a link someone else started for an address with no saved account: the address is not bound without the code', async () => {
+  const attacker = await newGuest(svc, 'Mallet');
+  // the victim opens the unexpected mail and confirms the address, but has no code: nothing is bound
+  const s1 = await saveFlow(attacker, 'fresh.victim@ucsd.edu', 'fresh.victim@ucsd.edu', { withCode: false });
+  assert.equal(s1.complete.status, 409);
+  assert.equal(s1.complete.data.error, 'need_code');
+  assert.equal(s1.complete.data.merge, false, 'the page says the address is about to be saved, not merged');
+  assert.deepEqual((await api(svc, 'POST', '/v1/email/poll', { body: { lid: s1.lid, poll: s1.poll } })).data, { status: 'pending' });
+  assert.equal(svc.accounts.get(attacker.id).email, null, 'the attacker\'s account holds no address');
+  // the victim later saves their own guest with it: a first save (their name, their bankroll), not a merge
+  const victim = await newGuest(svc, 'Rightful');
+  const s2 = await saveFlow(victim, 'fresh.victim@ucsd.edu');
+  assert.equal(s2.complete.status, 200);
+  assert.equal(s2.complete.data.name, 'Rightful');
+  assert.equal(svc.accounts.get(victim.id).email.masked, 'f***@ucsd.edu');
 });

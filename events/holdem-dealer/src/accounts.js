@@ -460,8 +460,9 @@ export class Accounts {
     while (mine.length >= LINKS_PER_ACCOUNT) this.links.delete(mine.shift().lid);
     const lid = secretId(16);
     const poll = secretId(24);
-    // shown on the device that asked; the link page needs it before that device is signed in to an existing saved
-    // account (otherwise anyone could send a link to someone else's address and get their account when they open it)
+    // shown on the device that asked; the link page needs it before the address is bound to this account or this
+    // device is signed in to an existing saved one (otherwise anyone could send a link to someone else's address and
+    // claim the address, or get their account, when they open it)
     const code = String(crypto.randomInt(0, 10_000)).padStart(4, '0');
     this.links.set(lid, {
       lid, accountId: a.id, emailHash: this.emailHash(email), masked: maskEmail(email.trim().toLowerCase()),
@@ -513,9 +514,10 @@ export class Accounts {
     const ownerId = this.byEmail.get(hash);
     if (b.email && b.email.hash !== hash) throw new ApiError(409, 'already_linked', 'This account is already saved with another email');
     let target;
-    if (ownerId && ownerId !== b.id) {
-      // second device (or a guest who already saved): merge B into A, A keeps its name, B's bankroll is dropped.
-      // B's device will be signed in to A, so the person opening the link must type the code shown on B
+    // Every completion that changes an account needs the code shown on the device that asked (B): a first save
+    // binds the address to B (else anyone could claim someone else's address by sending them a link), a merge
+    // signs B's device in to the address's account. The link page fills it in itself when opened on that device.
+    if (ownerId !== b.id) {
       if (typeof code !== 'string' || !/^\d{4}$/.test(code) || !l.codeHash || sha256(`${lid}:${code}`) !== l.codeHash) {
         if (code !== null && code !== undefined && code !== '') {
           l.codeTries = (l.codeTries || 0) + 1;
@@ -524,10 +526,13 @@ export class Accounts {
             this.links.delete(lid);
             throw new ApiError(404, 'expired', 'This link has expired');
           }
-          throw new ApiError(409, 'bad_code', 'The code does not match');
+          throw Object.assign(new ApiError(409, 'bad_code', 'The code does not match'), { detail: { merge: !!ownerId } });
         }
-        throw new ApiError(409, 'need_code', 'Enter the code shown on the device that asked');
+        throw Object.assign(new ApiError(409, 'need_code', 'Enter the code shown on the device that asked'), { detail: { merge: !!ownerId } });
       }
+    }
+    if (ownerId && ownerId !== b.id) {
+      // second device (or a guest who already saved): merge B into A, A keeps its name, B's bankroll is dropped
       const a = this.accounts.get(ownerId);
       if (this.tableInfo(b.id).seated) throw new ApiError(409, 'at_table', 'Leave the Hold\'em table first, then open the link again');
       this._merge(b, a);

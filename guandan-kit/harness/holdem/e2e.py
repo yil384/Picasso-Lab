@@ -568,7 +568,7 @@ async def accounts(br):
             sc.check('the link is sent through Firebase Auth to account-link.html', url.startswith(LINK + '?lid='), url)
             lid = url.split('lid=')[1].split('&')[0] if url else ''
 
-            async def landing(token, expect):
+            async def landing(token, expect, other_device=False):
                 pg = await e.ctx.new_page()
                 pg.on('console', lambda m: e.console.append((time.time(), m.text)) if m.type == 'error' else None)
                 pg.on('pageerror', lambda x: e.console.append((time.time(), f'LINK PAGEERROR: {x}')))
@@ -576,8 +576,19 @@ async def accounts(br):
                 await pg.wait_for_selector('#al-go', timeout=5000)
                 await pg.evaluate('t => { window.__authIdToken = t; }', token)
                 pre = await pg.evaluate("document.getElementById('al-email').value")
+                # another device: it has no code of its own (the device that asked keeps it in picasso.games.linkCode)
+                kept = await pg.evaluate("localStorage.getItem('picasso.games.linkCode')") if other_device else None
+                if other_device:
+                    await pg.evaluate("localStorage.removeItem('picasso.games.linkCode')")
                 await pg.click('#al-go')
                 await pg.wait_for_function("!document.querySelector('.al-ring')", timeout=8000)
+                if other_device:
+                    asked = await pg.evaluate("!!document.getElementById('al-code')")
+                    await pg.fill('#al-code', '0000' if kept and '"0000"' not in kept else '9999')
+                    await pg.click('#al-go')
+                    await pg.wait_for_function("!document.querySelector('.al-ring')", timeout=8000)
+                    await pg.evaluate('v => localStorage.setItem("picasso.games.linkCode", v)', kept)
+                    pre = asked
                 text = await pg.evaluate("document.getElementById('al-body').textContent.replace(/\\s+/g, ' ').trim()")
                 await pg.screenshot(path=f'/tmp/holdem-shots/accounts-link-{expect[:2]}.jpg', type='jpeg', quality=80)
                 await pg.close()
@@ -587,8 +598,11 @@ async def accounts(br):
             sc.check('the landing page prefills the email', pre == 'yufei@ucsd.edu', pre)
             _, text = await landing(keys.sign('other@ucsd.edu'), 'mismatch')
             sc.check('a token for another email is refused', '不一致' in text, text[:60])
+            asked, text = await landing(keys.sign('yufei@ucsd.edu'), 'other', other_device=True)
+            sc.check('opened on another device the link asks for the code and binds nothing without it',
+                     asked and '验证码不对' in text and svc.me(await e.token())['guest'], text[:60])
             _, text = await landing(keys.sign('yufei@ucsd.edu'), 'done')
-            sc.check('a good token completes the link', '已完成' in text, text[:60])
+            sc.check('a good token completes the link (the asking device fills its code in)', '已完成' in text, text[:60])
             sc.check('the dealer fetched the keys from the local JWK set', keys.fetches >= 1, keys.fetches)
             done = await until(lambda: e.pg.evaluate("!!document.querySelector('.ga-email.is-done')"), 10)
             sc.check('the game page picks the saved account up by polling', bool(done))

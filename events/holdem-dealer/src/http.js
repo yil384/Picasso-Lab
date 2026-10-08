@@ -183,7 +183,7 @@ export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, s
         const extra = { ...cors };
         if (e.retryAfter) extra['retry-after'] = String(e.retryAfter);
         if (e.status === 413) extra.connection = 'close';
-        send(res, e.status, { error: e.code, message: e.message }, extra);
+        send(res, e.status, { error: e.code, message: e.message, ...(e.detail || {}) }, extra);
         if (e.status === 413) req.resume();
       } else {
         log('http handler error', { path: url.pathname, error: e.message, ms: Date.now() - started });

@@ -112,6 +112,7 @@ const firebaseConfig = {
 const GAMES_ORIGIN = window.__PICASSO_GAMES_ORIGIN || "https://poker.picasso-lab.com";
 const GAME_URL = "https://yil384.github.io/Picasso-Lab/events/guandan.html";
 const LINK_EMAIL_KEY = "picasso.games.linkEmail";
+const LINK_CODE_KEY = "picasso.games.linkCode";
 const query = new URLSearchParams(location.search);
 const lid = query.get("lid") || "";
 const en = query.get("lang") === "en";
@@ -128,6 +129,14 @@ document.getElementById("al-title").textContent = L("Save with email", "用邮�
 document.getElementById("al-note").textContent = L("All chips are play money: they cannot be bought, sold or transferred.", "所有筹码都是虚拟的，不能购买、出售或转让。");
 
 const auth = getAuth(initializeApp(firebaseConfig, "account-link"));
+
+// the device that asked keeps its code here: opened on that device, the page sends it without asking
+function readCode() {
+    try {
+        const v = JSON.parse(localStorage.getItem(LINK_CODE_KEY) || "null");
+        return v && v.lid === lid && /^\d{4}$/.test(v.code) ? v.code : null;
+    } catch (_) { return null; }
+}
 
 function readEmail() {
     try { return localStorage.getItem(LINK_EMAIL_KEY) || ""; } catch (_) { return ""; }
@@ -167,10 +176,13 @@ function showFailed(text) {
         <p class="al-sub">${L("Open the account popup in the game to send a new link.", "可以在游戏的账号页重新发送登录链接。")}</p>${back}`;
 }
 
-// The email already has a saved account and another device asked: that device will be signed in to it, so the
-// person here types the code that device shows (a link sent by someone else to this address stops here).
-function showCode(idToken, error = "") {
-    body.innerHTML = `<p class="al-text">${L("This email already has a saved account. Opening this link signs another device in to it.", "这个邮箱已经保存过账号，确认后会让另一台设备登录这个账号。")}</p>
+// Opened away from the device that asked: the person here types the code that device shows (a link sent by someone
+// else to this address stops here). merge: the email already has a saved account and that device will be signed in
+// to it; otherwise the email is about to be bound to the account on that device.
+function showCode(idToken, error = "", merge = false) {
+    body.innerHTML = `<p class="al-text">${merge
+        ? L("This email already has a saved account. Opening this link signs another device in to it.", "这个邮箱已经保存过账号，确认后会让另一台设备登录这个账号。")
+        : L("Confirming saves the game account on the device that sent the link with this email.", "确认后，这个邮箱会绑定到发送链接的那台设备上的游戏账号。")}</p>
         <p class="al-sub">${L("Enter the 4-digit code shown in the game on the device that sent the link. If you did not ask for this, close this page.", "请输入发送链接的那台设备在游戏里显示的 4 位验证码。如果不是你本人操作，请直接关闭这个页面。")}</p>
         <input class="al-input al-code" id="al-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="4" spellcheck="false" placeholder="0000" aria-label="${L("Code", "验证码")}">
         <p class="al-err" role="alert">${esc(error)}</p>
@@ -178,7 +190,7 @@ function showCode(idToken, error = "") {
     const input = document.getElementById("al-code");
     const go = () => {
         const code = input.value.trim();
-        if (!/^\d{4}$/.test(code)) return showCode(idToken, L("Enter the 4 digits", "请输入 4 位数字"));
+        if (!/^\d{4}$/.test(code)) return showCode(idToken, L("Enter the 4 digits", "请输入 4 位数字"), merge);
         finish(idToken, code);
     };
     document.getElementById("al-go").addEventListener("click", go);
@@ -200,7 +212,7 @@ async function complete(email) {
             : L("Sign-in failed. Please try again.", "登录失败，请稍后再试。"));
     }
     await signOut(auth).catch(() => {});
-    return finish(idToken, null);
+    return finish(idToken, readCode());
 }
 
 async function finish(idToken, code) {
@@ -218,10 +230,10 @@ async function finish(idToken, code) {
     } catch (_) {
         res = null;
     }
-    if (res && data.error === "need_code") return showCode(idToken);
-    if (res && data.error === "bad_code") return showCode(idToken, L("The code does not match", "验证码不对"));
+    if (res && data.error === "need_code") return showCode(idToken, "", data.merge === true);
+    if (res && data.error === "bad_code") return showCode(idToken, L("The code does not match", "验证码不对"), data.merge === true);
     if (res?.ok) {
-        try { localStorage.removeItem(LINK_EMAIL_KEY); } catch (_) {}
+        try { localStorage.removeItem(LINK_EMAIL_KEY); localStorage.removeItem(LINK_CODE_KEY); } catch (_) {}
         return showDone(data.name || "", data.nameReserved !== false);
     }
     showFailed(!res ? L("The game service is unavailable. Please try again later.", "游戏服务暂不可用，请稍后再试。")

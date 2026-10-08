@@ -8,6 +8,7 @@ const TOKEN_KEY = "picasso.games.token";
 const CACHE_KEY = "picasso.games.account";
 const SEEN_KEY = "picasso.games.gdRounds";
 const LINK_EMAIL_KEY = "picasso.games.linkEmail";
+const LINK_CODE_KEY = "picasso.games.linkCode"; // { lid, code }: the link page on this device fills the code in itself
 const LINK_URL = "https://yil384.github.io/Picasso-Lab/events/account-link.html";
 const FIREBASE_AUTH = "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 const SESSION_TIMEOUT_MS = 4000;
@@ -311,6 +312,7 @@ export function createAccount(ctx) {
                 const url = `${LINK_URL}?lid=${encodeURIComponent(lid)}&lang=${ctx.lang() === "en" ? "en" : "zh"}`;
                 await sendSignInLinkToEmail(getAuth(ctx.firebaseApp), email, { url, handleCodeInApp: true });
                 storageSet(LINK_EMAIL_KEY, email);
+                if (code) storageSet(LINK_CODE_KEY, JSON.stringify({ lid, code }));
                 pendingLink = { lid, poll, code: code || "", email, until: Date.now() + POLL_FOR_MS };
                 show("sent");
                 startPolling(() => show("done"));

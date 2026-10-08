@@ -132,13 +132,16 @@ only when the flag is on. Flow (the game runs inside an iframe, so the link comp
 4. The service verifies the ID token itself (RS256 against Google's `securetoken@system.gserviceaccount.com` JWKs,
    cached per `Cache-Control`; `aud` = project id `yichen-5e23e`, `iss` = `https://securetoken.google.com/yichen-5e23e`,
    `exp`/`iat`/`auth_time` sane, `email_verified` true, `email` hash equals the pending link's `emailHash`).
+   - Every completion that changes an account must carry the `code` shown on the requesting device (else
+     `need_code`; a wrong one `bad_code`; 5 wrong ones drop the link; both errors carry `merge: true|false`).
+     `account-link.html` sends it by itself when opened in the browser that asked (`picasso.games.linkCode` in
+     localStorage, `{ lid, code }`); anywhere else it asks for it, says what confirming does, and "if you did not ask
+     for this, close this page". So a link someone else started for your address can neither bind the address to
+     their account nor hand them a token for yours.
    - Email not yet linked anywhere → link it to the pending link's account (guest becomes protected; its name is now
      reserved unless another email account already holds it — then the user is asked to pick another name).
    - Email already linked to account A (this is a second device, or a guest who already saved) → the requesting
-     device will be signed in to A, so `complete` must carry the device's `code` (else `need_code`; a wrong one
-     `bad_code`; 5 wrong ones drop the link). `account-link.html` asks for it and says another device is being signed
-     in ("if you did not ask for this, close this page"): a link someone else started for the owner's address can
-     never hand that person a token for A. Then the requesting device's guest account B is merged into A: B's Hold'em/Guandan counters are added to A (biggestPot = max), B's
+     device will be signed in to A (the page says another device is being signed in). Then the requesting device's guest account B is merged into A: B's Hold'em/Guandan counters are added to A (biggestPot = max), B's
      clientIds join A, B's bankroll is dropped (prevents farming starting chips), B is deleted; A keeps its name.
 5. The next poll returns `{ status: "done", token, account }`: a new device token for the linked account. The page
    stores it, keeps `picasso.guandan.client` as is (Guandan), and sets `picasso.guandan.name` to the account name.
