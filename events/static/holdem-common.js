@@ -73,32 +73,15 @@ export function handLabel(hand, L) {
     return detail ? `${name} · ${detail}` : name;
 }
 
-// The service names its bots by personality, three names each (a table never repeats one); every name has its own
-// first letter / character, which the robot face shows. Older tables may still carry Sage or a numbered name.
-const BOT_NAMES = {
-    steady: [["Stone", "石头"], ["Oak", "橡树"], ["Rock", "磐石"]],
-    fierce: [["Blaze", "烈火"], ["Tiger", "猛虎"], ["Hawk", "雄鹰"]],
-    sly: [["Fox", "狐狸"], ["Lynx", "山猫"], ["Viper", "蝮蛇"]],
-    veteran: [["Ace", "老将"], ["Duke", "公爵"], ["Grey", "灰狼"], ["Sage", "智者"]]
-};
-function botName(seat) {
-    const pool = BOT_NAMES[seat?.bot];
-    if (!pool) return null;
-    const base = String(seat.name || "").replace(/\s+\d+$/, "");
-    return pool.find(n => n[0] === base) || pool[0];
-}
-export function seatName(seat, L) {
+// Bots are seat AIs, like Guandan's (南家 AI): a bot is "AI 3" after its seat (1-based, as on 坐 3 号位) in both
+// languages, and its robot face shows that number. The service's own bot names are never shown.
+export function seatName(seat, i) {
     if (!seat) return "";
-    if (!seat.bot) return seat.name || "";
-    const n = botName(seat);
-    if (!n) return seat.name;
-    const num = /\s(\d+)$/.exec(seat.name || "")?.[1];
-    return `${L(n[0], n[1])}${num ? ` ${num}` : ""}`;
+    return seat.bot ? `AI ${i + 1}` : seat.name || "";
 }
-// the mark on a bot's robot face: its name's first letter (character)
-export function botMark(seat, L) {
-    const n = botName(seat);
-    return n ? L(n[0][0], n[1][0]) : "AI";
+// the mark on a bot's robot face: its seat number
+export function botMark(i) {
+    return String(i + 1);
 }
 
 export const ACTIONS = {

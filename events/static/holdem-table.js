@@ -349,8 +349,8 @@ export function createTable({ ui, S, send, popups }) {
     }
 
     // ---------- pieces ----------
-    function faceHTML(seat) {
-        if (seat.bot) return ui.defaultFaceHTML(botMark(seat, L));
+    function faceHTML(seat, i) {
+        if (seat.bot) return ui.defaultFaceHTML(botMark(i));
         const photo = ui.seatMemberPhoto(seat.name);
         return photo ? `<img src="${esc(photo)}" alt="" draggable="false">` : ui.defaultFaceHTML();
     }
@@ -546,10 +546,10 @@ export function createTable({ ui, S, send, popups }) {
             put(v.clock, "");
             return;
         }
-        const name = seatName(seat, L);
+        const name = seatName(seat, i);
         const tag = seat.bot ? `<span class="gd-avatar-tag">AI</span>` : me && k ? `<span class="gd-avatar-tag">${L("Me", "我")}</span>` : "";
         // my state tag rides in my plate (my cards sit over my avatar); others' hang under theirs
-        put(v.body, `<div class="hd-av${me ? "" : " is-opp"}"><span class="hd-face">${faceHTML(seat)}</span>${tag}</div>
+        put(v.body, `<div class="hd-av${me ? "" : " is-opp"}"><span class="hd-face">${faceHTML(seat, i)}</span>${tag}</div>
             <div class="hd-plate"><b class="hd-name">${esc(name)}</b><span class="hd-stack">${fmt(seat.stack)}</span>${k === 0 ? stateTag(seat, h) : ""}</div>
             ${k === 0 ? "" : stateTag(seat, h)}`);
         // cards: mine are the hero's big cards; others show backs while holding, faces when shown

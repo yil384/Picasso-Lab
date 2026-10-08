@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>掼蛋 · Picasso Lab</title>
+<title>Guandan · Picasso Lab</title>
 <meta name="theme-color" content="#1b2750">
 <!-- Critical first paint: navy for the lobby, the table teal when a ?room= link opens a game (a Hold'em link waits on navy). -->
 <script>document.documentElement.dataset.gdBoot = /[?&]room=/.test(location.search) && !/[?&]game=holdem/.test(location.search) ? "room" : "lobby";</script>
@@ -63,7 +63,7 @@
 
     <audio id="guandan-bgm" src="https://yil384.github.io/Picasso-Lab/events/static/guandan_music.mp3" loop preload="auto" style="display:none"></audio>
 
-    <div class="gdr-cardmodal gdr-scope" id="gdr-cardmodal" role="dialog" aria-modal="true" aria-label="巅峰对决" hidden>
+    <div class="gdr-cardmodal gdr-scope" id="gdr-cardmodal" role="dialog" aria-modal="true" aria-label="Peak Showdown" hidden>
         <div class="gdr-cardmodal-card">
             <div class="gdr-cardmodal-body" id="gdr-cardmodal-body"></div>
         </div>
@@ -72,7 +72,7 @@
     <main id="root"></main>
 </div>
 
-<div id="return-type-hint">试试输入 <b>picasso</b></div>
+<div id="return-type-hint">try typing <b>picasso</b></div>
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -182,7 +182,8 @@ function prefersReducedMotion() {
     return !!reducedMotionQuery?.matches;
 }
 
-let uiLang = storageGet("picasso.guandan.lang") === "en" ? "en" : "zh";
+// English unless the player chose 中文 (the EN / 中文 toggle and the settings row store their choice)
+let uiLang = storageGet("picasso.guandan.lang") === "zh" ? "zh" : "en";
 let returnBuffer = "";
 let returnHintTimer = null;
 let returnNavigationStarted = false;
@@ -279,6 +280,7 @@ function setStaticLabels() {
     if (staticLabelsLang === uiLang) return;
     staticLabelsLang = uiLang;
     document.documentElement.lang = isZH() ? "zh-CN" : "en";
+    document.title = L("Guandan · Picasso Lab", "掼蛋 · Picasso Lab");
     setHudButton(newRoomBtn, L("Lobby", "大厅"), L("Back to the lobby", "返回大厅"));
     setHudButton(copyLinkBtn, L("Invite", "邀请"), L("Copy room link", "复制房间链接"));
     setHudButton(hudRulesBtn, L("Rules", "规则"), L("Game rules", "玩法规则"));
@@ -2214,7 +2216,8 @@ function holdemTilesHTML() {
     const card = (c, i) => cardHTML(signatureCard(c, `hv${i}`));
     const royal = ["10♠", "J♠", "Q♠", "K♠", "A♠"].map((c, i) => cardHTML(signatureCard(c, `hr${i}`), true)).join("");
     refreshHoldemBoard();
-    const robots = [["S", "石"], ["F", "狐"], ["B", "烈"]].map(([en, zh], i) => `<span class="gd-avatar is-plain hd-bot-av b${i}">${defaultFaceHTML(L(en, zh))}</span>`).join("");
+    // three seat AIs, numbered like the table's (AI 1, AI 2, AI 3)
+    const robots = ["1", "2", "3"].map((n, i) => `<span class="gd-avatar is-plain hd-bot-av b${i}">${defaultFaceHTML(n)}</span>`).join("");
     return `
         <button class="lobby-tile is-classic is-holdem" type="button" data-lobby="h-create" aria-label="${L("Hold'em: open a friends table", "德州扑克：开一张好友桌")}">
             <span class="tile-art hd-hero-art">${card("A♠", 0)}${card("K♥", 1)}${chipStackHTML(4)}</span>
@@ -3693,7 +3696,8 @@ function seatMemberStat(name) {
 }
 
 // The face of a seat without a lab photo, drawn inside the avatar circle: a flat robot whose
-// screen shows `mark` (an AI seat's 南/西/北/东), or with no mark a guest's head-and-shoulders.
+// screen shows `mark` (a Guandan AI seat's 南/西/北/东, a Hold'em AI's seat number), or with no mark a guest's
+// head-and-shoulders.
 function defaultFaceHTML(mark = "") {
     return mark
         ? `<svg class="gd-face is-bot" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="14" r="5"/><path d="M48.5 16h3v10h-3z"/><rect x="15.5" y="38" width="9" height="17" rx="3.5"/><rect x="75.5" y="38" width="9" height="17" rx="3.5"/><rect x="21" y="24" width="58" height="48" rx="15"/><rect class="gd-face-screen" x="28.5" y="31.5" width="43" height="33" rx="9.5"/><text x="50" y="48.5" text-anchor="middle" dominant-baseline="central">${encodeHTML(mark)}</text><path d="M25 100c0-14 11-22 25-22s25 8 25 22Z" opacity=".9"/></svg>`
@@ -4475,7 +4479,7 @@ if (roomCode) {
         [document.getElementById("root"), document.querySelector(".topbar")].forEach(function (el) { if (el) el.inert = on; });
     }
     function uiLang() {
-        try { return localStorage.getItem("picasso.guandan.lang") === "en" ? "en" : "zh"; } catch (_) { return "zh"; }
+        try { return localStorage.getItem("picasso.guandan.lang") === "zh" ? "zh" : "en"; } catch (_) { return "en"; }
     }
     function isOpen() { return !modal.hidden && modal.classList.contains("is-open"); }
     function open(page) {
