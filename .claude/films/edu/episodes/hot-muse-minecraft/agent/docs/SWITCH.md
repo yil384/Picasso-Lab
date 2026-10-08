@@ -3,7 +3,9 @@
 
 The go/no-go report (`../../../../research/muse-reuse-validation.md`) asks for three gates before production plays
 with `BODY=mineai`. Gate 1 (the production config) and gate 3 (the two runtime patches, 0007 and 0008) are in this
-commit; gate 2 (the soak on staging and one Muse run) is the operator's, and the switch waits for it.
+commit; gate 2 is the soak on staging and one Muse run: the scripted soak passed on 2026-10-08 (the agent's README,
+"Gates before the switch": 10 of 10 one at a time, 6 of 8 at once, a whole 30-minute lease, 0 restarts), and the Muse
+run is the operator's; the switch waits for it.
 
 Production is `play.picasso-lab.com` on picasso: compose project `muse-minecraft`, code in
 `~/workspace/muse-minecraft/app`, its world in `app/data`, logs in `app/logs`, the agent on `172.24.0.1:7850` behind
@@ -29,19 +31,21 @@ earlier fixes too; staging has run them since 2026-10-07.
 
 | Check | Command | Expected |
 | --- | --- | --- |
-| gate 2 passed | the soak's numbers (report, section 1) | strict iron route at least 7 of 10 one at a time and 6 of 8 at once with today's build; 0 heartbeat restarts and 0 watchdog stops; a whole 30-minute lease; one Muse run through the gateway that finishes the iron route |
+| gate 2 passed | the soak's numbers (report, section 1; README, "Gates before the switch") | strict iron route at least 7 of 10 one at a time and 6 of 8 at once with today's build; 0 heartbeat restarts and 0 watchdog stops; a whole 30-minute lease; one Muse run through the gateway that finishes the iron route (2026-10-08: all but the Muse run; 10 of 10, 6 of 8, 0 in 23 games, the lease ended at 30.0 min) |
 | the commit's tests (Mac) | `npm test` | `ℹ pass 250`, `ℹ fail 0` (252 tests, 2 skipped) |
 | staging runs this commit (Mac) | `deploy/push.sh` | ends with `push: staging runs this code and passed its checks; deploy/push.sh --prod also puts it in production` |
 | staging's runtime is the pin plus eight patches | `docker exec muse-staging-agent-1 node scripts/mineai-fetch.mjs /opt/mine-ai-mcp --check` | `/opt/mine-ai-mcp: 2fe1306 with 8 patches, dependencies installed` |
 | production is idle (Mac) | `curl -s https://play.picasso-lab.com/ \| grep -o 'Bots in use: [0-9]* of [0-9]*'` | `Bots in use: 0 of 8` |
 | disk | `df -h /ssd2` | at least 5 GB available (96% used, 162 GB free on 2026-10-08) |
 
-Backups, once, before step 2 (picasso):
+Backups, once, before step 2 (picasso). The `.env` copies go to a folder of their own, never into `app/deploy`:
+`push.sh` copies `deploy/` with `rsync --delete`, which keeps only `.env`, `stream.env` and `camera.env` there, so a
+backup next to them is gone after the next deploy (on staging one was, 2026-10-08).
 
 ```sh
 cd ~/workspace/muse-minecraft/app
-T=$(date +%Y%m%d-%H%M%S)
-cp -p deploy/.env deploy/.env.bak-$T                      # mode 600 stays
+T=$(date +%Y%m%d-%H%M%S); B=~/workspace/muse-minecraft/backups; mkdir -p $B && chmod 700 $B
+cp -p deploy/.env $B/env.bak-$T                           # mode 600 stays
 cp -p data/server.properties data/server.properties.bak-$T
 docker tag muse-minecraft-agent:latest muse-minecraft-agent:pre-switch   # the images production runs now
 docker tag muse-minecraft-paper:latest muse-minecraft-paper:pre-switch
@@ -155,7 +159,7 @@ Then the agent:
 
 ```sh
 cd ~/workspace/muse-staging/app/deploy
-cp -p .env .env.bak-$(date +%Y%m%d-%H%M%S)
+B=~/workspace/muse-staging/backups; mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S)
 printf 'WEB_PROXY_SECRET=%s\n' "$(cat ~/workspace/FRAS/caddy-config/priv/muse-staging-proxy-secret)" >> .env
 docker compose -p muse-staging -f staging.compose.yaml up -d --no-deps --force-recreate agent
 ```
@@ -180,7 +184,7 @@ The same, with production's names: secret file `priv/muse-play-proxy-secret`; in
 
 ```sh
 cd ~/workspace/muse-minecraft/app/deploy
-cp -p .env .env.bak-$(date +%Y%m%d-%H%M%S)
+B=~/workspace/muse-minecraft/backups; mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S)
 printf 'WEB_PROXY_SECRET=%s\n' "$(cat ~/workspace/FRAS/caddy-config/priv/muse-play-proxy-secret)" >> .env
 docker compose up -d --no-deps --force-recreate agent
 ```
@@ -204,7 +208,7 @@ Idle check first (section 1). Then on picasso:
 
 ```sh
 cd ~/workspace/muse-minecraft/app/deploy
-cp -p .env .env.bak-$(date +%Y%m%d-%H%M%S)
+B=~/workspace/muse-minecraft/backups; mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S)
 cat >> .env <<'E'
 BODY=mineai
 MINEAI_DIR=/opt/mine-ai-mcp
