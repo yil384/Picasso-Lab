@@ -18,7 +18,10 @@
 //   register(name, () => data)              serializer called at flush time
 //   markDirty(name)                         schedules a flush
 //   flush() -> bool                         writes every dirty file now (as one batch)
+//   health(now?) -> { ok, unsavedMs }        ok false once a change has waited more than 10 s for the disk (a failing
+//                                            write: full disk, permissions); /v1/health turns it into a 503
 //   close()                                 final flush; no more timers
+// A failing write is logged at once, then once a minute while it lasts (with the number of tries).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,6 +35,8 @@ export class StoreError extends Error {
 }
 
 const FILE_MODE = 0o600;
+export const UNSAVED_MAX_MS = 10_000;
+const FAIL_LOG_EVERY = 60_000;
 
 function readEnvelope(file) {
   let text;
@@ -78,6 +83,13 @@ export class Store {
     this.gen = 0;
     this.closed = false;
     this.loaded = false;
+    this.dirtySince = null; // when the oldest unsaved change was made
+    this.failing = null; // { since, tries, logged } while writes fail
+  }
+
+  health(now = Date.now()) {
+    const unsavedMs = this.dirtySince === null ? 0 : Math.max(0, now - this.dirtySince);
+    return { ok: unsavedMs <= UNSAVED_MAX_MS, unsavedMs, failingSince: this.failing ? this.failing.since : null };
   }
 
   file(name) {
@@ -139,6 +151,7 @@ export class Store {
 
   markDirty(name) {
     if (this.closed) return;
+    if (this.dirtySince === null) this.dirtySince = Date.now();
     this.dirty.add(name);
     if (!this.timer) {
       this.timer = setTimeout(() => {
@@ -150,9 +163,9 @@ export class Store {
 
   flush() {
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
-    if (!this.dirty.size) return false;
-    const batch = [...this.dirty].filter((n) => this.serializers.has(n)).sort();
-    if (!batch.length) return false;
+    for (const n of [...this.dirty]) if (!this.serializers.has(n)) this.dirty.delete(n);
+    if (!this.dirty.size) { this.dirtySince = null; return false; }
+    const batch = [...this.dirty].sort();
     const gen = this.gen + 1;
     try {
       // serialize everything first (one synchronous moment), then write
@@ -163,9 +176,20 @@ export class Store {
       fsyncDir(this.dir);
       this.gen = gen;
       for (const n of batch) this.dirty.delete(n);
+      if (!this.dirty.size) this.dirtySince = null;
+      if (this.failing) {
+        this.log('store: writing again after failures', { tries: this.failing.tries, seconds: Math.round((Date.now() - this.failing.since) / 1000) });
+        this.failing = null;
+      }
       return true;
     } catch (e) {
-      this.log('store: write failed, will retry', { error: e.code || e.message });
+      const t = Date.now();
+      if (!this.failing) this.failing = { since: t, tries: 0, logged: 0 };
+      this.failing.tries++;
+      if (t - this.failing.logged >= FAIL_LOG_EVERY) {
+        this.failing.logged = t;
+        this.log('store: write failed, will retry', { error: e.code || e.message, tries: this.failing.tries });
+      }
       if (!this.closed && !this.timer) {
         this.timer = setTimeout(() => { this.timer = null; this.flush(); }, 1000);
       }

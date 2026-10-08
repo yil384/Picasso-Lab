@@ -1,6 +1,8 @@
 // HoldemTable: the authoritative No-Limit Hold'em cash table as a pure state machine (DESIGN.md sections 6-8).
 // No timers, no I/O: time only from the `now` arguments (ms), randomness only from the injected rng(n).
-// The whole state is a plain JSON object (toJSON / fromJSON round-trip a live hand exactly, deck included).
+// The whole state is a plain JSON object. snapshot() / fromJSON round-trip a live hand exactly (tests); toJSON(), the
+// form the service writes to disk, leaves out the deck, the burn cards and every hole card, so a restore calls a
+// live hand off (every chip put in goes back, nothing is recorded) and the table deals a new one.
 //
 // Public API (every mutation returns { ok: true } or { ok: false, error: "<code>" } and bumps `rev` when it
 // changes anything; `now` is optional only where noted - the table then uses the latest time it has seen):
@@ -8,8 +10,9 @@
 //        settings: { blinds: "5/10"|"10/20"|"25/50"|"50/100", seats: 2..9, actionSec: 15|20|30, timeBankSec: 0..60 }
 //        host: { id, pid } of the creating account (or null: the first human to sit becomes host)
 //        options: { pauseWithoutHumans = true }  false lets bots-only tables deal (tests, simulations)
-//   static fromJSON(obj, { rng, now })  now given = a restart: the player to act gets a fresh action timer
-//   toJSON(), markStopped(now)  before a clean stop's save (a restore then charges a running bank up to `now` only)
+//   static fromJSON(obj, { rng, now })  now given = a restart; a live hand without its deck (toJSON) is called off
+//   toJSON()  what goes to disk (no deck, burns or hole cards), snapshot()  the whole state (tests)
+//   markStopped(now)  before a clean stop's save (a restore then charges a running bank up to `now` only)
 //   sit(account, seat, buyIn, now)      account = { id, pid, name, chips }; buy-in leaves the bankroll at once
 //   stand(accountId, now)               folds a live hand at once; the stack goes back at hand end (or now)
 //   setSitOut(accountId, on, now)       on: skipped from the next hand; off: back, waits for the big blind
@@ -21,6 +24,8 @@
 //                                       removeBot ({ seat }), dissolve
 //   setConnected(accountId, on)         socket presence for the public `connected` flag (true on sit; no effect
 //                                       on play: a disconnected player simply times out)
+//   expire(now)                         closes a table that never started (rooms: it held its place too long);
+//                                       error bad_phase once it runs
 //   releaseHost(accountId, now)         the host is gone (rooms decide when): host passes to the longest-seated
 //                                       other human; error no_candidate when there is none (host unchanged).
 //                                       Standing up never passes the host on by itself: a host who stands (to
@@ -117,6 +122,7 @@ export class HoldemTable {
       rev: 1,
       now,
       host: host ? { id: host.id, pid: host.pid ?? null } : null,
+      createdBy: host ? host.id : null,
       settings: ns.settings,
       options: { pauseWithoutHumans: options.pauseWithoutHumans !== false },
       seats: Array(ns.settings.seats).fill(null),
@@ -137,21 +143,26 @@ export class HoldemTable {
     const t = Object.create(HoldemTable.prototype);
     t.rng = rng;
     t.s = JSON.parse(JSON.stringify(obj));
+    const h = t.s.hand;
+    // the deck and the hole cards are never written to disk: a live hand read back from it cannot go on
+    const blind = !!(h && !h.done && !Array.isArray(h.deck));
     if (now !== null && now !== undefined) {
       // a clean stop (markStopped) saved the stop time; after a crash the saved clock can be as old as the moment
       // the bank started, so the bank is charged up to the restore instead (at most all of it)
       const usedTo = Number.isFinite(t.s.stoppedAt) ? t.s.stoppedAt : now;
       delete t.s.stoppedAt;
+      t._chargeBank(usedTo);
       t._clock(now);
-      const h = t.s.hand;
-      if (h && !h.done && h.toAct !== null) {
+      if (blind) t._voidHand(t.s.now);
+      else if (h && !h.done && h.toAct !== null) {
         const s = t.s.seats[h.toAct];
-        // the time bank already used before the restart stays used
-        if (h.usingBank && h.bankStart !== null) s.bankMs = Math.max(0, s.bankMs - Math.max(0, usedTo - h.bankStart));
-        h.usingBank = false;
-        h.bankStart = null;
-        h.deadline = s.bot ? null : now + t.s.settings.actionSec * 1000;
+        h.deadline = s.bot ? null : t.s.now + t.s.settings.actionSec * 1000;
       }
+      t._housekeep();
+      t.s.rev++;
+    } else if (blind) {
+      t._voidHand(t.s.now);
+      t._housekeep();
       t.s.rev++;
     }
     return t;
@@ -164,7 +175,16 @@ export class HoldemTable {
     this.s.stoppedAt = this.s.now;
   }
 
+  // What the service writes to disk: everything but the deck, the burn cards and the hole cards (DESIGN 3: no one
+  // who can read the data volume learns a card). Shown cards stay: they are public.
   toJSON() {
+    const o = this.snapshot();
+    if (o.hand) { delete o.hand.deck; delete o.hand.burns; }
+    for (const s of o.seats) if (s) s.hole = null;
+    return o;
+  }
+
+  snapshot() {
     return JSON.parse(JSON.stringify(this.s));
   }
 
@@ -319,7 +339,6 @@ export class HoldemTable {
         }
         default: return err('bad_action');
       }
-      if (h.usingBank) s.bankMs = Math.max(0, s.bankMs - Math.max(0, this.s.now - h.bankStart));
       s.timeouts = 0;
       this._applyAction(seat, kind, amt, this.s.now, false);
       return OK;
@@ -348,9 +367,15 @@ export class HoldemTable {
       const s = this.s.seats[seat];
       if (s.bot) return err('is_bot');
       if (!Number.isInteger(amount) || amount <= 0) return err('bad_amount');
+      const st = this.s.settings;
       // in a hand the stack has lost its bets: check against what the seat had when the hand began
-      const base = this._inLiveHand(s) ? s.stack + s.contrib : s.stack;
-      if (base + s.pendingTopUp + amount > this.s.settings.maxBuyIn) return err('bad_amount');
+      const base = (this._inLiveHand(s) ? s.stack + s.contrib : s.stack) + s.pendingTopUp;
+      const room = st.maxBuyIn - base;
+      if (amount > room) return err('bad_amount');
+      // a rebuy (nothing left) is a buy-in: at least the minimum buy-in; a top-up at least a big blind, or exactly
+      // what is left up to the maximum
+      const min = base === 0 ? Math.min(st.minBuyIn, st.maxBuyIn) : st.bb;
+      if (amount < min && amount !== room) return err('bad_amount');
       if (bankroll !== null && bankroll !== undefined && amount > bankroll) return err('insufficient_chips');
       this.s.queue.chips.push({ accountId, amount: -amount, reason: 'topup' });
       if (this._inLiveHand(s)) s.pendingTopUp += amount;
@@ -365,6 +390,14 @@ export class HoldemTable {
       if (!this.s.host || this.s.host.id !== accountId) return err('not_host');
       this._handOffHost(accountId);
       return this.s.host.id === accountId ? err('no_candidate') : OK;
+    });
+  }
+
+  expire(now) {
+    return this._mut(now, () => {
+      if (this.s.phase !== 'waiting') return err('bad_phase');
+      this._close(this.s.now, 'idle');
+      return OK;
     });
   }
 
@@ -558,7 +591,7 @@ export class HoldemTable {
       h.deadline = h.deadline + s.bankMs;
       return;
     }
-    if (h.usingBank) s.bankMs = 0;
+    if (h.usingBank) { s.bankMs = 0; h.usingBank = false; h.bankStart = null; }
     const seat = h.toAct;
     s.timeouts++;
     const L = this._legal(seat);
@@ -568,6 +601,17 @@ export class HoldemTable {
       s.sitOutSince = now;
       s.postBB = false;
     }
+  }
+
+  // The player to act pays for the time bank it used before the turn moves on for any reason (its own action, a
+  // timeout, someone else standing up and closing the street or ending the hand, a restart).
+  _chargeBank(now) {
+    const h = this.s.hand;
+    if (!h || !h.usingBank) return;
+    const s = h.toAct !== null ? this.s.seats[h.toAct] : null;
+    if (s && h.bankStart !== null) s.bankMs = Math.max(0, s.bankMs - Math.max(0, now - h.bankStart));
+    h.usingBank = false;
+    h.bankStart = null;
   }
 
   // Legal moves of the seat to act. minRaiseTo/maxRaiseTo are totals for this street (null when no raise is
@@ -649,9 +693,8 @@ export class HoldemTable {
     const s = this.s.seats[seat];
     let a;
     let amt = null;
-    h.usingBank = false;
+    this._chargeBank(now);
     h.deadline = null;
-    h.bankStart = null;
     if (kind === 'fold') {
       s.folded = true;
       a = 'fold';
@@ -700,7 +743,6 @@ export class HoldemTable {
       const bettingOver = h.runout || (h.toAct === null && active.length <= 1);
       if (!s.folded && !s.allin && !bettingOver) {
         if (h.toAct === seat) {
-          if (h.usingBank) s.bankMs = Math.max(0, s.bankMs - Math.max(0, now - h.bankStart));
           this._applyAction(seat, 'fold', null, now, false);
         } else {
           s.folded = true;
@@ -751,9 +793,10 @@ export class HoldemTable {
     let R = eligible.filter((i) => !st.seats[i].waiting || st.seats[i].postBB);
     let W = eligible.filter((i) => st.seats[i].waiting && !st.seats[i].postBB);
     if (st.handNo === 0 || R.length < 2) { R = eligible; W = []; }
-    else if (R.length === 2 && W.length) {
-      // a brand-new seat at a heads-up table is dealt in at once; a player back from sitting out still waits for
-      // the big blind (or posts one)
+    else if (R.length === 2 && W.length && st.lastDealtN === 2) {
+      // a brand-new seat at a heads-up table (the last hand was heads-up) is dealt in at once; a player back from
+      // sitting out still waits for the big blind (or posts one), and so does a new seat at a table that is down to
+      // two only now
       const fresh = W.filter((i) => st.seats[i].handsDealt === 0 && !st.seats[i].returning);
       R = [...R, ...fresh].sort((a, b) => a - b);
       W = W.filter((i) => !fresh.includes(i));
@@ -774,8 +817,12 @@ export class HoldemTable {
       if (st.button === null) { button = R[this.rng(R.length)]; bb = nextIn(R, button); }
       else bb = nextIn([...R, ...W], Number.isInteger(st.lastBB) ? st.lastBB : st.button);
       if (W.includes(bb)) {
+        // three-handed: the small blind is last hand's big blind; when that seat is gone (stood up, sitting out) the
+        // small blind is dead, so the seat before the big blind never posts it twice running. The button stays on
+        // the seat after the big blind, which keeps the next hands' big blinds in turn.
         sb = prevIn(R, bb);
         button = R.find((i) => i !== sb);
+        if (Number.isInteger(st.lastBB) && !R.includes(st.lastBB) && st.lastSB === sb) sb = null;
         dealt = [...R, bb].sort((a, b) => a - b);
       } else {
         button = R.find((i) => i !== bb);
@@ -788,14 +835,18 @@ export class HoldemTable {
       bb = nextIn([...R, ...W], sb);
       dealt = W.includes(bb) ? [...R, bb].sort((a, b) => a - b) : R.slice();
     }
+    // what a called-off hand (a restart) puts back, so the new deal keeps the same positions
+    const before = { button: st.button, lastBB: st.lastBB ?? null, lastSB: st.lastSB ?? null, lastDealtN: st.lastDealtN ?? null };
     st.button = button;
     st.lastBB = bb;
+    st.lastSB = sb;
+    st.lastDealtN = dealt.length;
     const no = ++st.handNo;
     const h = {
       id: `${st.code}-${no}`, no, street: 'preflop', board: [], deck: shuffledDeck(this.rng), burns: [],
       button, sbSeat: sb, bbSeat: bb, dealt, toAct: null, deadline: null, usingBank: false, bankStart: null,
       currentBet: 0, lastRaise: st.settings.bb, riverAggressor: null, pots: [], winners: null, done: false,
-      uncontested: false, runout: false, shown: {}, log: [],
+      uncontested: false, runout: false, shown: {}, log: [], before,
     };
     st.hand = h;
     st.seats.forEach((s) => { if (s) Object.assign(s, handFields()); });
@@ -814,7 +865,7 @@ export class HoldemTable {
     const order = [];
     for (let k = 1; k <= n; k++) { const j = (button + k) % n; if (dealt.includes(j)) order.push(j); }
     for (let r = 0; r < 2; r++) for (const i of order) st.seats[i].hole.push(h.deck.shift());
-    this._post(sb, st.settings.sb, 'sb');
+    if (sb !== null) this._post(sb, st.settings.sb, 'sb');
     this._post(bb, st.settings.bb, 'bb');
     for (const i of order) {
       const s = st.seats[i];
@@ -890,9 +941,9 @@ export class HoldemTable {
 
   _closeStreet(now) {
     const h = this.s.hand;
+    this._chargeBank(now);
     h.toAct = null;
     h.deadline = null;
-    h.usingBank = false;
     this._returnUncalled();
     this._collect();
     if (h.street === 'river') return this._showdown(now);
@@ -980,9 +1031,9 @@ export class HoldemTable {
   _endUncontested(now, winner) {
     const st = this.s;
     const h = st.hand;
+    this._chargeBank(now);
     h.toAct = null;
     h.deadline = null;
-    h.usingBank = false;
     st.pending = null;
     this._returnUncalled();
     this._collect();
@@ -1011,10 +1062,18 @@ export class HoldemTable {
         net: s.stack - s.startStack, showdowns: s.wentToShowdown ? 1 : 0, hand: h.id, gain,
       });
     }
+    this._applyTopUps(now);
+    st.seats.forEach((s, i) => { if (s && s.leaving) this._removeSeat(i); });
+    st.pending = { kind: 'next', at: now + (showdown ? TIMING.holdShowdown : TIMING.hold) };
+  }
+
+  // queued top-ups join the stacks at hand end; a top-up never lifts a stack above the max buy-in (the seat may have
+  // won the hand): the rest goes back to the bankroll
+  _applyTopUps(now) {
+    const st = this.s;
     st.seats.forEach((s) => {
       if (!s) return;
       if (s.pendingTopUp > 0) {
-        // a top-up never lifts the stack above the max buy-in (the seat may have won the hand): the rest goes back
         const add = Math.max(0, Math.min(s.pendingTopUp, st.settings.maxBuyIn - s.stack));
         const back = s.pendingTopUp - add;
         if (back > 0 && !s.bot) st.queue.chips.push({ accountId: s.id, amount: back, reason: 'topup_back' });
@@ -1023,8 +1082,26 @@ export class HoldemTable {
       }
       if (s.inHand) s.bustedSince = s.stack === 0 ? now : null;
     });
+  }
+
+  // A live hand that cannot go on (read back after a restart: its deck and hole cards were never written to disk)
+  // is called off: every chip put in goes back to its seat, nothing is recorded, the next deal keeps the same
+  // button and blinds. Leavers go, queued top-ups join the stacks; a table being dissolved closes.
+  _voidHand(now) {
+    const st = this.s;
+    const h = st.hand;
+    if (!h || h.done) return;
+    this._chargeBank(now);
+    st.seats.forEach((s) => { if (s && s.inHand) { s.stack += s.contrib; s.contrib = 0; s.bet = 0; s.dead = 0; } });
+    const b = h.before || {};
+    if ('button' in b) { st.button = b.button; st.lastBB = b.lastBB; st.lastSB = b.lastSB; st.lastDealtN = b.lastDealtN; }
+    st.voided = { no: h.no, at: now };
+    this._applyTopUps(now);
+    st.hand = null;
+    st.pending = null;
+    st.seats.forEach((s) => { if (s) Object.assign(s, handFields()); });
     st.seats.forEach((s, i) => { if (s && s.leaving) this._removeSeat(i); });
-    st.pending = { kind: 'next', at: now + (showdown ? TIMING.holdShowdown : TIMING.hold) };
+    if (st.dissolving) this._close(now, 'dissolved');
   }
 
   _onNext(now) {

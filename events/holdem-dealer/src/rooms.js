@@ -13,10 +13,14 @@
 // with no socket (it may be reconnecting), an unseated one found gone after a restart after 15 s. While no hand is
 // live (waiting phase, or a running table that cannot deal: no timeouts) a seated human gone for 10 minutes is stood
 // up, which lets the engine's idle close run. Table codes are the gate to private tables: an account that misses
-// (`watch` of a code that does not exist) 30 times in a minute has its socket closed (1008). Tables close
-// as idle 10 minutes after the last human seat is gone (engine). At most 200 open tables; an account hosts at most 3.
+// (`watch` of a code that does not exist) 30 times in a minute has its socket closed (1008); a network that misses
+// 600 times in a day cannot look codes up until the day is over, but a player's own table (seated there, its host,
+// or watched it before) always opens. Tables close as idle 10 minutes after the last human seat is gone (engine),
+// and a table that never started closes 30 minutes after it was created. At most 200 open tables, 30 created from
+// one network; an account creates or hosts at most 3 and sits at most at 4.
 //
-//   new Rooms({ accounts, store, now, botThinkScale, paceScale, rng, botRng, log, onChange })
+//   new Rooms({ accounts, store, now, botThinkScale, paceScale, rng, botRng, log, onChange, onLimit })
+//     onLimit(bucket, ipKey)  a limit refused something (counted by the server's RateLimiter for its log line)
 //   attach(conn), detach(conn)        conn = { accountId, send(obj|string), close(code, reason), watching }
 //   handle(conn, msg)                 a validated client message (see protocol.js)
 //   restore(data), toJSON()           tables.json; a restored live hand gives its actor a fresh full timer
@@ -32,7 +36,11 @@ import { publicTable, me as meView } from './views.js';
 
 export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const MAX_TABLES = 200;
-export const MAX_HOSTED = 3;
+export const MAX_HOSTED = 3; // tables an account created or hosts (a creator who hands the host role on still counts)
+export const MAX_SEATED = 4; // tables an account sits at
+export const MAX_TABLES_PER_NET = 30; // open tables created from one network (ipKey); practice tables count
+export const WAITING_TABLE_MS = 30 * 60_000; // a table that never started closes this long after it was created
+const SEEN_MAX = 500;
 export const HOST_GONE_MS = 60_000;
 export const HOST_UNSEATED_GONE_MS = 15_000;
 export const WAITING_GONE_MS = 10 * 60_000;
@@ -58,7 +66,7 @@ const mathRng = (n) => Math.floor(Math.random() * n);
 export class Rooms {
   constructor({
     accounts, store = null, now = Date.now, botThinkScale = 1, paceScale = 1, rng = cryptoRng, botRng = mathRng,
-    log = () => {}, onChange = () => {},
+    log = () => {}, onChange = () => {}, onLimit = () => {},
   }) {
     this.accounts = accounts;
     this.store = store;
@@ -68,6 +76,7 @@ export class Rooms {
     this.botRng = botRng;
     this.log = log;
     this.onChange = onChange; // test hook: (table) after every change, before the broadcast
+    this.onLimit = onLimit;
     this.tables = new Map(); // code -> entry
     this.conns = new Set();
     this.byAccount = new Map(); // accountId -> Set<conn>
@@ -127,14 +136,22 @@ export class Rooms {
     switch (msg.t) {
       case 'create': return this._create(conn, account, msg, fail);
       case 'watch': {
-        if (this._netBlocked(conn.ipKey)) {
+        const entry = this.tables.get(msg.code);
+        // the network-wide ceiling stops guessing codes; it never keeps a player from its own table (seated there,
+        // its host or creator, or a watcher before), e.g. reconnecting after a Wi-Fi blip
+        const own = !!entry && (entry.table.seatOf(account.id) >= 0 || entry.table.host?.id === account.id
+          || entry.creator === account.id || entry.seen.has(account.id));
+        if (!own && this._netBlocked(conn.ipKey)) {
+          this.onLimit('code_misses_day', conn.ipKey);
           fail('too_many_misses');
           return conn.close(1008, 'too_many_misses');
         }
-        const entry = this.tables.get(msg.code);
         if (!entry) {
           fail('no_table');
-          if (this._watchMiss(account.id, conn.ipKey)) conn.close(1008, 'too_many_misses');
+          if (this._watchMiss(account.id, conn.ipKey)) {
+            this.onLimit('code_misses', conn.ipKey);
+            conn.close(1008, 'too_many_misses');
+          }
           return;
         }
         return this.watch(conn, msg.code);
@@ -151,6 +168,10 @@ export class Rooms {
     switch (msg.t) {
       case 'sit':
         if (!this.accounts.nameAllowed(account)) return fail('name_protected');
+        if (t.seatOf(id) < 0 && this._seatedCount(id) >= MAX_SEATED) {
+          this.onLimit('seats', conn.ipKey);
+          return fail('too_many_seats');
+        }
         r = t.sit({ id, pid: account.pid, name: account.name, chips: account.chips }, msg.seat, msg.buyIn, now);
         break;
       case 'stand': r = t.stand(id, now); break;
@@ -209,11 +230,28 @@ export class Rooms {
     throw new Error('no free table code');
   }
 
+  _seatedCount(accountId) {
+    let n = 0;
+    for (const e of this.tables.values()) if (e.table.seatOf(accountId) >= 0) n++;
+    return n;
+  }
+
   _create(conn, account, msg, fail) {
-    if (this.tables.size >= MAX_TABLES) return fail('too_many_tables');
+    if (this.tables.size >= MAX_TABLES) {
+      this.onLimit('tables', conn.ipKey);
+      return fail('too_many_tables');
+    }
     let hosted = 0;
-    for (const e of this.tables.values()) if (e.table.host && e.table.host.id === account.id) hosted++;
+    let fromNet = 0;
+    for (const e of this.tables.values()) {
+      if (e.creator === account.id || (e.table.host && e.table.host.id === account.id)) hosted++;
+      if (conn.ipKey && e.creatorNet === conn.ipKey) fromNet++;
+    }
     if (hosted >= MAX_HOSTED) return fail('too_many_tables');
+    if (fromNet >= MAX_TABLES_PER_NET) {
+      this.onLimit('tables_net', conn.ipKey);
+      return fail('too_many_tables_net');
+    }
     const practice = msg.practice === true;
     const input = { ...(msg.settings || {}) };
     if (practice) input.seats = 6;
@@ -222,6 +260,7 @@ export class Rooms {
     let buyIn = 0;
     if (practice) {
       if (!this.accounts.nameAllowed(account)) return fail('name_protected');
+      if (this._seatedCount(account.id) >= MAX_SEATED) return fail('too_many_seats');
       buyIn = defaultBuyIn(ns.settings, account.chips);
       if (buyIn < ns.settings.minBuyIn) return fail('insufficient_chips');
     }
@@ -230,7 +269,7 @@ export class Rooms {
     const table = new HoldemTable({
       code, settings: ns.settings, host: { id: account.id, pid: account.pid }, now, rng: this.rng,
     });
-    const entry = this._entry(table);
+    const entry = this._entry(table, { creator: account.id, creatorNet: conn.ipKey || null, createdAt: now });
     if (practice) {
       const steps = [
         table.sit({ id: account.id, pid: account.pid, name: account.name, chips: account.chips }, 0, buyIn, now),
@@ -248,8 +287,11 @@ export class Rooms {
     this._after(entry, now);
   }
 
-  _entry(table) {
-    return { table, watchers: new Set(), timer: null, bot: null, gone: new Map(), hostGoneSince: null, idleWakes: 0 };
+  _entry(table, { creator = null, creatorNet = null, createdAt = this.now() } = {}) {
+    return {
+      table, watchers: new Set(), timer: null, bot: null, gone: new Map(), hostGoneSince: null, idleWakes: 0,
+      creator, creatorNet, createdAt, seen: new Set(),
+    };
   }
 
   watch(conn, code) {
@@ -270,6 +312,7 @@ export class Rooms {
   _addWatcher(entry, conn, now) {
     entry.watchers.add(conn);
     conn.watching = entry.table.code;
+    if (entry.seen.size < SEEN_MAX) entry.seen.add(conn.accountId);
     entry.gone.delete(conn.accountId);
     if (entry.table.host && entry.table.host.id === conn.accountId) entry.hostGoneSince = null;
     const seat = entry.table.seatOf(conn.accountId);
@@ -440,6 +483,8 @@ export class Rooms {
           if (now - since >= WAITING_GONE_MS && t.stand(s.id, now).ok) changed = true;
         }
       }
+      // a table that never started does not hold its place (and the 200-table cap) for long
+      if (t.phase === 'waiting' && now - entry.createdAt >= WAITING_TABLE_MS && t.expire(now).ok) changed = true;
       if (changed) this._after(entry, now);
     }
   }
@@ -473,27 +518,32 @@ export class Rooms {
   restore(data) {
     if (!data || !Array.isArray(data.tables)) return;
     const now = this.now();
+    let voided = 0;
     for (const obj of data.tables) {
+      const live = !!(obj && obj.hand && !obj.hand.done);
       const table = HoldemTable.fromJSON(obj, { rng: this.rng, now });
+      if (live) voided++;
+      // a called-off hand gives every chip back to its seat; leavers and a dissolved table pay out here
+      const s = table.settlements();
+      if (s.chips.length || s.records.length) this.accounts.applySettlements(s);
       if (table.phase === 'closed' || this.tables.has(table.code)) continue;
-      const entry = this._entry(table);
-      for (const s of table.seats) {
-        if (!s || s.bot) continue;
-        table.setConnected(s.id, false);
-        entry.gone.set(s.id, now);
+      const entry = this._entry(table, { creator: table.s.createdBy ?? null, createdAt: now });
+      for (const seat of table.seats) {
+        if (!seat || seat.bot) continue;
+        table.setConnected(seat.id, false);
+        entry.gone.set(seat.id, now);
+        entry.seen.add(seat.id);
       }
       if (table.host) entry.hostGoneSince = now;
       this.tables.set(table.code, entry);
-      // nothing is ever saved undrained, but apply anything found rather than lose it
-      const s = table.settlements();
-      if (s.chips.length || s.records.length) {
-        this.log('restored table had queued settlements', { code: table.code });
-        this.accounts.applySettlements(s);
-      }
       this._planBot(entry, now);
       this._schedule(entry);
     }
-    this.log('tables restored', { tables: this.tables.size });
+    if (data.tables.length) {
+      this.store?.markDirty('tables');
+      this.store?.markDirty('accounts');
+    }
+    this.log('tables restored', { tables: this.tables.size, handsCalledOff: voided });
   }
 
   stop() {

@@ -19,11 +19,12 @@ import { Rooms } from './rooms.js';
 import { createVerifier } from './firebase-token.js';
 import { createHttpHandler } from './http.js';
 import { attachWs } from './ws.js';
-import { RateLimiter, makeIpKey, clientIp, createLog } from './util.js';
+import { RateLimiter, makeIpKey, clientIp, createLog, createProxyTrust } from './util.js';
 import { warmup } from './engine/ai.js';
 
 const SWEEP_ACCOUNTS_MS = 3600_000;
 const SWEEP_ROOMS_MS = 15_000;
+const LIMIT_LOG_MS = 60_000;
 
 export async function startServer(config, opts = {}) {
   const now = opts.now || Date.now;
@@ -41,6 +42,7 @@ export async function startServer(config, opts = {}) {
     hooks = createTestHooks({ rooms: { get: (code) => rooms?.get(code) }, store, log });
     log('test hooks on: /__test/* answers loopback callers', {});
   }
+  const limiter = new RateLimiter(now);
   const accounts = new Accounts({
     gamesSecret: config.gamesSecret,
     emailLink: config.emailLink,
@@ -59,6 +61,7 @@ export async function startServer(config, opts = {}) {
     paceScale: config.paceScale,
     rng: opts.rng,
     botRng: opts.botRng,
+    onLimit: (bucket, key) => limiter.note(bucket, key),
     onChange: hooks ? (t) => { hooks.onChange(t); opts.onChange?.(t); } : opts.onChange,
   });
   store.register('accounts', () => accounts.toJSON());
@@ -68,14 +71,16 @@ export async function startServer(config, opts = {}) {
 
   warmup();
 
-  const limiter = new RateLimiter(now);
   const ipKey = makeIpKey(config.ipSalt);
-  const ipKeyOf = (req) => ipKey(clientIp(req, config.trustProxy));
+  // only the listed proxy (Caddy) may say who the client is; names are resolved before the first request
+  const trust = opts.proxyTrust || createProxyTrust(config.trustProxy, { log });
+  await trust.refresh();
+  const ipKeyOf = (req) => ipKey(clientIp(req, trust));
   const startedAt = Date.now();
 
   const server = http.createServer({ requestTimeout: 15_000, headersTimeout: 10_000 });
   const api = createHttpHandler({
-    config, accounts, rooms, limiter, ipKeyOf, startedAt, log,
+    config, accounts, rooms, limiter, ipKeyOf, startedAt, log, store,
     closeToken: (hash) => wsLayer?.closeToken(hash),
   });
   server.on('request', hooks ? (req, res) => (req.url.startsWith('/__test/') ? hooks.handle(req, res) : api(req, res)) : api);
@@ -91,6 +96,11 @@ export async function startServer(config, opts = {}) {
   const timers = [
     setInterval(() => { accounts.sweep(); limiter.sweep(); }, SWEEP_ACCOUNTS_MS),
     setInterval(() => rooms.sweep(), SWEEP_ROOMS_MS),
+    // one line a minute while any limit refuses something: which limit, how often, from how many networks (no keys)
+    setInterval(() => {
+      const r = limiter.drain();
+      if (Object.keys(r).length) log('rate limited', { refused: r });
+    }, LIMIT_LOG_MS),
   ];
   log('dealer listening', { port, tables: rooms.stats().tables, accounts: accounts.accounts.size, emailLink: config.emailLink });
 
@@ -99,6 +109,7 @@ export async function startServer(config, opts = {}) {
     if (stopping) return stopping;
     stopping = (async () => {
       for (const t of timers) clearInterval(t);
+      trust.stop();
       server.close();
       wsLayer.closeAll(1012, 'restart');
       rooms.stop();

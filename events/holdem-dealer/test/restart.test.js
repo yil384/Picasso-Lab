@@ -1,7 +1,8 @@
 // Restarts (DESIGN.md sections 9, 10).
 // 1. Graceful: stop the dealer mid-hand (once while a bot must act, once while a human must act); every socket
-//    closes with 1012; a new server on the same DATA_DIR restores the table; the clients reconnect, see the same
-//    hand, cards, board and stacks (a human actor gets a fresh full timer), the hand finishes, chips are conserved.
+//    closes with 1012; the data file holds no deck, burn or hole card; a new server on the same DATA_DIR restores
+//    the table with the live hand called off (every chip put in back on its seat, nothing recorded); the clients
+//    reconnect, see which hand was called off, a new hand is dealt and play goes on; chips are conserved.
 // 2. kill -9 (a child process, no flush): the files always parse; after the restart chips are conserved across
 //    accounts.json and tables.json and every change acknowledged more than the debounce window before the kill
 //    is there.
@@ -17,7 +18,14 @@ import {
 
 const PKG = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-test('graceful restart mid-hand: 1012, restore, reconnect, same hand and cards, fresh timer, chips conserved', async () => {
+const CARD = /^[2-9TJQKA][shdc]$/;
+function cardsIn(v, out = new Set()) {
+  if (typeof v === 'string') { if (CARD.test(v)) out.add(v); } else if (Array.isArray(v)) v.forEach((x) => cardsIn(x, out));
+  else if (v && typeof v === 'object') Object.values(v).forEach((x) => cardsIn(x, out));
+  return out;
+}
+
+test('graceful restart mid-hand: 1012, no hidden card on disk, the hand called off with every chip back, play goes on', async () => {
   const dir = tmpDir();
   const truth = truthRecorder();
   const over = { DATA_DIR: dir, BOT_THINK_SCALE: '0.05' };
@@ -56,21 +64,36 @@ test('graceful restart mid-hand: 1012, restore, reconnect, same hand and cards, 
     });
     const live = svc.rooms.get(code);
     const total = chipsTotal(svc, code, ids);
-    const snap = live.toJSON();
+    const snap = live.snapshot();
     assert.ok(snap.hand && !snap.hand.done);
+    const records = ids.map((id) => svc.accounts.get(id).holdem.hands);
     const closing = [ca.waitClose(), cb.waitClose()];
     await svc.stop();
     const codes = (await Promise.all(closing)).map((c) => c.code);
     assert.deepEqual(codes, [1012, 1012]);
-    // on disk: the same live hand, deck included, file mode 600
-    const onDisk = JSON.parse(fs.readFileSync(path.join(dir, 'tables.json'), 'utf8')).data.tables.find((t) => t.code === code);
+    // on disk: the table without its deck, burns or any hole card that was not shown; file mode 600
+    const file = JSON.parse(fs.readFileSync(path.join(dir, 'tables.json'), 'utf8'));
+    const onDisk = file.data.tables.find((t) => t.code === code);
     assert.equal(onDisk.hand.id, snap.hand.id);
-    assert.equal(onDisk.hand.deck.length, snap.hand.deck.length);
+    assert.equal(onDisk.hand.deck, undefined);
+    assert.equal(onDisk.hand.burns, undefined);
+    assert.ok(onDisk.seats.every((x) => !x || x.hole === null));
+    const shown = cardsIn([snap.hand.board, snap.hand.shown, snap.seats.map((x) => x && x.shown), snap.last]);
+    const hidden = [...snap.hand.deck, ...snap.hand.burns, ...snap.seats.flatMap((x) => (x && x.hole) || [])].filter((c) => !shown.has(c));
+    const leaked = hidden.filter((c) => cardsIn(file).has(c));
+    assert.deepEqual(leaked, [], 'no hidden card anywhere in tables.json');
     assert.equal(fs.statSync(path.join(dir, 'tables.json')).mode & 0o777, 0o600);
 
     svc = await startTest(over, { onChange: (t) => truth.hook(t) });
     assert.equal(chipsTotal(svc, code, ids), total, 'chips conserved across the restart');
-    const t0 = Date.now();
+    const back = svc.rooms.get(code);
+    assert.equal(back.s.voided.no, snap.hand.no, 'the live hand was called off');
+    assert.ok(!back.hand || back.hand.id !== snap.hand.id);
+    assert.deepEqual(ids.map((id) => svc.accounts.get(id).holdem.hands), records, 'a called-off hand is not recorded');
+    // every chip put in went back to its seat (the new hand, if dealt already, has only its blinds in)
+    if (!back.hand) {
+      assert.deepEqual(back.seats.map((x) => x && x.stack), snap.seats.map((x) => x && x.stack + x.contrib + (x.pendingTopUp || 0)));
+    }
     ca = await connect(svc, A.token);
     cb = await connect(svc, B.token);
     old.push(ca, cb);
@@ -78,30 +101,18 @@ test('graceful restart mid-hand: 1012, restore, reconnect, same hand and cards, 
     cb.send({ t: 'watch', code });
     const sa = await ca.waitFor((m) => m.t === 'state');
     const sb = await cb.waitFor((m) => m.t === 'state');
-    for (const [s, seat] of [[sa, 0], [sb, 2]]) {
-      assert.equal(s.table.hand.id, snap.hand.id, 'same hand');
-      assert.deepEqual(s.table.hand.board, snap.hand.board, 'same board');
-      assert.equal(s.me.seat, seat);
-      assert.deepEqual(s.me.hole, snap.seats[seat].inHand && !snap.seats[seat].folded ? snap.seats[seat].hole : null, 'same cards');
-      assert.deepEqual(s.table.seats.map((x) => x && x.stack), snap.seats.map((x) => x && x.stack), 'same stacks');
-    }
-    const h = sa.table.hand;
-    assert.equal(h.toAct, snap.hand.toAct, 'the same seat is to act');
-    assert.equal(!!sa.table.seats[h.toAct].bot, who === 'bot');
-    if (who === 'human') {
-      const left = h.deadline - sa.serverTime;
-      assert.ok(left > 17_000 && left <= 20_000 + (Date.now() - t0), `fresh full action timer (${left} ms)`);
-    } else {
-      assert.equal(h.deadline, null, 'bots have no clock');
+    for (const [st, seat] of [[sa, 0], [sb, 2]]) {
+      assert.equal(st.table.voided, snap.hand.no, 'the page learns which hand was called off');
+      assert.equal(st.me.seat, seat, 'the seat was kept');
+      assert.ok(!st.table.hand || st.table.hand.id !== snap.hand.id);
     }
     autoPlay(ca, { rng: floatRng(53) });
     autoPlay(cb, { rng: floatRng(54) });
     const doneBefore = truth.handsDone(code);
-    await until(() => truth.done.get(code)?.has(snap.hand.id), { what: 'the interrupted hand to finish' });
     await until(() => truth.handsDone(code) >= doneBefore + 2, { what: 'two more hands' });
+    assert.ok(!truth.done.get(code)?.has(snap.hand.id), 'the called-off hand never finished');
     // conservation holds while play continues (sampled between steps)
-    const now = chipsTotal(svc, code, ids);
-    assert.equal(now, total, 'chips conserved after the resumed hand');
+    assert.equal(chipsTotal(svc, code, ids), total, 'chips conserved after the restart');
   }
   ca.playing = cb.playing = false;
   for (const c of old) checkFrames(c, truth, c === old[0] || old.indexOf(c) % 2 === 0 ? A.account.pid : B.account.pid);
@@ -217,7 +228,8 @@ test('kill -9 mid-play: files never torn, chips conserved across both files, at 
   autoPlay(ca, { rng: floatRng(99) });
   autoPlay(cb, { rng: floatRng(98) });
   const s0 = ca.lastState();
-  await ca.waitFor((m) => m.t === 'state' && m.table.hand && s0.table.hand && m.table.hand.no > s0.table.hand.no + 1, { timeout: 15000 });
+  const no0 = s0.table.hand ? s0.table.hand.no : s0.table.voided || 0;
+  await ca.waitFor((m) => m.t === 'state' && m.table.hand && m.table.hand.no > no0 + 1, { timeout: 15000 });
   ca.playing = cb.playing = false;
   ca.close(); cb.close();
   t.diagnostic(`lost windows (ms before the kill): ${losses.join(', ')}`);

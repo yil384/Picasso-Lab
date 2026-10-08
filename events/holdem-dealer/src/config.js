@@ -1,15 +1,19 @@
 // Service configuration from the environment (DESIGN.md section 12). Dev defaults are safe to run on a laptop;
 // with NODE_ENV=production the service refuses to start unless GAMES_SECRET and IP_SALT are set (32+ characters
-// each, different from each other) and TRUST_PROXY is set explicitly, and every other value is valid.
+// each, different from each other) and TRUST_PROXY is set explicitly to 0 or a list, and every other value is valid.
 //
 //   PORT              8787                 HOST  127.0.0.1 (the Docker image sets 0.0.0.0)
 //   DATA_DIR          ./data (production: /data)
-//   GAMES_SECRET      keys the email HMACs (never shown to anyone)
-//   IP_SALT           keys the ipKey HMAC
+//   GAMES_SECRET      keys the email HMACs (never shown to anyone); or GAMES_SECRET_FILE, a file holding it (the
+//                     deploy uses files, so `docker inspect` does not show the secrets)
+//   IP_SALT           keys the ipKey HMAC; or IP_SALT_FILE
 //   EMAIL_LINK        off | on             reported to clients as features.emailLink
 //   FIREBASE_PROJECT_ID  yichen-5e23e
 //   ALLOWED_ORIGINS   comma list, default https://yil384.github.io; "http://127.0.0.1:*" allows any port
-//   TRUST_PROXY       0 | 1                1: the client IP is the right-most X-Forwarded-For entry (Caddy)
+//   TRUST_PROXY       0 | a comma list of the proxies that may set X-Forwarded-For: addresses, CIDR ranges or host
+//                     names (production behind Caddy in Docker: fras-caddy-1). The client IP is then the right-most
+//                     X-Forwarded-For entry of a request from one of them, else the socket address.
+//                     1 (any peer) is for tests only and refused in production.
 //   BOT_THINK_SCALE   1                    multiplies bots' think delays (tests: 0 = instant)
 //   PACE_SCALE        1                    tests only: multiplies the table's pacing pauses (street, run-out,
 //                                          hand-end hold, first deal); action timers are never scaled
@@ -20,7 +24,9 @@
 // Exports: loadConfig(env) -> frozen config (throws ConfigError listing every problem), originAllowed(config, origin),
 //          ConfigError.
 
+import fs from 'node:fs';
 import path from 'node:path';
+import { parseTrustEntry } from './util.js';
 
 const DEV_GAMES_SECRET = 'dev-only-games-secret-do-not-use-in-production';
 const DEV_IP_SALT = 'dev-only-ip-salt-do-not-use-in-production-000';
@@ -77,7 +83,17 @@ export function loadConfig(env = process.env) {
   const dataDir = path.resolve(env.DATA_DIR || (production ? '/data' : './data'));
 
   const secret = (name, dev) => {
-    const v = env[name];
+    let v = env[name];
+    const file = env[`${name}_FILE`];
+    if (file) {
+      if (v) problems.push(`set ${name} or ${name}_FILE, not both`);
+      try {
+        v = fs.readFileSync(file, 'utf8').trim();
+      } catch (e) {
+        problems.push(`${name}_FILE: cannot read ${file} (${e.code || e.message})`);
+        return dev;
+      }
+    }
     if (v === undefined || v === '') {
       if (production) problems.push(`${name} is required in production (32+ random characters)`);
       return dev;
@@ -108,12 +124,22 @@ export function loadConfig(env = process.env) {
   }
   if (!allowedOrigins.length) problems.push('ALLOWED_ORIGINS is empty');
 
-  // production must say whether a proxy is in front: behind Caddy without TRUST_PROXY=1 every client would share
-  // the proxy's ipKey (one suggestion list and one set of per-network limits for the whole site)
-  if (production && (env.TRUST_PROXY === undefined || env.TRUST_PROXY === '')) problems.push('TRUST_PROXY must be set in production (1 behind Caddy)');
-  const tp = (env.TRUST_PROXY || '0').toLowerCase();
-  if (!['0', '1', 'true', 'false', 'yes', 'no'].includes(tp)) problems.push('TRUST_PROXY must be 0 or 1');
-  const trustProxy = tp === '1' || tp === 'true' || tp === 'yes';
+  // production must say whether a proxy is in front: behind Caddy without a trusted proxy every client would share
+  // the proxy's ipKey (one suggestion list and one set of per-network limits for the whole site), and trusting any
+  // peer would let anyone who reaches the port name any network
+  if (production && (env.TRUST_PROXY === undefined || env.TRUST_PROXY === '')) problems.push('TRUST_PROXY must be set in production (the proxy, e.g. fras-caddy-1, or 0)');
+  const tpRaw = (env.TRUST_PROXY || '0').trim();
+  const tp = tpRaw.toLowerCase();
+  let trustProxy = false;
+  if (['1', 'true', 'yes'].includes(tp)) {
+    if (production) problems.push('TRUST_PROXY=1 trusts every peer: list the proxy instead (its address, range or container name)');
+    trustProxy = true;
+  } else if (!['0', 'false', 'no'].includes(tp)) {
+    const list = tpRaw.split(',').map((x) => x.trim()).filter(Boolean);
+    const bad = list.filter((x) => !parseTrustEntry(x));
+    if (bad.length || !list.length) problems.push(`TRUST_PROXY must be 0 or a list of addresses, CIDR ranges or host names (bad: ${bad.join(', ') || tpRaw})`);
+    trustProxy = Object.freeze(list);
+  }
 
   const botThinkScale = num(env.BOT_THINK_SCALE, 1, { min: 0, max: 10 }, 'BOT_THINK_SCALE', problems);
   const paceScale = num(env.PACE_SCALE, 1, { min: 0.001, max: 10 }, 'PACE_SCALE', problems);

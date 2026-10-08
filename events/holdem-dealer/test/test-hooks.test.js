@@ -12,7 +12,7 @@ import { seededRng } from '../src/engine/cards.js';
 import { startTest, newGuest, connect, sleep, makeSigner, idClaims, PROJECT } from './service-helpers.js';
 import { createVerifier } from '../src/firebase-token.js';
 
-const PROD = { NODE_ENV: 'production', GAMES_SECRET: 'a'.repeat(40), IP_SALT: 'b'.repeat(40), TRUST_PROXY: '1' };
+const PROD = { NODE_ENV: 'production', GAMES_SECRET: 'a'.repeat(40), IP_SALT: 'b'.repeat(40), TRUST_PROXY: 'fras-caddy-1' };
 
 test('config: hooks never in production; the key URL needs the hooks and a loopback address', () => {
   assert.equal(loadConfig({}).testHooks, false);
@@ -39,7 +39,7 @@ test('applyRig swaps the asked holes and board into place and keeps 52 distinct 
   for (let i = 0; i < 3; i++) t.sit({ id: `u${i}`, pid: `p${i}`, name: `P${i}`, chips: 10_000 }, i, 1000, 0);
   t.hostOp('u0', 'start', {}, 0);
   for (let now = 0; now < 10_000 && !t.hand; now += 500) t.tick(now);
-  const s = t.toJSON();
+  const s = t.snapshot();
   applyRig(s, { holes: { 0: ['As', 'Ah'], 2: ['Kd', 'Kc'] }, board: ['Ad', 'Ac', 'Kh', '2s', '3s'] });
   assert.deepEqual(s.seats[0].hole, ['As', 'Ah']);
   assert.deepEqual(s.seats[2].hole, ['Kd', 'Kc']);

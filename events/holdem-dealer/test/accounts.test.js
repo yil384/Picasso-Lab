@@ -117,10 +117,12 @@ test('IP memory expires after 30 days (sweep) and suggestions skip stale entries
   assert.equal(acc.toJSON().ip[IP_A], undefined, 'swept');
 });
 
-test('claims: one click, same ipKey, 10 minutes, guest only; the pristine fresh guest is deleted', () => {
+test('claims: one click, same ipKey, 10 minutes, guest only; the caller keeps its own account under the name', () => {
   const { acc, clock, events } = setup();
   const old = guest(acc, { name: 'Juno' });
   visit(acc, old.token);
+  old.a.chips = 7_300;
+  const tokensBefore = old.a.tokens.length;
   const fresh = acc.session({ account: null, fresh: true, ipKey: IP_A });
   const freshAcc = acc.authenticate(fresh.token);
   const sid = fresh.suggestions[0].sid;
@@ -129,13 +131,20 @@ test('claims: one click, same ipKey, 10 minutes, guest only; the pristine fresh 
   // unknown sid
   assert.throws(() => acc.claim(freshAcc, 'nope', IP_A), (e) => e.status === 404 && e.code === 'expired');
   const out = acc.claim(freshAcc, sid, IP_A);
-  assert.equal(out.account.pid, old.account.pid);
-  assert.equal(acc.authenticate(out.token).id, old.a.id);
-  assert.equal(acc.authenticate(fresh.token), null, 'the empty fresh guest is gone');
-  assert.deepEqual(events.deleted, [freshAcc.id]);
-  assert.equal(acc.authenticate(old.token).id, old.a.id, 'the old device keeps working');
+  assert.equal(out.token, undefined, 'no token for anyone');
+  assert.equal(out.account.pid, freshAcc.pid, 'the caller keeps its own account');
+  assert.equal(out.account.name, 'Juno', 'under the suggested name');
+  assert.equal(out.account.chips, START_CHIPS, 'with its own chips');
+  assert.equal(acc.authenticate(fresh.token).id, freshAcc.id);
+  assert.deepEqual(events.deleted, []);
+  assert.equal(old.a.tokens.length, tokensBefore, 'the other account gets no new token');
+  assert.equal(acc.authenticate(old.token).id, old.a.id, 'the old device keeps its account');
+  assert.equal(old.a.chips, 7_300);
   // single use
-  assert.throws(() => acc.claim(acc.authenticate(out.token), sid, IP_A), (e) => e.code === 'expired');
+  assert.throws(() => acc.claim(freshAcc, sid, IP_A), (e) => e.code === 'expired');
+  // the network now remembers the name once
+  const again = acc.session({ account: null, fresh: true, ipKey: IP_A });
+  assert.deepEqual(again.suggestions.map((x) => x.name), ['Juno'], 'one entry per name');
 
   // expiry after 10 minutes
   const f2 = acc.session({ account: null, fresh: true, ipKey: IP_A });
@@ -145,24 +154,26 @@ test('claims: one click, same ipKey, 10 minutes, guest only; the pristine fresh 
   // a guest that saved with an email in the meantime cannot be claimed
   const f3 = acc.session({ account: null, fresh: true, ipKey: IP_A });
   old.a.email = { uid: 'u', masked: 'j***@x.org', hash: 'h2', linkedAt: clock.t };
+  acc._reindex();
   assert.throws(() => acc.claim(acc.authenticate(f3.token), f3.suggestions[0].sid, IP_A), (e) => e.status === 409 && e.code === 'protected');
 });
 
-test('claims keep a caller that already played (not pristine) and never delete an account at a table', () => {
-  let seatedId = null;
-  const { acc } = setup({ tableInfo: (id) => ({ seated: id === seatedId, chips: id === seatedId ? 2000 : 0 }) });
-  const old = guest(acc, { name: 'Kai' });
-  visit(acc, old.token);
+test('a claim never hands over a seat, a bankroll or a record: whoever shares the network gets a name only', () => {
+  const { acc } = setup({ tableInfo: () => ({ seated: true, chips: 2000 }) });
+  const victor = guest(acc, { name: 'Victor' });
+  visit(acc, victor.token);
+  victor.a.holdem.hands = 120;
+  victor.a.chips = 9_000;
   const f = acc.session({ account: null, fresh: true, ipKey: IP_A });
-  const fa = acc.authenticate(f.token);
-  fa.guandan.rounds = 1;
-  acc.claim(fa, f.suggestions[0].sid, IP_A);
-  assert.ok(acc.authenticate(f.token), 'played once: kept');
-  const g = acc.session({ account: null, fresh: true, ipKey: IP_A });
-  const ga = acc.authenticate(g.token);
-  seatedId = ga.id;
-  acc.claim(ga, g.suggestions[0].sid, IP_A);
-  assert.ok(acc.authenticate(g.token), 'seated: kept');
+  const claimer = acc.authenticate(f.token);
+  const out = acc.claim(claimer, f.suggestions[0].sid, IP_A);
+  assert.equal(out.account.name, 'Victor');
+  assert.notEqual(out.account.pid, victor.a.pid);
+  assert.equal(out.account.holdem.hands, 0);
+  assert.equal(out.account.chips, START_CHIPS);
+  // no token issued by the claim reaches Victor's account
+  assert.ok(victor.a.tokens.every((x) => x.createdAt <= victor.a.createdAt));
+  assert.equal(acc.get(victor.a.id).chips, 9_000);
 });
 
 test('names: rules, and protection of names held by email accounts (case and space insensitive)', () => {
@@ -279,6 +290,7 @@ test('Hold\'em ranking: chips lost by fresh accounts (chip dumping) never count;
   const dump = guest(acc, { name: 'Dump', clientId: 'c-dump' }).a;
   clock.t += ESTABLISHED_AGE;
   vet.holdem.hands = ESTABLISHED_HANDS;
+  main.holdem.hands = ESTABLISHED_HANDS;
   const rec = (a, net, hand, gain) => ({ accountId: a.id, hands: 1, won: net > 0 ? 1 : 0, biggestPot: Math.max(0, net), net, showdowns: 0, hand, gain });
   // a fresh guest dumps 9,000 to the main account: it shows in net but not in the ranked net
   acc.applySettlements({ records: [rec(main, 9000, 'T-1', 9000), rec(dump, -9000, 'T-1', 9000)] });
@@ -293,21 +305,50 @@ test('Hold\'em ranking: chips lost by fresh accounts (chip dumping) never count;
   assert.equal(dump.holdem.rnet, -10500, 'losses always count');
   const h = acc.leaderboard('holdem', 50, main);
   assert.equal(h.rows.find((r) => r.name === 'Main').net, 1900, 'the ranking shows and sorts by the ranked net');
-  assert.deepEqual(h.rows.map((r) => r.name), ['Main', 'Vet', 'Dump']);
+  assert.deepEqual(h.rows.map((r) => r.name), ['Main', 'Vet'], 'the fresh guest does not rank');
+});
+
+test('Hold\'em ranking: only established accounts rank, so a throwaway guest\'s lucky hands never do', () => {
+  const { acc, clock } = setup();
+  const regular = guest(acc, { name: 'Regular', clientId: 'c-reg' }).a;
+  clock.t += 30 * 24 * 3600_000;
+  Object.assign(regular.holdem, { hands: 2000, net: 15_000, rnet: 15_000 });
+  const lucky = [];
+  for (let i = 0; i < 20; i++) lucky.push(guest(acc, { name: `Guest${i}`, clientId: `c-g${i}` }).a);
+  // five of twenty one-hand guests win about 30,000 from bots; the rest bust (losses to bots rank for nobody)
+  const rec = (a, net, hand) => ({ accountId: a.id, hands: 1, won: net > 0 ? 1 : 0, biggestPot: Math.max(0, net), net, showdowns: 1, hand, gain: Math.max(net, 0) });
+  acc.applySettlements({ records: lucky.map((a, i) => rec(a, i < 5 ? 30_000 : -10_000, `B-${i}`)) });
+  const h = acc.leaderboard('holdem', 50, lucky[0]);
+  assert.deepEqual(h.rows.map((r) => r.name), ['Regular']);
+  assert.equal(h.me.rank, null, 'a fresh account sees its own row, unranked');
+  assert.equal(h.me.net, 30_000);
+  assert.deepEqual(h.rule, { days: 3, hands: 50 });
+  // after 3 days and 50 hands the same account ranks with everything it won and lost meanwhile
+  clock.t += ESTABLISHED_AGE;
+  lucky[0].holdem.hands = ESTABLISHED_HANDS;
+  assert.deepEqual(acc.leaderboard('holdem').rows.map((r) => r.name), ['Guest0', 'Regular']);
+  // a merge carries a fresh guest's losses into the saved account, never its lucky gains
+  const saved = guest(acc, { name: 'Saved', clientId: 'c-saved' }).a;
+  Object.assign(saved.holdem, { hands: 80, net: 500, rnet: 500 });
+  acc._merge(lucky[1], saved);
+  assert.equal(saved.holdem.rnet, 500);
+  acc._merge(lucky[6], saved);
+  assert.equal(saved.holdem.rnet, -9_500);
 });
 
 test('leaderboards: Hold\'em by net, Guandan by wins; only players with games; me row with rank', () => {
-  const { acc } = setup();
+  const { acc, clock } = setup();
   const mk = (name, holdem, guandan) => {
     const g = guest(acc, { name, clientId: 'c' + name });
     Object.assign(g.a.holdem, holdem);
     Object.assign(g.a.guandan, guandan);
     return g.a;
   };
-  const a = mk('A', { hands: 10, net: 500, won: 4, biggestPot: 800 }, { rounds: 10, wins: 3 });
+  const a = mk('A', { hands: 60, net: 500, won: 4, biggestPot: 800 }, { rounds: 10, wins: 3 });
   const b = mk('B', { hands: 50, net: 1500, won: 20, biggestPot: 300 }, { rounds: 4, wins: 3 });
-  const c = mk('C', { hands: 5, net: -200 }, { rounds: 0, wins: 0 });
+  const c = mk('C', { hands: 55, net: -200 }, { rounds: 0, wins: 0 });
   const d = mk('D', { hands: 0, net: 0 }, { rounds: 20, wins: 9 });
+  clock.t += ESTABLISHED_AGE;
   const h = acc.leaderboard('holdem', 50, c);
   assert.deepEqual(h.rows.map((r) => r.name), ['B', 'A', 'C']);
   assert.deepEqual(Object.keys(h.rows[0]).sort(), ['biggestPot', 'chips', 'hands', 'name', 'net', 'pid', 'rank', 'won']);

@@ -604,7 +604,7 @@ test('JSON round-trip after every step reproduces the same game as never round-t
     t.hostOp('u_0', 'start', {}, 0);
     const streets = new Set();
     for (let step = 0; step < 4000 && t.hand && t.hand.no <= 40; step++) {
-      if (roundTrip) t = HoldemTable.fromJSON(JSON.parse(JSON.stringify(t)), { rng });
+      if (roundTrip) t = HoldemTable.fromJSON(JSON.parse(JSON.stringify(t.snapshot())), { rng });
       if (t.hand) streets.add(t.hand.street);
       const a = t.actor();
       if (a && t.seats[a.seat].bot) {
@@ -618,19 +618,73 @@ test('JSON round-trip after every step reproduces the same game as never round-t
         else t.act(a.id, a.handId, L.check ? 'check' : L.call <= 60 ? 'call' : 'fold', null, t.s.now + 900);
       } else if (wake(t) === null) break;
     }
-    return { json: t.toJSON(), streets };
+    return { json: t.snapshot(), streets };
   };
   const a = play(false);
   const b = play(true);
   assert.ok(a.json.handNo >= 20, `played ${a.json.handNo} hands`);
   assert.deepEqual([...b.streets].sort(), ['flop', 'preflop', 'river', 'showdown', 'turn']);
   assert.deepEqual(b.json, a.json);
-  // a restart gives the player to act a fresh action timer
-  const t = makeTable({ seats: [0, 1, 2], rng: riggedRng(27).queue(0) });
-  const restored = HoldemTable.fromJSON(t.toJSON(), { rng: seededRng(1), now: t.s.now + 99999 });
-  assert.equal(restored.hand.deadline, t.s.now + 99999 + 20000);
-  assert.equal(restored.hand.toAct, t.hand.toAct);
-  assert.deepEqual(restored.hand.deck, t.hand.deck);
+});
+
+const CARD = /^[2-9TJQKA][shdc]$/;
+const cardsIn = (v, out = new Set()) => {
+  if (typeof v === 'string') { if (CARD.test(v)) out.add(v); } else if (Array.isArray(v)) v.forEach((x) => cardsIn(x, out));
+  else if (v && typeof v === 'object') Object.values(v).forEach((x) => cardsIn(x, out));
+  return out;
+};
+
+test('the saved form holds no deck, burn or hole card; a restore calls the live hand off and gives every chip back', () => {
+  const rng = riggedRng(27).queue(0);
+  const t = makeTable({ seats: [0, 1, 2], rng });
+  act(t, 'raise', 100); // seat 0
+  act(t, 'call'); // seat 1 (sb)
+  act(t, 'call'); // seat 2 (bb)
+  wake(t); // the flop
+  act(t, 'raise', 60);
+  assert.equal(t.hand.street, 'flop');
+  t.settlements(); // the rooms layer drains every step before a save
+  const full = t.snapshot();
+  const saved = t.toJSON();
+  assert.equal(saved.hand.deck, undefined);
+  assert.equal(saved.hand.burns, undefined);
+  assert.ok(saved.seats.every((s) => !s || s.hole === null));
+  const hidden = [...full.hand.deck, ...full.hand.burns, ...full.seats.flatMap((s) => (s && s.hole) || [])];
+  assert.deepEqual(hidden.filter((c) => cardsIn(saved).has(c)), [], 'no hidden card anywhere in the saved form');
+  assert.deepEqual(saved.hand.board, full.hand.board, 'the board is public and stays');
+  const before = full.seats.map((s) => (s ? s.stack + s.contrib : null));
+  const restored = HoldemTable.fromJSON(JSON.parse(JSON.stringify(saved)), { rng: seededRng(9), now: t.s.now + 5000 });
+  assert.equal(restored.hand, null, 'the live hand is called off');
+  assert.equal(restored.s.voided.no, full.hand.no);
+  assert.equal(publicTable(restored).voided, full.hand.no);
+  assert.deepEqual(restored.seats.map((s) => (s ? s.stack : null)), before, 'every chip put in is back on its seat');
+  assert.deepEqual(restored.settlements(), { chips: [], records: [] }, 'nothing recorded');
+  // the next deal keeps the same positions and gets a new hand number
+  const h = nextHand(restored);
+  assert.equal(h.no, full.hand.no + 1);
+  assert.deepEqual([h.button, h.sbSeat, h.bbSeat], [full.hand.button, full.hand.sbSeat, full.hand.bbSeat]);
+  assert.equal(h.deck.length, 52 - 6);
+  // a finished hand waiting for the next deal is kept (its shown cards are public)
+  const u = makeTable({ seats: [0, 1], rng: riggedRng(3) });
+  foldAround(u);
+  u.settlements();
+  const done = HoldemTable.fromJSON(u.toJSON(), { rng: seededRng(9), now: u.s.now + 100 });
+  assert.equal(done.hand.done, true);
+  assert.equal(done.s.voided, undefined);
+  assert.ok(nextHand(done));
+  // a stand-up or a dissolve pending in the called-off hand still happens
+  const v = makeTable({ seats: [0, 1, 2], rng: riggedRng(31) });
+  v.settlements();
+  const leaver = v.hand.toAct === 0 ? 1 : 0;
+  assert.equal(v.stand(`u_${leaver}`, v.s.now).ok, true);
+  assert.equal(v.hostOp('u_0', 'dissolve', {}, v.s.now).ok, true);
+  v.settlements();
+  const w = HoldemTable.fromJSON(v.toJSON(), { rng: seededRng(9), now: v.s.now + 100 });
+  assert.equal(w.phase, 'closed');
+  assert.equal(w.closedReason, 'dissolved');
+  const back = w.settlements().chips;
+  assert.deepEqual(back.map((c) => c.accountId).sort(), ['u_0', 'u_1', 'u_2']);
+  assert.ok(back.every((c) => c.reason === 'cashout' && c.amount === 2000), 'every buy-in back in full');
 });
 
 test('a short big blind is all-in from the post; the others still owe the full big blind; side pot', () => {
@@ -865,8 +919,7 @@ test('a restart keeps the time bank already used', () => {
   t.markStopped(t.hand.bankStart + 12_000); // 12 s of bank used, then the service stops cleanly (rooms.stop)
   const restored = HoldemTable.fromJSON(t.toJSON(), { rng: seededRng(1), now: t.s.now + 60_000 });
   assert.equal(restored.seats[seat].bankMs, bank - 12_000, 'the downtime is not charged');
-  assert.equal(restored.hand.usingBank, false);
-  assert.equal(restored.hand.deadline, t.s.now + 60_000 + 20_000);
+  assert.equal(restored.hand, null, 'the hand itself is called off');
   assert.equal(restored.toJSON().stoppedAt, undefined);
 });
 
@@ -881,5 +934,91 @@ test('a crash (no clean stop) charges the running time bank up to the restore, a
   assert.equal(quick.seats[seat].bankMs, bank - 7_000);
   const late = HoldemTable.fromJSON(saved, { rng: seededRng(1), now: t.hand.bankStart + 10 * 60_000 });
   assert.equal(late.seats[seat].bankMs, 0);
-  assert.equal(late.hand.deadline, t.hand.bankStart + 10 * 60_000 + 20_000, 'a fresh action timer, no bank left');
+});
+
+test('a bettor standing up while the player to act is in its time bank: that player still pays for the bank used', () => {
+  const t = makeTable({ seats: [0, 1, 2], rng: riggedRng(16).queue(0), settings: { actionSec: 20, timeBankSec: 30 } });
+  assert.equal(t.hand.toAct, 0);
+  act(t, 'raise', 100);
+  act(t, 'fold'); // seat 1
+  assert.equal(t.hand.toAct, 2);
+  const deadline = t.hand.deadline;
+  t.tick(deadline); // the action time runs out: the bank starts
+  assert.equal(t.hand.usingBank, true);
+  t.tick(deadline + 25_000); // 25 s of the 30 s bank used
+  assert.equal(t.hand.toAct, 2);
+  assert.equal(t.stand('u_0', deadline + 25_000).ok, true); // the bettor leaves: the hand ends uncontested
+  assert.equal(t.hand.done, true);
+  assert.equal(t.seats[2].bankMs, 5_000, 'the bank used is charged');
+  // the same when a stand-up only closes the street (the leaver's raise was all the player to act still faced)
+  const u = makeTable({ seats: [0, 1, 2, 3], rng: riggedRng(29).queue(0), settings: { actionSec: 20, timeBankSec: 30 } });
+  act(u, 'call'); act(u, 'call'); act(u, 'call'); act(u, 'check');
+  wake(u);
+  u.seats[2].stack = 50;
+  act(u, 'raise', 50); // seat 1 bets 50
+  act(u, 'call'); // seat 2 calls all-in
+  act(u, 'raise', 200); // seat 3
+  act(u, 'fold'); // seat 0
+  assert.equal(u.hand.toAct, 1);
+  const d2 = u.hand.deadline;
+  u.tick(d2);
+  u.tick(d2 + 10_000);
+  assert.equal(u.stand('u_3', d2 + 10_000).ok, true);
+  assert.equal(u.hand.toAct, null, 'the street closed');
+  assert.equal(u.seats[1].bankMs, 20_000, '10 s of the bank used');
+});
+
+test('a rebuy is at least the minimum buy-in; a top-up at least a big blind or exactly what is left to the maximum', () => {
+  const t = makeTable({ seats: [0, 1], stacks: [2000, 1000], rng: riggedRng(3), start: false });
+  t.seats[1].stack = 0; // busted
+  t.seats[1].bustedSince = t.s.now;
+  assert.deepEqual(t.requestTopUp('u_1', 1, 100000, t.s.now), { ok: false, error: 'bad_amount' }, 'no 1-chip rebuy');
+  assert.deepEqual(t.requestTopUp('u_1', 799, 100000, t.s.now), { ok: false, error: 'bad_amount' });
+  assert.equal(t.requestTopUp('u_1', 800, 100000, t.s.now).ok, true, 'the minimum buy-in');
+  assert.equal(t.seats[1].stack, 800);
+  assert.deepEqual(t.requestTopUp('u_1', 19, 100000, t.s.now), { ok: false, error: 'bad_amount' }, 'under a big blind');
+  assert.equal(t.requestTopUp('u_1', 20, 100000, t.s.now).ok, true);
+  assert.equal(t.requestTopUp('u_1', 1180, 100000, t.s.now).ok, true, 'up to the max');
+  assert.deepEqual(t.requestTopUp('u_1', 1, 100000, t.s.now), { ok: false, error: 'bad_amount' }, 'nothing left');
+  t.seats[0].stack = 1995;
+  assert.equal(t.requestTopUp('u_0', 5, 100000, t.s.now).ok, true, 'exactly the room left, under a big blind');
+  assert.equal(t.seats[0].stack, 2000);
+});
+
+test('blinds when a table drops to two ready players while a third waits: no small blind twice, new seats wait', () => {
+  // (a) seats 1-3 play, seat 0 sits back down (returning, waits); seat 3 sits out: the big blind reaches seat 0
+  const t = makeTable({ seats: [0, 1, 2, 3], rng: riggedRng(3).queue(0) });
+  const pos = () => [t.hand.button, t.hand.sbSeat, t.hand.bbSeat];
+  assert.deepEqual(pos(), [0, 1, 2]);
+  foldAround(t);
+  assert.equal(t.stand('u_0', t.s.now).ok, true);
+  assert.equal(t.sit(acct(0), 0, 2000, t.s.now).ok, true);
+  assert.equal(t.seats[0].returning, true);
+  nextHand(t);
+  assert.deepEqual(pos(), [1, 2, 3]);
+  assert.deepEqual(t.hand.dealt, [1, 2, 3]);
+  foldAround(t);
+  assert.equal(t.setSitOut('u_3', true, t.s.now).ok, true);
+  nextHand(t);
+  assert.equal(t.hand.bbSeat, 0, 'the big blind moves on to the waiting seat');
+  assert.deepEqual(t.hand.dealt, [0, 1, 2]);
+  assert.equal(t.hand.sbSeat, null, 'last hand\'s small blind does not post it again: the small blind is dead');
+  assert.equal(t.seats[2].bet, 0);
+  assert.deepEqual(t.hand.log.filter((e) => e.a === 'sb'), []);
+  assert.equal(t.hand.toAct, 1, 'the first seat after the big blind acts first');
+  foldAround(t);
+  nextHand(t);
+  assert.deepEqual(pos(), [2, 0, 1], 'the big blind keeps its turn');
+  foldAround(t);
+  nextHand(t);
+  assert.deepEqual(pos(), [0, 1, 2]);
+  // (b) a brand-new seat at a table that is down to two only now waits for the big blind
+  const u = makeTable({ seats: [0, 1, 2], rng: riggedRng(3).queue(2) });
+  assert.deepEqual([u.hand.button, u.hand.sbSeat, u.hand.bbSeat], [2, 0, 1]);
+  assert.equal(u.sit(acct(3), 3, 2000, u.s.now).ok, true);
+  foldAround(u);
+  assert.equal(u.stand('u_1', u.s.now).ok, true);
+  nextHand(u);
+  assert.ok(!u.hand.dealt.includes(3), 'the new seat waits: the last hand was not heads-up');
+  assert.deepEqual(u.hand.dealt, [0, 2]);
 });

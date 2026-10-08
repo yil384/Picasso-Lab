@@ -37,7 +37,10 @@ export function attachWs(server, { config, accounts, rooms, limiter, ipKeyOf, lo
     if (!originAllowed(config, req.headers.origin)) return reject(socket, 403, 'Forbidden');
     const ipKey = ipKeyOf(req);
     if (!limiter.hit('other', ipKey, 600, 60_000).ok) return reject(socket, 429, 'Too Many Requests');
-    if ((perIp.get(ipKey) || 0) >= SOCKETS_PER_IP) return reject(socket, 429, 'Too Many Requests');
+    if ((perIp.get(ipKey) || 0) >= SOCKETS_PER_IP) {
+      limiter.note('sockets', ipKey);
+      return reject(socket, 429, 'Too Many Requests');
+    }
     wss.handleUpgrade(req, socket, head, (ws) => onConnection(ws, ipKey));
   });
 
@@ -69,7 +72,10 @@ export function attachWs(server, { config, accounts, rooms, limiter, ipKeyOf, lo
       alive = true;
       const t = now();
       if (t - windowStart >= 1000) { windowStart = t; windowCount = 0; }
-      if (++windowCount > MSGS_PER_SEC) return conn.close(1008, 'rate_limited');
+      if (++windowCount > MSGS_PER_SEC) {
+        if (windowCount === MSGS_PER_SEC + 1) limiter.note('messages', ipKey);
+        return conn.close(1008, 'rate_limited');
+      }
       if (isBinary) return conn.send({ t: 'error', code: 'bad_message', re: null });
       const parsed = parseMessage(data.toString('utf8'));
       if (parsed.error) return conn.send({ t: 'error', code: parsed.error, re: parsed.re });

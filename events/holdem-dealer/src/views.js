@@ -80,6 +80,8 @@ export function publicTable(table, now) {
       done: !!h.done,
     } : null,
     log: h ? h.log.map((e) => ({ seat: e.seat, a: e.a, amt: e.amt, street: e.street })) : [],
+    // the number of the last hand a restart called off (every chip put in went back), for the pages that saw it
+    voided: table.s.voided ? table.s.voided.no : null,
     last: last ? {
       no: last.no,
       board: last.board.slice(),

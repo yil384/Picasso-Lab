@@ -14,7 +14,7 @@ const keys = (o) => Object.keys(o).sort();
 test('PublicTable and Me have exactly the documented fields', () => {
   const t = makeTable({ seats: [0, 2, 3], rng: riggedRng(4).queue(0) });
   const pt = publicTable(t, t.s.now);
-  assert.deepEqual(keys(pt), ['code', 'hand', 'host', 'last', 'log', 'phase', 'rev', 'seats', 'settings']);
+  assert.deepEqual(keys(pt), ['code', 'hand', 'host', 'last', 'log', 'phase', 'rev', 'seats', 'settings', 'voided']);
   assert.deepEqual(keys(pt.settings), ['actionSec', 'bb', 'maxBuyIn', 'minBuyIn', 'sb', 'seats', 'timeBankSec']);
   assert.deepEqual(keys(pt.seats[0]), ['bet', 'bot', 'connected', 'inHand', 'last', 'name', 'pid', 'shown', 'stack', 'state', 'timeBank']);
   assert.equal(pt.seats[1], null);
@@ -120,7 +120,11 @@ test('views fuzz: no recipient ever sees a card it may not see (thousands of ran
       if (h) cur = snapshotHidden(t);
       // positive control: the raw table state does contain hidden cards, and the checker sees them
       if (h && !h.done && step % 500 === 0) {
-        assert.throws(() => assertNoLeak(JSON.stringify(t.toJSON()), forbiddenFor(cur, null, cur.shown), 'control'));
+        assert.throws(() => assertNoLeak(JSON.stringify(t.snapshot()), forbiddenFor(cur, null, cur.shown), 'control'));
+        // the form written to disk is as clean as a spectator's view (the previous hand checked against itself)
+        const { last: savedLast, ...saved } = t.toJSON();
+        assertNoLeak(JSON.stringify(saved), forbiddenFor(cur, null, cur.shown), 'saved table');
+        if (savedLast && prev) assertNoLeak(JSON.stringify(savedLast), forbiddenFor(prev, '(nobody)', prev.shown), 'saved last hand');
       }
       if (h && h.done && h.id !== lastId) { lastId = h.id; n++; }
       // check every recipient: every seated account, a spectator, an outsider

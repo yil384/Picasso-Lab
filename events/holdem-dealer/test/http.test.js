@@ -42,7 +42,7 @@ test('CORS: allow-listed origins are echoed; preflight allows the private networ
   const plain = await api(svc, 'GET', '/v1/health', { origin: null });
   assert.equal(plain.status, 200);
   assert.equal(plain.headers.get('access-control-allow-origin'), null);
-  assert.deepEqual(Object.keys(plain.data).sort(), ['ok', 'players', 'tables', 'uptime']);
+  assert.deepEqual(Object.keys(plain.data).sort(), ['limited', 'ok', 'players', 'tables', 'uptime']);
   assert.equal(plain.headers.get('cache-control'), 'no-store');
 });
 
@@ -84,10 +84,14 @@ test('suggestions by network: fresh browsers on the same network only; claims re
   assert.equal(wrong.data.error, 'ip_mismatch');
   const ok = await api(svc, 'POST', '/v1/claim', { token: fresh.data.token, body: { sid }, headers: home });
   assert.equal(ok.status, 200);
-  assert.equal(ok.data.account.pid, g.data.account.pid);
-  assert.equal((await api(svc, 'GET', '/v1/me', { token: ok.data.token, headers: home })).data.account.name, 'Quinn');
-  assert.equal((await api(svc, 'GET', '/v1/me', { token: fresh.data.token, headers: home })).status, 401, 'pristine fresh guest deleted');
-  assert.equal((await api(svc, 'POST', '/v1/claim', { token: ok.data.token, body: { sid }, headers: home })).data.error, 'expired');
+  assert.equal(ok.data.token, undefined, 'a claim never issues a token');
+  assert.equal(ok.data.account.pid, fresh.data.account.pid, 'the caller keeps its own account');
+  assert.equal(ok.data.account.name, 'Quinn', 'under the suggested name');
+  const mine = await api(svc, 'GET', '/v1/me', { token: fresh.data.token, headers: home });
+  assert.equal(mine.data.account.pid, fresh.data.account.pid);
+  assert.equal(mine.data.account.name, 'Quinn');
+  assert.equal((await api(svc, 'GET', '/v1/me', { token: g.data.token, headers: home })).data.account.pid, g.data.account.pid);
+  assert.equal((await api(svc, 'POST', '/v1/claim', { token: fresh.data.token, body: { sid }, headers: home })).data.error, 'expired');
 });
 
 test('names, refills, Guandan rounds and the leaderboard over HTTP', async () => {
@@ -189,4 +193,55 @@ test('data files: mode 600; no IP address or raw token anywhere', async () => {
   assert.ok(!text.includes('127.0.0.1'));
   assert.ok(!text.includes(g.token));
   assert.ok(text.includes('"ip":{'));
+});
+
+test('rate limits: every refusal is counted per limit in /v1/health (no network named)', async () => {
+  const h = await api(svc, 'GET', '/v1/health', { headers: nextIp() });
+  assert.ok(h.data.limited.create >= 1, 'the 31st new account above was refused and counted');
+  assert.ok(h.data.limited.other >= 1);
+  assert.ok(!JSON.stringify(h.data).includes('198.51.100.'));
+});
+
+test('an untrusted peer cannot name a network with X-Forwarded-For (only the listed proxy can)', async () => {
+  const own = await startTest({ TRUST_PROXY: '10.255.255.1' }); // the proxy is elsewhere: loopback is not trusted
+  try {
+    const victim = { 'x-forwarded-for': '128.54.10.20' };
+    const g = await api(own, 'POST', '/v1/session', { body: { clientId: 'gd-alice', name: 'Alice', fresh: false }, headers: victim });
+    assert.equal(g.status, 200);
+    // the attacker on the host sends the victim's address: it is ignored, the request is keyed by the socket address
+    const forged = await api(own, 'POST', '/v1/session', { body: { fresh: true }, headers: victim });
+    assert.deepEqual(forged.data.suggestions.map((x) => x.name), ['Alice'], 'both came from 127.0.0.1 in truth');
+    const elsewhere = await api(own, 'POST', '/v1/session', { body: { fresh: true }, headers: { 'x-forwarded-for': '203.0.113.5' } });
+    assert.deepEqual(elsewhere.data.suggestions.map((x) => x.name), ['Alice'], 'a rotated header changes nothing');
+    // rotating the header no longer escapes the per-network account limit
+    let made = 0;
+    for (let i = 0; i < 40; i++) {
+      const r = await api(own, 'POST', '/v1/session', { body: {}, headers: { 'x-forwarded-for': `10.1.${i}.9` } });
+      if (r.status === 200) made++;
+    }
+    assert.equal(made, 30 - 3, '30 an hour from the one real address');
+  } finally { await own.stop(); }
+});
+
+test('health is 503 while changes cannot be written (full disk, permissions), and 200 again once they can', async () => {
+  const own = await startTest({});
+  try {
+    const dir = own.config.dataDir;
+    assert.equal((await api(own, 'GET', '/v1/health')).status, 200);
+    fs.chmodSync(dir, 0o500); // writes fail from now on (as a full disk would)
+    await newGuest(own, 'Unsaved');
+    own.store.dirtySince = Date.now() - 11_000; // the change has waited longer than 10 s
+    own.store.flush();
+    const bad = await api(own, 'GET', '/v1/health');
+    assert.equal(bad.status, 503);
+    assert.equal(bad.data.error, 'persist_failing');
+    assert.equal(bad.data.persist, 'failing');
+    assert.ok(bad.data.unsavedFor >= 10);
+    fs.chmodSync(dir, 0o700);
+    assert.equal(own.store.flush(), true);
+    assert.equal((await api(own, 'GET', '/v1/health')).status, 200);
+  } finally {
+    fs.chmodSync(own.config.dataDir, 0o700);
+    await own.stop();
+  }
 });

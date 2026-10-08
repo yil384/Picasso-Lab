@@ -3,7 +3,10 @@
 // passes it on; an unseated host found gone (after a restart) after 15 s. Injected clock, fake sockets and accounts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Rooms, HOST_GONE_MS, HOST_UNSEATED_GONE_MS, WAITING_GONE_MS, WATCH_MISS_MAX, WATCH_MISS_NET_MAX, WATCH_MISS_NET_DAY } from '../src/rooms.js';
+import {
+  Rooms, HOST_GONE_MS, HOST_UNSEATED_GONE_MS, WAITING_GONE_MS, WATCH_MISS_MAX, WATCH_MISS_NET_MAX, WATCH_MISS_NET_DAY,
+  MAX_HOSTED, MAX_SEATED, MAX_TABLES_PER_NET, WAITING_TABLE_MS,
+} from '../src/rooms.js';
 
 function setup() {
   let clock = 1_000_000;
@@ -19,14 +22,17 @@ function setup() {
       return touched;
     },
   };
-  const rooms = new Rooms({ accounts: acc, now: () => clock });
+  const limits = [];
+  const rooms = new Rooms({ accounts: acc, now: () => clock, onLimit: (bucket) => limits.push(bucket) });
   const conn = (id) => {
     const c = { accountId: id, frames: [], send(m) { c.frames.push(typeof m === 'string' ? JSON.parse(m) : m); }, close() {} };
     rooms.attach(c);
     return c;
   };
-  return { rooms, conn, tick: (ms) => { clock += ms; }, accounts };
+  return { rooms, conn, tick: (ms) => { clock += ms; }, accounts, limits };
 }
+
+const account = (accounts, id) => { if (!accounts.has(id)) accounts.set(id, { id, pid: `p_${id}`, name: id, chips: 100_000 }); };
 
 const hostOf = (rooms, code) => rooms.get(code).host.id;
 
@@ -184,5 +190,143 @@ test('guessing table codes from many fresh accounts on one network: a minute and
   c = guesser();
   rooms.handle(c, { t: 'watch', code });
   assert.equal(c.closed, null, 'the next day the network may look tables up again');
+  rooms.stop();
+});
+
+test('a network shut out of code lookups still reaches its own tables: seated players and hosts reconnect', () => {
+  const { rooms, conn, tick, accounts, limits } = setup();
+  const a = conn('u_a');
+  a.ipKey = 'net-lab';
+  rooms.handle(a, { t: 'create', settings: { blinds: '10/20', seats: 6 } });
+  const code = a.frames.find((m) => m.t === 'created').code;
+  rooms.handle(a, { t: 'sit', seat: 0, buyIn: 2000 });
+  const b = conn('u_b');
+  b.ipKey = 'net-home';
+  rooms.handle(b, { t: 'watch', code });
+  rooms.handle(b, { t: 'sit', seat: 1, buyIn: 2000 });
+  rooms.handle(a, { t: 'host', op: 'start' });
+  const c = conn('u_c');
+  c.ipKey = 'net-lab';
+  rooms.handle(c, { t: 'watch', code }); // a spectator from the lab before the ban
+  // a griefer on the lab network burns the day's misses with fresh guests
+  let n = 0;
+  for (let misses = 0; misses < WATCH_MISS_NET_DAY;) {
+    const id = `u_g${n++}`;
+    account(accounts, id);
+    const g = conn(id);
+    g.ipKey = 'net-lab';
+    g.close = () => {};
+    for (let k = 0; k < 20 && misses < WATCH_MISS_NET_DAY; k++, misses++) rooms.handle(g, { t: 'watch', code: `ZZZ${k}` });
+    tick(60_000);
+  }
+  // a stranger on the lab network is refused, even for a real code
+  account(accounts, 'u_new');
+  const stranger = conn('u_new');
+  stranger.ipKey = 'net-lab';
+  let refused = null;
+  stranger.close = (code2, reason) => { refused = reason; };
+  rooms.handle(stranger, { t: 'watch', code });
+  assert.equal(refused, 'too_many_misses');
+  assert.ok(limits.includes('code_misses_day'));
+  // the seated host's Wi-Fi blips: its new socket on the same network gets its own table back
+  rooms.detach(a);
+  const a2 = conn('u_a');
+  a2.ipKey = 'net-lab';
+  let closed = null;
+  a2.close = (code2, reason) => { closed = reason; };
+  rooms.handle(a2, { t: 'watch', code });
+  assert.equal(closed, null);
+  assert.equal(a2.watching, code);
+  assert.ok(a2.frames.some((m) => m.t === 'state' && m.me.seat === 0));
+  assert.equal(rooms.get(code).seats[0].connected, true);
+  // the spectator from before the ban too
+  rooms.detach(c);
+  const c2 = conn('u_c');
+  c2.ipKey = 'net-lab';
+  rooms.handle(c2, { t: 'watch', code });
+  assert.equal(c2.watching, code);
+  rooms.stop();
+});
+
+test('table caps: an account creates or hosts at most 3 (handing the host role on does not reset it), sits at 4', () => {
+  const { rooms, conn, accounts } = setup();
+  const a = conn('u_a');
+  a.ipKey = 'net-1';
+  const codes = [];
+  const create = (c) => {
+    const since = c.frames.length;
+    rooms.handle(c, { t: 'create', settings: { blinds: '5/10', seats: 2 } });
+    const f = c.frames.slice(since).find((m) => m.t === 'created' || m.t === 'error');
+    return f.t === 'created' ? f.code : f.code === undefined ? null : `error:${f.code}`;
+  };
+  // a creator who leaves each table without a seat hands it to a sitter at once, but still counts as its creator
+  for (let k = 0; k < MAX_HOSTED; k++) {
+    const code = create(a);
+    codes.push(code);
+    account(accounts, `u_s${k}`);
+    const s = conn(`u_s${k}`);
+    s.ipKey = 'net-1';
+    rooms.handle(s, { t: 'watch', code });
+    rooms.handle(s, { t: 'sit', seat: 0, buyIn: 400 });
+    rooms.handle(a, { t: 'unwatch' });
+    assert.equal(rooms.get(code).host.id, `u_s${k}`, 'the host role passed on');
+  }
+  assert.equal(create(a), 'error:too_many_tables');
+  // one account sits at no more than 4 tables
+  account(accounts, 'u_sitter');
+  const sitter = conn('u_sitter');
+  sitter.ipKey = 'net-2';
+  const more = [];
+  for (let k = 0; k < 2; k++) {
+    account(accounts, `u_h${k}`);
+    const h = conn(`u_h${k}`);
+    h.ipKey = `net-h${k}`;
+    more.push(create(h));
+  }
+  account(accounts, 'u_h9');
+  const h9 = conn('u_h9');
+  h9.ipKey = 'net-h9';
+  more.push(create(h9));
+  for (const code of [...codes.slice(0, 2), ...more]) {
+    rooms.handle(sitter, { t: 'watch', code });
+    rooms.handle(sitter, { t: 'sit', seat: 1, buyIn: 400 });
+  }
+  const sat = [...codes.slice(0, 2), ...more].filter((code) => rooms.get(code).seatOf('u_sitter') >= 0).length;
+  assert.equal(sat, MAX_SEATED);
+  assert.equal(sitter.frames.filter((m) => m.t === 'error').pop().code, 'too_many_seats');
+  rooms.stop();
+});
+
+test('table caps: 30 open tables created from one network; a table that never started closes after 30 minutes', () => {
+  const { rooms, conn, tick, accounts } = setup();
+  let made = 0;
+  let last = null;
+  for (let k = 0; k < MAX_TABLES_PER_NET + 2; k++) {
+    account(accounts, `u_c${k}`);
+    const c = conn(`u_c${k}`);
+    c.ipKey = 'net-campus';
+    rooms.handle(c, { t: 'create', settings: { seats: 2 } });
+    last = c.frames.find((m) => m.t === 'created' || m.t === 'error');
+    if (last.t === 'created') made++;
+  }
+  assert.equal(made, MAX_TABLES_PER_NET);
+  assert.equal(last.code, 'too_many_tables_net');
+  // another network still creates
+  account(accounts, 'u_far');
+  const far = conn('u_far');
+  far.ipKey = 'net-far';
+  rooms.handle(far, { t: 'create', settings: { seats: 2 } });
+  const farCode = far.frames.find((m) => m.t === 'created').code;
+  rooms.handle(far, { t: 'sit', seat: 0, buyIn: 2000 }); // seated and connected: still never started
+  const chips = accounts.get('u_far').chips;
+  tick(WAITING_TABLE_MS - 1000);
+  rooms.sweep();
+  assert.ok(rooms.get(farCode));
+  tick(2000);
+  rooms.sweep();
+  assert.equal(rooms.get(farCode), null, 'closed');
+  assert.ok(far.frames.some((m) => m.t === 'closed' && m.reason === 'idle'));
+  assert.equal(accounts.get('u_far').chips, chips + 2000, 'the buy-in went back');
+  assert.equal(rooms.stats().tables, 0, 'the campus tables expired too: the network may create again');
   rooms.stop();
 });

@@ -8,7 +8,7 @@ import WebSocket from 'ws';
 import { HoldemTable } from '../src/engine/table.js';
 import { MAX_TABLES } from '../src/rooms.js';
 import {
-  startTest, newGuest, connect, Client, truthRecorder, chipsTotal, until, autoPlay, checkFrames, floatRng, sleep, ORIGIN,
+  startTest, newGuest, connect, Client, truthRecorder, chipsTotal, until, autoPlay, checkFrames, floatRng, sleep, ORIGIN, api,
 } from './service-helpers.js';
 
 const truth = truthRecorder();
@@ -444,4 +444,41 @@ test('a protected name cannot sit; two sockets of one account share the seat; th
   laptop.close();
   await cz.waitFor((m) => m.t === 'state' && m.table.seats[0] && m.table.seats[0].connected === false);
   ci.close(); cz.close();
+});
+
+test('a claimed suggestion never reaches someone else\'s seat: the claimer gets a name, not the cards or the turn', async () => {
+  const net = { 'x-forwarded-for': '128.54.10.20' };
+  // Victor, a returning player on the lab network, sits at a heads-up table with a friend
+  const v = await api(svc, 'POST', '/v1/session', { headers: net, body: { clientId: 'gd-victor', name: 'Victor', fresh: false } });
+  await api(svc, 'POST', '/v1/session', { token: v.data.token, headers: net, body: {} });
+  const f = await newGuest(svc, 'Friend');
+  const cv = await connect(svc, v.data.token);
+  const cf = await connect(svc, f.token);
+  const code = await createTable(cv, { blinds: '10/20', seats: 2 });
+  assert.equal((await sit(cv, 0, 2000)).me.seat, 0);
+  await watch(cf, code);
+  assert.equal((await sit(cf, 1, 2000)).me.seat, 1);
+  cv.send({ t: 'host', op: 'start' });
+  const live = await cv.waitFor((m) => m.t === 'state' && m.me.hole);
+  // someone else on the same network opens a private window and clicks 继续
+  const o = await api(svc, 'POST', '/v1/session', { headers: net, body: { fresh: true } });
+  assert.deepEqual(o.data.suggestions.map((x) => x.name), ['Victor']);
+  const claimed = await api(svc, 'POST', '/v1/claim', { token: o.data.token, headers: net, body: { sid: o.data.suggestions[0].sid } });
+  assert.equal(claimed.status, 200);
+  assert.equal(claimed.data.token, undefined);
+  assert.equal(claimed.data.account.name, 'Victor');
+  assert.notEqual(claimed.data.account.pid, v.data.account.pid);
+  const co = await connect(svc, o.data.token);
+  const seen = await watch(co, code);
+  assert.equal(seen.me.seat, null, 'not seated');
+  assert.equal(seen.me.hole, null, 'no hole cards');
+  assert.equal(seen.me.legal, null, 'no right to act');
+  const err = await sendAndError(co, { t: 'act', hand: live.table.hand.id, action: 'fold' });
+  assert.equal(err.code, 'not_seated');
+  for (const m of co.frames) if (m.t === 'state') assert.equal(m.me.hole, null);
+  // Victor's own token and seat are untouched
+  assert.equal((await api(svc, 'GET', '/v1/me', { token: v.data.token })).data.account.pid, v.data.account.pid);
+  assert.equal(svc.rooms.get(code).seatOf(svc.accounts.byPublicId(v.data.account.pid).id), 0);
+  cv.send({ t: 'host', op: 'dissolve' });
+  for (const c of [cv, cf, co]) c.close();
 });

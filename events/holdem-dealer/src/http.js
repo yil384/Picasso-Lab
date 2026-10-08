@@ -3,7 +3,10 @@
 // Access-Control-Allow-Private-Network: true. Rate limits per ipKey (in memory): new accounts 30/h, email start 5/h,
 // claims 10/h, everything 600/min. Errors are { error, message } with a 4xx/5xx status. Never logs IPs or tokens.
 //
-//   createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, startedAt, log, closeToken }) -> (req, res)
+// GET /v1/health answers 503 { error: "persist_failing" } while changes cannot be written to disk (store.health()),
+// so `docker compose ps` and the watchdog see it, and counts every refusal per limit since the start (`limited`).
+//
+//   createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, startedAt, log, closeToken, store }) -> (req, res)
 
 import { originAllowed } from './config.js';
 import { ApiError } from './util.js';
@@ -64,7 +67,7 @@ function bearer(req) {
   return m ? m[1] : null;
 }
 
-export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, startedAt = Date.now(), log = () => {}, closeToken = () => {} }) {
+export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, startedAt = Date.now(), log = () => {}, closeToken = () => {}, store = null }) {
   const limit = (bucket, ipKey, n, windowMs) => {
     const r = limiter.hit(bucket, ipKey, n, windowMs);
     if (!r.ok) throw Object.assign(new ApiError(429, 'rate_limited', 'Too many requests, try again later'), { retryAfter: r.retryAfter });
@@ -131,7 +134,14 @@ export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, s
     },
     'GET /v1/health': async () => {
       const s = rooms.stats();
-      return { ok: true, tables: s.tables, players: s.players, uptime: Math.round((Date.now() - startedAt) / 1000) };
+      const out = { ok: true, tables: s.tables, players: s.players, uptime: Math.round((Date.now() - startedAt) / 1000), limited: limiter.refusals() };
+      const p = store ? store.health() : { ok: true };
+      if (!p.ok) {
+        // the service still plays, but nothing reaches the disk: a restart now would lose every change since
+        log('health: changes not saved', { seconds: Math.round(p.unsavedMs / 1000) });
+        throw Object.assign(new ApiError(503, 'persist_failing', 'Changes are not being saved'), { detail: { ...out, ok: false, persist: 'failing', unsavedFor: Math.round(p.unsavedMs / 1000) } });
+      }
+      return out;
     },
   };
   const paths = new Set(Object.keys(routes).map((k) => k.split(' ')[1]));
@@ -180,6 +190,7 @@ export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, s
       send(res, 200, out, cors);
     } catch (e) {
       if (e instanceof ApiError) {
+        if (e.status === 429 && e.code !== 'rate_limited') limiter.note(e.code, ipKey); // e.g. refill_later
         const extra = { ...cors };
         if (e.retryAfter) extra['retry-after'] = String(e.retryAfter);
         if (e.status === 413) extra.connection = 'close';

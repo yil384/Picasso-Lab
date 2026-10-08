@@ -4,7 +4,9 @@
 //
 // Credentials: a device token is 32 random bytes (base64url); only sha256(token) is stored. A Guandan clientId is
 // public and never a credential. IP addresses are never stored: only ipKey = HMAC(IP_SALT, normalized IP), computed
-// by the transport and passed in. Email accounts never enter the IP memory.
+// by the transport and passed in. Email accounts never enter the IP memory. An IP suggestion hands over a name, never
+// an account: claiming one renames the caller's own account (no token for the other account, whose chips, records,
+// seat and cards stay its own).
 //
 //   new Accounts({ gamesSecret, emailLink, verifier, now, tableInfo, onChange, onAccount, onDelete, log })
 //     tableInfo(accountId) -> { seated: bool, chips: int }   chips the account has at tables (rooms layer)
@@ -15,10 +17,10 @@
 //   authenticate(token) -> account | null
 //   session({ account, clientId, name, fresh, ipKey }) -> { token?, account, suggestions?, features }
 //        account = the bearer's account or null (the transport rate-limits creation before calling)
-//   claim(account, sid, ipKey) -> { token, account }
+//   claim(account, sid, ipKey) -> { account }   the caller's own account, now under the suggested name
 //   get(id), view(account), nameAllowed(account), setName(account, name), refill(account)
 //   guandanRound(account, { room, round, won, place }) -> { ok, duplicate? }
-//   leaderboard(game, limit, account?) -> { rows, me? }
+//   leaderboard(game, limit, account?) -> { rows, me?, rule? }   Hold'em ranks established accounts only
 //   emailStart(account, email, tokenHash) -> { lid, poll }
 //   emailComplete(lid, idToken) -> Promise<{ ok, name, nameReserved }>
 //   emailPoll(lid, poll) -> { status: "pending" } | { status: "done", token, account }
@@ -290,11 +292,16 @@ export class Accounts {
   _suggestions(ipKey, a) {
     const t = this.now();
     const out = [];
+    const seen = new Set();
     for (const e of this.ip.get(ipKey) || []) {
       if (out.length >= SUGGEST_MAX) break;
       if (t - e.at >= IP_TTL || e.a === a.id) continue;
       const other = this.accounts.get(e.a);
       if (!other || other.email) continue;
+      // one entry per name (a claimed name lives on in two accounts)
+      const k = nameKey(other.name);
+      if (seen.has(k)) continue;
+      seen.add(k);
       const sid = secretId(18);
       this.sids.set(sid, { accountId: other.id, ipKey, exp: t + SID_TTL });
       out.push({ sid, name: other.name });
@@ -332,6 +339,10 @@ export class Accounts {
     return out;
   }
 
+  // One click on a suggestion: the caller's own account takes the suggested name. The other account is never
+  // handed over (no token for it): an IP address only says "someone here used this name", it never signs anyone in,
+  // so whoever shares the network cannot take a guest's chips, records, seat or hole cards. A device carries a whole
+  // account over only by saving it with an email.
   claim(caller, sid, ipKey) {
     const t = this.now();
     const s = typeof sid === 'string' ? this.sids.get(sid) : null;
@@ -346,19 +357,18 @@ export class Accounts {
       throw new ApiError(404, 'expired', 'This suggestion has expired');
     }
     if (target.email) throw new ApiError(409, 'protected', 'This account is saved with an email');
+    const holder = this.nameHolder(target.name);
+    if (holder && holder !== caller.id) throw new ApiError(409, 'protected', 'This name belongs to a saved account');
     this.sids.delete(sid);
-    let token;
-    if (caller.id === target.id) {
-      token = this._issueToken(target);
-    } else {
-      for (const c of caller.clientIds) this._attachClientId(target, c);
-      token = this._issueToken(target);
-      if (this._pristine(caller)) this._delete(caller);
+    if (caller.name !== target.name) {
+      caller.name = target.name;
+      if (caller.email) this._reindexNames();
+      this.onAccount(caller.id);
     }
-    target.lastSeen = t;
-    this._recordIp(ipKey, target);
+    caller.lastSeen = t;
+    this._recordIp(ipKey, caller);
     this._changed();
-    return { token, account: this.view(target) };
+    return { account: this.view(caller) };
   }
 
   setName(a, name) {
@@ -422,7 +432,8 @@ export class Accounts {
     let rowOf;
     if (game === 'holdem') {
       rowOf = (a) => ({ pid: a.pid, name: a.name, chips: a.chips, net: rnetOf(a), hands: a.holdem.hands, won: a.holdem.won, biggestPot: a.holdem.biggestPot });
-      rows = [...this.accounts.values()].filter((a) => a.holdem.hands > 0)
+      // only established accounts rank (3 days old and 50 hands): a throwaway guest's lucky hands never do
+      rows = [...this.accounts.values()].filter((a) => this.established(a))
         .sort((x, y) => rnetOf(y) - rnetOf(x) || y.holdem.hands - x.holdem.hands || (x.pid < y.pid ? -1 : 1));
     } else if (game === 'guandan') {
       rowOf = (a) => ({ pid: a.pid, name: a.name, rounds: a.guandan.rounds, wins: a.guandan.wins });
@@ -436,7 +447,13 @@ export class Accounts {
       const i = rows.indexOf(me);
       out.me = { rank: i >= 0 ? i + 1 : null, ...rowOf(me) };
     }
+    if (game === 'holdem') out.rule = { days: ESTABLISHED_AGE / DAY, hands: ESTABLISHED_HANDS };
     return out;
+  }
+
+  // 3 days old and 50 Hold'em hands: an account whose losses count toward others' ranking and that ranks itself
+  established(a) {
+    return !!a && this.now() - a.createdAt >= ESTABLISHED_AGE && a.holdem.hands >= ESTABLISHED_HANDS;
   }
 
   // ---------- email link (DESIGN 4.4) ----------
@@ -558,7 +575,8 @@ export class Accounts {
   _merge(b, a) {
     a.holdem.hands += b.holdem.hands;
     a.holdem.won += b.holdem.won;
-    a.holdem.rnet = rnetOf(a) + rnetOf(b);
+    // a fresh guest's lucky hands never lift a saved account's ranking (its losses still count)
+    a.holdem.rnet = rnetOf(a) + (this.established(b) ? rnetOf(b) : Math.min(0, rnetOf(b)));
     a.holdem.net += b.holdem.net;
     a.holdem.showdowns += b.holdem.showdowns;
     a.holdem.biggestPot = Math.max(a.holdem.biggestPot, b.holdem.biggestPot);
@@ -615,7 +633,7 @@ export class Accounts {
     }
     // per hand: the chips fresh accounts lost, taken out of every winner's ranked gain in proportion
     const t = this.now();
-    const fresh = (a) => !a || t - a.createdAt < ESTABLISHED_AGE || a.holdem.hands < ESTABLISHED_HANDS;
+    const fresh = (a) => !a || t - a.createdAt < ESTABLISHED_AGE || a.holdem.hands < ESTABLISHED_HANDS; // = !established(a)
     const freshLoss = new Map();
     for (const r of records) {
       if (!r.hand || r.net >= 0 || !fresh(this.accounts.get(r.accountId))) continue;
