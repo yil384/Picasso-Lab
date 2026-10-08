@@ -110,10 +110,14 @@ body[data-screen="lobby"] #lang-toggle { order: 2; margin-left: auto; }
 body[data-screen="lobby"] #back-events-btn { order: 3; }
 
 .hud-profile { display: flex; align-items: center; gap: calc(12 * var(--lu)); min-width: 0; }
-/* profile photo: a rounded square in a gold frame (Tencent's framed head portrait) */
+/* profile photo: a rounded square in a gold frame (Tencent's framed head portrait); it opens 账号 */
 .hud-avatar {
     position: relative;
     flex: none;
+    display: block;
+    border: 0;
+    cursor: pointer;
+    transition: translate var(--dur-fast) var(--ease-out);
     width: calc(62 * var(--lu));
     height: calc(62 * var(--lu));
     padding: calc(3 * var(--lu));
@@ -129,6 +133,7 @@ body[data-screen="lobby"] #back-events-btn { order: 3; }
     object-fit: cover;
 }
 .hud-avatar > .gd-face { border-radius: calc(11 * var(--lu)); }
+.hud-avatar:active { translate: 0 calc(2 * var(--lu)); }
 .hud-id { display: flex; flex-direction: column; align-items: flex-start; gap: calc(5 * var(--lu)); min-width: 0; }
 /* above the 段位 pill, so the field's --tap box is not cut by it */
 .hud-name { position: relative; z-index: 1; display: flex; align-items: center; cursor: text; }

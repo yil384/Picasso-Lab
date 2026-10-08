@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>掼蛋 · Picasso Lab</title>
 <meta name="theme-color" content="#1b2750">
-<!-- Critical first paint: navy for the lobby, the table teal when a ?room= link opens a game. -->
-<script>document.documentElement.dataset.gdBoot = /[?&]room=/.test(location.search) ? "room" : "lobby";</script>
+<!-- Critical first paint: navy for the lobby, the table teal when a ?room= link opens a game (a Hold'em link waits on navy). -->
+<script>document.documentElement.dataset.gdBoot = /[?&]room=/.test(location.search) && !/[?&]game=holdem/.test(location.search) ? "room" : "lobby";</script>
 <style>html,body{margin:0;background:#2b3c7c}html[data-gd-boot="room"],html[data-gd-boot="room"] body:not([data-screen]){background:#049484}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/guandan-table.css">
 <link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/guandan-records.css">
 <link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/guandan-transition.css">
+<link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/holdem.css">
 </head>
 <body>
 <div id="stage-mount"></div>
@@ -46,6 +47,7 @@
         <symbol id="gd-g-close" viewBox="0 0 24 24"><path d="M5.6 3.4 12 9.8l6.4-6.4 2.2 2.2-6.4 6.4 6.4 6.4-2.2 2.2-6.4-6.4-6.4 6.4-2.2-2.2 6.4-6.4-6.4-6.4 2.2-2.2Z"/></symbol>
         <symbol id="gd-g-note" viewBox="0 0 24 24"><path d="M9 4.6 20.5 2v13.6a3.4 3.4 0 1 1-2.2-3.2V7.1L11.2 8.7v9.4A3.4 3.4 0 1 1 9 14.9V4.6Z"/></symbol>
         <symbol id="gd-g-star" viewBox="0 0 24 24"><path d="M12 1.8 15.1 8.2l7 .9-5.1 4.9 1.3 7L12 17.6 5.7 21l1.3-7L1.9 9.1l7-.9L12 1.8Z"/></symbol>
+        <symbol id="gd-g-chip" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2a10 10 0 1 1 0 20 10 10 0 1 1 0-20Zm0 3a7 7 0 1 0 0 14 7 7 0 1 0 0-14Zm0 2a5 5 0 1 1 0 10 5 5 0 1 1 0-10ZM10.7 2.3h2.6v3h-2.6Zm0 16.4h2.6v3h-2.6ZM2.3 10.7h3v2.6h-3Zm16.4 0h3v2.6h-3Z"/></symbol>
         <symbol id="gd-g-cards" viewBox="0 0 24 24"><path d="M3.2 6.3 10.6 4.3c.7-.2 1.4.2 1.6.9l3.5 13c.2.7-.2 1.4-.9 1.6l-7.4 2c-.7.2-1.4-.2-1.6-.9l-3.5-13c-.2-.7.2-1.4.9-1.6Z"/><path d="M13.3 3.4 20 5.2c.7.2 1.1.9.9 1.6l-3.2 12.1-4.3-15.5Z" opacity=".75"/></symbol>
     </svg>
     <!-- Tencent-style top bar for the lobby and room (the table screen hides it and reuses these handlers). -->
@@ -99,6 +101,8 @@ const db = getDatabase(app);
 const EVENTS_URL = "https://yil384.github.io/Picasso-Lab/events/events.html";
 const GUANDAN_URL = "https://yil384.github.io/Picasso-Lab/events/guandan.html";
 const TIGA_FILMS = "https://yil384.github.io/Picasso-Lab/events/static/tiga/";
+// The games service (accounts, Hold'em tables). Tests point the page at a local one; never taken from the URL.
+const GAMES_ORIGIN = window.__PICASSO_GAMES_ORIGIN || "https://poker.picasso-lab.com";
 // Inside the Events page the table runs in a frame named "gd-portal" (the name survives this page's own
 // reloads, e.g. a new room). Events plays the Tiga films around it and owns the way in and out.
 const IN_EVENTS_PORTAL = window.name === "gd-portal" && window.parent !== window;
@@ -139,8 +143,11 @@ const DEALING_MS = 2800;
 const SORTING_MS = 980;
 const TURN_LIMIT_MS = 180000;
 
+// ?game=holdem&room=CODE opens a Hold'em table (its invite links); ?room=CODE alone is a Guandan room.
+const bootQuery = new URLSearchParams(location.search);
+const bootHoldem = bootQuery.get("game") === "holdem";
 let game = null;
-let roomCode = new URLSearchParams(location.search).get("room") || "";
+let roomCode = bootHoldem ? "" : bootQuery.get("room") || "";
 let selected = new Set();
 let hintAdvisor = null;
 let unsubscribe = null;
@@ -152,6 +159,9 @@ let actionBusy = false;
 let closingOwnRoom = false;   // this client is removing its room (解散 / the host's ↩), no notice
 let roomHostSeen = null;      // { code, host } at the last room render: a guest handed the room is told
 let handOrderState = { key: "", ids: [] };
+let account = null;           // games-account.js: the shared guest / saved identity, null until it loads
+let lobbyGame = bootHoldem || storageGet("picasso.games.game") === "holdem" ? "holdem" : "guandan";   // the lobby's game switch
+let holdem = null;            // holdem.js once loaded; holdem.active while a Hold'em screen is up
 
 // Storage can throw (blocked third-party storage in the Google Sites iframe, private modes);
 // every access goes through these so the module never dies at top level.
@@ -183,6 +193,8 @@ const dealAnimation = {
     completed: new Set(),
     timers: []
 };
+// A browser that never played (no Guandan id, no nickname, no games token) may be offered "continue as X?".
+const freshVisitor = !storageGet("picasso.guandan.client") && !storageGet("picasso.guandan.name") && !storageGet("picasso.games.token");
 let clientId = storageGet("picasso.guandan.client");
 if (!clientId) {
     clientId = "c_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -886,7 +898,16 @@ function attachRoom(code) {
         maybeRunAI();
         scheduleTurnClock();
         maybePrefetchHint();
+        reportRound();
     });
+}
+
+// My finished rounds go to the account records once each (self-reported, as trusted as Guandan itself).
+function reportRound() {
+    const seat = mySeat();
+    const result = game.roundResult;
+    if (!account || seat < 0 || !result || (game.phase !== "roundOver" && game.phase !== "gameOver")) return;
+    account.reportGuandanRound({ room: roomCode, round: game.roundNo, won: seat % 2 === result.firstTeam, place: valuesFromFirebase(result.order).indexOf(seat) + 1 });
 }
 
 // The room is gone: dissolved by its host while we were in it, or a ?room= link to a closed room.
@@ -1739,22 +1760,37 @@ function glyphHTML(name, className = "") {
 }
 
 // ---------- top bar content ----------
+function profileFaceHTML(name) {
+    const photo = labPlayers()[labPlayerKey(name)]?.avatar;
+    return photo ? `<img src="${encodeHTML(photo)}" alt="">` : defaultFaceHTML();
+}
+
+// Coin discs marked 分 / 胜 / 场 (Guandan: the lab board) or 筹 / 胜 / 手 (Hold'em: the account's
+// bankroll and hands); in English a glyph each, the word in the title.
+function lobbyStatsHTML(st) {
+    const h = account?.account;
+    const rows = lobbyGame === "holdem"
+        ? h && [
+            ["筹", "chip", Number(h.chips || 0).toLocaleString("en-US"), L("Chips", "筹码")],
+            ["胜", "trophy", h.holdem?.hands ? `${Math.round(h.holdem.won * 100 / h.holdem.hands)}%` : "-", L("Hands won", "胜率")],
+            ["手", "cards", h.holdem?.hands || 0, L("Hands", "手数")]
+        ]
+        : st && [
+            ["分", "star", st.pts, L("Rating", "评分")],
+            ["胜", "trophy", `${st.wr}%`, L("Win rate", "胜率")],
+            ["场", "cards", st.p, L("Matches", "场次")]
+        ];
+    return (rows || []).map(([mark, glyph, value, label], i) => `<span class="hud-stat s${i}" title="${label}"><i>${isZH() ? mark : glyphHTML(glyph)}</i><b>${value}</b><span class="sr-only">${label}</span></span>`).join("");
+}
+
 function lobbyProfileHTML() {
     const key = labPlayerKey(nickname);
     const p = key ? labPlayers()[key] : null;
     const st = key ? labStatsFor(key) : null;
-    const face = p?.avatar
-        ? `<img src="${encodeHTML(p.avatar)}" alt="">`
-        : defaultFaceHTML();
     const tier = st ? L(`Rank ${st.rank}`, `第 ${st.rank} 名`) : p ? L("Lab member", "实验室") : L("Rookie", "新手");
-    // coin discs marked 分 / 胜 / 场; in English a star, a trophy and cards, the word in the title
-    const stats = st ? [
-        ["分", "star", st.pts, L("Rating", "评分")],
-        ["胜", "trophy", `${st.wr}%`, L("Win rate", "胜率")],
-        ["场", "cards", st.p, L("Matches", "场次")]
-    ].map(([mark, glyph, value, label], i) => `<span class="hud-stat s${i}" title="${label}"><i>${isZH() ? mark : glyphHTML(glyph)}</i><b>${value}</b><span class="sr-only">${label}</span></span>`).join("") : "";
+    const stats = lobbyStatsHTML(st);
     return `<div class="hud-profile">
-        <span class="hud-avatar">${face}</span>
+        <button class="hud-avatar" type="button" data-account aria-label="${L("Account", "账号")}">${profileFaceHTML(nickname)}</button>
         <div class="hud-id">
             <label class="hud-name"><input id="nick-input" value="${encodeHTML(nickname)}" maxlength="24" autocomplete="nickname" spellcheck="false" placeholder="${L("Set a name", "设置昵称")}" aria-label="${L("Nickname", "昵称")}"><svg class="hud-pen" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17.2V21h3.8L17.9 9.9l-3.8-3.8L3 17.2Zm17.7-10.1c.4-.4.4-1 0-1.4l-2.4-2.4c-.4-.4-1-.4-1.4 0l-1.8 1.8 3.8 3.8 1.8-1.8Z"/></svg></label>
             <span class="hud-tier"><span>${tier}</span></span>
@@ -1772,9 +1808,18 @@ function saveNickname(input) {
         if (input) input.value = nickname;
         return;
     }
+    const previous = nickname;
+    setNickname(name);
+    account?.syncName(name, previous);
+}
+
+// Also the account layer's way in: a name a saved account keeps is reverted, a claimed or
+// email-saved account brings its own.
+function setNickname(name) {
     if (name !== nickname) {
         nickname = name;
         storageSet("picasso.guandan.name", name);
+        document.querySelectorAll("#nick-input").forEach(input => { if (input !== document.activeElement) input.value = name; });
         updateTopbarStatus();
     }
     // A seated player re-takes the same seat so the table shows the new name. It goes through
@@ -4153,7 +4198,22 @@ hudStatusEl.addEventListener("change", event => {
     if (event.target.id === "nick-input") saveNickname(event.target);
 });
 hudStatusEl.addEventListener("keydown", blurNicknameOnEnter);
+hudStatusEl.addEventListener("click", event => {
+    if (!event.target.closest("[data-account]")) return;
+    if (account) account.openProfile();
+    else showToast(L("The game service is unavailable", "游戏服务暂不可用"));
+});
 document.addEventListener("guandan:music", refreshLobbyRail);
+
+// The account layer loads beside the game and never holds it up: without it the page plays as before.
+import("https://yil384.github.io/Picasso-Lab/events/static/games-account.js").then(({ createAccount }) => {
+    account = createAccount({
+        origin: GAMES_ORIGIN, fresh: freshVisitor, clientId, firebaseApp: app,
+        getName: () => nickname, setName: setNickname, avatarHTML: profileFaceHTML, lang: () => uiLang,
+        L, encodeHTML, openPopup, showToast, storageGet, storageSet
+    });
+    account.onChange(updateTopbarStatus);
+}).catch(() => {});
 
 // In the Events portal, Events focuses this frame when it reveals the table: a frame that focused
 // itself on load would take the keys (Esc to skip) while the attack film still plays over it.

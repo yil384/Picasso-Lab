@@ -1,0 +1,132 @@
+/* ==========================================================================
+   Picasso Lab games: Texas Hold'em (holdem*.js) and the shared account popups (games-account.js).
+   Same design system as Guandan (guandan-ui.css tokens, components and motion rules): popups are
+   GuandanUI popups sized in --pu, the lobby and the room reuse guandan-lobby.css, and the table is a
+   design-px stage (holdem-table.js) with the hd- components below.
+   Screens: body[data-screen="hroom"] (the waiting room, styled as Guandan's room) and "htable".
+   ========================================================================== */
+
+/* ---------- account popups (账号, continue as X, save with email, privacy) ---------- */
+.ga-profile { display: flex; flex-direction: column; gap: calc(16 * var(--pu)); }
+.ga-id {
+    display: flex;
+    align-items: center;
+    gap: calc(16 * var(--pu));
+    padding: calc(14 * var(--pu)) calc(16 * var(--pu));
+    border-radius: calc(10 * var(--pu));
+    background: linear-gradient(180deg, #eef3fd, #e2eafa);
+}
+.ga-face {
+    flex: none;
+    width: calc(76 * var(--pu));
+    height: calc(76 * var(--pu));
+    padding: calc(4 * var(--pu));
+    border-radius: calc(16 * var(--pu));
+    background: linear-gradient(180deg, #fff8d8 0%, #f3cc62 55%, #c9871c 100%);
+}
+.ga-face > img, .ga-face > .gd-face { display: block; width: 100%; height: 100%; border-radius: calc(12 * var(--pu)); object-fit: cover; background: #e9eef5; }
+.ga-id-text { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: calc(6 * var(--pu)); }
+.ga-name { max-width: 100%; overflow: hidden; color: var(--ink); font: 900 calc(26 * var(--pu))/1.2 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.ga-status {
+    padding: 0 calc(12 * var(--pu));
+    border-radius: calc(6 * var(--pu));
+    background: #d3dcf2;
+    color: var(--ink-2);
+    font: 800 calc(16 * var(--pu))/calc(28 * var(--pu)) var(--font-ui);
+    white-space: nowrap;
+}
+.ga-status.is-saved { background: linear-gradient(180deg, #33a3ec, #1569b8); color: #fff; }
+.ga-bank { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: calc(6 * var(--pu)); }
+.ga-bank-k { color: var(--ink-3); font: 700 calc(16 * var(--pu))/1 var(--font-ui); }
+.ga-bank-v { display: flex; align-items: center; gap: calc(8 * var(--pu)); color: var(--ink); font: 800 calc(36 * var(--pu))/1 var(--font-num); }
+.ga-coin {
+    width: calc(26 * var(--pu));
+    height: calc(26 * var(--pu));
+    border-radius: 50%;
+    background: radial-gradient(circle at 36% 30%, #fff5bf 0%, #ffcf45 48%, #e39516 100%);
+    box-shadow: inset 0 calc(-2 * var(--pu)) 0 rgba(150, 70, 0, .35), inset 0 0 0 calc(4 * var(--pu)) rgba(255, 255, 255, .25);
+}
+.ga-bank .btn { --btn-h: max(var(--tap, 0px), calc(34 * var(--pu))); --btn-fs: calc(16 * var(--pu)); --btn-px: calc(14 * var(--pu)); }
+.ga-offline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(12 * var(--pu));
+    padding: calc(10 * var(--pu)) calc(16 * var(--pu));
+    border-radius: calc(8 * var(--pu));
+    background: #fdecea;
+    color: #9e2a24;
+    font: 700 calc(17 * var(--pu))/1.3 var(--font-ui);
+}
+.ga-offline .btn { --btn-h: max(var(--tap, 0px), calc(34 * var(--pu))); --btn-fs: calc(16 * var(--pu)); --btn-px: calc(14 * var(--pu)); }
+.ga-games { display: grid; grid-template-columns: 4fr 2.4fr; gap: calc(12 * var(--pu)); }
+.ga-game { min-width: 0; overflow: hidden; border-radius: calc(8 * var(--pu)); background: #fff; box-shadow: inset 0 0 0 1px var(--panel-line); }
+.ga-game h3 {
+    margin: 0;
+    padding: 0 calc(14 * var(--pu));
+    background: linear-gradient(90deg, #8196f4, #6c84ec);
+    color: #fff;
+    font: 900 calc(18 * var(--pu))/calc(36 * var(--pu)) var(--font-ui);
+    letter-spacing: .06em;
+}
+html[lang="en"] .ga-game h3 { letter-spacing: 0; }
+.ga-stats { display: flex; }
+.ga-stat { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: calc(4 * var(--pu)); padding: calc(12 * var(--pu)) calc(4 * var(--pu)); }
+.ga-stat + .ga-stat { box-shadow: inset 1px 0 0 var(--panel-line); }
+.ga-stat b { color: var(--ink); font: 800 calc(30 * var(--pu))/1 var(--font-num); white-space: nowrap; }
+.ga-stat.is-neg b { color: #c8304e; }
+.ga-stat span { color: var(--ink-3); font: 700 calc(15 * var(--pu))/1.2 var(--font-ui); white-space: nowrap; }
+.ga-foot { display: flex; flex-direction: column; align-items: center; gap: calc(10 * var(--pu)); }
+.ga-foot .btn { --btn-h: max(var(--tap, 0px), calc(50 * var(--pu))); --btn-fs: calc(21 * var(--pu)); --btn-px: calc(28 * var(--pu)); --btn-minw: calc(220 * var(--pu)); }
+.ga-note { margin: 0; color: var(--ink-3); font: 500 calc(15 * var(--pu))/1.4 var(--font-ui); text-align: center; }
+/* a quiet text link in the util blue (隐私说明); the box keeps the --tap target */
+.ga-link {
+    display: inline-grid;
+    place-items: center;
+    min-height: var(--tap, 0px);
+    padding: 0 calc(4 * var(--pu));
+    border: 0;
+    background: none;
+    color: var(--util);
+    font: 700 calc(16 * var(--pu))/1.3 var(--font-ui);
+}
+.ga-suggest, .ga-email { display: flex; flex-direction: column; align-items: center; }
+.ga-suggest .gd-confirm-text { margin-top: calc(10 * var(--pu)); margin-bottom: calc(22 * var(--pu)); }
+.ga-suggest-face { width: calc(84 * var(--pu)); height: calc(84 * var(--pu)); padding: calc(4 * var(--pu)); border-radius: calc(18 * var(--pu)); background: linear-gradient(180deg, #fff8d8 0%, #f3cc62 55%, #c9871c 100%); }
+.ga-suggest-face > * { display: block; width: 100%; height: 100%; border-radius: calc(14 * var(--pu)); object-fit: cover; }
+.gd-confirm-row.is-names { flex-wrap: wrap; gap: calc(12 * var(--pu)); }
+.gd-confirm-row.is-names .btn { --btn-minw: calc(120 * var(--pu)); }
+.ga-suggest .ga-link, .ga-email .ga-link { margin-top: calc(10 * var(--pu)); }
+.ga-email-lead { margin: calc(4 * var(--pu)) 0 calc(16 * var(--pu)); color: var(--ink-2); font: 500 calc(18 * var(--pu))/1.55 var(--font-ui); text-align: center; text-wrap: balance; }
+.ga-email-input {
+    width: 100%;
+    height: max(var(--tap, 0px), calc(52 * var(--pu)));
+    padding: 0 calc(16 * var(--pu));
+    border: 0;
+    border-radius: calc(8 * var(--pu));
+    background: #fff;
+    box-shadow: inset 0 0 0 calc(2 * var(--pu)) #b8c8ea, inset 0 calc(2 * var(--pu)) calc(4 * var(--pu)) rgba(20, 40, 100, .1);
+    color: var(--ink);
+    font: 700 max(16px, calc(20 * var(--pu)))/1 var(--font-ui);
+    outline: none;
+}
+.ga-email-input:focus { box-shadow: inset 0 0 0 calc(2 * var(--pu)) var(--util); }
+.ga-email-err { min-height: calc(26 * var(--pu)); margin: calc(6 * var(--pu)) 0 calc(4 * var(--pu)); color: #c8304e; font: 700 calc(16 * var(--pu))/1.4 var(--font-ui); }
+.ga-email.is-sent .gd-confirm-text { margin: calc(12 * var(--pu)) 0 calc(4 * var(--pu)); }
+.ga-email-wait { margin: 0 0 calc(22 * var(--pu)); color: var(--ink-3); font: 600 calc(16 * var(--pu))/1.4 var(--font-ui); }
+/* the turning ring of the lobby's loading plate, in ink: waiting for the link to be opened */
+.ga-email-ring {
+    width: calc(40 * var(--pu));
+    height: calc(40 * var(--pu));
+    border: calc(4 * var(--pu)) solid rgba(108, 132, 236, .25);
+    border-top-color: var(--util);
+    border-radius: 50%;
+    animation: gd-busy-turn 900ms linear infinite;
+}
+.ga-privacy { margin: calc(4 * var(--pu)) 0; color: var(--ink-2); font: 500 calc(17 * var(--pu))/1.7 var(--font-ui); }
+@media (max-aspect-ratio: 1/1) {
+    .ga-id { flex-wrap: wrap; }
+    .ga-bank { flex-basis: 100%; flex-direction: row; align-items: center; }
+    .ga-bank-k { margin-right: auto; }
+    .ga-games { grid-template-columns: 1fr; }
+}

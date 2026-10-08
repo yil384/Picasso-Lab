@@ -64,6 +64,22 @@ async def route_context(ctx):
         return h
     for mod, fname in (('app', 'fb-stub-app.js'), ('database', 'fb-stub-db.js')):
         await ctx.route(f'https://www.gstatic.com/firebasejs/12.8.0/firebase-{mod}.js', stub(open(os.path.join(D, fname)).read()))
+    await ctx.route(GAMES + '**', games_stub)
+
+
+# The production games service (accounts, Hold'em) is never called: a guest session and {ok} for the rest.
+GAMES = 'https://poker.picasso-lab.com/'
+GUEST = {'pid': 'p_harness', 'name': 'Yichen', 'guest': True, 'email': None, 'chips': 10000, 'refills': 0, 'protected': False,
+         'holdem': {'hands': 0, 'won': 0, 'biggestPot': 0, 'net': 0, 'showdowns': 0}, 'guandan': {'rounds': 0, 'wins': 0}}
+
+
+async def games_stub(route):
+    req = route.request
+    head = {'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type'}
+    if req.method == 'OPTIONS':
+        return await route.fulfill(status=204, headers=head, body='')
+    body = {'token': 'harness-token', 'account': GUEST, 'features': {'emailLink': False}} if req.url.split('?')[0].endswith('/v1/session') else {'ok': True, 'account': GUEST}
+    await route.fulfill(status=200, headers=head, body=json.dumps(body))
 
 
 class Session:
