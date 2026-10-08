@@ -77,20 +77,37 @@ test('staging compose: production settings, its own project, port, hostname, net
   assert.doesNotMatch(read('deploy/staging.compose.yaml'), /"\.\.\/(data|logs):/);
 });
 
-test('BODY=mineai: staging builds the Mine AI MCP runtime and keeps its bot data; production builds none', () => {
+test('BODY=mineai: both images carry the Mine AI MCP runtime, run under an init and keep its bot data; .env picks the body', () => {
   const prod = services('deploy/compose.yaml');
   const stg = services('deploy/staging.compose.yaml');
-  assert.match(stg.agent.text, /build: \{ context: \.\., dockerfile: deploy\/Dockerfile\.agent, args: \{ MINEAI: "1" \} \}/);
-  assert.doesNotMatch(prod.agent.text, /MINEAI/, 'production: no runtime in its image (Dockerfile.agent: MINEAI=0)');
-  assert.match(stg.agent.text, /"\.\.\/\.\.\/mineai-data:\/mineai-data"/, 'their per-bot SQLite outlives the container, next to staging\'s world and logs');
-  assert.match(stg.agent.text, /^ {4}init: true/m, 'an init reaps what a host leaves behind');
-  // which body plays is deploy/.env's business on picasso, never the compose file's (the settings test compares them)
-  for (const s of [prod, stg]) assert.ok(!('BODY' in s.agent.env) && !('MINEAI_DIR' in s.agent.env));
+  for (const [name, s] of [['production', prod], ['staging', stg]]) {
+    assert.match(s.agent.text, /build: \{ context: \.\., dockerfile: deploy\/Dockerfile\.agent, args: \{ MINEAI: "1" \} \}/, `${name}: the runtime fetched and patched at build time`);
+    assert.match(s.agent.text, /^ {4}init: true/m, `${name}: an init reaps what a host leaves behind`);
+    // which body plays is deploy/.env's business on picasso, never the compose file's (the settings test compares them)
+    for (const k of ['BODY', 'MINEAI_DIR', 'MINEAI_DATA_DIR']) assert.ok(!(k in s.agent.env), `${name}: ${k} comes from deploy/.env`);
+    assert.match(s.agent.text, /^ {4}env_file: \[ \.env \]$/m);
+  }
+  // their per-bot SQLite outlives the container, next to each stack's world and logs (production: app/data, app/logs)
+  assert.match(prod.agent.text, /volumes: \[ "\.\.\/logs:\/logs", "console:\/console", "\.\.\/mineai-data:\/mineai-data" \]/);
+  assert.match(prod.paper.text, /"\.\.\/data:\/data"/);
+  assert.match(stg.agent.text, /"\.\.\/\.\.\/mineai-data:\/mineai-data"/);
+  // a deploy without a BODY line plays with our body: the default, and the runtime is never checked or started
+  assert.equal(loadConfig({ LOG_DIR: '' }).body.kind, 'ours');
+  assert.equal(loadConfig({ LOG_DIR: '', BODY: 'mineai', MINEAI_DIR: '/opt/mine-ai-mcp', MINEAI_DATA_DIR: '/mineai-data' }).mineai.dataDir, '/mineai-data');
   // every image copies mineai/ (the pin and our patches), so both deploys must send it; the fetch comes before src/
   const docker = read('deploy/Dockerfile.agent');
   assert.match(docker, /^COPY mineai \.\/mineai$/m);
   assert.ok(docker.indexOf('mineai/fetch-and-patch.sh') < docker.indexOf('COPY src '), 'a change to src/ reuses the runtime layer');
   assert.match(docker, /^ARG MINEAI=0$/m);
+  assert.match(docker, /^ENV MINEAI_DIR=\/opt\/mine-ai-mcp MINEAI_RUNTIME=bun MINEAI_EXEC=\/usr\/local\/bin\/bun$/m);
+  // the patches the image applies and the start check demands are UPSTREAM.json's, 0007 and 0008 (gate 3) included
+  const up = JSON.parse(read('mineai/UPSTREAM.json'));
+  assert.deepEqual(up.patches.map((p) => p.slice(8, 12)), ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008']);
+  for (const p of up.patches) assert.ok(fs.existsSync(path.join(ROOT, 'mineai', p)), p);
+  const fetch = read('mineai/fetch-and-patch.sh');
+  for (const t of ['src/world/block-classification.test.ts', 'src/world/nearby-placement.test.ts', 'src/actions/collect-block', 'src/world/landing.test.ts']) {
+    assert.ok(fetch.includes(t), `the build runs ${t}`);
+  }
 });
 
 // push.sh with stand-ins: ssh, rsync and node only write down how they were called. The run uses `zsh -f` (no startup
@@ -117,11 +134,11 @@ function push(args, { nodeExit = 0 } = {}) {
 // production's commands as push.sh ran them before staging existed, plus mineai/ (its image copies the folder)
 const AGENT = ROOT;
 const PROD_CALLS = [
-  `[${AGENT}] ssh picasso mkdir -p ~/workspace/muse-minecraft/{app,data,logs}`,
+  `[${AGENT}] ssh picasso mkdir -p ~/workspace/muse-minecraft/{app,data,logs} ~/workspace/muse-minecraft/app/mineai-data && chmod 700 ~/workspace/muse-minecraft/app/mineai-data`,
   `[${AGENT}] rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy mineai package.json package-lock.json README.md .dockerignore picasso:workspace/muse-minecraft/app/`,
   `[${AGENT}/server] rsync -azL paper.jar picasso:workspace/muse-minecraft/app/paper.jar`,
   `[${AGENT}/server] rsync -azL --delete --include *.jar --exclude * plugins/ picasso:workspace/muse-minecraft/app/plugins/`,
-  `[${AGENT}] ssh picasso set -e; cd ~/workspace/muse-minecraft/app`,
+  `[${AGENT}] ssh picasso set -eo pipefail; cd ~/workspace/muse-minecraft/app`,
 ];
 
 test('push.sh: staging by default; production only with --prod and only after the staging checks pass', { skip: !ZSH && 'no zsh' }, () => {
@@ -147,8 +164,10 @@ test('push.sh: staging by default; production only with --prod and only after th
   const after = prod.calls.slice(check + 1);
   assert.deepEqual(after.slice(0, PROD_CALLS.length), PROD_CALLS);
   assert.match(after.join('\n'), /cd deploy && docker compose up -d --build 2>&1 \| tail -4 && docker compose ps --format "\{\{\.Service\}\}: \{\{\.Status\}\}"$/m);
-  // after the build: our own dangling images only (ROADMAP M0 item 8), and a note while the trusted proxy is unset (item 6)
-  assert.match(after.join('\n'), /^ {2}docker image prune -f --filter "label=org\.picasso-lab\.app=muse-minecraft" \| tail -1$/m);
+  // after the build: our own dangling images only (ROADMAP M0 item 8), a note instead of a stop when picasso refuses the
+  // prune (as on staging), the body deploy/.env picks, and a note while the proxy secret is unset (item 6)
+  assert.match(after.join('\n'), /^ {2}docker image prune -f --filter "label=org\.picasso-lab\.app=muse-minecraft" 2>&1 \| tail -1 \|\| echo "note: the prune was refused[^"]*\$\(docker images -q -f dangling=true -f label=org\.picasso-lab\.app=muse-minecraft \| wc -l\)[^"]*"$/m);
+  assert.match(after.join('\n'), /^ {2}B=\$\(sed -n "s\/\^BODY=\/\/p" \.env \| tail -1\); echo "production body: \$\{B:-ours\} /m, 'which body production plays, ours without a BODY line');
   assert.match(after.at(-1), /grep -q "\^WEB_PROXY_SECRET=" \.env \|\| echo "note: deploy\/\.env has no WEB_PROXY_SECRET/);
   assert.match(after.join('\n'), /if \[ -f deploy\/stream\.env \]; then chmod 600 deploy\/stream\.env; P=stream; fi/);
 
@@ -283,4 +302,10 @@ test('staging-check: strict; a failed step fails the check and the game still en
   const refused = [];
   assert.equal(await runCheck({ base: 'https://play.picasso-lab.com/', print: (l) => refused.push(l) }), 2);
   assert.match(refused.join('\n'), /refused: play\.picasso-lab\.com is production/);
+  // the smoke check after a production deploy (docs/SWITCH.md) asks for production by name; it gets past that refusal
+  // (to the next one here: no time to play in, so nothing is fetched)
+  const asked = [];
+  assert.equal(await runCheck({ base: 'https://play.picasso-lab.com/', production: true, minutes: 0, print: (l) => asked.push(l) }), 2);
+  assert.doesNotMatch(asked.join('\n'), /is production/);
+  assert.match(asked.join('\n'), /refused: minutes must be more than 0/);
 });

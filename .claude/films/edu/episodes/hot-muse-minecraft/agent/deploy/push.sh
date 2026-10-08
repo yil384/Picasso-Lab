@@ -16,7 +16,8 @@
 # picasso's docker wrapper refuses every prune for a non-root user: staging then prints a note with the number of our
 # dangling images left (remove them by hand, README "Deploy on picasso") and goes on to its checks.
 # mineai/ (the Mine AI MCP pin and our patches) goes out with the code: Dockerfile.agent copies it into every image and
-# builds the runtime from it where MINEAI=1 (staging).
+# builds the runtime from it (MINEAI=1 in both compose files). Production then prints which body its deploy/.env picks
+# (BODY, default ours; docs/SWITCH.md) and, like staging, a note instead of stopping when picasso refuses the prune.
 set -e
 A=$(cd "$(dirname "$0")/.." && pwd)
 PROD=0 CHECK_ONLY=0 DRY=0
@@ -60,14 +61,15 @@ check() {
   x node "$A/scripts/staging-check.mjs" https://play-staging.picasso-lab.com
 }
 
-# production, as before staging existed (with the prune of our own dangling images, the trusted-proxy note, and mineai/,
-# which its image copies too: production's own build has MINEAI=0, so no runtime is fetched and it plays with our body)
+# production, as before staging existed, with: the prune of our own dangling images (a note when picasso refuses it),
+# the trusted-proxy note, mineai/ (its image builds the runtime too, MINEAI=1), the bots' data folder (mode 700) and
+# the body deploy/.env picks (BODY; without it, ours)
 prod() {
   local R=picasso:workspace/muse-minecraft
-  x ssh picasso 'mkdir -p ~/workspace/muse-minecraft/{app,data,logs}'
+  x ssh picasso 'mkdir -p ~/workspace/muse-minecraft/{app,data,logs} ~/workspace/muse-minecraft/app/mineai-data && chmod 700 ~/workspace/muse-minecraft/app/mineai-data'
   (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy mineai package.json package-lock.json README.md .dockerignore $R/app/)
   (cd "$A/server" && x rsync -azL paper.jar $R/app/paper.jar && x rsync -azL --delete --include '*.jar' --exclude '*' plugins/ $R/app/plugins/)
-  x ssh picasso 'set -e; cd ~/workspace/muse-minecraft/app
+  x ssh picasso 'set -eo pipefail; cd ~/workspace/muse-minecraft/app
   [ -f deploy/.env ] || printf "WEB_ADMIN_TOKEN=%s\n" "$(openssl rand -base64 24 | tr -d "/+=" | head -c 32)" > deploy/.env
   chmod 600 deploy/.env
   # the live-video streamer runs only when its stream keys are there (deploy/stream.env, made by hand on picasso)
@@ -77,8 +79,10 @@ prod() {
   if [ -f deploy/camera.env ]; then chmod 600 deploy/camera.env; P="${P:+$P,}camera"; mkdir -p ../camera/auth && chmod 700 ../camera ../camera/auth; fi
   if [ -n "$P" ]; then export COMPOSE_PROFILES=$P; fi
   cd deploy && docker compose up -d --build 2>&1 | tail -4 && docker compose ps --format "{{.Service}}: {{.Status}}"
-  # the images this build replaced: dangling, ours only (an image a container still uses is never removed)
-  docker image prune -f --filter "label=org.picasso-lab.app=muse-minecraft" | tail -1
+  # the images this build replaced: dangling, ours only (an image a container still uses is never removed); picasso
+  # refuses prune to non-root users, and production goes on with a note, as staging does
+  docker image prune -f --filter "label=org.picasso-lab.app=muse-minecraft" 2>&1 | tail -1 || echo "note: the prune was refused (picasso allows it as root only); our dangling images left: $(docker images -q -f dangling=true -f label=org.picasso-lab.app=muse-minecraft | wc -l) (README, Deploy on picasso)"
+  B=$(sed -n "s/^BODY=//p" .env | tail -1); echo "production body: ${B:-ours} (deploy/.env BODY; docs/SWITCH.md)"
   grep -q "^WEB_PROXY_SECRET=" .env || echo "note: deploy/.env has no WEB_PROXY_SECRET: forwarded headers are believed from any local peer on 7850 (README, Deploy on picasso)"'
 }
 

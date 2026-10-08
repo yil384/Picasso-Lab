@@ -331,9 +331,11 @@ paper.jar (a few minutes); later pushes skip it.
 `test/deploy.test.js` keeps this honest without picasso: `staging.compose.yaml` must keep production's Paper and
 agent settings (only `MC_HOST` and `WEB_PUBLIC_URL` differ) and every service production always runs; and push.sh,
 run with stand-ins for ssh, rsync and node, must reach production only with `--prod` and only after a passing check,
-with production's commands as before staging existed (plus, after the build, the prune of our own dangling images and
-the note while `WEB_PROXY_SECRET` is unset, ROADMAP M0 items 8 and 6; staging prunes the same way; and `mineai/` in the
-copy, which every agent image copies).
+with production's commands as before staging existed (plus the bots' data folder, mode 700; after the build, the prune
+of our own dangling images with a note when picasso refuses it, the body `deploy/.env` picks, and the note while
+`WEB_PROXY_SECRET` is unset, ROADMAP M0 items 8 and 6; staging prunes the same way; and `mineai/` in the copy, which
+every agent image copies); and both compose files must build the runtime, run the agent under an init, mount the
+data folder and leave `BODY` to `deploy/.env`.
 
 Staging plays with `BODY=mineai` (section "The Mine AI MCP body"): `staging.compose.yaml` builds its agent image with
 `--build-arg MINEAI=1` (the runtime fetched and patched at build time, 163 MB in `/opt/mine-ai-mcp`; the image 794 MB
@@ -343,7 +345,10 @@ bots' private names are in it) at `/mineai-data` for their per-bot SQLite; the a
 Which body plays is set in staging's `deploy/.env` only, next to its admin token: `BODY=mineai`,
 `MINEAI_DIR=/opt/mine-ai-mcp`, `MINEAI_DATA_DIR=/mineai-data`, and `MC_USERNAME=Tst_rv` (staging's bots are test
 bots: `Tst_rv_` and random letters). Remove the `BODY` line (and `docker compose -p muse-staging -f staging.compose.yaml
-up -d` in its deploy folder) to go back to our body. Production's compose file and image have none of it.
+up -d` in its deploy folder) to go back to our body. Production's compose file builds, runs and mounts the same way
+since gate 1 of the switch (its data folder: `~/workspace/muse-minecraft/app/mineai-data`, next to its world and
+logs), and its own `deploy/.env` decides its body: without a `BODY` line it plays ours, as before. The switch, the
+proxy secret, the whitelist, the smoke checks and the one-line rollback: `docs/SWITCH.md`.
 
 Caddy: the block was added to `~/workspace/FRAS/caddy-config/Caddyfile` after a backup
 (`Caddyfile.bak-20261007-222723`), validated as a separate file inside the container, moved into place, then
@@ -786,15 +791,16 @@ craft (12).
 MIT, "Copyright (c) 2026 AI Bengineering") instead of in this process, after the reuse spike
 (`../../../research/muse-reuse-spike.md`). Everything a guest talks to stays ours: `/mcp` (the queue, `request_id`,
 45 s replies, typed codes, the dry-run check), `/play`, `/api`, quotas, leases, the kill switch, the live views and the
-stream. The house bot of the Ask queue stays on our body. Production runs `ours` until the switch is flipped.
+stream. The house bot of the Ask queue stays on our body. Production runs `ours` until the switch is flipped
+(`docs/SWITCH.md`).
 
 Their code stays out of this repo: `mineai/UPSTREAM.json` pins the commit and lists our patches, `mineai/patches/` holds
 them, and `mineai/fetch-and-patch.sh` puts the two together in a folder of its own at build time (`mineai/README.md`):
 
 ```sh
-BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime-6   # clone 2fe1306, the 6 patches, bun install, fork check, typecheck, crafting tests
-node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime-6 --check
-BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime-6 MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
+BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime-8   # clone 2fe1306, the 8 patches, bun install, fork check, typecheck, the patches' tests
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime-8 --check
+BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime-8 MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
 ```
 
 The agent runs that same check when it starts with `BODY=mineai`: a folder that is not exactly the pin plus every patch
@@ -806,7 +812,12 @@ slot before Paper's burst of slot updates had settled; `mineai/README.md`), `000
 their host and its runtime refuse any request without `Authorization: Bearer $MINEAI_HOST_TOKEN` (their host had no
 authentication); `0005` takes the player name from `MINEAI_USERNAME` and hands their runtime its bootstrap (which holds
 the name) through its environment instead of its command line, so the name is on no command line at all; `0006` lets
-their runtime exit once a stop is done (its IPC channel kept it alive until their supervisor's SIGKILL).
+their runtime exit once a stop is done (its IPC channel kept it alive until their supervisor's SIGKILL); `0007` never
+puts a placed block (a temporary table or furnace, a bed, `place_block`) into a cell the server will not replace: no
+flowers (their rule counted them as replaceable, so a table went on a poppy and the server refused it) and snow only as
+a single layer; `0008` tries a collect once more when its path search gave up ("no path found", nothing gained or
+broken) within 30 s of a landing (the server moved the bot more than 16 blocks: our spread, a teleport, a respawn),
+after the chunks around the bot have loaded and a 2 s pause.
 
 How a host runs (`src/mineai/host.js`): one per guest game, their `src/server/host.ts` under Node with tsx (their own
 dev dependency; Node 24.15 or newer) or Bun (`MINEAI_RUNTIME=bun`, `MINEAI_EXEC`), with `--listen-host 127.0.0.1` on
@@ -1064,6 +1075,41 @@ pickaxe in 19.4 s, 3 MCP calls), `ps` on picasso showed both of their processes 
 player name and no bootstrap on either command line, staging failure 4's sequence passed (birch, 22.4 s, the table
 carried at the end) with both live views at 200 through Caddy, and the two game ends closed their hosts in 150 and 245
 ms (8.00-8.01 s before) with the games' bot data deleted (23 bot folders before and after).
+
+### Gates before the switch (2026-10-08)
+
+The report (`../../../research/muse-reuse-validation.md`) asks for three gates before production plays with this
+body. Gate 3 is two runtime patches for staging's two body failures, gate 1 the production config; gate 2 (the soak and
+a Muse run) is still open. The runbook for the switch itself is `docs/SWITCH.md`.
+
+Gate 3, on this Mac's Paper (1.21.4-232 on 25565, seed 71811045), `mineai/bench/gates.mjs` (one host of the runtime,
+their MCP tools, bot `Tst_gate_` and random letters, every placement checked with the server's `execute if block`):
+
+| Check | Runtime with patches 0001-0006 | With 0007 and 0008 (built by `fetch-and-patch.sh`) |
+| --- | --- | --- |
+| `craft_item wooden_pickaxe` with a temporary table, the 8 cells around the bot holding flowers (poppy, dandelion, cornflower, oxeye daisy, red tulip) | **0 of 5**: "Server processed placement, but block at ... is still poppy" (and the other four), staging spot 7's failure | **10 of 10**: the table 2 blocks away on clear ground, all 8 flowers standing, the pickaxe in the server's inventory, the table picked up again; 2.8-2.9 s a craft |
+| `collect_block oak_log 1` from inside a closed barrier box with logs outside, 1 s after a 100-block teleport, and again 35 s after it | no second try either time | **3 of 3**: tried once more right after the landing (the result says so; 2.2-4.4 s instead of 0.9 s), not after 35 s |
+
+Their whole suite with both patches: 1,579 pass, 0 fail (6 of the tests new); typecheck clean. Through our
+gateway on the same Paper (`BODY=mineai`, the runtime built with all eight patches): `scripts/staging-check.mjs`
+PASS (wooden pickaxe in 21.4 s, 3 MCP calls) and the strict iron route `test/e2e/mcp-iron.mjs` PASS (141.1 s, 14 MCP
+calls, 0 failed steps). Staging was redeployed with `deploy/push.sh`: the image (794 MB) built the runtime with all
+eight patches, the agent passed its start check, the staging check passed (wooden pickaxe in 22.7 s, 3 MCP calls),
+the host was ready in 1.25 s and closed in 222 ms with the game's data deleted. The landing retry itself has not met a
+real "no path" after a spread on staging yet (it needs 8 regions generating at once; the soak of gate 2 is where it
+would show).
+
+Gate 1 (`deploy/compose.yaml`, `deploy/push.sh`): production's agent image is built with `MINEAI=1` (the runtime at
+the pin and its patches, fetched, built and tested at build time), runs under an init, and mounts
+`~/workspace/muse-minecraft/app/mineai-data` (made mode 700 by `push.sh --prod`) at `/mineai-data`; which body plays
+comes from production's `deploy/.env` (`BODY`, `MINEAI_DIR`, `MINEAI_DATA_DIR`), and without a `BODY` line it is ours,
+so the next deploy changes no game. `push.sh --prod` prints the body, and goes on with a note when picasso refuses the
+prune (its remote script now runs with `pipefail`, as staging's). Checked: `npm test`; `docker compose config` of the
+production file on picasso in a scratch folder (valid; build args `MINEAI=1`, init, the data folder next to `app/logs`,
+no `BODY`); `deploy/push.sh --prod --dry-run`. Production was not deployed. The proxy secret (M0 item 6) and the Paper
+whitelist (item 7) are in the runbook: the whitelist goes out with that deploy, the secret in Caddy first and the
+agent's `.env` second. Caddy's `{file.*}` placeholder (v2.11.2, FRAS's image, in a throwaway container) sends exactly
+a secret file's contents, so the secret stays in `caddy-config/priv/` (mode 700) and out of the Caddyfile (mode 664).
 
 ## What is mocked
 

@@ -20,6 +20,10 @@ and keep `BODY=ours` in the same image as the rollback (one line in `deploy/.env
 | 2. A soak with today's build on staging: the strict 10 spots and 8 at once again, one whole 30-minute lease, and one Muse run through the gateway (ROADMAP appendix A) | the strict numbers in section 2 are from the builds before the review fixes; nothing has run a full lease or with Muse as the client | 1 day (the Muse run is the user's) |
 | 3. Two small runtime patches: never put a temporary table on a flower (staging spot 7), and one retry of a log collect that found no path right after landing (8-at-once run 6) | 2 of the 18 staging games failed this way; both are cheap, and the third failure (a shoreline wander) needs a stall stop that can come after | 0.5-1 day |
 
+Status (2026-10-08, later the same day): gates 1 and 3 are done on branch `muse-gates` and checked on the Mac's Paper
+and on staging (the agent's README, "Gates before the switch"); production is unchanged. The switch, the proxy secret,
+the whitelist, the smoke checks and the one-line rollback are the agent's `docs/SWITCH.md`. Gate 2 is open.
+
 Why go:
 
 | | Our body (in the agent's process) | Mine AI MCP body (one process per bot) |

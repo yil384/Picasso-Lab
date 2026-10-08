@@ -1,4 +1,4 @@
-<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper, the watchdog window, the host token, the player name off the command line, the runtime's exit), how to build it, and what was measured. -->
+<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper, the watchdog window, the host token, the player name off the command line, the runtime's exit, no placement into a flower, a collect tried again after a landing), how to build it, and what was measured. -->
 # Mine AI MCP as the bot body: pinned upstream, our patches
 
 Decision (2026-10-08, after the M0 reuse spike, `../../../../research/muse-reuse-spike.md`): run the Mine AI MCP
@@ -6,8 +6,8 @@ runtime (https://github.com/aibengineering/mine-ai-mcp, MIT) as the body of a gu
 code never enters this repository. We keep a pinned upstream commit and our patch files, and
 `fetch-and-patch.sh` clones that commit into a folder, applies the patches and installs the dependencies at build
 time. How the agent runs it (`BODY=mineai`, one host per guest game) is in `../README.md`, section "The Mine AI MCP
-body"; this folder is the runtime itself: the pin, our six patches, the build, and the measurements of the crafting
-fix (their crafting failed on Paper, the server we deploy).
+body"; this folder is the runtime itself: the pin, our eight patches, the build, and the measurements of the crafting
+fix (their crafting failed on Paper, the server we deploy) and of the two gate patches.
 
 | File | What it is |
 | --- | --- |
@@ -20,8 +20,10 @@ fix (their crafting failed on Paper, the server we deploy).
 | `patches/0004-host-token.patch` | with `MINEAI_HOST_TOKEN` set (from the agent, per host, environment only), their host and its runtime refuse requests without `Authorization: Bearer <token>` (their host had no authentication); the agent checks that a request without it gets 401 before it uses a host |
 | `patches/0005-player-name-off-the-command-line.patch` | the player name from `MINEAI_USERNAME`, and the runtime's bootstrap (which holds the name) in the runtime's environment instead of its command line: on a whitelisted server the private name is the secret, and every user of the machine can read command lines; with a test of its own in `src/server/config.test.ts` |
 | `patches/0006-runtime-exits-once-stopped.patch` | their runtime process exits once a SIGTERM's stop is done (its IPC channel kept it alive until their supervisor's SIGKILL, `MINEAI_UNRESPONSIVE_MS` later, on every game end) |
+| `patches/0007-no-placement-into-a-flower.patch` | a placed block (a temporary table or furnace, a bed, `place_block`) never goes into a cell the server will not replace: flowers and tulips out of their replaceable set (vanilla's and Paper's `replaceable` tag has none of them), snow only as a single layer; staging spot 7's table went on a poppy and the server refused it. Tests in `src/world/block-classification.test.ts` and `src/world/nearby-placement.test.ts` |
+| `patches/0008-collect-retries-once-after-landing.patch` | `collect_block` whose path search gave up ("no path found", nothing gained or broken) within 30 s of a landing (the server moved the bot more than 16 blocks) is run once more after the chunks around the bot have loaded and a 2 s pause; staging's 8-at-once failure. The runtime owns the landing watch (`src/world/landing.ts`, disposed with the bot's other listeners). Tests in `src/world/landing.test.ts` and `src/actions/collect-block/collect-block.test.ts` |
 | `LICENSE-mine-ai-mcp` | their MIT notice, kept with the patches |
-| `bench/` | the scripted checks behind the numbers below (no model): crafting, smelting, chests, equip and drop against the server's own record, and the strict iron route on their tools; `gateway-iron.mjs`: the strict iron route through our `/mcp` (`../test/e2e/mcp-iron.mjs`), n games in turn or at once, with every host's and runtime's memory and CPU, the agent's event loop and the bots' deaths |
+| `bench/` | the scripted checks behind the numbers below (no model): crafting, smelting, chests, equip and drop against the server's own record, and the strict iron route on their tools; `gateway-iron.mjs`: the strict iron route through our `/mcp` (`../test/e2e/mcp-iron.mjs`), n games in turn or at once, with every host's and runtime's memory and CPU, the agent's event loop and the bots' deaths; `gates.mjs`: the Paper check of patches 0007 and 0008 |
 
 ## Pins
 
@@ -40,7 +42,7 @@ No patch to their mineflayer fork is needed: the fix replaces the one call into 
 
 ```sh
 BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime   # under a minute with a warm Bun cache
-node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check        # the pin plus our 6 patches, installed
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check        # the pin plus our 8 patches, installed
 BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime MINEAI_RUNTIME=bun npm start   # the agent, one host per game
 cd ~/picasso-work/mineai-runtime && MINEAI_USERNAME=Tst_rv_cp bun src/server/host.ts --minecraft-port 25566 \
   --listen-port 25691 --data-root <dir>                                     # or one host by hand
@@ -130,6 +132,23 @@ Before the patch the same route on Paper stopped at its first craft (spike, spot
 Paper (seconds, range over the five spots): logs 19.5-45.0, the four crafting calls together 15.5-16.2 (vanilla's
 native path: 13.3-14.7), stone 23.5-28.9, iron 11.7-62.4, smelting 3 iron 32.0-33.0. Mining varies with the terrain
 and the ore the bot happens to find; the crafting calls cost about 1-3 s more per route than on vanilla.
+
+### Patches 0007 and 0008 on Paper (gate 3)
+
+`bench/gates.mjs` on this Mac's Paper (1.21.4-232 on 25565, seed 71811045), one host of the runtime, bot `Tst_gate_`
+and random letters, every placement checked with the server's `execute if block` (2026-10-08):
+
+| Check | Built with 0001-0006 | Built with 0001-0008 |
+| --- | --- | --- |
+| a temporary table for `craft_item wooden_pickaxe`, the 8 cells around the bot holding flowers (5 kinds in turn) | 0 of 5: "block at ... is still poppy" (dandelion, cornflower, oxeye_daisy, red_tulip) | 10 of 10: the table on clear ground 2 blocks away, 8 of 8 flowers standing, the pickaxe in the server's inventory, the table picked up again, 2.8-2.9 s |
+| `collect_block oak_log 1` from a closed barrier box with logs outside, 1 s and 35 s after a 100-block teleport | no second try | 3 of 3: one more try right after the landing (2.2-4.4 s, the result says so), none after 35 s |
+
+Their whole suite with both: 1,579 pass, 0 fail (6 of the tests new); typecheck clean. `fetch-and-patch.sh` now also runs the
+tests of 0007 and 0008 (and the runtime's own listener-count and disposal tests, which the landing watch touches).
+
+```sh
+BUN=... node mineai/bench/gates.mjs ~/picasso-work/mineai-runtime-8 --server <Paper folder with console.in> --flowers 10 --landings 3
+```
 
 ## Found along the way (not window clicks)
 

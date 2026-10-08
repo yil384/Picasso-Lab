@@ -16,7 +16,8 @@
 # last MINEAI_KEEP_FAILED failed games). Which body plays is set in deploy/.env on picasso, never here (production
 # keeps compose.yaml's settings):
 #   BODY=mineai  MINEAI_DIR=/opt/mine-ai-mcp  MINEAI_DATA_DIR=/mineai-data
-# (README, "The Mine AI MCP body"); without them the image plays with our body as before.
+# (README, "The Mine AI MCP body"); without them the image plays with our body as before. Production (compose.yaml)
+# builds, runs and mounts the same way since the switch's gate 1; its .env decides its body (docs/SWITCH.md).
 name: muse-staging
 services:
   paper:
@@ -28,7 +29,7 @@ services:
   agent:
     build: { context: .., dockerfile: deploy/Dockerfile.agent, args: { MINEAI: "1" } }
     restart: unless-stopped
-    init: true # an init as PID 1 reaps what a Mine AI host leaves behind (production needs it too once it plays BODY=mineai)
+    init: true # an init as PID 1 reaps what a Mine AI host leaves behind (production too)
     depends_on: [ paper ]
     env_file: [ .env ]
     environment:

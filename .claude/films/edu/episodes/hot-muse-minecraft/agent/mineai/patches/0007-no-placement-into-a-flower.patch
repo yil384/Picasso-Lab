@@ -1,0 +1,164 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0007: a placed block (a temporary crafting table or furnace, a bed, a place_block) never goes into a cell the server
+will not replace: flowers and tulips are out of the replaceable set (vanilla's and Paper's replaceable tag has none of
+them), and snow counts only as a single layer. Staging, spot 7: the temporary table was put on a poppy, the server
+refused it ("block ... is still poppy") and the craft failed in 81 ms. With tests (block-classification, nearby-placement).
+
+diff --git a/src/world/block-classification.test.ts b/src/world/block-classification.test.ts
+index 90620a6..0596c01 100644
+--- a/src/world/block-classification.test.ts
++++ b/src/world/block-classification.test.ts
+@@ -18,7 +18,7 @@ test("classifies placement cells and support", () => {
+   assert.equal(isAir(block("cave_air")), true);
+   assert.equal(isLiquid(block("water")), true);
+   assert.equal(isReplaceableForPlacement(block("tall_grass")), true);
+-  assert.equal(isReplaceableForPlacement(block("orange_tulip")), true);
++  assert.equal(isReplaceableForPlacement(block("orange_tulip")), false);
+   assert.equal(isReplaceableForPlacement(block("torch")), false);
+   assert.equal(supportsFlatPlacement(block("stone", "block")), true);
+   assert.equal(supportsFlatPlacement(null), false);
+@@ -37,3 +37,23 @@ test("a fluid cell takes a placement, but is never chosen as a site", () => {
+   assert.equal(isDryPlacementSite(block("cave_air")), true);
+   assert.equal(isDryPlacementSite(block("torch")), false);
+ });
++
++/**
++ * Patched for Muse plays Minecraft (picasso-lab): the server does not replace a
++ * flower with a placed block, so a temporary crafting table chosen on a poppy
++ * failed its craft ("block ... is still poppy"). Only what the server replaces
++ * is a site: air, the grasses and ferns, one layer of snow.
++ */
++test("a flower or deep snow is never a placement site; grass and one layer of snow are", () => {
++  for (const name of ["poppy", "dandelion", "cornflower", "lily_of_the_valley", "red_tulip", "torchflower", "oak_sapling", "sweet_berry_bush", "brown_mushroom", "sugar_cane"]) {
++    assert.equal(isReplaceableForPlacement(block(name)), false, name);
++    assert.equal(isDryPlacementSite(block(name)), false, name);
++  }
++  for (const name of ["air", "short_grass", "tall_grass", "fern", "dead_bush", "vine", "snow"]) {
++    assert.equal(isDryPlacementSite(block(name)), true, name);
++  }
++  const snow = (layers: number): ClassifiedBlock => ({ name: "snow", boundingBox: "empty", getProperties: () => ({ layers }) });
++  assert.equal(isDryPlacementSite(snow(1)), true);
++  assert.equal(isDryPlacementSite(snow(2)), false);
++  assert.equal(isDryPlacementSite(snow(7)), false);
++});
+diff --git a/src/world/block-classification.ts b/src/world/block-classification.ts
+index d37e685..0d3e457 100644
+--- a/src/world/block-classification.ts
++++ b/src/world/block-classification.ts
+@@ -6,10 +6,16 @@ export interface NamedBlock {
+ /** The block facts needed by placement policy, without depending on a concrete registry version. */
+ export interface ClassifiedBlock extends NamedBlock {
+   readonly boundingBox: "block" | "empty";
++  /** The block state's properties (prismarine-block); read for a snow cell's layers. */
++  readonly getProperties?: () => Record<string, unknown>;
+ }
+ 
+ const AIR_BLOCKS = new Set(["air", "cave_air", "void_air"]);
+ const LIQUID_BLOCKS = new Set(["water", "lava", "bubble_column"]);
++// Patched for Muse plays Minecraft (picasso-lab): only what the server itself
++// replaces (vanilla's and Paper's `replaceable` block tag). Flowers are not in
++// it: a block aimed at a poppy's cell is refused ("block ... is still poppy"),
++// so a temporary crafting table chosen there failed its craft (staging, spot 7).
+ const REPLACEABLE_PLANTS = new Set([
+   "short_grass",
+   "tall_grass",
+@@ -19,15 +25,6 @@ const REPLACEABLE_PLANTS = new Set([
+   "warped_roots",
+   "crimson_roots",
+   "nether_sprouts",
+-  "dandelion",
+-  "poppy",
+-  "blue_orchid",
+-  "allium",
+-  "azure_bluet",
+-  "oxeye_daisy",
+-  "cornflower",
+-  "lily_of_the_valley",
+-  "wither_rose",
+   "vine",
+   "glow_lichen",
+   "leaf_litter",
+@@ -52,13 +49,14 @@ export function isLiquid(block: NamedBlock | null): boolean {
+  */
+ export function isReplaceableForPlacement(block: ClassifiedBlock | null): boolean {
+   if (!block) return false;
+-  return (
+-    isAir(block) ||
+-    isLiquid(block) ||
+-    REPLACEABLE_PLANTS.has(block.name) ||
+-    block.name.endsWith("_flower") ||
+-    block.name.endsWith("_tulip")
+-  );
++  return isAir(block) || isLiquid(block) || (REPLACEABLE_PLANTS.has(block.name) && !isDeepSnow(block));
++}
++
++/** Snow is replaced only as a single layer; two or more layers stay, like a flower. */
++function isDeepSnow(block: ClassifiedBlock): boolean {
++  if (block.name !== "snow") return false;
++  const layers = Number(block.getProperties?.().layers ?? 1);
++  return Number.isFinite(layers) && layers > 1;
+ }
+ 
+ /**
+diff --git a/src/world/nearby-placement.test.ts b/src/world/nearby-placement.test.ts
+new file mode 100644
+index 0000000..85bd364
+--- /dev/null
++++ b/src/world/nearby-placement.test.ts
+@@ -0,0 +1,41 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import type { Bot } from "mineflayer";
++import { Vec3 } from "vec3";
++import { chooseCell } from "./nearby-placement.js";
++
++/**
++ * Patched for Muse plays Minecraft (picasso-lab). Staging, spot 7: the
++ * temporary crafting table was put into a poppy's cell, the server refused the
++ * placement ("block ... is still poppy") and the craft failed in 81 ms. On a
++ * grass floor with flowers in the nearest cells, the table goes to the nearest
++ * cell the server would fill, and with flowers everywhere to none at all.
++ */
++function meadow(cells: (position: Vec3) => string) {
++  return {
++    entity: { position: new Vec3(0.5, 64, 0.5) },
++    blockAt: (position: Vec3) => {
++      const name = position.y < 64 ? "grass_block" : position.y === 64 ? cells(position) : "air";
++      return { name, position, boundingBox: name === "grass_block" ? "block" : "empty" };
++    },
++  } as unknown as Bot;
++}
++
++test("a temporary table goes to the nearest clear cell, never into a flower's", () => {
++  const flowers = new Set(["1,0", "-1,0", "0,1", "0,-1"]);
++  const bot = meadow((p) => (flowers.has(`${p.x},${p.z}`) ? "poppy" : "air"));
++  const cell = chooseCell(bot, "crafting_table", 3);
++  assert.ok(cell, "a clear cell is found");
++  assert.equal(cell.position.y, 64);
++  assert.equal(flowers.has(`${cell.position.x},${cell.position.z}`), false);
++  assert.equal(cell.face.y, 1, "on the floor");
++  assert.ok(cell.position.distanceTo(new Vec3(0, 64, 0)) < 1.5, "the next nearest cell, a diagonal");
++});
++
++test("short grass is filled as before; flowers everywhere leave no cell", () => {
++  const grass = chooseCell(meadow(() => "short_grass"), "crafting_table", 3);
++  assert.ok(grass);
++  assert.equal(grass.position.distanceTo(new Vec3(0, 64, 0)), 1);
++  assert.equal(chooseCell(meadow(() => "poppy"), "crafting_table", 3), null);
++  assert.equal(chooseCell(meadow(() => "dandelion"), "furnace", 3), null);
++});
+diff --git a/src/world/nearby-placement.ts b/src/world/nearby-placement.ts
+index aed8c0b..745b5c4 100644
+--- a/src/world/nearby-placement.ts
++++ b/src/world/nearby-placement.ts
+@@ -33,7 +33,7 @@ interface PlacementCell {
+  * has walls on every side and no free floor, and the model walked off to
+  * find open ground instead of crafting where it stood.
+  */
+-function chooseCell(bot: Bot, itemName: string, maxRadius: number): PlacementCell | null {
++export function chooseCell(bot: Bot, itemName: string, maxRadius: number): PlacementCell | null {
+   const feet = bot.entity.position.floored();
+   let chosen: { readonly cell: PlacementCell; readonly distance: number; readonly onFloor: boolean } | null = null;
+   for (let dx = -maxRadius; dx <= maxRadius; dx += 1) {
