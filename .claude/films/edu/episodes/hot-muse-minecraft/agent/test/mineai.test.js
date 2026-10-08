@@ -886,6 +886,8 @@ test('mineai collect: cobblestone mines stone, and the reply never says "mined 0
   assert.equal(muse, 'mined no cobblestone as a target and picked up 12 cobblestone (12 of 12 wanted; all of them from blocks dug or items picked up on the way)');
   assert.doesNotMatch(muse, /mined 0/);
   assert.equal(said({ block_name: 'coal_ore', count: 4 }, { requested: 4, gained: 4, gainedByItem: { coal: 4 }, blocksBroken: 4 }), 'mined 4 coal_ore (coal_ore drops coal) and picked up 4 coal (4 of 4 wanted)');
+  // more broken than picked up (staging, 2026-10-08: their collect stops picking up at the count asked for)
+  assert.equal(said({ block_name: 'oak_log', count: 12 }, { requested: 12, gained: 12, gainedByItem: { oak_log: 12 }, blocksBroken: 16 }), 'mined 16 oak_log and picked up 12 oak_log (12 of 12 wanted; the drops of 4 were not picked up)');
   // blocks that drop several items each (copper ore 2-5 raw copper, clay 4 clay balls): their own drops are not "on the way"
   assert.equal(said({ block_name: 'copper_ore', count: 8 }, { requested: 8, gained: 9, gainedByItem: { raw_copper: 9 }, blocksBroken: 3 }), 'mined 3 copper_ore (copper_ore drops raw_copper) and picked up 9 raw_copper (9 of 8 wanted)');
   assert.equal(said({ block_name: 'clay', count: 8 }, { requested: 8, gained: 8, gainedByItem: { clay_ball: 8 }, blocksBroken: 2 }), 'mined 2 clay (clay drops clay_ball) and picked up 8 clay_ball (8 of 8 wanted)');

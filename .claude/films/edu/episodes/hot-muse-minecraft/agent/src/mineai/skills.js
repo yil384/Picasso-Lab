@@ -338,6 +338,9 @@ function describeCollect(c, block) {
   if (beyond > 0 && !BY_CHANCE.test(block)) {
     more = !broken ? '; all of them from blocks dug or items picked up on the way'
       : `; ${most > 1 ? 'at least ' : ''}${beyond} of them from blocks dug or items picked up on the way`;
+  } else if (most === 1 && broken > gained && !BY_CHANCE.test(block)) {
+    // their collect stops picking up once it has what was asked: the drops of blocks it broke past that stay behind
+    more = `; the drops of ${broken - gained} were not picked up`;
   }
   return `${mined} and picked up ${picked} (${gained} of ${c.requested ?? '?'} wanted${more})`;
 }
