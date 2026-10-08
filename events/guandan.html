@@ -2216,8 +2216,9 @@ function holdemTilesHTML() {
     const card = (c, i) => cardHTML(signatureCard(c, `hv${i}`));
     const royal = ["10♠", "J♠", "Q♠", "K♠", "A♠"].map((c, i) => cardHTML(signatureCard(c, `hr${i}`), true)).join("");
     refreshHoldemBoard();
-    // three seat AIs, numbered like the table's (AI 1, AI 2, AI 3)
-    const robots = ["1", "2", "3"].map((n, i) => `<span class="gd-avatar is-plain hd-bot-av b${i}">${defaultFaceHTML(n)}</span>`).join("");
+    // the three seat AIs across the felt from a practice player (who sits at seat 1): AI 3, AI 4 (raised, in the
+    // middle) and AI 5, as at the table
+    const robots = ["3", "4", "5"].map((n, i) => `<span class="gd-avatar is-plain hd-bot-av b${i}">${defaultFaceHTML(n)}</span>`).join("");
     return `
         <button class="lobby-tile is-classic is-holdem" type="button" data-lobby="h-create" aria-label="${L("Hold'em: open a friends table", "德州扑克：开一张好友桌")}">
             <span class="tile-art hd-hero-art">${card("A♠", 0)}${card("K♥", 1)}${chipStackHTML(4)}</span>
@@ -4451,6 +4452,7 @@ if (IN_EVENTS_PORTAL) {
 }
 
 if (roomCode) {
+    setStaticLabels();
     root.innerHTML = `<div class="gd-boot" role="status">${L("Joining the room…", "正在进入房间…")}</div>`;
     attachRoom(roomCode);
 } else if (bootHoldem && bootQuery.get("room")) {
@@ -4478,8 +4480,10 @@ if (roomCode) {
     function setBackgroundInert(on) {
         [document.getElementById("root"), document.querySelector(".topbar")].forEach(function (el) { if (el) el.inert = on; });
     }
+    // the page's own language (setStaticLabels keeps <html lang> in step with it), not storage, which can throw
+    // in the Google Sites iframe while the page still switched to 中文 in memory
     function uiLang() {
-        try { return localStorage.getItem("picasso.guandan.lang") === "zh" ? "zh" : "en"; } catch (_) { return "en"; }
+        return /^zh/i.test(document.documentElement.lang) ? "zh" : "en";
     }
     function isOpen() { return !modal.hidden && modal.classList.contains("is-open"); }
     function open(page) {

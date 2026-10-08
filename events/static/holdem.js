@@ -85,6 +85,18 @@ export function mountHoldem(ui) {
         }
     }
 
+    // Who sat where in the last few hands. The service's last hand names seats only, so 上一手 takes each row's name
+    // and face from here: whoever played that hand, not whoever has taken or left the seat since.
+    const handSeats = new Map();   // "CODE:no" -> { done, seats: [{ bot, name } | null] }
+    function noteHandSeats(t) {
+        const h = t.hand;
+        if (!h) return;
+        const key = `${t.code}:${h.no}`;
+        if (handSeats.get(key)?.done) return;   // kept as the hand ended
+        handSeats.set(key, { done: !!h.done, seats: t.seats.map(s => (s ? { bot: s.bot || null, name: s.name || "" } : null)) });
+        while (handSeats.size > 4) handSeats.delete(handSeats.keys().next().value);
+    }
+
     function onState(msg) {
         const t = msg.table;
         if (!t || (S.code && t.code !== S.code)) return;
@@ -93,6 +105,7 @@ export function mountHoldem(ui) {
         S.rev = msg.rev;
         S.offset = (msg.serverTime || Date.now()) - Date.now();
         S.table = t;
+        noteHandSeats(t);
         S.me = msg.me;
         S.code = t.code;
         S.pending = "";
@@ -664,7 +677,8 @@ export function mountHoldem(ui) {
         const last = S.table?.last;
         if (!last) return ui.showToast(L("No finished hand yet", "还没有打完的牌"));
         const board = last.board?.length ? last.board : [];
-        const seats = S.table.seats;
+        // the players of that hand when this page saw it, else (a page that joined later) the seats as they are now
+        const seats = handSeats.get(`${S.table.code}:${last.no}`)?.seats || S.table.seats;
         const shown = Object.entries(last.shown || {}).map(([i, hole]) => [Number(i), hole]);
         const winners = last.winners || [];
         const lines = new Map();

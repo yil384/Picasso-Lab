@@ -231,7 +231,7 @@ html[lang="en"] .lobby-tile.is-holdem .tile-title { font-size: calc(54 * var(--t
 }
 .hd-chips i:nth-child(2n) { background: radial-gradient(closest-side, #2c3e7c 0 52%, #fff 54% 60%, #2c3e7c 62% 100%), #2c3e7c; box-shadow: inset 0 0 0 calc(var(--c, 60px) * .04) #fff, 0 calc(var(--c, 60px) * .07) 0 #141c40, 0 calc(var(--c, 60px) * .1) calc(var(--c, 60px) * .05) rgba(10, 20, 60, .35); }
 
-/* 人机练习: three seat AIs (robots numbered 1-3, like the table's AI 1, AI 2...) and two card backs */
+/* 人机练习: the three seat AIs across the felt (AI 3, AI 4, AI 5, as a practice table seats them) and two card backs */
 .hd-bots-art { --card-w: calc(44 * var(--t)); top: calc(30 * var(--t)); }
 .hd-bot-av { position: absolute; left: 50%; top: 50%; z-index: 1; --av-size: calc(58 * var(--t)); border-width: calc(3 * var(--t)); margin: calc(-29 * var(--t)) 0 0 calc(-29 * var(--t)); }
 .hd-bot-av.b0 { translate: calc(-62 * var(--t)) calc(8 * var(--t)); }

@@ -397,7 +397,8 @@ export function createTable({ ui, S, send, popups }) {
         if (seat.state === "allin" && h && !h.done && !seat.stack) return `<span class="hd-tag is-allin">${L("All-in", "全下")}</span>`;
         if (seat.state === "out") return `<span class="hd-tag is-grey">${L("Away", "暂离")}</span>`;
         if (seat.state === "waiting") return `<span class="hd-tag is-grey">${L("Waiting", "等待")}</span>`;
-        if (seat.state === "busted") return `<span class="hd-tag is-grey">${L("Rebuying", "补码中")}</span>`;
+        // a player out of chips may top up; an AI never does (the service takes it off the table)
+        if (seat.state === "busted") return `<span class="hd-tag is-grey">${seat.bot ? L("Out", "出局") : L("Rebuying", "补码中")}</span>`;
         return "";
     }
 
