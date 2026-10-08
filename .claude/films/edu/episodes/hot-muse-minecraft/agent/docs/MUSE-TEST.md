@@ -73,3 +73,26 @@ misses, host restarts and downs, and no death. The shelter and eating are not pa
 skills Muse will be asked for, and their failures go to the ROADMAP rather than stop the switch. If the route does
 not finish, the report and the log say whether the body, our gateway or Muse's client was at fault; the body or the
 gateway means no switch yet.
+
+## Runs
+
+| Date | Game | Result |
+| --- | --- | --- |
+| 2026-10-08 | `g38e5ef` (staging, the image of the soak) | **passed**: the iron pickaxe 3:34 after `start_game`, 12 MCP calls, 0 transport failures, 0 heartbeat misses or host restarts, no death; shelter done, a pig hunted and 2 porkchops cooked, `eat` refused twice at 20/20. Muse's findings and their fixes: README, "The Muse run on staging" |
+
+The re-test after those fixes (branch `muse-fix`, deployed to staging with `deploy/push.sh`; the same prompt) should
+show, besides the iron route:
+
+- the steps of a `play_sequence` numbered as Muse sent them, with an added craft as a "+" line "added by the check
+  before step N" (also in `get_state`), and no step renumbered;
+- each step's own change first and the rest apart: `[-3 cobblestone, -2 stick, +1 stone_pickaxe; also on the way
+  (...): +1 cobblestone]`, and `used`, `gained`, `other` in `structuredContent`;
+- `collect cobblestone` answered "mined N stone (stone drops cobblestone) and picked up N cobblestone";
+- smelt's `n` given as 1 to 24 in the tool description;
+- every skill (hunt included) named in the server instructions and in `play_sequence`'s description;
+- `eat` at 20/20 failing with code `NOT_HUNGRY` and the word "Harmless".
+
+Known before the re-test: a `build shelter` can stop the bot's runtime (their builder never seals the bot in; in a
+pocket in stone its event loop stops until their watchdog ends it), which our host answers by starting it again once;
+a second crash in the same game ends it. If that happens, the step fails with "the body stopped in the middle of it
+(RUNTIME_UNRESPONSIVE)", and `mineai_host_restart` appears in staging's log: note it with the bot's position.

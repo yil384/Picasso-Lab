@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { RESULT_CODES, skillSet } from './contracts.js';
-import { createQueue, isFinal, statusOf, QUEUE_MAX, REPEAT_MS } from './mcp-queue.js';
+import { createQueue, isFinal, statusOf, stepName, QUEUE_MAX, REPEAT_MS } from './mcp-queue.js';
 import { createPlanner, describeMissing } from './plan.js';
 
 const CALL_MS = 45_000; // every reply within 45 s: MCP clients commonly give up after 60 s (a long skill keeps going)
@@ -44,7 +44,7 @@ function argText(k, v) {
   if (v.type === 'object') return `${k}: {${Object.entries(v.properties ?? {}).map(([pk, pv]) => argText(pk, pv)).join(', ')}}`;
   if (v.type === 'integer') return `${k}: integer${v.maximum - v.minimum <= 1000 ? ` ${v.minimum} to ${v.maximum}` : ''}`;
   if (v.type === 'boolean') return `${k}: true|false`;
-  if (v.type === 'string') return `${k}: text${v.maxLength ? ` (1 to ${v.maxLength} characters)` : ''}`;
+  if (v.type === 'string') return `${k}: text${v.maxLength ? ` (${v.minLength ?? 0} to ${v.maxLength} characters)` : ''}`;
   return `${k}: ${v.type}`;
 }
 
@@ -70,16 +70,62 @@ const roughly = (ms) => (ms < 60_000 ? 'under 1 min' : `about ${Math.round(ms / 
 const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, ' ').trim().slice(0, max);
 const fmtDelta = (delta) => Object.entries(delta ?? {}).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${k}`).join(', ');
 
+/** The part of a step's inventory change that is not the step's own use or gain (delta minus own); {} without own. */
+export function otherChange(r) {
+  const out = {};
+  if (!r?.own) return out;
+  for (const k of new Set([...Object.keys(r.delta ?? {}), ...Object.keys(r.own)])) {
+    const d = (r.delta?.[k] ?? 0) - (r.own[k] ?? 0);
+    if (d) out[k] = d;
+  }
+  return out;
+}
+
+/**
+ * A step's inventory change as reply text: the whole change, or, when the body can tell what the step itself used and
+ * made (r.own), that first and the rest apart ("-3 cobblestone, -2 stick, +1 stone_pickaxe; also on the way (dug
+ * through, scaffolding, pickups): +1 cobblestone"), so a recipe never looks wrong for an item picked up meanwhile.
+ */
+export function changeText(r, skill) {
+  if (!r?.own) return fmtDelta(r?.delta);
+  // what it used, then what it made
+  const mine = fmtDelta(Object.fromEntries(Object.entries(r.own).sort(([, a], [, b]) => Math.sign(a) - Math.sign(b))));
+  const other = fmtDelta(otherChange(r));
+  if (!other) return mine;
+  const label = skill === 'build' ? 'also from digging the site and on the way' : 'also on the way (dug through, scaffolding, pickups)';
+  return `${mine}${mine ? '; ' : ''}${label}: ${other}`;
+}
+
+/** used / gained / other of a step's result for structuredContent (only what the body could tell apart). */
+function splitOf(r) {
+  if (!r?.own) return {};
+  const pick = (sign) => Object.fromEntries(Object.entries(r.own).filter(([, v]) => v * sign > 0).map(([k, v]) => [k, Math.abs(v)]));
+  const used = pick(-1);
+  const gained = pick(1);
+  const other = otherChange(r);
+  return { ...(Object.keys(used).length ? { used } : {}), ...(Object.keys(gained).length ? { gained } : {}), ...(Object.keys(other).length ? { other } : {}) };
+}
+
+/** "4. " for the caller's step 4, "+ " for a craft the check added (it has no number of its own). */
+const numberOf = (st) => (st.step != null ? `${st.step}. ` : '+ ');
+/** A step named in a sentence: "4. craft {...}", or "craft {...} (added before step 4)". */
+const refOf = (st, describe) => (st.step != null ? `${st.step}. ${describe(st)}` : `${describe(st)} (added before step ${st.before ?? '?'})`);
+
 // structuredContent of play, play_sequence, get_state and stop (declared, so a client can rely on its shape)
+const COUNTS = z.record(z.string(), z.number());
 const STEP_OUT = z.object({
-  n: z.number().describe('position in this call\'s steps (added crafts included)'),
-  step: z.number().nullable().describe('your step number, null for a craft the check added'),
+  n: z.number().describe('the order this call\'s steps run in, added crafts included (a key; your numbering is step)'),
+  step: z.number().nullable().describe('your step number, as you sent it; null for a craft the check added'),
+  before: z.number().optional().describe('for a craft the check added: your step it was added before'),
   skill: z.string(),
   args: z.record(z.string(), z.any()),
   status: z.enum(['pending', 'confirmed', 'failed', 'cancelled']),
   running: z.boolean().optional(),
   result: z.string().optional(),
-  delta: z.record(z.string(), z.number()).optional(),
+  delta: COUNTS.optional().describe('the whole inventory change while the step ran (+ more, - fewer)'),
+  used: COUNTS.optional().describe('what the step itself used, e.g. a recipe\'s ingredients'),
+  gained: COUNTS.optional().describe('what the step itself made or collected'),
+  other: COUNTS.optional().describe('the rest of delta: blocks dug through or scaffolding placed on the way, items lying nearby picked up, drops of cells a build dug clear'),
   code: z.string().optional(),
   added: z.string().optional(),
   why: z.string().optional(),
@@ -114,6 +160,9 @@ export function createMcp(hooks) {
   // the skills play and play_sequence take: the 10 tools and craft_batch, plus a body's extra ones (BODY=mineai)
   const skills = hooks.skills ?? skillSet();
   const SKILLS = skillList(skills.mcpSkills);
+  // the skills this server offers, by name, in the server instructions and in both play tools (one source: skills),
+  // so a client never relies on notes about another server (Muse's own notes listed only some, and it had to guess hunt)
+  const SKILL_NAMES_TEXT = skills.names.join(', ');
   const now = hooks.now ?? Date.now; // the web's clock (leases, idle, repeats); call deadlines run on the real one
   const callMs = hooks.callMs ?? CALL_MS;
   /** How long a call waits for its steps: callMs less the time its reply takes to build, so the reply leaves within callMs. */
@@ -157,9 +206,9 @@ export function createMcp(hooks) {
   const safely = (fn, fallback = null) => { try { return fn(); } catch { return fallback; } };
 
   /** ": ok: crafted 4 stick [+4 stick, -2 oak_planks]" for a skill result. */
-  const outcome = (r) => {
-    const delta = fmtDelta(r.delta);
-    return `: ${r.ok ? 'ok' : 'FAILED'}: ${r.result}${delta ? ` [${delta}]` : ''}`;
+  const outcome = (r, skill) => {
+    const change = changeText(r, skill);
+    return `: ${r.ok ? 'ok' : 'FAILED'}: ${r.result}${change ? ` [${change}]` : ''}`;
   };
   const stateBlock = (s) => `State (game ${s.id}, ${roughly(Math.max(0, s.expiresAt - now()))} left; it also ends after ${IDLE_MS / 60_000} min without calls):\n${hooks.stateText(s)}`;
 
@@ -177,11 +226,14 @@ export function createMcp(hooks) {
 
   // ----- steps as text and as data
 
-  /** One step as a reply line. numbered: "3. " in front (sequences, or a play the check added crafts to). */
+  /**
+   * One step as a reply line. numbered (sequences, or a play the check added crafts to): the caller's own step number
+   * in front ("4. "), or "+ " for a craft the check added, which takes no number: the caller's steps keep theirs.
+   */
   function stepLine(st, numbered) {
-    const head = `${numbered ? `${st.n}. ` : ''}${st.skill} ${JSON.stringify(st.args)}${st.added ? ` (added by the check, ${st.added})` : ''}`;
-    if (st.status === 'confirmed' || st.status === 'failed') return `${head}${outcome(st.result)}`;
-    if (st.status === 'cancelled') return `${head}: cancelled (${st.why ?? 'stopped'})${st.result ? `: ${st.result.result}${fmtDelta(st.result.delta) ? ` [${fmtDelta(st.result.delta)}]` : ''}` : ''}`;
+    const head = `${numbered ? numberOf(st) : ''}${st.skill} ${JSON.stringify(st.args)}${st.added ? ` (added by the check before step ${st.before ?? '?'}, ${st.added})` : ''}`;
+    if (st.status === 'confirmed' || st.status === 'failed') return `${head}${outcome(st.result, st.skill)}`;
+    if (st.status === 'cancelled') return `${head}: cancelled (${st.why ?? 'stopped'})${st.result ? `: ${st.result.result}${changeText(st.result, st.skill) ? ` [${changeText(st.result, st.skill)}]` : ''}` : ''}`;
     if (st.status === 'running') return `${head}: still running after ${Math.round((now() - st.startedAt) / 1000)} s (long walks and mining take a while); a later reply reports the result`;
     return `${head}: queued`;
   }
@@ -191,11 +243,12 @@ export function createMcp(hooks) {
     return {
       n: st.n,
       step: st.step,
+      ...(st.step == null && st.before != null ? { before: st.before } : {}),
       skill: st.skill,
       args: st.args,
       status: statusOf(st),
       ...(st.status === 'running' ? { running: true } : {}),
-      ...(r ? { result: r.result, delta: r.delta } : {}),
+      ...(r ? { result: r.result, delta: r.delta, ...splitOf(r) } : {}),
       ...(st.code ? { code: st.code } : {}),
       ...(st.added ? { added: st.added } : {}),
       ...(st.addedItems?.length ? { addedItems: st.addedItems } : {}),
@@ -227,6 +280,24 @@ export function createMcp(hooks) {
   }
 
   const describe = (st) => `${st.skill}${Object.keys(st.args ?? {}).length ? ` ${JSON.stringify(st.args)}` : ''}`;
+
+  /**
+   * The steps that outlived earlier calls, by call: each call's steps numbered as the caller numbered them (a call of
+   * one step unnumbered, as before), with a line naming the call when the block holds steps of more than one.
+   */
+  function earlierText(earlier) {
+    const groups = [];
+    for (const st of earlier) {
+      const g = groups.at(-1);
+      if (g && g.call === st.call) g.steps.push(st);
+      else groups.push({ call: st.call, steps: [st] });
+    }
+    return groups.map((g) => {
+      const numbered = (g.call?.steps?.length ?? 1) > 1;
+      const head = groups.length > 1 && numbered ? `From ${g.call.label} sent ${Math.round((now() - g.call.at) / 1000)} s ago:\n` : '';
+      return `${head}${g.steps.map((st) => stepLine(st, numbered)).join('\n')}`;
+    }).join('\n');
+  }
 
   /** Mark the final steps a reply carries as delivered once its HTTP response was written out in full. */
   function deliverWhenSent(q, shown, extra) {
@@ -260,7 +331,7 @@ export function createMcp(hooks) {
     const lines = steps.filter((st) => st.status !== 'cancelled' || st.result).map((st) => stepLine(st, numbered)).join('\n');
     const main = `${lead.trimEnd()}${lead.trim() && lines ? '\n' : ''}${lines}${tail}`.trim();
     const blocks = [
-      earlier.length ? `Finished since your last call:\n${earlier.map((st) => stepLine(st, false)).join('\n')}` : '',
+      earlier.length ? `Finished since your last call:\n${earlierText(earlier)}` : '',
       main,
       s ? stateBlock(s) : '',
     ];
@@ -380,7 +451,7 @@ export function createMcp(hooks) {
     const warnText = warnings.length ? `The check warns (it does not know exactly where you will stand):\n${warnings.map((w) => `- ${w.text}`).join('\n')}\n` : '';
     const warnMore = warnings.length ? { warnings } : {};
     if (raw.dry_run) {
-      const lines = planned.map((st, i) => `${i + 1}. ${st.skill} ${JSON.stringify(st.args)}${st.added ? ` (added by the check, ${st.added})` : ''}`);
+      const lines = planned.map((st) => `${numberOf(st)}${st.skill} ${JSON.stringify(st.args)}${st.added ? ` (added by the check before step ${st.before ?? '?'}, ${st.added})` : ''}`);
       const verdict = !plan ? 'The check could not run; nothing was checked.'
         : plan.ok ? `The check passed${plan.added ? `, adding ${plan.added} craft${plan.added > 1 ? 's' : ''}` : ''}. Nothing was run (dry_run); send it again without dry_run to run it.`
           : `The check would refuse this: missing ${plan.missing.map((m) => `${describeMissing(m)} (step ${m.step})`).join('; ')}. Nothing was run (dry_run).`;
@@ -402,7 +473,7 @@ export function createMcp(hooks) {
     return reply(s, extra, {
       steps: call.steps,
       numbered: tool === 'play_sequence' || call.steps.length > 1,
-      lead: `${added ? `The check added ${plan.added} craft${plan.added > 1 ? 's' : ''} your steps need (marked below).\n` : ''}${warnText}`,
+      lead: `${added ? `The check added ${plan.added} craft${plan.added > 1 ? 's' : ''} your steps need (marked + below, each before the step that needs it; your steps keep their numbers).\n` : ''}${warnText}`,
       tail: pendingTail(call.steps),
       more: warnMore,
     });
@@ -415,10 +486,16 @@ export function createMcp(hooks) {
     const failed = steps.some((st) => st.status === 'failed');
     let out = '';
     if (cancelled.length) {
-      out += `\nNot run: ${cancelled.map((st) => `${st.n}. ${describe(st)}`).join(', ')}. ${failed ? 'Deal with the failure above first, then send the steps you still want.' : `They were cancelled (${cancelled[0].why}).`}`;
+      out += `\nNot run: ${cancelled.map((st) => refOf(st, describe)).join(', ')}. ${failed ? 'Deal with the failure above first, then send the steps you still want.' : `They were cancelled (${cancelled[0].why}).`}`;
     }
     if (open.length) {
-      out += `\n${open.length === 1 ? `Step ${open[0].n} is` : `Steps ${open.map((st) => st.n).join(', ')} are`} still running or queued: they go on after this reply. Call get_state to wait for them (it reports their results once), or stop to clear the queue.`;
+      // by the caller's numbers; the crafts the check added are counted, not numbered
+      const nums = [...new Set(open.filter((st) => st.step != null).map((st) => st.step))];
+      const extra = open.filter((st) => st.step == null).length;
+      const addedText = `${extra} craft${extra > 1 ? 's' : ''} the check added`;
+      const what = !nums.length ? (extra > 1 ? `${addedText[0].toUpperCase()}${addedText.slice(1)} are` : `${stepName(open[0])[0].toUpperCase()}${stepName(open[0]).slice(1)} is`)
+        : nums.length === 1 && !extra ? `Step ${nums[0]} is` : `Steps ${nums.join(', ')}${extra ? ` (and ${addedText})` : ''} are`;
+      out += `\n${what} still running or queued: they go on after this reply. Call get_state to wait for them (it reports their results once), or stop to clear the queue.`;
     }
     return out;
   }
@@ -436,7 +513,7 @@ export function createMcp(hooks) {
 
   function build(entry) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
-      instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot.`,
+      instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot. The skills this server offers (${skills.names.length}): ${SKILL_NAMES_TEXT}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.`,
     });
     const sid8 = () => String(entry.transport.sessionId ?? '').slice(0, 8);
     // a call the SDK's own input check refuses (an unknown skill, too many steps, args that are not an object...) gets
@@ -515,7 +592,7 @@ export function createMcp(hooks) {
     }, async ({ request_id: requestId, ...raw }, extra) => runCall(entry, 'play', { steps: [raw], request_id: requestId }, extra));
 
     server.registerTool('play_sequence', {
-      description: `Run up to ${MAX_STEPS} skills in order, sent in ONE call, e.g. steps [{"skill": "collect", "args": {"block": "oak_log", "n": 3}}, {"skill": "craft_batch", "args": {"items": [{"item": "oak_planks", "n": 12}, {"item": "crafting_table", "n": 1}, {"item": "wooden_pickaxe", "n": 1}]}}]. Same skills and arguments as play (craft_batch crafts a list with one table). Replies within ${Math.round(callMs / 1000)} s with every step's result or status and the final state. ${queueText} dry_run: true only checks the steps and shows them as they would run. Saves many round trips.`,
+      description: `Run up to ${MAX_STEPS} skills in order, sent in ONE call, e.g. steps [{"skill": "collect", "args": {"block": "oak_log", "n": 3}}, {"skill": "craft_batch", "args": {"items": [{"item": "oak_planks", "n": 12}, {"item": "crafting_table", "n": 1}, {"item": "wooden_pickaxe", "n": 1}]}}]. Same skills and arguments as play (its description gives each skill's arguments; craft_batch crafts a list in one step); the ${skills.names.length} skills: ${SKILL_NAMES_TEXT}. Replies within ${Math.round(callMs / 1000)} s with every step's result or status and the final state. ${queueText} dry_run: true only checks the steps and shows them as they would run. Saves many round trips.`,
       inputSchema: {
         steps: z.array(z.object(callShape).loose()).min(1).max(MAX_STEPS),
         request_id: requestIdShape,

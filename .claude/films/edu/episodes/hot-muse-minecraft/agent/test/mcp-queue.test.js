@@ -136,7 +136,8 @@ test('queue: steps past the reply keep running in order; the reply says what is 
   assert.equal(r.structuredContent.code, null);
 
   const g = await drain(c);
-  assert.match(text(g.replies[0]), /^Finished since your last call:\ncollect \{"block":"oak_log","n":12\}: ok: collect done \[\+12 oak_log\]\n/);
+  // the steps that outlived the call keep the caller's numbers
+  assert.match(text(g.replies[0]), /^Finished since your last call:\n2\. collect \{"block":"oak_log","n":12\}: ok: collect done \[\+12 oak_log\]\n/);
   assert.deepEqual(g.earlier.map((x) => [x.skill, x.status]), [['collect', 'confirmed'], ['go_to', 'confirmed'], ['say', 'confirmed']], 'each result once, in order');
   assert.deepEqual(g.replies[0].structuredContent.changed, { oak_log: 12 });
   const last = g.replies.at(-1).structuredContent;
@@ -173,8 +174,10 @@ test('queue: a failed step cancels what was queued after it, in every call; type
   ]);
   assert.equal(earlier[3].why, 'step 2 of your play_sequence (say) failed');
   const all = replies.map(text).join('\n');
-  assert.match(all, /^say \{"text":"fail stopped: .*"\}: FAILED: stopped: a zombie is attacking you/m);
+  assert.match(all, /^2\. say \{"text":"fail stopped: .*"\}: FAILED: stopped: a zombie is attacking you/m);
+  assert.match(all, /^3\. collect \{"block":"oak_log","n":1\}: cancelled \(step 2 of your play_sequence \(say\) failed\)$/m);
   assert.match(all, /^say \{"text":"second call"\}: cancelled \(step 2 of your play_sequence \(say\) failed\)$/m);
+  assert.match(all, /^From your play_sequence sent \d+ s ago:\n1\. go_to/m, 'steps of two calls in one block: each call named');
   assert.ok(replies.some((r) => r.structuredContent.code === 'HOSTILE_CONTACT'), 'the reply that carries the failure has its code');
   assert.deepEqual(bodies[0].runs.map((r) => r.split(' ')[0]), ['go_to', 'say'], 'nothing after the failure ran');
 
@@ -196,13 +199,32 @@ test('queue: a failed step cancels what was queued after it, in every call; type
   }
 });
 
+test('a craft the check adds keeps the caller\'s step numbers, in the reply and in get_state (the Muse run on staging)', async (t) => {
+  const { client, bodies } = await serve(t, { mcpCallMs: 400 });
+  const c = await client();
+  await c.callTool({ name: 'start_game', arguments: START });
+  // step 2 needs planks and sticks: the check adds them before it, and step 3 stays step 3
+  const r = await c.callTool(seq([logs(8), { skill: 'craft', args: { item: 'wooden_pickaxe', n: 1 } }, say('done')]));
+  assert.deepEqual(r.structuredContent.steps.map((x) => [x.step, x.before ?? null]), [[1, null], [null, 2], [null, 2], [2, null], [3, null]]);
+  assert.match(text(r), /^1\. collect \{"block":"oak_log","n":8\}: still running/m);
+  assert.match(text(r), /^\+ craft \{"item":"oak_planks","n":8\} \(added by the check before step 2, for craft wooden_pickaxe 1\): queued$/m);
+  assert.match(text(r), /^2\. craft \{"item":"wooden_pickaxe","n":1\}: queued\n3\. say \{"text":"done"\}: queued$/m);
+  assert.match(text(r), /^Steps 1, 2, 3 \(and 2 crafts the check added\) are still running or queued/m);
+  const g = await drain(c);
+  const all = g.replies.map(text).join('\n');
+  assert.match(all, /^Finished since your last call:\n1\. collect \{"block":"oak_log","n":8\}: ok: collect done \[\+8 oak_log\]\n\+ craft \{"item":"oak_planks","n":8\} \(added by the check before step 2, for craft wooden_pickaxe 1\): ok: craft done\n\+ craft \{"item":"stick","n":4\} .*\n2\. craft \{"item":"wooden_pickaxe","n":1\}: ok: craft done\n3\. say \{"text":"done"\}: ok: say done$/m);
+  assert.doesNotMatch(all, /^[45]\. /m, 'no step renumbered');
+  assert.deepEqual(g.earlier.map((x) => [x.step, x.before ?? null, x.skill]), [[1, null, 'collect'], [null, 2, 'craft'], [null, 2, 'craft'], [2, null, 'craft'], [3, null, 'say']]);
+  assert.equal(bodies[0].runs.length, 5);
+});
+
 test('stop clears the queue: the running step and the waiting ones end as cancelled, reported once', async (t) => {
   const { client, bodies } = await serve(t);
   const c = await client();
   await c.callTool({ name: 'start_game', arguments: START });
   await c.callTool(seq([goTo(20), logs(2), say('never')]));
   const s = await c.callTool({ name: 'stop', arguments: {} });
-  assert.match(text(s), /^Finished since your last call:\ngo_to .*: cancelled \(stop cleared the queue\): stopped: stopped through MCP\ncollect .*: cancelled \(stop cleared the queue\)\nsay .*: cancelled \(stop cleared the queue\)\n\nStopped\. 2 queued steps were cancelled\./);
+  assert.match(text(s), /^Finished since your last call:\n1\. go_to .*: cancelled \(stop cleared the queue\): stopped: stopped through MCP\n2\. collect .*: cancelled \(stop cleared the queue\)\n3\. say .*: cancelled \(stop cleared the queue\)\n\nStopped\. 2 queued steps were cancelled\./);
   assert.equal(s.structuredContent.code, 'STOPPED');
   assert.deepEqual(s.structuredContent.earlier.map((x) => x.status), ['cancelled', 'cancelled', 'cancelled']);
   assert.deepEqual(s.structuredContent.queue, { running: null, waiting: 0 });
@@ -425,11 +447,17 @@ test('check: refusals before anything runs, crafts added where logs can make the
     // the same for real: the logs, then the added planks, table and sticks, then the pickaxe
     const run = await c.callTool(seq([logs(3), { skill: 'craft', args: { item: 'wooden_pickaxe', n: 1 } }]));
     assert.equal(run.structuredContent.code, null, text(run));
-    assert.match(text(run), /^The check added 3 crafts your steps need \(marked below\)\.\n1\. collect/);
-    assert.deepEqual(run.structuredContent.steps.map((s) => [s.step, s.skill, s.status]), [
-      [1, 'collect', 'confirmed'], [null, 'craft', 'confirmed'], [null, 'craft', 'confirmed'], [null, 'craft', 'confirmed'], [2, 'craft', 'confirmed'],
+    // the caller's steps keep their numbers (1 and 2); the added crafts carry none, only "+" and the step they come before
+    assert.match(text(run), /^The check added 3 crafts your steps need \(marked \+ below, each before the step that needs it; your steps keep their numbers\)\.\n1\. collect/);
+    assert.match(text(run), /^\+ craft \{"item":"oak_planks","n":12\} \(added by the check before step 2, for craft wooden_pickaxe 1\): ok: /m);
+    assert.match(text(run), /^2\. craft \{"item":"wooden_pickaxe","n":1\}: ok: /m);
+    assert.doesNotMatch(text(run), /^[345]\. /m, 'no step renumbered');
+    assert.deepEqual(run.structuredContent.steps.map((s) => [s.step, s.before ?? null, s.skill, s.status]), [
+      [1, null, 'collect', 'confirmed'], [null, 2, 'craft', 'confirmed'], [null, 2, 'craft', 'confirmed'], [null, 2, 'craft', 'confirmed'], [2, null, 'craft', 'confirmed'],
     ]);
-    assert.match(run.structuredContent.steps[1].added, /^for step 2 \(craft wooden_pickaxe 1\)$/);
+    assert.match(run.structuredContent.steps[1].added, /^for craft wooden_pickaxe 1$/);
+    // the dry run shows them the same way
+    assert.match(text(dry), /^1\. collect .*\n\+ craft \{"item":"oak_planks","n":12\} \(added by the check before step 2, for craft wooden_pickaxe 1\)\n\+ craft .*\n\+ craft .*\n2\. craft \{"item":"wooden_pickaxe","n":1\}$/m);
     assert.equal(run.structuredContent.state.inventory.wooden_pickaxe, 1);
 
     // an iron pickaxe without iron, a smelt without raw iron: refused with what is missing

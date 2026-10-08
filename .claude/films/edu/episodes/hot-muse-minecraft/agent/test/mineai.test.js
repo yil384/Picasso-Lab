@@ -24,10 +24,10 @@ import { startAgent } from '../src/index.js';
 import { createPlanner } from '../src/plan.js';
 import { blueprintBlockCount, fuelPlan, FUEL_ORDER } from '../src/game.js';
 import { MCP_SKILLS } from '../src/contracts.js';
-import { MINEAI_SKILLS, EXTRA_DEFS, SPAWN_GUARD, toTheirs, fromTheirs, codeFor, needsTable, bestFood, chooseFuel, blueprintCells } from '../src/mineai/skills.js';
+import { MINEAI_SKILLS, EXTRA_DEFS, SPAWN_GUARD, toTheirs, fromTheirs, codeFor, needsTable, bestFood, chooseFuel, blueprintCells, ownChange, dropOf, COLLECT_FROM } from '../src/mineai/skills.js';
 import { createMineAiBody, inventoryOfStacks, equipmentOfStacks } from '../src/mineai/body.js';
 import { createHostManager, hostCommand, hostEnv, offlineUuid, killGrace, PRELOAD } from '../src/mineai/host.js';
-import { readUpstream, check as checkFetched, main as fetchMain } from '../scripts/mineai-fetch.mjs';
+import { readUpstream, check as checkFetched, main as fetchMain, stampFor, STAMP } from '../scripts/mineai-fetch.mjs';
 import { startFakeMineAi, fakeHosts } from './fake-mineai.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -117,8 +117,8 @@ test('mineai skills: the extra skills (M4 survival set) become their tools; comp
 });
 
 test('mineai skills: their results become our text and typed codes', () => {
-  const ok = fromTheirs('collect_block', { result: { status: 'succeeded', collected: { requested: 3, gained: 3, gainedByItem: { birch_log: 3 }, blocksBroken: 3 } } });
-  assert.deepEqual(ok, { ok: true, result: 'mined 3 blocks and picked up 3 birch_log (3 of 3 wanted)', code: null, theirs: null });
+  const ok = fromTheirs('collect_block', { result: { status: 'succeeded', collected: { requested: 3, gained: 3, gainedByItem: { birch_log: 3 }, blocksBroken: 3 } } }, { call: { tool: 'collect_block', args: { block_name: 'birch_log', count: 3 } } });
+  assert.deepEqual(ok, { ok: true, result: 'mined 3 birch_log and picked up 3 birch_log (3 of 3 wanted)', code: null, theirs: null });
   const missing = fromTheirs('craft_item', { result: { status: 'failed', error: '[CRAFT_MATERIALS_MISSING] missing 2 stick', craft: { items: [] } } });
   assert.equal(missing.code, 'NEED_ITEMS');
   assert.match(missing.result, /^failed: missing 2 stick/);
@@ -847,4 +847,126 @@ test('mineai skills: Muse reads what this body\'s craft, smelt, collect and go_t
 test('mineai switch: the agent refuses a runtime folder that is not the pin plus every patch', async () => {
   const dir = tmp('mineai-unbuilt-');
   await assert.rejects(startAgent({ config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '', BODY: 'mineai', MINEAI_DIR: dir }), print: () => {}, loopStatsMs: 0 }), /BODY=mineai: .*has no \.muse-mineai\.json.*fetch-and-patch\.sh/);
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// the Muse run on staging (2026-10-08, game g38e5ef): what its report found unclear or wrong
+
+test('mineai collect: cobblestone mines stone, and the reply never says "mined 0 blocks" for what it picked up', () => {
+  assert.deepEqual(toTheirs('collect', { block: 'cobblestone', n: 12 }, { inventory: {} }).calls[0].args, { block_name: 'stone', count: 12 }, 'cobblestone is what stone drops');
+  assert.equal(toTheirs('collect', { block: 'cobbled_deepslate', n: 3 }, { inventory: {} }).calls[0].args.block_name, 'deepslate');
+  assert.equal(toTheirs('collect', { block: 'coal_ore', n: 4 }, { inventory: {} }).calls[0].args.block_name, 'coal_ore');
+  assert.deepEqual(COLLECT_FROM, { cobblestone: 'stone', cobbled_deepslate: 'deepslate' });
+  assert.equal(dropOf('stone'), 'cobblestone');
+  assert.equal(dropOf('iron_ore'), 'raw_iron');
+  assert.equal(dropOf('oak_log'), null, 'drops itself');
+  const said = (args, collected) => fromTheirs('collect_block', { result: { status: 'succeeded', collected } }, { call: { tool: 'collect_block', args } }).result;
+  assert.equal(said({ block_name: 'stone', count: 12 }, { requested: 12, gained: 12, gainedByItem: { cobblestone: 12 }, blocksBroken: 12 }),
+    'mined 12 stone (stone drops cobblestone) and picked up 12 cobblestone (12 of 12 wanted)');
+  // their blocksBroken counts only the target blocks their collect broke; the rest of the gain came on the way
+  assert.equal(said({ block_name: 'stone', count: 8 }, { requested: 8, gained: 8, gainedByItem: { cobblestone: 8 }, blocksBroken: 4 }),
+    'mined 4 stone (stone drops cobblestone) and picked up 8 cobblestone (8 of 8 wanted; 4 of them from blocks dug or items picked up on the way)');
+  const muse = said({ block_name: 'cobblestone', count: 12 }, { requested: 12, gained: 12, gainedByItem: { cobblestone: 12 }, blocksBroken: 0 });
+  assert.equal(muse, 'mined no cobblestone as a target and picked up 12 cobblestone (12 of 12 wanted; all of them from blocks dug or items picked up on the way)');
+  assert.doesNotMatch(muse, /mined 0/);
+  assert.equal(said({ block_name: 'coal_ore', count: 4 }, { requested: 4, gained: 4, gainedByItem: { coal: 4 }, blocksBroken: 4 }), 'mined 4 coal_ore (coal_ore drops coal) and picked up 4 coal (4 of 4 wanted)');
+});
+
+test('mineai: what a step itself used and made, from their evidence (ownChange)', () => {
+  // the stone pickaxe of the Muse run: the recipe takes 3 cobblestone and 2 sticks, whatever else came in meanwhile
+  const plan = { steps: [{ item: 'stone_pickaxe', count: 1, applications: 1, ingredients: [{ item: 'cobblestone', count: 3 }, { item: 'stick', count: 2 }], requiresCraftingTable: true }] };
+  const pick = { status: 'succeeded', craft: { items: [{ item: 'stone_pickaxe', requested: 1, gained: 1 }], completedSteps: 1, plan }, workstation: { block: 'crafting_table', position: { x: -5, y: 47, z: -201 }, recovered: true } };
+  assert.deepEqual(ownChange('craft_item', { result: pick }), { stone_pickaxe: 1, cobblestone: -3, stick: -2 });
+  // recursive: planks and sticks made on the way to a pickaxe are used up again (net)
+  const wooden = { status: 'succeeded', craft: { items: [], completedSteps: 2, plan: { steps: [
+    { item: 'stick', count: 4, applications: 1, ingredients: [{ item: 'oak_planks', count: 2 }] },
+    { item: 'wooden_pickaxe', count: 1, applications: 1, ingredients: [{ item: 'oak_planks', count: 3 }, { item: 'stick', count: 2 }] },
+  ] } } };
+  assert.deepEqual(ownChange('craft_item', { result: wooden }), { stick: 2, oak_planks: -5, wooden_pickaxe: 1 });
+  assert.deepEqual(ownChange('craft_item', { result: { ...pick, status: 'partial', workstation: { ...pick.workstation, recovered: false } } }), { stone_pickaxe: 1, cobblestone: -3, stick: -2, crafting_table: -1 }, 'a table left standing is one fewer carried');
+  assert.equal(ownChange('craft_item', { result: { ...pick, status: 'partial', craft: { ...pick.craft, completedSteps: 0 } } }), null, 'cut part-way: cannot tell');
+  assert.equal(ownChange('craft_item', { result: { status: 'succeeded', craft: { items: [] } } }), null, 'no plan in their evidence');
+  assert.deepEqual(ownChange('smelt_item', { result: { status: 'succeeded', smelt: { inputItem: 'raw_iron', fuelItem: 'coal', outputItem: 'iron_ingot', requested: 3, produced: 3, fuelInserted: 1, rawRecovered: 0, fuelRecovered: 0 } } }), { raw_iron: -3, coal: -1, iron_ingot: 3 });
+  assert.deepEqual(ownChange('collect_block', { result: { status: 'succeeded', collected: { gainedByItem: { coal: 4 } } } }), { coal: 4 });
+  assert.deepEqual(ownChange('collect_mob_drop', { result: { status: 'succeeded', hunt: { drop: 'porkchop', gained: 2 } } }), { porkchop: 2 });
+  assert.deepEqual(ownChange('eat_food', { result: { status: 'succeeded', eating: { food: 'cooked_porkchop', inventoryBefore: 2, inventoryAfter: 1 } } }), { cooked_porkchop: -1 });
+  assert.deepEqual(ownChange('build_structure', { result: { status: 'succeeded', structure: { placed: 10, dug: 2 } } }, { args: { blocks: [{ block_name: 'cobblestone' }, { block_name: 'air' }] } }), { cobblestone: -10 });
+  assert.deepEqual(ownChange('navigate', { result: { status: 'succeeded' } }), {}, 'a walk itself uses and makes nothing');
+  assert.equal(ownChange('pick_up_items', { result: { status: 'succeeded' } }), null, 'all of it is the step\'s own: shown whole');
+});
+
+test('mineai body and MCP: a step\'s own use and gain apart from what changed on the way (the Muse run\'s deltas)', async () => {
+  const hosts = fakeHosts(() => ({ inventory: { cobblestone: 3, stick: 2, crafting_table: 1, stone_pickaxe: 1, raw_iron: 3, coal: 2, furnace: 1 } }));
+  const web = createWeb({
+    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '' }), log, skills: MINEAI_SKILLS,
+    makeBody: (id, o) => createMineAiBody({ config, log, hosts, gameId: id, username: `Tst_rv_${id}`, viewId: o?.viewId }),
+  });
+  const { url } = await web.start();
+  const c = await mcpClient(url);
+  try {
+    await c.callTool({ name: 'start_game', arguments: { adult: true } });
+    const fake = hosts.started[0].fake;
+    // the table is dug back up and a cobblestone lying by it comes along (their craft's evidence says nothing of it)
+    fake.world.side.craft_item = { cobblestone: 1 };
+    const pick = await c.callTool({ name: 'play', arguments: { skill: 'craft', args: { item: 'stone_pickaxe', n: 1 } } });
+    const st = pick.structuredContent.steps[0];
+    assert.equal(st.status, 'confirmed', text(pick));
+    assert.deepEqual(st.delta, { cobblestone: -2, stick: -2, stone_pickaxe: 1 }, 'the whole change, as before');
+    assert.deepEqual(st.used, { cobblestone: 3, stick: 2 }, 'the recipe');
+    assert.deepEqual(st.gained, { stone_pickaxe: 1 });
+    assert.deepEqual(st.other, { cobblestone: 1 });
+    assert.match(text(pick), /^craft \{"item":"stone_pickaxe","n":1\}: ok: crafted 1 stone_pickaxe .*\[-3 cobblestone, -2 stick, \+1 stone_pickaxe; also on the way \(dug through, scaffolding, pickups\): \+1 cobblestone\]$/m);
+    assert.deepEqual(pick.structuredContent.changed, { cobblestone: -2, stick: -2, stone_pickaxe: 1 });
+    fake.world.side = {};
+
+    // coal ore underground: stone dug through on the way, dirt placed to stand on
+    fake.world.side.collect_block = { cobblestone: 7, dirt: -4 };
+    fake.world.inventory.set('dirt', 10);
+    const coal = (await c.callTool({ name: 'play', arguments: { skill: 'collect', args: { block: 'coal_ore', n: 4 } } })).structuredContent.steps[0];
+    assert.deepEqual([coal.gained, coal.used, coal.other], [{ coal: 4 }, undefined, { cobblestone: 7, dirt: -4 }]);
+    fake.world.side = {};
+
+    // cobblestone: stone is mined for it
+    const cob = await c.callTool({ name: 'play', arguments: { skill: 'collect', args: { block: 'cobblestone', n: 12 } } });
+    assert.equal(fake.tools('collect_block').at(-1).args.block_name, 'stone');
+    assert.match(cob.structuredContent.steps[0].result, /^mined 12 stone \(stone drops cobblestone\) and picked up 12 cobblestone \(12 of 12 wanted\)$/);
+
+    // a shelter dug into the stone: the build places 10 and digs; what it dug out is apart from what it used
+    fake.world.buildDug = 2;
+    fake.world.side.build_structure = { cobblestone: 19, dirt: 1 };
+    const shelter = (await c.callTool({ name: 'play', arguments: { skill: 'build', args: { blueprint: 'shelter', material: 'cobblestone' } } })).structuredContent.steps[0];
+    assert.equal(shelter.status, 'confirmed', shelter.result);
+    assert.match(shelter.result, /^placed 10 cobblestone and dug 2 cells clear \(12 of 12 cells as the blueprint\) \(built facing \w+\)$/);
+    assert.deepEqual([shelter.delta, shelter.used, shelter.other], [{ cobblestone: 9, dirt: 1 }, { cobblestone: 10 }, { cobblestone: 19, dirt: 1 }]);
+    fake.world.side = {};
+
+    // a smelt with nothing else going on: no "other"
+    const smelt = (await c.callTool({ name: 'play', arguments: { skill: 'smelt', args: { item: 'raw_iron', n: 3 } } })).structuredContent.steps[0];
+    assert.deepEqual([smelt.used, smelt.gained, smelt.other], [{ raw_iron: 3, coal: 1 }, { iron_ingot: 3 }, undefined]);
+
+    // eat at a full bar: a typed, harmless failure
+    fake.world.food = 20;
+    await c.callTool({ name: 'play', arguments: { skill: 'say', args: { text: 'read the status' } } });
+    const eat = await c.callTool({ name: 'play', arguments: { skill: 'eat', args: {} } });
+    assert.equal(eat.structuredContent.code, 'NOT_HUNGRY');
+    assert.equal(eat.structuredContent.steps[0].code, 'NOT_HUNGRY');
+    assert.match(text(eat), /FAILED: not hungry: food is 20\/20, and eat works only below 20\. Harmless: nothing was eaten or used/);
+    assert.equal(fake.tools('eat_food').length, 0, 'nothing was sent to the body');
+  } finally {
+    await c.close();
+    await web.stop();
+  }
+});
+
+test('mineai start check: a runtime built before patch 0009 is refused', () => {
+  const up = readUpstream();
+  assert.ok(up.patches.at(-1).endsWith('0009-placement-around-a-mob.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-1), 'utf8'), /overlaps bat #44444/);
+  const dir = tmp('mineai-eight-');
+  fs.writeFileSync(path.join(dir, STAMP), JSON.stringify(stampFor({ ...up, patches: up.patches.slice(0, -1) })));
+  const old = checkFetched(dir, up);
+  assert.equal(old.ok, false);
+  assert.match(old.why, /other patch files/);
+  fs.writeFileSync(path.join(dir, STAMP), JSON.stringify(stampFor(up)));
+  assert.match(checkFetched(dir, up).why, /has HEAD/, 'with every patch the stamp passes; the folder is still checked further');
 });

@@ -1,4 +1,4 @@
-<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper, the watchdog window, the host token, the player name off the command line, the runtime's exit, no placement into a flower, a collect tried again after a landing), how to build it, and what was measured. -->
+<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper, the watchdog window, the host token, the player name off the command line, the runtime's exit, no placement into a flower, a collect tried again after a landing, no placement into a mob's cell), how to build it, and what was measured. -->
 # Mine AI MCP as the bot body: pinned upstream, our patches
 
 Decision (2026-10-08, after the M0 reuse spike, `../../../../research/muse-reuse-spike.md`): run the Mine AI MCP
@@ -6,8 +6,8 @@ runtime (https://github.com/aibengineering/mine-ai-mcp, MIT) as the body of a gu
 code never enters this repository. We keep a pinned upstream commit and our patch files, and
 `fetch-and-patch.sh` clones that commit into a folder, applies the patches and installs the dependencies at build
 time. How the agent runs it (`BODY=mineai`, one host per guest game) is in `../README.md`, section "The Mine AI MCP
-body"; this folder is the runtime itself: the pin, our eight patches, the build, and the measurements of the crafting
-fix (their crafting failed on Paper, the server we deploy) and of the two gate patches.
+body"; this folder is the runtime itself: the pin, our nine patches, the build, and the measurements of the crafting
+fix (their crafting failed on Paper, the server we deploy), of the two gate patches and of 0009.
 
 | File | What it is |
 | --- | --- |
@@ -22,8 +22,9 @@ fix (their crafting failed on Paper, the server we deploy) and of the two gate p
 | `patches/0006-runtime-exits-once-stopped.patch` | their runtime process exits once a SIGTERM's stop is done (its IPC channel kept it alive until their supervisor's SIGKILL, `MINEAI_UNRESPONSIVE_MS` later, on every game end) |
 | `patches/0007-no-placement-into-a-flower.patch` | a placed block (a temporary table or furnace, a bed, `place_block`) never goes into a cell the server will not replace: flowers and tulips out of their replaceable set (vanilla's and Paper's `replaceable` tag has none of them), snow only as a single layer; staging spot 7's table went on a poppy and the server refused it. Tests in `src/world/block-classification.test.ts` and `src/world/nearby-placement.test.ts` |
 | `patches/0008-collect-retries-once-after-landing.patch` | `collect_block` whose path search gave up ("no path found", nothing gained or broken) within 30 s of a landing (the server moved the bot more than 16 blocks) is run once more after the chunks around the bot have loaded and a 2 s pause; staging's 8-at-once failure. The runtime owns the landing watch (`src/world/landing.ts`, disposed with the bot's other listeners). Tests in `src/world/landing.test.ts` and `src/actions/collect-block/collect-block.test.ts` |
+| `patches/0009-placement-around-a-mob.patch` | a block put down beside the bot (a temporary table or furnace, a table for a craft, `place_block`'s nearby cell) never goes into a cell a mob or another player is in, and when one moves into the chosen cell before the block goes down, the next cell is tried after a 4-tick pause (3 cells at most); the soak's run 8 of 8 at once ("Placement cell ... overlaps bat"). Tests in `src/world/nearby-placement.test.ts` |
 | `LICENSE-mine-ai-mcp` | their MIT notice, kept with the patches |
-| `bench/` | the scripted checks behind the numbers below (no model): crafting, smelting, chests, equip and drop against the server's own record, and the strict iron route on their tools; `gateway-iron.mjs`: the strict iron route through our `/mcp` (`../test/e2e/mcp-iron.mjs`), n games in turn or at once, with every host's and runtime's memory and CPU, the agent's event loop and the bots' deaths; `gates.mjs`: the Paper check of patches 0007 and 0008; for the soak of gate 2, `lease-soak.mjs` (one game through its whole lease with a mixed script: memory, heartbeats, restarts and the live view watched throughout) and `muse-session.mjs` (a session in plain HTTP JSON-RPC through the public `/mcp`, with a re-sent `request_id` and a resume by handle); `procs.mjs`: the process sampler both benches share |
+| `bench/` | the scripted checks behind the numbers below (no model): crafting, smelting, chests, equip and drop against the server's own record, and the strict iron route on their tools; `gateway-iron.mjs`: the strict iron route through our `/mcp` (`../test/e2e/mcp-iron.mjs`), n games in turn or at once, with every host's and runtime's memory and CPU, the agent's event loop and the bots' deaths; `gates.mjs`: the Paper check of patches 0007 and 0008; for the soak of gate 2, `lease-soak.mjs` (one game through its whole lease with a mixed script: memory, heartbeats, restarts and the live view watched throughout) and `muse-session.mjs` (a session in plain HTTP JSON-RPC through the public `/mcp`, with a re-sent `request_id` and a resume by handle); `procs.mjs`: the process sampler both benches share; `muse-deltas.mjs`: the actions behind the Muse run's unclear inventory changes, with their evidence and our reply, and the check of 0009 (bats in the cells around the bot) |
 
 ## Pins
 
@@ -42,7 +43,7 @@ No patch to their mineflayer fork is needed: the fix replaces the one call into 
 
 ```sh
 BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime   # under a minute with a warm Bun cache
-node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check        # the pin plus our 8 patches, installed
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check        # the pin plus our 9 patches, installed
 BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime MINEAI_RUNTIME=bun npm start   # the agent, one host per game
 cd ~/picasso-work/mineai-runtime && MINEAI_USERNAME=Tst_rv_cp bun src/server/host.ts --minecraft-port 25566 \
   --listen-port 25691 --data-root <dir>                                     # or one host by hand
@@ -150,7 +151,45 @@ tests of 0007 and 0008 (and the runtime's own listener-count and disposal tests,
 BUN=... node mineai/bench/gates.mjs ~/picasso-work/mineai-runtime-8 --server <Paper folder with console.in> --flowers 10 --landings 3
 ```
 
+### Patch 0009 on Paper (after the Muse run, 2026-10-08)
+
+The soak's one runtime failure of 8 games at once (run 8): `craft iron_pickaxe` failed in 1.3 s, "crafting_table:
+Placement cell (3, 51, 6322) overlaps bat #44444". Their cell choice (`chooseCell` in `src/world/nearby-placement.ts`)
+looked at blocks only; the placement then checked the cell for bodies (`occupiedCell`) and failed. 0009 leaves out
+cells a mob or another player is in, and when one moves into the chosen cell between the choice and the placement
+(their check before the click, or the server refusing it while a body is there), tries the next cell after a 4-tick
+pause, 3 cells at most; any other refusal is reported as before. `bench/muse-deltas.mjs` on this Mac's Paper (25565,
+bot `Tst_dl_` and random letters): a stone platform in the sky, bats held still (NoAI, no gravity) in the 8 cells
+around the bot, `craft_item wooden_pickaxe` with a temporary table:
+
+| Runtime | Result |
+| --- | --- |
+| 0001-0008 (`mineai-runtime-8`) | **0 of 3**: "[WORKSTATION_PLACEMENT_FAILED] crafting_table: Placement cell (14399, 200, 14000) overlaps bat #29469", the soak's error, in 0.5 s |
+| 0001-0009 (`fetch-and-patch.sh`) | **3 of 3**: the table 2 blocks away (dx -2), the pickaxe made, the table picked up again, 5.1-5.2 s |
+
+Unit tests (`src/world/nearby-placement.test.ts`, 3 new): a cell a bat is in is not chosen; a bat that arrives between
+the choice and the placement sends the table to the next cell after a pause; bats in the way of every try end with the
+last refusal after 3 cells, and a refusal with nobody in the cell is not tried again. Their whole suite with 0009:
+1,582 pass, 0 fail; typecheck clean; the build's own test list (`fetch-and-patch.sh`, which already runs
+`nearby-placement.test.ts`): 99 pass.
+
+```sh
+BUN=... node mineai/bench/muse-deltas.mjs ~/picasso-work/mineai-runtime-9 --server <Paper folder with console.in> --only bats --bats 3
+```
+
 ## Found along the way (not window clicks)
+
+- **A build around the bot (our `shelter` blueprint) does not finish, and in a pocket in stone it stops their runtime.**
+  Their builder never seals the bot in (`build-process.ts`: it steps out of the structure first). `bench/muse-deltas.mjs`
+  on this Mac's Paper (2026-10-08): on open ground (s4b) `build_structure` stopped at 9 of 10 placed, 11 of 12 cells,
+  "[BUILD_STOPPED] could not step out of the structure: no path found after 0 ms compute"; in a 1x2 pocket in stone
+  (s4) the runtime's event loop stopped for over 5 s, and over 60 s with `MINEAI_UNRESPONSIVE_MS=60000`, so their
+  watchdog ended the runtime (`RUNTIME_UNRESPONSIVE`) in 4 of 4 tries (one with 0001-0008, three with 0009); through our gateway
+  a shelter after the iron route did the same once (the host was started again). Their incident record ends with a walk
+  of the build ("navigation route returned"), then nothing. Likely (UNVERIFIED): `build()`'s step-out branch goes round
+  again (`continue`) without counting an idle pass and without yielding to the event loop, when the walk out ends without
+  leaving the structure. Muse's shelter on staging (game g38e5ef) succeeded in 16.3 s. Not patched yet: a candidate 0010
+  (count the step-out passes, yield between them), or a shelter for this body that leaves the bot a way out.
 
 - **Their planner counts carried sticks toward a pickaxe even when sticks are asked for too.** `craft_item
   wooden_pickaxe 1 + stick 4` with 20 sticks carried makes 4 sticks and uses 2 carried ones: a net gain of 2 of 4,

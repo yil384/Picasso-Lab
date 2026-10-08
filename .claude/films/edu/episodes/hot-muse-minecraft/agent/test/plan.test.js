@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPlanner, describeMissing } from '../src/plan.js';
-import { validateArgs, codeOf, SKILL_NAMES, TOOL_NAMES, TOOLS, MCP_SKILLS, RESULT_CODES } from '../src/contracts.js';
+import { validateArgs, codeOf, SKILL_NAMES, TOOL_NAMES, TOOLS, MCP_SKILLS, RESULT_CODES, NOT_HUNGRY_TEXT } from '../src/contracts.js';
 import { createFakeBot } from './fake-bot.js';
 import { createBody } from '../src/body.js';
 import { loadConfig } from '../src/config.js';
@@ -21,7 +21,9 @@ test('check: a wooden pickaxe from logs gets its planks (cut once), a table and 
   assert.equal(p.ok, true);
   assert.deepEqual(run(p), ['+ craft oak_planks 12', '+ craft crafting_table 1', '+ craft stick 4', '1 craft wooden_pickaxe 1']);
   assert.equal(p.added, 3);
-  assert.match(p.steps[0].added, /^for step 1 \(craft wooden_pickaxe 1\)$/);
+  assert.match(p.steps[0].added, /^for craft wooden_pickaxe 1$/);
+  assert.equal(p.steps[0].before, 1, 'added before the caller\'s step 1, which keeps its number');
+  assert.equal(p.steps.at(-1).step, 1);
 
   // a table within reach: no table craft; the wood the bot holds is used
   const near = planner.check([craft('wooden_pickaxe')], { inventory: { birch_log: 2 }, table: true });
@@ -70,7 +72,8 @@ test('check: the iron route from an empty inventory passes, with a table, sticks
     '3 collect stone 11', '4 craft stone_pickaxe 1', '5 collect iron_ore 3', '6 collect coal_ore 1', '+ craft furnace 1',
     '7 smelt raw_iron 3', '+ craft stick 4', '8 craft iron_pickaxe 1',
   ]);
-  assert.match(p.steps[9].added, /^for a furnace in step 7 \(smelt raw_iron 3\)$/);
+  assert.match(p.steps[9].added, /^for a furnace in smelt raw_iron 3$/);
+  assert.equal(p.steps[9].before, 7);
   // one stone short for the furnace: refused before anything runs
   const short = planner.check(route.map((s) => (s.args.block === 'stone' ? { ...s, args: { ...s.args, n: 10 } } : s)), { inventory: {}, table: false, furnace: false });
   assert.deepEqual(short.missing, [{ step: 7, item: 'cobblestone', need: 1, for: 'a furnace' }]);
@@ -142,6 +145,8 @@ test('codes: skill results map to the typed codes the MCP replies carry', () => 
     [{ ok: false, result: 'timed out after 60 s; craft was cancelled' }, 'TIMED_OUT'],
     [{ ok: false, result: 'stopped: stopped through MCP' }, 'STOPPED'],
     [{ ok: false, result: 'no zombie within 16 blocks' }, 'FAILED'],
+    // eat at a full bar (both bodies): a typed, harmless failure (the Muse run on staging tried it twice)
+    [{ ok: false, result: NOT_HUNGRY_TEXT }, 'NOT_HUNGRY'],
   ];
   for (const [r, code] of cases) assert.equal(codeOf(r), code, r.result);
   for (const [, code] of cases) if (code) assert.ok(RESULT_CODES.includes(code));

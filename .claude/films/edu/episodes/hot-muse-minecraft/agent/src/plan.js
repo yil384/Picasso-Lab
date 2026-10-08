@@ -40,8 +40,9 @@ const KNOWN = new Set(['get_state', 'say', 'eat', 'attack', 'equip', 'sleep', 'e
 
 /**
  * @typedef {{skill: string, args: object}} Step
- * @typedef {{skill: string, args: object, step: number|null, added?: string, addedItems?: Array<{item: string, n: number}>}} PlannedStep
- *   step: the 1-based index in the caller's list (null for a step the check added); added: why it was added;
+ * @typedef {{skill: string, args: object, step: number|null, before?: number, added?: string, addedItems?: Array<{item: string, n: number}>}} PlannedStep
+ *   step: the 1-based index in the caller's list (null for a step the check added); before: for an added step, the
+ *   caller's step it was added for (it runs just before it); added: why it was added;
  *   addedItems: items the check put into a craft_batch's list
  * @typedef {{step: number, item: string, need: number, for?: string, anyWood?: true, note?: string}} Missing
  * @typedef {{ok: boolean, steps: PlannedStep[], missing: Missing[], added: number}} Plan
@@ -460,8 +461,9 @@ export function createPlanner({ version = '1.21.4' } = {}) {
       if (unknownBefore) for (const m of sumUp(lacking)) warn(st, `may lack ${describeMissing(m)}, unless ${unknownBefore} brings it`);
       else missing.push(...sumUp(lacking).map((m) => ({ step: i + 1, ...m })));
       for (const o of tidy(ops)) {
-        const serves = o.why && o.why !== step.args?.item ? `for ${o.why} in ${label}` : `for ${label}`;
-        out.push({ skill: 'craft', args: { item: o.item, n: o.n }, step: null, added: serves });
+        // which of the caller's steps it serves is `before` (it runs just before it); this says what it is for
+        const serves = o.why && o.why !== step.args?.item ? `for ${o.why} in ${describeStep(step)}` : `for ${describeStep(step)}`;
+        out.push({ skill: 'craft', args: { item: o.item, n: o.n }, step: null, before: i + 1, added: serves });
         added += 1;
       }
       if (replaced) {

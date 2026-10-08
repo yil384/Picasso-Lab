@@ -5,7 +5,10 @@
 // smelt, equip (worn and off-hand stacks in the status), and the rest answering simply. Every call is recorded (calls).
 // Failures and durations are set per tool; world.held = {owner, until} makes one of their reflexes hold the body (a
 // submission is refused ACTION_BUSY with no action id until then); world.huntKillAfterMs makes a hunt's progress show a
-// kill after that long while the hunt goes on (no drop came) until cancelled.
+// kill after that long while the hunt goes on (no drop came) until cancelled. world.side[tool] = {item: n} changes the
+// inventory during that tool's next runs beyond what its evidence reports (a walk digging through stone, scaffolding
+// placed, an item lying near a table picked up with it), as on a real server; world.collectBroken sets how many target
+// blocks a collect reports broken (the rest of its gain came on the way), world.buildDug how many cells a build dug.
 // Run as a process (test/fake-mineai-host.mjs) it stands in for their host.ts.
 
 import http from 'node:http';
@@ -48,6 +51,9 @@ export async function startFakeMineAi(opts = {}) {
     equipment: new Map(), // slot -> {name, count}
     held: null, // {owner, until}: a reflex owns the body
     huntKillAfterMs: null,
+    side: {}, // tool -> {item: n}: what else changes while it runs (not in its evidence)
+    collectBroken: null,
+    buildDug: 0,
     die: null, // a tool whose next run kills the bot
   };
   const calls = [];
@@ -64,12 +70,13 @@ export async function startFakeMineAi(opts = {}) {
   const slotFor = (name) => (name === 'shield' ? 'off-hand' : /_helmet$/.test(name) ? 'head' : /_chestplate$/.test(name) ? 'torso' : /_leggings$/.test(name) ? 'legs' : /_boots$/.test(name) ? 'feet' : 'hand');
   const planksOf = () => WOODS.map((w) => `${w}_planks`).find((p) => have(p) > 0) ?? `${WOODS.find((w) => have(`${w}_log`) > 0) ?? 'oak'}_planks`;
 
-  /** Recursive craft of n item; returns an error string or null. */
+  /** Recursive craft of n item; returns an error string or null. ctx.steps gets their plan's steps (as they report them). */
   function craft(item, n, ctx) {
     const r = RECIPES[item];
     if (!r) return `[ITEMS_NOT_CRAFTABLE] ${item} has no recipe`;
     if (r.table && !ctx.table) return '[CRAFTING_TABLE_REQUIRED] needs a crafting table in reach';
     const times = Math.ceil(n / r.out);
+    const ingredients = [];
     for (let [ing, c] of Object.entries(r.need)) {
       if (ing === '$planks') ing = planksOf();
       const want = c * times;
@@ -79,8 +86,10 @@ export async function startFakeMineAi(opts = {}) {
         if (e) return e;
       }
       add(ing, -want);
+      ingredients.push({ item: ing, count: want });
     }
     add(item, r.out * times);
+    ctx.steps?.push({ item, count: r.out * times, applications: times, ingredients, requiresCraftingTable: Boolean(r.table) });
     return null;
   }
 
@@ -100,7 +109,7 @@ export async function startFakeMineAi(opts = {}) {
         const drop = DROPS[a.block_name] ?? a.block_name;
         if (a.block_name === 'iron_ore' && !have('stone_pickaxe')) return { status: 'failed', error: '[TARGET_UNMINEABLE] iron_ore needs a stone pickaxe' };
         add(drop, a.count ?? 1);
-        return { collected: { requested: a.count ?? 1, gained: a.count ?? 1, gainedByItem: { [drop]: a.count ?? 1 }, blocksBroken: a.count ?? 1 }, status: 'succeeded' };
+        return { collected: { requested: a.count ?? 1, gained: a.count ?? 1, gainedByItem: { [drop]: a.count ?? 1 }, blocksBroken: world.collectBroken ?? a.count ?? 1 }, status: 'succeeded' };
       }
       case 'craft_item': {
         const needs = a.items.some((i) => RECIPES[i.item_name]?.table);
@@ -111,13 +120,15 @@ export async function startFakeMineAi(opts = {}) {
           table = true;
         } else if (needs && have('crafting_table')) { add('crafting_table', -1); placed = { x: 11, y: 64, z: -3 }; table = true; }
         const items = [];
+        const steps = [];
         for (const i of a.items) {
           const before = have(i.item_name);
-          const e = craft(i.item_name, i.count ?? 1, { table });
-          if (e) return { craft: { items, completedSteps: items.length }, status: 'failed', error: e };
+          const e = craft(i.item_name, i.count ?? 1, { table, steps });
+          if (e) return { craft: { items, completedSteps: steps.length }, status: 'failed', error: e };
           items.push({ item: i.item_name, requested: i.count ?? 1, gained: have(i.item_name) - before, confirmed: true });
         }
-        return { craft: { items, completedSteps: items.length, ...(placed ? { craftingTablePlaced: placed } : {}) }, ...(a.temporary_workstation ? { workstation: { block: 'crafting_table', recovered: true } } : {}), status: 'succeeded' };
+        const plan = { status: 'ready', steps, requiredMaterials: [], carriedMaterials: [], missingMaterials: [], requiresCraftingTable: table, tree: '' };
+        return { craft: { items, completedSteps: steps.length, plan, ...(placed ? { craftingTablePlaced: placed } : {}) }, ...(a.temporary_workstation ? { workstation: { block: 'crafting_table', position: { x: 11, y: 64, z: -3 }, recovered: true } } : {}), status: 'succeeded' };
       }
       case 'smelt_item': {
         if (have(a.item_name) < a.count) return { status: 'failed', error: `[SMELT_INPUT_MISSING] carries ${have(a.item_name)} ${a.item_name}` };
@@ -127,10 +138,26 @@ export async function startFakeMineAi(opts = {}) {
         add(a.item_name, -a.count);
         add(a.fuel_item_name, -fuel);
         add(SMELTS[a.item_name] ?? 'stone', a.count);
-        return { smelt: { furnace: { x: 12, y: 64, z: -3 }, inputItem: a.item_name, fuelItem: a.fuel_item_name, requested: a.count, produced: a.count, outputItem: SMELTS[a.item_name] }, ...(a.temporary_workstation ? { workstation: { block: 'furnace', recovered: true } } : {}), status: 'succeeded' };
+        return { smelt: { furnace: { x: 12, y: 64, z: -3 }, inputItem: a.item_name, fuelItem: a.fuel_item_name, requested: a.count, produced: a.count, outputItem: SMELTS[a.item_name], fuelInserted: fuel, rawRecovered: 0, fuelRecovered: 0 }, ...(a.temporary_workstation ? { workstation: { block: 'furnace', position: { x: 12, y: 64, z: -3 }, recovered: true } } : {}), status: 'succeeded' };
       }
       case 'place_block': if (!have(a.block_name)) return { status: 'failed', error: `[PLACE_ITEM_MISSING] no ${a.block_name}` }; add(a.block_name, -1); return { status: 'succeeded', placed: { block: a.block_name, position: { x: a.x, y: a.y, z: a.z } } };
-      case 'eat_food': if (!have(a.food_name)) return { status: 'failed', error: `[EAT_FOOD_MISSING] no ${a.food_name}` }; add(a.food_name, -1); world.food = Math.min(20, world.food + 6); return { status: 'succeeded' };
+      case 'eat_food': {
+        if (!have(a.food_name)) return { status: 'failed', error: `[EAT_FOOD_MISSING] no ${a.food_name}` };
+        const before = have(a.food_name);
+        const hungerBefore = world.food;
+        add(a.food_name, -1);
+        world.food = Math.min(20, world.food + 6);
+        return { status: 'succeeded', eating: { food: a.food_name, inventoryBefore: before, inventoryAfter: have(a.food_name), confirmed: true, hungerBefore, hungerAfter: world.food, consumed: true } };
+      }
+      case 'build_structure': {
+        // every cell of the material is placed from the inventory; world.buildDug cells were dug clear
+        const cells = a.blocks ?? [];
+        const solid = cells.filter((b) => b.block_name !== 'air');
+        const material = solid[0]?.block_name;
+        if (material && have(material) < solid.length) return { status: 'failed', error: `[BUILD_INCOMPLETE] ${solid.length - have(material)} cells still wrong: short of ${solid.length - have(material)} ${material}.`, structure: null };
+        if (material) add(material, -solid.length);
+        return { status: 'succeeded', structure: { dimension: 'overworld', cells: cells.length, correct: cells.length, placed: solid.length, dug: world.buildDug, wrong: 0, left: [], missing: [], passes: 1, complete: true } };
+      }
       case 'collect_mob_drop': add(a.drop_name, a.count ?? 1); return { status: 'succeeded', hunt: { mob: a.mob_name, drop: a.drop_name, requested: a.count ?? 1, gained: a.count ?? 1, targetDeathsObserved: a.count ?? 1 } };
       case 'drop_item': for (const i of a.items) add(i.item_name, -Math.min(have(i.item_name), i.count ?? have(i.item_name))); return { status: 'succeeded' };
       case 'equip':
@@ -158,7 +185,12 @@ export async function startFakeMineAi(opts = {}) {
     actions.set(id, act);
     active = id;
     const hunting = tool === 'collect_mob_drop' && world.huntKillAfterMs !== null;
-    act.timer = setTimeout(() => settle(act, perform(tool, a, () => act.cancel)), hunting ? 600_000 : world.durations[tool] ?? 20);
+    act.timer = setTimeout(() => {
+      const result = perform(tool, a, () => act.cancel);
+      // what else happened meanwhile (a walk's digging and scaffolding, a pickup): in the inventory, not in the evidence
+      if (result.status !== 'cancelled') for (const [k, n] of Object.entries(world.side[tool] ?? {})) add(k, n);
+      settle(act, result);
+    }, hunting ? 600_000 : world.durations[tool] ?? 20);
     act.t0 = t0;
     act.hunting = hunting;
     act.args = a;

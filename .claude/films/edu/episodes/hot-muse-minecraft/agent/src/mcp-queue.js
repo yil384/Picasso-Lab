@@ -23,6 +23,11 @@ const FINAL = new Set(['confirmed', 'failed', 'cancelled']);
 export const isFinal = (step) => FINAL.has(step.status);
 /** The status a client sees: pending (waiting or running), confirmed, failed or cancelled. */
 export const statusOf = (step) => (isFinal(step) ? step.status : 'pending');
+/**
+ * A step in words, by the caller's own numbering: "step 4", or for a craft the check added "the craft added before
+ * step 4" (the caller's steps keep their numbers; an added step gets none of its own).
+ */
+export const stepName = (step) => (step.step != null ? `step ${step.step}` : `the ${step.skill} added before step ${step.before ?? '?'}`);
 
 /**
  * @param {{start: (skill: string, args: object) => ({ok: true, promise: Promise<object>}|{ok: false, error: string}), now?: () => number}} opts
@@ -62,9 +67,10 @@ export function createQueue({ start, now = Date.now }) {
     const result = {
       ok: Boolean(r?.ok), result: String(r?.result ?? ''), delta: r?.delta && typeof r.delta === 'object' ? r.delta : {},
       ...(r?.ms != null ? { ms: r.ms } : {}), ...(typeof r?.code === 'string' ? { code: r.code } : {}),
+      ...(r?.own && typeof r.own === 'object' ? { own: r.own } : {}),
     };
     settle(step, result.ok ? 'confirmed' : step.stopping ? 'cancelled' : 'failed', result, step.stopping ? step.stopping : null);
-    if (!result.ok) cancelWaiting(`step ${step.n} of ${step.call.label} (${step.skill}) ${step.stopping ? 'was stopped' : 'failed'}`, step.code ?? (step.stopping ? 'STOPPED' : 'FAILED'));
+    if (!result.ok) cancelWaiting(`${stepName(step)} of ${step.call.label} (${step.skill}) ${step.stopping ? 'was stopped' : 'failed'}`, step.code ?? (step.stopping ? 'STOPPED' : 'FAILED'));
     pump();
   }
 
@@ -114,7 +120,8 @@ export function createQueue({ start, now = Date.now }) {
     },
 
     /**
-     * Accept a call: remember it under key and queue its steps. planned: [{skill, args, step, added?, addedItems?}].
+     * Accept a call: remember it under key and queue its steps. planned: [{skill, args, step, before?, added?, addedItems?}]
+     * (step: the caller's number, null for a craft the check added before the caller's step `before`).
      * @returns {object} the call: {key, sig, requestId, label, at, steps, settled}
      */
     submit(key, { sig, requestId = null, label, planned }) {
@@ -123,7 +130,7 @@ export function createQueue({ start, now = Date.now }) {
         let resolve;
         const done = new Promise((r) => { resolve = r; });
         return {
-          id: ++seq, call, n: i + 1, skill: p.skill, args: p.args, step: p.step ?? null, added: p.added ?? null,
+          id: ++seq, call, n: i + 1, skill: p.skill, args: p.args, step: p.step ?? null, before: p.before ?? null, added: p.added ?? null,
           addedItems: p.addedItems ?? null, status: 'queued', result: null, code: null, cause: null, why: null, startedAt: null,
           endedAt: null, delivered: false, stopping: null, done, resolve,
         };

@@ -2,6 +2,7 @@
 // say (one chat line; never a command, never a character the server kicks for).
 
 import { done, fail, equip } from './util.js';
+import { NOT_HUNGRY_TEXT } from '../contracts.js';
 import { pendingFor, fetchSmelted } from './smelt.js';
 
 // Foods that hurt (poison, hunger, nausea) or teleport the bot; never picked automatically.
@@ -25,7 +26,7 @@ export function bestSafeFood(bot) {
 export async function eat(ctx) {
   const { bot } = ctx;
   const before = bot.food;
-  if (before >= 20) return fail('not hungry: food is 20/20');
+  if (before >= 20) return fail(NOT_HUNGRY_TEXT);
   const foods = bot.registry.foodsByName;
   // food still cooking in the bot's furnaces (a background smelt) is fetched when nothing else is carried
   let fetched = '';

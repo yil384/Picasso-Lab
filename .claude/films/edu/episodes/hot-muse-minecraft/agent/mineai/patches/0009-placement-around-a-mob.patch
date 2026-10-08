@@ -1,0 +1,256 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0009: a block put down beside the bot (a temporary crafting table or furnace, a table for a craft, place_block's
+nearby cell) never goes into a cell a mob or another player is in, and when one moves into the chosen cell before the
+block goes down, that cell is left out and the next one is tried after a 4-tick pause (3 cells at most). Staging soak,
+8 games at once, run 8: in a cave a bat flew into the cell chosen for the iron pickaxe's temporary table and the craft
+failed in 1.3 s ("crafting_table: Placement cell (3, 51, 6322) overlaps bat #44444"). With tests (nearby-placement).
+
+diff --git a/src/world/nearby-placement.test.ts b/src/world/nearby-placement.test.ts
+index 85bd364..ec71c13 100644
+--- a/src/world/nearby-placement.test.ts
++++ b/src/world/nearby-placement.test.ts
+@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
+ import test from "node:test";
+ import type { Bot } from "mineflayer";
+ import { Vec3 } from "vec3";
+-import { chooseCell } from "./nearby-placement.js";
++import { chooseCell, OCCUPIED_CELL_TRIES, placeCarriedBlockNearby } from "./nearby-placement.js";
++import type { placeBlock } from "./placement.js";
+ 
+ /**
+  * Patched for Muse plays Minecraft (picasso-lab). Staging, spot 7: the
+@@ -13,7 +14,8 @@ import { chooseCell } from "./nearby-placement.js";
+  */
+ function meadow(cells: (position: Vec3) => string) {
+   return {
+-    entity: { position: new Vec3(0.5, 64, 0.5) },
++    entity: { id: 1, position: new Vec3(0.5, 64, 0.5) },
++    entities: {},
+     blockAt: (position: Vec3) => {
+       const name = position.y < 64 ? "grass_block" : position.y === 64 ? cells(position) : "air";
+       return { name, position, boundingBox: name === "grass_block" ? "block" : "empty" };
+@@ -39,3 +41,89 @@ test("short grass is filled as before; flowers everywhere leave no cell", () =>
+   assert.equal(chooseCell(meadow(() => "poppy"), "crafting_table", 3), null);
+   assert.equal(chooseCell(meadow(() => "dandelion"), "furnace", 3), null);
+ });
++
++/**
++ * Patched for Muse plays Minecraft (picasso-lab). Staging soak, 8 games at
++ * once, run 8: in a cave a bat flew into the cell chosen for the iron
++ * pickaxe's temporary table, and the craft failed in 1.3 s ("crafting_table:
++ * Placement cell (3, 51, 6322) overlaps bat #44444"). A cell a mob is in is
++ * not chosen, and a mob that moves into the chosen cell before the block goes
++ * down sends the placement to the next cell.
++ */
++type Placement = Parameters<typeof placeBlock>[1];
++const key = (p: { x: number; y: number; z: number }) => `${p.x},${p.y},${p.z}`;
++
++function cave() {
++  const placed = new Map<string, string>();
++  const entities: Record<number, unknown> = {};
++  let ticks = 0;
++  const bot = {
++    entity: { id: 1, position: new Vec3(0.5, 64, 0.5) },
++    entities,
++    registry: { entitiesByName: { bat: { metadataKeys: ["mob_flags"] } } },
++    inventory: { items: () => [{ name: "crafting_table", count: 1 }] },
++    blockAt: (position: Vec3) => {
++      const name = placed.get(key(position)) ?? (position.y < 64 ? "grass_block" : "air");
++      return { name, position, boundingBox: name === "air" ? "empty" : "block" };
++    },
++    waitForTicks: async (n: number) => { ticks += n; },
++  } as unknown as Bot;
++  const bat = (cell: Vec3, id = 44444) => {
++    entities[id] = { id, name: "bat", type: "mob", isValid: true, position: new Vec3(cell.x + 0.5, cell.y + 0.1, cell.z + 0.5), width: 0.5, height: 0.9 };
++  };
++  return { bot, placed, bat, ticks: () => ticks };
++}
++
++test("a cell a mob is in is not chosen for a placement", () => {
++  const { bot, bat } = cave();
++  const first = chooseCell(bot, "crafting_table", 3);
++  assert.ok(first);
++  bat(first.position);
++  const other = chooseCell(bot, "crafting_table", 3);
++  assert.ok(other, "another clear cell");
++  assert.notEqual(key(other.position), key(first.position));
++  assert.equal(other.position.distanceTo(first.position) > 0, true);
++});
++
++test("a mob that moves into the chosen cell sends the table to the next cell", async () => {
++  const { bot, placed, bat, ticks } = cave();
++  const tried: string[] = [];
++  const place = (async (_bot: Bot, p: Placement) => {
++    const cell = p.expectedCells[0];
++    tried.push(key(cell));
++    if (tried.length === 1) {
++      bat(new Vec3(cell.x, cell.y, cell.z)); // the bat arrives between the choice and the placement
++      return { kind: "failed", error: `Placement cell (${cell.x}, ${cell.y}, ${cell.z}) overlaps bat #44444 at (${cell.x + 0.5}, ${cell.y + 0.1}, ${cell.z + 0.5}).` };
++    }
++    placed.set(key(cell), "crafting_table");
++    return { kind: "placed", block: bot.blockAt(new Vec3(cell.x, cell.y, cell.z))! };
++  }) as typeof placeBlock;
++  const result = await placeCarriedBlockNearby(bot, "crafting_table", { place });
++  assert.equal(result.kind, "placed");
++  assert.equal(tried.length, 2);
++  assert.notEqual(tried[1], tried[0], "not the bat's cell again");
++  assert.equal(result.kind === "placed" && key(result.position), tried[1]);
++  assert.ok(ticks() > 0, "a short pause before the next try");
++});
++
++test("a mob in the way of every try ends with the last refusal; other refusals are not tried again", async () => {
++  const { bot, bat } = cave();
++  let calls = 0;
++  const always = (async (_bot: Bot, p: Placement) => {
++    const cell = p.expectedCells[0];
++    calls += 1;
++    bat(new Vec3(cell.x, cell.y, cell.z), 100 + calls);
++    return { kind: "failed", error: `Placement cell (${cell.x}, ${cell.y}, ${cell.z}) overlaps bat #${100 + calls} at (0, 0, 0).` };
++  }) as typeof placeBlock;
++  const crowded = await placeCarriedBlockNearby(bot, "crafting_table", { place: always });
++  assert.equal(crowded.kind, "failed");
++  assert.equal(calls, OCCUPIED_CELL_TRIES);
++  assert.match(crowded.kind === "failed" ? crowded.error : "", /overlaps bat #103/);
++
++  const { bot: plain } = cave();
++  let once = 0;
++  const refused = (async () => { once += 1; return { kind: "failed", error: "The expected block did not appear after placement." }; }) as typeof placeBlock;
++  const r = await placeCarriedBlockNearby(plain, "crafting_table", { place: refused });
++  assert.equal(r.kind, "failed");
++  assert.equal(once, 1, "a refusal with nobody in the cell is reported as before");
++});
+diff --git a/src/world/nearby-placement.ts b/src/world/nearby-placement.ts
+index 745b5c4..e47ed88 100644
+--- a/src/world/nearby-placement.ts
++++ b/src/world/nearby-placement.ts
+@@ -2,13 +2,21 @@ import type { Bot } from "mineflayer";
+ import { Vec3 } from "vec3";
+ import { cellIntersectsPlayerBody } from "../utils/index.js";
+ import { isDryPlacementSite, supportsFlatPlacement } from "./block-classification.js";
+-import { placeBlock, findPlacementSupport, type WorldBlock } from "./placement.js";
++import { placeBlock, findPlacementSupport, occupiedCell, type WorldBlock } from "./placement.js";
+ import { chestOpeningObstruction } from "./chest-clearance.js";
+ 
+ /** Vanilla block-interaction reach, measured from the bot's feet cell like every other placement here. */
+ const NEARBY_PLACEMENT_REACH = 4;
+ /** Feet level first, then the step down and the step up; a cell two up is over the bot's head. */
+ const SEARCH_HEIGHTS = [0, -1, 1] as const;
++/**
++ * Patched for Muse plays Minecraft (picasso-lab): how many cells a placement
++ * tries when a mob (or another player) is in the chosen one, and how long it
++ * lets the mob move on before the next choice.
++ */
++export const OCCUPIED_CELL_TRIES = 3;
++const OCCUPIED_CELL_PAUSE_TICKS = 4;
++const cellKey = (position: Vec3): string => `${position.x},${position.y},${position.z}`;
+ 
+ export type NearbyPlacement =
+   | { readonly kind: "placed"; readonly position: Vec3; readonly block: WorldBlock }
+@@ -33,7 +41,12 @@ interface PlacementCell {
+  * has walls on every side and no free floor, and the model walked off to
+  * find open ground instead of crafting where it stood.
+  */
+-export function chooseCell(bot: Bot, itemName: string, maxRadius: number): PlacementCell | null {
++export function chooseCell(
++  bot: Bot,
++  itemName: string,
++  maxRadius: number,
++  excluded: ReadonlySet<string> = new Set(),
++): PlacementCell | null {
+   const feet = bot.entity.position.floored();
+   let chosen: { readonly cell: PlacementCell; readonly distance: number; readonly onFloor: boolean } | null = null;
+   for (let dx = -maxRadius; dx <= maxRadius; dx += 1) {
+@@ -42,7 +55,10 @@ export function chooseCell(bot: Bot, itemName: string, maxRadius: number): Place
+         const position = feet.offset(dx, dy, dz);
+         const distance = position.distanceTo(feet);
+         if (distance > NEARBY_PLACEMENT_REACH || cellIntersectsPlayerBody(position, bot.entity.position)) continue;
++        if (excluded.has(cellKey(position))) continue;
+         if (!isDryPlacementSite(bot.blockAt(position))) continue;
++        // A mob in the cell refuses the placement (staging soak: a bat in a cave).
++        if (occupiedCell(bot, position, bot.entity.id)) continue;
+         if (chestOpeningObstruction(bot, itemName, position)) continue;
+         const placement = findPlacementSupport(bot, position, supportsFlatPlacement);
+         if (placement) {
+@@ -60,6 +76,18 @@ export function chooseCell(bot: Bot, itemName: string, maxRadius: number): Place
+   return chosen?.cell ?? null;
+ }
+ 
++/** A placement refused because a body (a mob, another player) was in the cell. */
++function occupantRefused(bot: Bot, position: Vec3, error: string): boolean {
++  return /^Placement cell .* overlaps /.test(error) || occupiedCell(bot, position, bot.entity.id) !== null;
++}
++
++async function pause(bot: Bot, ticks: number, signal?: AbortSignal): Promise<void> {
++  signal?.throwIfAborted();
++  if (typeof bot.waitForTicks === "function") await bot.waitForTicks(ticks);
++  else await new Promise((resolve) => setTimeout(resolve, ticks * 50));
++  signal?.throwIfAborted();
++}
++
+ /**
+  * Place one carried block on the nearest clear cell around the bot, without
+  * moving.
+@@ -68,24 +96,46 @@ export function chooseCell(bot: Bot, itemName: string, maxRadius: number): Place
+  * playthrough spent a third of its calls guessing coordinates for a crafting
+  * table. The cell is chosen here: clear, outside the bot's body, within
+  * reach, with something solid to place against, nearest first.
++ *
++ * Patched for Muse plays Minecraft (picasso-lab): a cell a mob is in is not
++ * chosen, and when one moves into the chosen cell before the block goes down
++ * (staging soak, 8 at once, run 8: "Placement cell (3, 51, 6322) overlaps bat",
++ * the iron pickaxe's temporary table in a cave), that cell is left out and the
++ * next one is tried after a short pause, up to OCCUPIED_CELL_TRIES cells.
+  */
+ export async function placeCarriedBlockNearby(
+   bot: Bot,
+   itemName: string,
+-  options: { readonly maxRadius?: number; readonly signal?: AbortSignal } = {},
++  options: {
++    readonly maxRadius?: number;
++    readonly signal?: AbortSignal;
++    /** The placement itself; placeBlock, replaceable in tests. */
++    readonly place?: typeof placeBlock;
++  } = {},
+ ): Promise<NearbyPlacement> {
+-  const item = bot.inventory.items().find((candidate) => candidate.name === itemName);
+-  if (!item) return { kind: "no_item" };
+-  const cell = chooseCell(bot, itemName, options.maxRadius ?? 3);
+-  if (!cell) return { kind: "no_cell" };
+-  const result = await placeBlock(bot, {
+-    item,
+-    support: cell.support,
+-    face: cell.face,
+-    expectedCells: [cell.position],
+-    matches: (block) => block.name === itemName,
+-    signal: options.signal,
+-  });
+-  if (result.kind === "placed") return { kind: "placed", position: cell.position, block: result.block };
+-  return { kind: "failed", position: cell.position, error: result.error };
++  const place = options.place ?? placeBlock;
++  const excluded = new Set<string>();
++  let last: NearbyPlacement = { kind: "no_cell" };
++  for (let attempt = 0; attempt < OCCUPIED_CELL_TRIES; attempt += 1) {
++    const item = bot.inventory.items().find((candidate) => candidate.name === itemName);
++    if (!item) return attempt === 0 ? { kind: "no_item" } : last;
++    const cell = chooseCell(bot, itemName, options.maxRadius ?? 3, excluded);
++    if (!cell) return attempt === 0 ? { kind: "no_cell" } : last;
++    const result = await place(bot, {
++      item,
++      support: cell.support,
++      face: cell.face,
++      expectedCells: [cell.position],
++      matches: (block) => block.name === itemName,
++      signal: options.signal,
++    });
++    if (result.kind === "placed") return { kind: "placed", position: cell.position, block: result.block };
++    last = { kind: "failed", position: cell.position, error: result.error };
++    // Only a body in the way is worth another cell; a placement the server
++    // refused for any other reason is reported as before.
++    if (bot.blockAt(cell.position)?.name === itemName || !occupantRefused(bot, cell.position, result.error)) return last;
++    excluded.add(cellKey(cell.position));
++    if (attempt + 1 < OCCUPIED_CELL_TRIES) await pause(bot, OCCUPIED_CELL_PAUSE_TICKS, options.signal);
++  }
++  return last;
+ }

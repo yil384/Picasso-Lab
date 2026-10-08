@@ -264,7 +264,7 @@ export async function smelt(ctx, { item, n }) {
     }
     return fail(`you have no ${item} to smelt${early}`);
   }
-  const capped = n > SMELT_PER_CALL && have > SMELT_PER_CALL;
+  // n is at most SMELT_PER_CALL (the smelt schema's maximum): what a call loads
   const want = Math.min(n, have, SMELT_PER_CALL);
   if (!chooseFuel(bot, item, 1)) return fail('no fuel: you need coal, charcoal, planks, sticks or logs');
 
@@ -308,12 +308,11 @@ export async function smelt(ctx, { item, n }) {
   const extras = [
     notes.length ? notes.join('; ') : '',
     prevOut ? `took ${prevOut} items an earlier load left in the furnace` : '',
-    total < want && !capped ? `fuel covers only ${total} of ${want}` : '',
+    total < want ? `fuel covers only ${total} of ${want}` : '',
     loadError ?? '',
-    capped ? `one call loads at most ${SMELT_PER_CALL}, call smelt again for the other ${Math.min(n, have) - total}` : '',
   ].filter(Boolean);
   const result = `smelting ${total} ${item} in ${loaded.length} furnace${loaded.length > 1 ? 's' : ''} at ${where}, burning ${burning}: ${total} ${output} ready in about ${secs} s. They come into your inventory with your next action near the furnace${loaded.length > 1 ? 's' : ''}, or when a craft needs them${extras.length ? ` (${extras.join('; ')})` : ''}${early}`;
   ctx.progress?.({ loaded: true, result });
-  if (total < Math.min(n, have, SMELT_PER_CALL) && !capped && total < have) return fail(result.replace(/^smelting/, 'smelting only'));
+  if (total < want) return fail(result.replace(/^smelting/, 'smelting only'));
   return done(result);
 }

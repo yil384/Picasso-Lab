@@ -14,8 +14,11 @@ import {
 const obj = (properties) => ({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
 const int = (description, minimum, maximum) => ({ type: 'integer', description, minimum, maximum });
 const pick = (description, list) => ({ type: 'string', description, enum: [...list] });
-const COUNT = (what) => int(`how many ${what}, 1 to 64`, 1, 64);
-/** Furnace items per smelt call: at about 10.5 s each, they fit in TOOL_TIMEOUTS_MS.smelt with time to spare. */
+const COUNT = (what, max = 64) => int(`how many ${what}, 1 to ${max}`, 1, max);
+/**
+ * Furnace items per smelt call: at about 10.5 s each, they fit in TOOL_TIMEOUTS_MS.smelt with time to spare. The
+ * smelt schema's maximum, so the description and the schema say the same (test/descriptions.test.js).
+ */
 export const SMELT_PER_CALL = 24;
 /**
  * Chat text: no command (a leading "/", also after spaces) and no "§" anywhere, which the server answers by kicking
@@ -43,7 +46,7 @@ const DEFS = [
     obj({ item: pick('item to make', CRAFTABLE_ITEMS), n: COUNT('items you want') })],
   ['smelt',
     `Smelt n items in furnaces. item is the INPUT (raw_iron -> iron_ingot, oak_log -> charcoal, cobblestone -> stone). Loads up to 3 furnaces (yours nearby, ones you carry, or new ones from spare cobblestone), fuels them from your inventory (coal, charcoal, planks, logs) and returns at once; a furnace takes about 10 s per item. The output comes into your inventory with your next action near the furnaces, or when a craft needs it. One call loads at most ${SMELT_PER_CALL}; call again for the rest.`,
-    obj({ item: pick('what to put in the furnace', SMELTABLE_ITEMS), n: COUNT('items to smelt') })],
+    obj({ item: pick('what to put in the furnace', SMELTABLE_ITEMS), n: COUNT('items to smelt', SMELT_PER_CALL) })],
   ['place',
     'Place one block from your inventory at an exact position: it must be air, next to a solid block and within reach after walking there.',
     obj({ block: pick('block to place', PLACEABLE_BLOCKS), pos: { ...obj({ ...XYZ }), description: 'where the block goes' } })],
@@ -54,12 +57,18 @@ const DEFS = [
     'Fight one mob of this kind (the closest within 16 blocks) until it dies or gets away. nearest_hostile picks the closest hostile mob. Never players.',
     obj({ target: pick('mob to fight', ATTACK_TARGETS) })],
   ['eat',
-    'Eat the best food in your inventory. Only works when your food bar is below 20.',
+    'Eat the best food in your inventory. Only works when your food bar is below 20; at 20/20 it fails with code NOT_HUNGRY, which is harmless (nothing is eaten or lost).',
     obj({})],
   ['say',
     'Send one chat message to the players on the server (1 to 200 characters, must not start with / or a space, no § sign).',
     obj({ text: { type: 'string', description: 'the message', minLength: 1, maxLength: 200, pattern: SAY_PATTERN } })],
 ];
+
+/**
+ * What eat answers at a full food bar (both bodies; code NOT_HUNGRY): a failure, but a harmless one, and the reply says
+ * so, so a model does not take it for a problem to solve (the Muse run on staging, 2026-10-08, tried twice).
+ */
+export const NOT_HUNGRY_TEXT = 'not hungry: food is 20/20, and eat works only below 20. Harmless: nothing was eaten or used; eat again once food is below 20 (the body also eats on its own when it gets hungry)';
 
 /** Items one craft_batch call may make (the MCP check may add planks, sticks or a table to the ones asked for). */
 export const CRAFT_BATCH_MAX = 12;
@@ -296,6 +305,7 @@ export const RESULT_CODES = Object.freeze([
   'RETREATED_LOW_HEALTH', // the body fled on its own because health ran low
   'INVENTORY_FULL',
   'DIED',
+  'NOT_HUNGRY', // eat at a full food bar (20/20): harmless, nothing was eaten or used
   'NOT_STARTED', // no game (start_game first), the game ended, or the bot is not in the world yet
   'DUPLICATE', // a re-sent play / play_sequence: the first call's result (none of its steps failed), nothing run again
   'BAD_ARGS', // a step's skill or arguments are not valid: nothing was run
@@ -308,6 +318,7 @@ export const RESULT_CODES = Object.freeze([
 // what the body and the skills say (src/body.js, src/skills/*); the first match wins
 const CODE_RULES = [
   ['DIED', /\byou died\b/],
+  ['NOT_HUNGRY', /^not hungry\b/],
   // reflexes off: "a zombie is attacking you"; on: a fight that cannot resume the skill, or too many fights in one
   ['HOSTILE_CONTACT', /\bis attacking you\b|^stopped: an? [a-z_]+ hit you\b|^stopped: mobs kept attacking\b/],
   ['RETREATED_LOW_HEALTH', /\b(retreated|fled)\b/i],
@@ -357,6 +368,9 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {string[]} [reflexes]  what the body did on its own during or before the skill (src/reflexes.js)
  * @property {string} [code]     a RESULT_CODES entry the body names itself (BODY=mineai maps the runtime's failure codes);
  *   without it codeOf reads the code from the result text
+ * @property {InventoryDelta} [own]  what the skill itself used (-) and made or collected (+), apart from what else
+ *   changed during it (blocks dug through or scaffolding placed on a walk, items lying nearby picked up, the drops of
+ *   cells a build dug clear): delta minus own. Only when the body can tell (BODY=mineai, from the runtime's evidence)
  *
  * @typedef {object} StateSnapshot  the structured form of Body.state(), for /api/.../state and the HUD
  * @property {number} health                 0-20
@@ -577,14 +591,20 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {() => void} sweep                ends sessions whose lease is over (also on a timer)
  *
  * @typedef {object} McpStepReport  one step in an MCP reply's structuredContent (src/mcp.js)
- * @property {number} n                  position in the call's steps, crafts added by the check included
+ * @property {number} n                  the order the call's steps run in, crafts added by the check included (a key;
+ *   replies number the steps by the caller's step)
  * @property {number|null} step          the caller's step number; null for a craft the check added
+ * @property {number} [before]           for a craft the check added: the caller's step it was added before
  * @property {SkillName} skill
  * @property {object} args
  * @property {'pending'|'confirmed'|'failed'|'cancelled'} status   pending = waiting in the queue or running
  * @property {boolean} [running]
  * @property {string} [result]           the skill's result text, once it ended
- * @property {InventoryDelta} [delta]
+ * @property {InventoryDelta} [delta]    the whole inventory change while the step ran
+ * @property {Record<string, number>} [used]    what the step itself used (counts), when the body can tell
+ * @property {Record<string, number>} [gained]  what the step itself made or collected (counts)
+ * @property {InventoryDelta} [other]    the rest of delta: blocks dug through or scaffolding placed on the way, items
+ *   lying nearby picked up, the drops of cells a build dug clear
  * @property {string} [code]             a RESULT_CODES entry for a step that failed or was stopped
  * @property {string} [added]            why the check added this craft
  * @property {Array<{item: string, n: number, for?: string}>} [addedItems]   items the check put into a craft_batch

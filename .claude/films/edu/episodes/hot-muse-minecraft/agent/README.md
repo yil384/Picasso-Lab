@@ -219,13 +219,18 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
    or a log, as the body does (counted); when there is no wood to spare and the old table is past 24 blocks, or a craft
    needs furnace output left more than 28 blocks behind, or a smelt has no furnace left within 24, the call is not
    refused (where the bot ends up is only roughly known; `collect` walks are not followed) but the reply says so
-   (`structuredContent.warnings`, "The check warns ...").
+   (`structuredContent.warnings`, "The check warns ..."). Added crafts never renumber the caller's steps: the reply,
+   `get_state` and `dry_run` number the steps as the caller sent them and show an added craft on a line of its own
+   starting "+", "(added by the check before step 4, for craft wooden_pickaxe 1)"; in `structuredContent` a step's
+   `step` is the caller's number (null for an added craft, whose `before` names the step it comes before), and `n` is
+   only the order they run in (a key).
 4. The steps go into the game's queue (`src/mcp-queue.js`, at most 64 waiting, else `QUEUE_FULL`) and run one after
    another past the reply. Each step is `pending` (waiting or running), `confirmed`, `failed` or `cancelled`; a failed
    step cancels everything queued after it, in every call; `stop` stops the running step and clears the queue.
 5. The reply (within 45 s, the state text included: a call waits for its steps until 2 s before that) has the text as
    before plus `structuredContent`: `code` (null, or `NEED_ITEMS`,
-   `HOSTILE_CONTACT`, `RETREATED_LOW_HEALTH`, `INVENTORY_FULL`, `DIED`, `NOT_STARTED`, `DUPLICATE`, `BAD_ARGS`,
+   `HOSTILE_CONTACT`, `RETREATED_LOW_HEALTH`, `INVENTORY_FULL`, `DIED`, `NOT_HUNGRY` (eat at 20/20: harmless, and the
+   text says so), `NOT_STARTED`, `DUPLICATE`, `BAD_ARGS`,
    `QUEUE_FULL`, `TIMED_OUT`, `STOPPED`, `FAILED`; for a call whose steps were all cancelled, what cancelled them: the
    failed step's code, or `STOPPED`), `steps`, `earlier` (steps that finished since the last delivered
    reply), `queue`, `changed` (the inventory change) and a short `state` (health, food, position, inventory, seconds
@@ -234,7 +239,14 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
    "stopped: a zombie hit you ..." or "stopped: mobs kept attacking ..." (a fight it could not go on from) is
    `HOSTILE_CONTACT`. A reply counts as delivered only once its HTTP response was written out in full: one whose
    connection dropped, that a proxy gave up on, or that the client cancelled, delivers nothing, so its results come
-   again in the next reply (and a re-send of the call is a repeat).
+   again in the next reply (and a re-send of the call is a repeat). When the body can tell what a step itself used
+   and made (`BODY=mineai`, from the runtime's evidence: a craft's recipe steps, a smelt's input, fuel and output, a
+   collect's or hunt's gain, a build's placed blocks, a meal; `SkillResult.own`), the step also carries `used`,
+   `gained` and `other` (the rest of its `delta`: blocks dug through or scaffolding placed on the way, items lying
+   nearby picked up, the drops of cells a build dug clear), and its line shows its own change first and the rest apart,
+   `[-3 cobblestone, -2 stick, +1 stone_pickaxe; also on the way (dug through, scaffolding, pickups): +1 cobblestone]`;
+   `delta` and `changed` stay the whole change. The server instructions, `play` (with each skill's arguments),
+   `play_sequence` and both `skill` enums name the skills the server offers, all from the body's one skill set.
 
 `craft_batch {items: [{item, n}, ...]}` (MCP only; the brain's tools and the web page keep the 10 skills) crafts a
 list in order at one crafting table: the bot's own nearby, or the carried one put down once; the table stays (as
@@ -799,9 +811,9 @@ Their code stays out of this repo: `mineai/UPSTREAM.json` pins the commit and li
 them, and `mineai/fetch-and-patch.sh` puts the two together in a folder of its own at build time (`mineai/README.md`):
 
 ```sh
-BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime-8   # clone 2fe1306, the 8 patches, bun install, fork check, typecheck, the patches' tests
-node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime-8 --check
-BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime-8 MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
+BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime-9   # clone 2fe1306, the 9 patches, bun install, fork check, typecheck, the patches' tests
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime-9 --check
+BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime-9 MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
 ```
 
 The agent runs that same check when it starts with `BODY=mineai`: a folder that is not exactly the pin plus every patch
@@ -818,7 +830,8 @@ puts a placed block (a temporary table or furnace, a bed, `place_block`) into a 
 flowers (their rule counted them as replaceable, so a table went on a poppy and the server refused it) and snow only as
 a single layer; `0008` tries a collect once more when its path search gave up ("no path found", nothing gained or
 broken) within 30 s of a landing (the server moved the bot more than 16 blocks: our spread, a teleport, a respawn),
-after the chunks around the bot have loaded and a 2 s pause.
+after the chunks around the bot have loaded and a 2 s pause; `0009` never puts a block down beside the bot (a temporary
+table or furnace) into a cell a mob is in, and tries the next cell when one moves in first (the soak's bat).
 
 How a host runs (`src/mineai/host.js`): one per guest game, their `src/server/host.ts` under Node with tsx (their own
 dev dependency; Node 24.15 or newer) or Bun (`MINEAI_RUNTIME=bun`, `MINEAI_EXEC`), with `--listen-host 127.0.0.1` on
@@ -849,13 +862,13 @@ What a guest's skill becomes (`src/mineai/skills.js`):
 | --- | --- | --- |
 | `get_state` | `view_status` | their status in our state text (`renderState`); notable blocks from `view_blocks` (two finds of 8 names, in the background, every 20 s at most) |
 | `go_to {x, y, z}` | `navigate` | `BODY_MAX_TRAVEL` checked first |
-| `collect {block, n}` | `collect_block` | their search covers every loaded chunk; more than 32 is two calls |
+| `collect {block, n}` | `collect_block` | their search covers every loaded chunk; more than 32 is two calls; `cobblestone` mines `stone` and `cobbled_deepslate` `deepslate` (their collect looks for blocks of the name it is given); the result says how many target blocks were mined and how much of the gain came on the way |
 | `craft {item, n}`, `craft_batch {items}` | `craft_item` (recursive), one call per item, in order | a table carried at that point (also one made earlier in the batch) is put down for the item and picked up again (`temporary_workstation`); 2x2 recipes put none down |
-| `smelt {item, n}` | `smelt_item`, one call per fuel | at most 24 a call; fuel as the check plans it (`FUEL_ORDER` and `fuelPlan` in `src/game.js`: one kind after another when one is not enough); a carried furnace put down and picked up, else a furnace within 24 blocks; waits for the whole load |
+| `smelt {item, n}` | `smelt_item`, one call per fuel | at most 24 a call (the schema's maximum, as for our body); fuel as the check plans it (`FUEL_ORDER` and `fuelPlan` in `src/game.js`: one kind after another when one is not enough); a carried furnace put down and picked up, else a furnace within 24 blocks; waits for the whole load |
 | `place {block, pos}` | `place_block` | |
-| `build {blueprint, material}` | `build_structure` | our blueprints as cells, anchored as our build skill anchors them, by their compass heading |
+| `build {blueprint, material}` | `build_structure` | our blueprints as cells, anchored as our build skill anchors them, by their compass heading; the result gives their audit (placed, dug, cells as the blueprint) |
 | `attack {target}` | `collect_mob_drop` (the mob's usual drop, 1) | the fight is read every 2 s and ended as soon as the mob died (their hunt would chase the next one for a drop the first did not give): ok; hostile mobs fought without a shield; `nearest_hostile` from their status |
-| `eat {}` | `eat_food` | the best safe food carried, as ours picks it |
+| `eat {}` | `eat_food` | the best safe food carried, as ours picks it; at 20/20 nothing is sent and the step fails `NOT_HUNGRY` (harmless, as the text says) |
 | `say {text}` | `send_message` | |
 | `equip {item, to?}` | `equip` | extra skill; what is worn and in the off-hand shows in the state (`wearing: ...; off-hand: ...`, `equipment` in the short state) and an equip changes no inventory count |
 | `hunt {mob, drop, n, without_shield?}` | `collect_mob_drop` | extra; never players, villagers, pets or golems |
@@ -1081,8 +1094,8 @@ ms (8.00-8.01 s before) with the games' bot data deleted (23 bot folders before 
 
 The report (`../../../research/muse-reuse-validation.md`) asks for three gates before production plays with this
 body. Gate 3 is two runtime patches for staging's two body failures, gate 1 the production config, gate 2 the soak on
-staging and one Muse run: the scripted soak passed (below); the Muse run is the owner's and still open. The runbook for
-the switch itself is `docs/SWITCH.md`.
+staging and one Muse run: the scripted soak passed (below), and so did the Muse run (section "The Muse run on staging"
+below). The runbook for the switch itself is `docs/SWITCH.md`.
 
 Gate 3, on this Mac's Paper (1.21.4-232 on 25565, seed 71811045), `mineai/bench/gates.mjs` (one host of the runtime,
 their MCP tools, bot `Tst_gate_` and random letters, every placement checked with the server's `execute if block`):
@@ -1203,8 +1216,7 @@ Every failure, with its cause:
 
 Against the gate (`docs/SWITCH.md`, section 1): at least 7 of 10 one at a time (10 of 10), at least 6 of 8 at once (6 of
 8, at the line), 0 heartbeat restarts and 0 watchdog stops (0 in 23 games), a whole 30-minute lease (yes): the
-scripted soak passes. Still open: the Muse run, which is the owner's (ROADMAP appendix A; the Muse-like session above is
-a script). Staging's `deploy/.env` is back as it was (`MC_USERNAME=Tst_rv`, no `SPREAD_SPOTS`).
+scripted soak passes. The Muse run (ROADMAP appendix A; the Muse-like session above is a script) passed too: below. Staging's `deploy/.env` is back as it was (`MC_USERNAME=Tst_rv`, no `SPREAD_SPOTS`).
 
 Reproduce on picasso (`rsync -az --relative test/e2e mineai/bench picasso:workspace/muse-staging/accept-gate2/`;
 `MC_USERNAME=Tst_gate`, `SPREAD_SPOTS` and `WEB_MCP_GAMES_PER_ADDRESS=8` in staging's `deploy/.env` for the soak only,
@@ -1219,6 +1231,48 @@ $R node rv/mineai/bench/gateway-iron.mjs http://172.24.0.1:7851 --agent-pid $P -
 $R node rv/mineai/bench/lease-soak.mjs http://172.24.0.1:7851 --agent-pid $P --agent-log /staging-logs/$L \
   --server-log /paper-logs/latest.log --label gate2-lease30 --public https://play-staging.picasso-lab.com --out rv/runs
 node mineai/bench/muse-session.mjs https://play-staging.picasso-lab.com --out session.json   # on the Mac
+```
+
+### The Muse run on staging and what it found (2026-10-08)
+
+The owner's run of `docs/MUSE-TEST.md`: Muse in muse.ai, through its own MCP client ("muse-minecraft-mcp 1.0", a
+wrapper of its own pointed at staging's `/mcp`), game `g38e5ef`, 20:30:26-20:37:38 UTC. The iron pickaxe was in its
+inventory 3:34 after `start_game` (Muse's clock; staging's log has the craft at 20:33:59), then a shelter, a hunted pig,
+2 cooked porkchops, and `eat` twice at a full food bar. 12 MCP calls, 0 transport failures; staging's log: 19 steps, 17
+ok, 2 failed (both `eat`, "not hungry"), 0 heartbeat misses, 0 host restarts, no death, the host closed in 160 ms with
+the game's data deleted. Gate 2 passed. The owner's decision: fix what Muse found unclear or wrong first, re-test on
+staging, then switch.
+
+What Muse found, the cause, and the change (each with a test; `mineai/bench/muse-deltas.mjs` replays the actions on
+this Mac's Paper with their evidence, since staging's log keeps only each step's whole change and the game's runtime
+data was deleted at its end):
+
+| Muse's finding | Cause | Change |
+| --- | --- | --- |
+| smelt says "at most 24 a call", its schema allows n 1-64 | the schema used the shared 1-64 count, while both bodies load at most `SMELT_PER_CALL` (24) a call | smelt's `n` is 1 to 24 in the schema and both descriptions; `test/descriptions.test.js` checks every bound a description states ("A to B", "at most N", "up to N") against the schema, for every skill of both bodies, the brain's tools and every MCP tool as `tools/list` sends it (numbers that are not argument bounds are listed there with their source) |
+| `collect cobblestone 12`: "mined 0 blocks and picked up 12 cobblestone" | we sent `block_name: cobblestone`; their collect looks for cobblestone blocks (dungeon walls, builds, the bot's own scaffolding) and counts the stone it digs on its way there, and their `blocksBroken` counts only target blocks. Bench s1: a cobblestone block 10 blocks into stone, 0 target blocks broken, 12 cobblestone picked up, the block still there | `collect cobblestone` mines `stone` (`cobbled_deepslate`: `deepslate`); s2: "mined 12 stone (stone drops cobblestone) and picked up 12 cobblestone (12 of 12 wanted)". The wording says what was mined as a target and how much of the gain came on the way, never "mined 0" for a gain |
+| `craft stone_pickaxe` -2 cobblestone (the recipe takes 3); `build shelter` +9 cobblestone +1 dirt; `collect coal_ore` +7 cobblestone -4 dirt; `hunt` -2 dirt +12 cobblestone | a step's change was their inventory before and after the whole step, so it held everything that came or went meanwhile: stone dug through and dirt placed as scaffolding by the walks (s5: +12 cobblestone on the way to one coal ore 6 blocks into stone), the cells a build digs clear or out of its way (their audit's `dug`), and items picked up during the step (s3: a cobblestone lying in the temporary table's cell, picked up during the craft, gives -2 while their evidence says 3 were used; the local replay below had +1 cobblestone in a stick craft, a late pickup from the collect before it) | the body takes what the step itself used and made from their evidence (`ownChange` in `src/mineai/skills.js`: a craft's recipe steps, a smelt's input, fuel and output, a collect's or hunt's gain, a build's placed blocks, a meal) and the reply gives it first and the rest apart: `used`, `gained`, `other` (section "MCP calls"); `delta` and `changed` stay the whole change. Builds say their audit: "placed 10 cobblestone and dug 2 cells clear" |
+| `play_sequence` inserted a crafting table as step 4 and renumbered Muse's steps | replies numbered the steps by their run order | the caller's numbers stay; an added craft is a "+" line "added by the check before step N", in replies, `get_state` and `dry_run` (`step`, `before`) |
+| the integration's notes listed only some skills; `hunt` was known only from `start_game`'s reply | the server's own skill list was in `play`'s description and `start_game`'s reply only; the notes Muse wrote for its integration listed fewer (production, on our body, offers 11; the web page and `openapi.json` 10) | the server instructions and `play_sequence` name every skill too, from the same list as `play`'s description and the `skill` enums |
+| `eat` failed twice: "not hungry: food is 20/20" | a full bar refuses eat (both bodies) | still a failure, with the code `NOT_HUNGRY` and the words "Harmless: nothing was eaten or used; eat again once food is below 20" |
+| (the soak's run 8) "Placement cell ... overlaps bat" | their cell choice for a temporary table ignored mobs | patch 0009 (`mineai/README.md`): bats in the 8 cells around the bot, 0 of 3 before, 3 of 3 with it |
+
+Through our gateway on this Mac (`BODY=mineai`, the runtime with all nine patches, Bun 1.4.2, local Paper 1.21.4 on
+25565): `scripts/staging-check.mjs` PASS (wooden pickaxe in 27.0 s, 3 MCP calls); Muse's own calls replayed (its
+12-step `play_sequence`, `get_state` until done, `collect cobblestone 8` and `build shelter`, `eat`): the table craft
+shown as "+ craft ... (added by the check before step 4 ...)" with steps 1-12 as sent, the iron pickaxe 220.6 s after
+the start, every step's own change apart from the rest, `eat` `NOT_HUNGRY`, and the shelter as below.
+
+Found while checking, not fixed here: the shelter. Their builder never seals the bot in, and our `shelter` is built
+around the bot: on open ground it stops at 9 of 10 blocks ("could not step out of the structure"), and in a pocket in
+stone their runtime's event loop stops until their watchdog ends it (`RUNTIME_UNRESPONSIVE`; 4 of 4 bench tries, and
+once through the gateway in the replay above: the step failed "the body stopped in the middle of it", and our host
+starts the runtime again). Muse's shelter on staging finished
+in 16.3 s. Details and a candidate patch in `mineai/README.md`, "Found along the way"; until then a `build shelter`
+may cost a host restart (a second crash ends the game).
+
+```sh
+BUN=... node mineai/bench/muse-deltas.mjs ~/picasso-work/mineai-runtime-9 --server <Paper folder with console.in>   # s1-s5, bats; --only s4 last
 ```
 
 ## What is mocked

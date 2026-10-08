@@ -64,7 +64,8 @@ export function playLine(txt) {
 /** In a get_state reply, the result of the step that outlived its call, once it finished; null while it runs. */
 export function finishedLine(txt, skill) {
   const block = /^Finished since your last call:\n([\s\S]*?)\n\n/.exec(String(txt))?.[1] ?? '';
-  return block.split('\n').filter((l) => l.startsWith(`${skill} `)).at(-1) ?? null;
+  // a step of a call of several steps carries the caller's number ("4. "), a craft the check added "+ "
+  return block.split('\n').map((l) => l.replace(/^(?:\d+\. |\+ )/, '')).filter((l) => l.startsWith(`${skill} `)).at(-1) ?? null;
 }
 
 /** An MCP client on the agent's /mcp. */
