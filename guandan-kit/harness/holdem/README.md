@@ -95,7 +95,8 @@ held writes: pages at rev 161-162, the restored table's first snapshots 156-162)
 
 `python3 shots_live.py --lang=both --par=2` on 20b5c1f: 10 runs, 280 screenshots, no failed step, no console error.
 
-On commit 1ba3f60 (only the dealer button's placement changed after it): `flows.py desk` and `portrait`,
+While the tree went from 1ba3f60 to 386f09a (the two differ, and differ from 20b5c1f, only in where the dealer button
+is placed): `flows.py desk` and `portrait`,
 `restart.py desk` and `phone`, `eggs.py desk` and `ifr`: ALL PASS; `play.py desk 6 practice` (7 hands),
 `play.py portrait 4 practice` (5 hands), `play.py phone 4 room` (5 hands): no console errors (long tasks 51-110 ms,
 at the table's first layout). `../mustkeep.py`: 113 PASS, 0 FAIL.
