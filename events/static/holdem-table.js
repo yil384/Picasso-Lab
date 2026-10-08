@@ -221,7 +221,9 @@ export function createTable({ ui, S, send, popups }) {
             // bets sit on an inner ring toward the centre; the hero's bet over the hole cards
             const bx = k === 0 ? cx : cx + inner * cos;
             const by = k === 0 ? heroY - (portrait ? 278 : 228) : cy + inner * sin;
-            return { x, y, side, bx, by, cos, sin };
+            // portrait: a side seat low enough that its face-up cards beside it would meet my cards
+            const low = portrait && k > 0 && (side === "left" || side === "right") && y > heroY - 284;
+            return { x, y, side, low, bx, by, cos, sin };
         });
         return { cx, cy, rx, ry, heroY, seats, boardY: cy + (portrait ? 6 : 4) };
     }
@@ -250,7 +252,7 @@ export function createTable({ ui, S, send, popups }) {
         for (let k = 0; k < V.n; k++) {
             const p = G.seats[k];
             const el = document.createElement("div");
-            el.className = `hd-seat is-${p.side}${k === 0 ? " is-hero" : ""}`;
+            el.className = `hd-seat is-${p.side}${p.low ? " is-low" : ""}${k === 0 ? " is-hero" : ""}`;
             el.style.left = `${p.x.toFixed(1)}px`;
             el.style.top = `${p.y.toFixed(1)}px`;
             el.innerHTML = `<div class="hd-seat-body"></div><div class="hd-holes"></div><div class="hd-clockslot"></div><div class="hd-label"></div>`;
@@ -326,7 +328,7 @@ export function createTable({ ui, S, send, popups }) {
         // 全下 only while the hand is live (a winner who was all in has chips again)
         if (seat.state === "allin" && h && !h.done && !seat.stack) return `<span class="hd-tag is-allin">${L("All-in", "全下")}</span>`;
         if (seat.state === "out") return `<span class="hd-tag is-grey">${L("Away", "暂离")}</span>`;
-        if (seat.state === "waiting") return `<span class="hd-tag is-grey">${L("Next hand", "等待")}</span>`;
+        if (seat.state === "waiting") return `<span class="hd-tag is-grey">${L("Waiting", "等待")}</span>`;
         if (seat.state === "busted") return `<span class="hd-tag is-grey">${L("Rebuying", "补码中")}</span>`;
         return "";
     }
@@ -377,6 +379,8 @@ export function createTable({ ui, S, send, popups }) {
         renderMine(t, me);
         renderActions(t, me, h);
         renderWord(h, winners);
+        fitWord();
+        clearHero(h, me);
         region("menu", menuHTML());
         region("status", V.stale || S.status !== "online" ? `<span>${L("Reconnecting…", "重新连接中…")}</span>` : "");
         stage.classList.toggle("is-stale", V.stale || S.status !== "online");
@@ -405,6 +409,16 @@ export function createTable({ ui, S, send, popups }) {
             const out = 108 + ((p.side === "left" || p.side === "right") && t.seats[h.button].shown ? 48 : 0);
             let x = k === 0 ? p.x + (V.portrait ? 86 : 80) : p.x + dx * out + px * 84;
             let y = k === 0 ? p.y - 28 : p.y + dy * out + py * 84;
+            // a low portrait side seat: toward the centre lies my cards, so the button sits under its plate's inner end;
+            // a portrait side seat showing its cards (beside and above its avatar): the button goes under them
+            const sideSeat = p.side === "left" || p.side === "right";
+            if (k && V.portrait && p.low) {
+                x = p.x + (p.side === "left" ? 70 : -70);
+                y = p.y + 112;
+            } else if (k && V.portrait && sideSeat && t.seats[h.button].shown) {
+                x = p.x + (p.side === "left" ? 104 : -104);
+                y = p.y + 60;
+            }
             // never on the board's cards (a side seat of the narrow portrait table): step above or below them,
             // with room for the winning cards' lift
             // (the five slots' box is measured once per layout, no forced layout on every snapshot; before the
@@ -414,11 +428,11 @@ export function createTable({ ui, S, send, popups }) {
                 if (r.width) V.boardBox = { key: V.keys, top: (r.top - V.top) / V.s, bottom: (r.bottom - V.top) / V.s, left: (r.left - V.left) / V.s, right: (r.right - V.left) / V.s };
             }
             const bx = V.boardBox?.key === V.keys ? V.boardBox : null;
-            if (k && bx && x > bx.left - 22 && x < bx.right + 22 && y > bx.top - 30 && y < bx.bottom + 22) {
+            if (k && !(V.portrait && p.low) && bx && x > bx.left - 22 && x < bx.right + 22 && y > bx.top - 30 && y < bx.bottom + 22) {
                 if (V.portrait && (p.side === "left" || p.side === "right")) {
                     // the narrow portrait table: beside the plate on the inner side, between its cards and its bet
                     x = p.x + (p.side === "left" ? 104 : -104);
-                    y = p.y + 52;
+                    y = p.y + 60;
                 } else {
                     y = p.y < V.G.boardY ? bx.top - 34 : bx.bottom + 26;
                 }
@@ -443,6 +457,7 @@ export function createTable({ ui, S, send, popups }) {
         v.el.classList.toggle("is-out", !!seat && (seat.state === "out" || seat.state === "busted" || seat.state === "waiting"));
         const won = winners?.filter(w => w.seat === i).reduce((a, w) => a + w.amt, 0) || 0;
         v.el.classList.toggle("is-winner", won > 0);
+        v.el.classList.toggle("has-shown", !!seat?.shown && !(me && k === 0));
         if (!seat) {
             // an empty seat shows only while I can take it (seated, the felt stays clean)
             put(v.body, mine == null
@@ -702,6 +717,45 @@ export function createTable({ ui, S, send, popups }) {
         region("word", word || split ? `<div class="hd-word-in">${word ? ui.wordHTML(word) : ""}${split ? `<small>${L("Split pot", "平分底池")}</small>` : ""}</div>` : "");
     }
 
+    // the narrow portrait felt: the hand's word shrinks until it clears a winner's +amount beside it (stage px,
+    // from layout sizes, so the word's pop-in animation does not skew the measure)
+    function fitWord() {
+        const el = R.word;
+        el.style.scale = "";
+        if (!V.portrait || !el.firstElementChild) return;
+        const W = el.offsetWidth;
+        const H = el.offsetHeight;
+        const bottom = el.offsetTop;
+        const cx = V.G.cx;
+        let half = W / 2;
+        V.bets.forEach(b => {
+            if (!b.firstChild) return;
+            const bx = parseFloat(b.style.left);
+            const by = parseFloat(b.style.top);
+            const bw = b.offsetWidth / 2;
+            const bh = b.offsetHeight / 2;
+            if (by + bh < bottom - H || by - bh > bottom) return;
+            const room = (bx > cx ? bx - bw - cx : cx - bx - bw) - 14;
+            if (room > 40) half = Math.min(half, room);
+        });
+        if (half < W / 2) el.style.scale = (half / (W / 2)).toFixed(3);
+    }
+
+    // landscape with the action pills up: my plate steps left of the 弃牌 pill when they would meet (a short stage)
+    function clearHero(h, me) {
+        const v = V.seats[0];
+        if (!v) return;
+        v.el.style.translate = "";
+        if (V.portrait || !stage.classList.contains("is-acting")) return;
+        const plate = v.body.querySelector(".hd-plate");
+        const row = R.actions.firstElementChild;
+        if (!plate || !row) return;
+        const right = V.G.seats[0].x + plate.offsetWidth / 2;
+        const left = R.actions.offsetLeft + row.offsetLeft;
+        const shift = right + 16 - left;
+        if (shift > 0) v.el.style.translate = `${-Math.ceil(shift)}px 0`;
+    }
+
     function renderHud() {
         region("hud", `<button class="gd-menu-btn" type="button" data-menu aria-label="${L("Menu", "菜单")}" aria-expanded="${V.menuOpen}"><i></i><i></i><i></i></button>
             <span class="hd-code">${L("Table", "房间")} <b>${esc(S.code)}</b></span>`);
@@ -941,9 +995,9 @@ export function createTable({ ui, S, send, popups }) {
             V.seats.forEach(v => { v.label.innerHTML = ""; v.label.classList.remove("is-on"); });
             if (!reduced() && fresh && h.street === "preflop" && !h.board.length) dealIn(h, deckPt);
         }
-        // once the hand is decided the action labels go (a fold, an all-in, a call are old news by then); only a
-        // muck still says something the table does not show
-        if (h?.done) V.seats.forEach(v => { if (v.label.classList.contains("is-on") && !v.label.querySelector(".is-muck")) v.label.classList.remove("is-on"); });
+        // once the hand is decided the action labels go (a fold, an all-in, a call are old news by then; a mucked
+        // seat is dimmed and shows no cards, which says it)
+        if (h?.done) V.seats.forEach(v => v.label.classList.remove("is-on"));
         // bets going in, labels for the actions just taken
         let betIn = false;
         t.seats.forEach((seat, i) => {
@@ -961,7 +1015,10 @@ export function createTable({ ui, S, send, popups }) {
             if (seat.last && V.lastAct.get(i) !== lastKey) {
                 const show = !!prev.table && V.lastAct.has(i) || (!!prev.table && sameHand);
                 V.lastAct.set(i, lastKey);
-                if (show && !["sb", "bb", "dead"].includes(seat.last.a) && !(h?.done && seat.last.a !== "muck")) showLabel(k, seat.last);
+                // a new street with this seat's last action unchanged (all in, or a run-out) is not a new action
+                const carried = sameHand && ph.street !== h.street && before?.last?.a === seat.last.a && before?.last?.amt === seat.last.amt;
+                // an all-in shows as the seat's 全下 tag (one marker), a muck as the dimmed seat
+                if (show && !carried && !h?.done && !["sb", "bb", "dead", "allin", "muck"].includes(seat.last.a)) showLabel(k, seat.last);
             }
         });
         if (betIn) sound("bet");

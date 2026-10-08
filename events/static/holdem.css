@@ -581,7 +581,9 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
     font: 800 16px/24px var(--font-ui);
     white-space: nowrap;
 }
-.hd-tag.is-allin { background: linear-gradient(180deg, #ff6b5e, #c8302a); }
+.hd-tag.is-allin { background: linear-gradient(180deg, #ff6b5e, #c8302a); animation: hd-tag-pop var(--dur-ui) var(--ease-back) both; }
+/* the all-in tag is the seat's one all-in marker (no 全下 action label beside it): it pops in when it appears */
+@keyframes hd-tag-pop { from { scale: .6; opacity: 0; } }
 .hd-tag.is-off { background: #4a5168; }
 
 /* cards at a seat: two small backs tucked at the table side, or the shown cards */
@@ -632,6 +634,11 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 /* the action just taken: a pill over the avatar for 1.5 s */
 .hd-label { position: absolute; left: 0; top: -70px; z-index: 3; translate: -50% 0; opacity: 0; scale: .8; pointer-events: none; transition: opacity 160ms ease, scale var(--dur-ui) var(--ease-back); }
 .hd-label.is-on { opacity: 1; scale: 1; }
+/* an action label takes the AI / 我 badge's place for its moment (the two pills sat on each other) */
+.hd-av .gd-avatar-tag { transition: opacity 120ms ease; }
+.hd-seat:has(> .hd-label.is-on) .hd-av .gd-avatar-tag { opacity: 0; }
+/* face-up cards say the rest: no action label over them */
+.hd-seat.has-shown .hd-label { display: none; }
 .hd-act {
     display: block;
     padding: 0 14px;
@@ -727,7 +734,7 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-mineplate.is-watch { padding: 10px 20px; color: rgba(255, 255, 255, .85); }
 
 /* the hand's word (Guandan's gold display word) over the board */
-.hd-word { position: absolute; left: var(--cx); top: calc(var(--board-y) - var(--card-w-small) / .74 / 2 - 26px); z-index: 9; translate: -50% -100%; pointer-events: none; }
+.hd-word { position: absolute; left: var(--cx); top: calc(var(--board-y) - var(--card-w-small) / .74 / 2 - 26px); z-index: 9; translate: -50% -100%; transform-origin: 50% 100%; pointer-events: none; }
 .hd-word-in { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .hd-word .gd-word { font-size: 64px; }
 .hd-word small { padding: 0 12px; border-radius: 12px; background: rgba(0, 16, 14, .7); color: #ffe9a6; font: 800 18px/26px var(--font-ui); }
@@ -854,7 +861,8 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-code b { color: #fff; font: 700 20px/28px var(--font-num); letter-spacing: .06em; }
 .hd-hud-right { position: absolute; right: 26px; top: 14px; z-index: 25; display: flex; gap: 16px; }
 /* reconnecting: over the middle of the felt (at the top it sat on the top seat's avatar) */
-.hd-status { position: absolute; left: var(--cx); top: var(--board-y); z-index: 30; translate: -50% -50%; pointer-events: none; }
+/* in the HUD row, top centre: never over the board's cards */
+.hd-status { position: absolute; left: 50%; top: 22px; z-index: 30; translate: -50% 0; pointer-events: none; }
 .hd-status span { display: block; padding: 0 18px; border-radius: 18px; background: rgba(0, 0, 0, .7); color: #fff; font: 700 19px/36px var(--font-ui); white-space: nowrap; }
 .hd-status:empty { display: none; }
 
@@ -882,8 +890,15 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-stage.is-portrait .hd-backs { --card-w-small: 40px; left: 34px; top: -44px; }
 .hd-stage.is-portrait .hd-seat.is-right .hd-backs { left: auto; right: 34px; }
 .hd-stage.is-portrait .hd-shown { --card-w-small: 66px; }
-/* side seats show their cards over their own avatar (the board fills the felt between them) */
-.hd-stage.is-portrait .hd-seat.is-left .hd-shown, .hd-stage.is-portrait .hd-seat.is-right .hd-shown { left: 0; top: -22px; }
+/* side seats show their cards beside the avatar and up, toward the felt (where their backs were, clear of their own
+   bet slot), so the face stays visible; a low side seat, whose cards there would meet mine, holds them up and in */
+.hd-stage.is-portrait .hd-seat.is-left .hd-shown { left: 114px; top: -58px; }
+.hd-stage.is-portrait .hd-seat.is-right .hd-shown { left: -114px; top: -58px; }
+.hd-stage.is-portrait .hd-seat.is-left.is-low .hd-shown { --card-w-small: 54px; left: 50px; top: -98px; }
+.hd-stage.is-portrait .hd-seat.is-right.is-low .hd-shown { --card-w-small: 54px; left: -50px; top: -98px; }
+/* a side seat's clock past its card backs */
+.hd-stage.is-portrait .hd-seat.is-left .hd-clock { left: 104px; }
+.hd-stage.is-portrait .hd-seat.is-right .hd-clock { right: 104px; }
 .hd-stage.is-portrait .hd-mark b { font-size: 60px; }
 .hd-stage.is-portrait .hd-board { gap: 8px; }
 .hd-stage.is-portrait .hd-actions { left: 20px; right: 20px; bottom: 30px; }
@@ -892,9 +907,9 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-stage.is-portrait .hd-pill-act b { font-size: 30px; }
 .hd-stage.is-portrait .hd-pre.btn { flex: 1; justify-content: center; --btn-h: 72px; --btn-fs: 22px; --btn-px: 8px; }
 .hd-stage.is-portrait .hd-raise { left: 20px; right: 20px; bottom: 136px; }
-/* my clock rides the lower left corner of my first card: beside the cards it met the next seat's card backs
-   (9-max), beside my avatar the open raise panel would cover it */
-.hd-stage.is-portrait .hd-hero-clock { right: auto; left: calc(50% - 145px); top: calc(50% + 44px); }
+/* my clock sits on the felt above my first card's corner, clear of the card faces: beside the cards it met the
+   next seat's card backs (9-max), beside my avatar the open raise panel would cover it */
+.hd-stage.is-portrait .hd-hero-clock { right: auto; left: calc(50% - 140px); top: calc(50% - 137px); }
 /* the open raise panel lies over my seat: my avatar and my dealer button step out instead of peeking over its edge */
 .hd-stage.is-portrait .hd-seat.is-hero { transition: opacity 120ms ease; }
 .hd-stage.is-portrait.is-raising .hd-seat.is-hero, .hd-stage.is-portrait.is-raising .hd-dealer.is-mine { opacity: 0; }
@@ -943,9 +958,16 @@ html[lang="en"] .gd-rules-row.hd-rank-row { grid-template-columns: calc(176 * va
 .hd-last-row { display: flex; align-items: center; gap: calc(12 * var(--pu)); padding: calc(8 * var(--pu)) calc(12 * var(--pu)); border-radius: calc(8 * var(--pu)); background: #fff; box-shadow: inset 0 0 0 1px var(--panel-line); }
 .hd-last-row.is-win { background: #fff8e2; box-shadow: inset 0 0 0 2px #f4c04a; }
 .hd-last-av { --av-size: calc(46 * var(--pu)); }
-.hd-last-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.hd-last-name b { overflow: hidden; color: var(--ink); font: 800 calc(19 * var(--pu))/1.3 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
-.hd-last-name small { color: var(--ink-3); font: 700 calc(15 * var(--pu))/1.3 var(--font-ui); }
+/* the hand's name runs under the player's name and the cards on its own line (in the name column alone a long
+   English name wrapped mid-phrase on a phone) */
+.hd-last-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "av name cards amt" "av hand hand hand"; column-gap: calc(12 * var(--pu)); row-gap: 0; }
+.hd-last-av { grid-area: av; }
+.hd-last-name { display: contents; }
+.hd-last-name b { grid-area: name; overflow: hidden; color: var(--ink); font: 800 calc(19 * var(--pu))/1.3 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.hd-last-name small { grid-area: hand; overflow: hidden; color: var(--ink-3); font: 700 calc(15 * var(--pu))/1.3 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.hd-last-name small:empty { display: none; }
+.hd-last-cards { grid-area: cards; }
+.hd-last-amt { grid-area: amt; }
 .hd-last-cards { --card-w-small: calc(44 * var(--pu)); display: flex; gap: calc(4 * var(--pu)); }
 .hd-last-amt { min-width: calc(80 * var(--pu)); color: #c86a00; font: 800 calc(26 * var(--pu))/1 var(--font-num); text-align: right; }
 .gd-popup .card.is-dim { filter: brightness(.55) saturate(.6); }
@@ -1038,6 +1060,7 @@ html[lang="en"] .hd-page-head h2 { letter-spacing: 0; }
 .hd-pod.is-p2 .hd-pod-step { height: calc(86 * var(--pg)); }
 .hd-pod.is-p3 .hd-pod-step { height: calc(62 * var(--pg)); }
 .hd-podium .hd-board-empty { margin: 0; }
+.hd-board-play { --btn-h: max(44px, calc(60 * var(--pg))); --btn-fs: max(16px, calc(24 * var(--pg))); min-width: calc(240 * var(--pg)); }
 .hd-board-loading, .hd-board-empty { margin: auto; color: rgba(220, 232, 255, .8); font: 700 max(13px, calc(20 * var(--pg)))/1.5 var(--font-ui); text-align: center; }
 .hd-board-loading { display: flex; align-items: center; gap: 10px; }
 .hd-board-loading i { width: 1.1em; height: 1.1em; border: .15em solid rgba(255, 255, 255, .28); border-top-color: #fff; border-radius: 50%; animation: gd-busy-turn 800ms linear infinite; }
@@ -1049,4 +1072,7 @@ html[lang="en"] .hd-page-head h2 { letter-spacing: 0; }
     .hd-bhead span:nth-child(6), .hd-brow > :nth-child(6) { display: none; }
     .hd-page-title { flex-direction: column; align-items: flex-start; gap: calc(6 * var(--pg)); }
     .hd-page-body { padding: 0 calc(14 * var(--pg)) calc(14 * var(--pg) + env(safe-area-inset-bottom, 0px)); }
+    /* a phone: the empty panel takes the screen, its podium in the middle */
+    .hd-lb.is-empty { align-self: stretch; }
+    .hd-lb.is-empty .hd-podium { flex: 1; justify-content: center; }
 }

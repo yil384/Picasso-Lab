@@ -724,6 +724,10 @@ export function mountHoldem(ui) {
             return;
         }
         body.innerHTML = boardHTML(data);
+        body.querySelector("[data-board-play]")?.addEventListener("click", () => {
+            closePage();
+            document.querySelector('[data-lobby="h-practice"]')?.click();
+        });
     }
 
     function rankBadge(i) {
@@ -752,18 +756,20 @@ export function mountHoldem(ui) {
         };
         const inTop = rows.some(r => r.pid === mePid);
         const head = `<div class="hd-bhead"><span>${L("Rank", "名次")}</span><span>${L("Player", "玩家")}</span><span>${L("Net", "净胜筹码")}</span><span>${L("Hands", "手数")}</span><span>${L("Won", "胜率")}</span><span>${L("Biggest pot", "最大底池")}</span></div>`;
-        // nobody ranked yet: my row right under the header, then the three empty places on their steps
+        // nobody ranked yet: the three empty places on their steps, and (from the lobby) a way to play a first hand
         if (!rows.length) {
             const step = i => `<div class="hd-pod is-p${i + 1}">${rankBadge(i)}<span class="gd-avatar is-plain hd-pod-av">${ui.defaultFaceHTML()}</span><span class="hd-pod-step">${i + 1}</span></div>`;
+            const play = !S.screen && document.querySelector('[data-lobby="h-practice"]')
+                ? `<button class="btn primary hd-board-play" type="button" data-board-play>${L("Play a hand", "去打一手")}</button>` : "";
             return `<div class="hd-lb is-empty">${head}
-                ${data.me ? `<div class="hd-bme is-first">${line(data.me, null, true)}</div>` : ""}
                 <div class="hd-podium"><div class="hd-pods">${[1, 0, 2].map(step).join("")}</div>
-                <p class="hd-board-empty">${L("No hands played yet. The first three places are open.", "还没有人上榜，前三名虚位以待")}</p></div>
+                <p class="hd-board-empty">${L("No hands played yet. Play one to take a place.", "还没有人上榜，打一手牌就能上榜")}</p>${play}</div>
             </div>`;
         }
+        // my own row below the list only once I have played (an unranked 0 / 0 / - row says nothing)
         return `<div class="hd-lb">${head}
             <div class="hd-brows">${rows.map((r, i) => line(r, i, r.pid === mePid)).join("")}</div>
-            ${!inTop && data.me ? `<div class="hd-bme">${line(data.me, null, true)}</div>` : ""}
+            ${!inTop && data.me?.hands ? `<div class="hd-bme">${line(data.me, null, true)}</div>` : ""}
         </div>`;
     }
 
