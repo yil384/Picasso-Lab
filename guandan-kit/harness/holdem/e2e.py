@@ -194,6 +194,13 @@ async def six(br):
         b, c = Player(br, 'portrait', 'Bo', svc), Player(br, 'ifr', 'Cy', svc)
         code = await host_table(a)
         sc.check('guests join (portrait taps, ifr clicks)', await join(b, code) and await join(c, code))
+        # the host changes seats in the waiting room (stand + sit with the same stack): still the host
+        await a.tap('.hd-rseat.is-empty [data-sit]')
+        moved = await until(lambda: a.seat not in (None, 0), 6)
+        await a.pg.wait_for_timeout(500)
+        start_btn = await a.pg.evaluate("!!document.querySelector('[data-host=\"start\"]')")
+        sc.check('host: moving seats in the room keeps the host (start button, 房主 badge)', bool(moved) and a.snap['table']['host'] == a.pid and start_btn,
+                 f'seat {a.seat} host {a.snap["table"]["host"]} me {a.pid}')
         sc.check('AI 补位 fills the other 3 seats', await fill_bots(a, 6), [x and x['name'] for x in seats_of(a)])
         await a.shot('six-room')
         await start(a, [a, b, c])
@@ -273,13 +280,16 @@ async def sidepots(br):
         # hand 1: the short stack has aces, the middle kings, the big queens; a dry board
         svc.rig(code, {0: ['Qs', 'Qd'], 1: ['Kh', 'Kc'], 2: ['As', 'Ad']}, ['2c', '7d', '9h', 'Js', '3h'])
         await start(a, players)
-        side_seen = []
+        side_seen, pre_seen = [], []
 
         async def watch_pots():
             while True:
                 t = await c.pg.evaluate("[...document.querySelectorAll('.hd-sidepot')].map(e => e.textContent.replace(/\\s+/g, ' ').trim())")
                 if t and t not in side_seen:
                     side_seen.append(t)
+                for p in players:
+                    if p.hand and not p.hand['done'] and p.hand['toAct'] is None and await p.pg.evaluate("!!document.querySelector('.hd-pre')"):
+                        pre_seen.append(p.name)
                 await asyncio.sleep(.1)
         watcher = asyncio.ensure_future(watch_pots())
         hands = await play(players, {n: pusher for n in ('Ann', 'Bo', 'Cy')}, 1, svc, cap=60)
@@ -293,6 +303,9 @@ async def sidepots(br):
         st = [x['stack'] for x in seats_of(a)]
         sc.check('hand 1: stacks 600 (uncalled back) / 1,200 / 2,400', st == [600, 1200, 2400], st)
         sc.check('the pot pills showed 主池 2,400 and 边池 1 1,200', any('主池 2,400' in ' '.join(x) and '边池 1 1,200' in ' '.join(x) for x in side_seen), side_seen[-3:])
+        sc.check('no pre-action toggles while the board is only run out', not pre_seen, pre_seen[:3])
+        word = await c.pg.evaluate("(document.querySelector('.hd-word-in')||{}).textContent||''")
+        sc.check('main and side pot to different players is not called a split pot', word and '平分' not in word, word)
         # hand 2: the big stack (now seat 2) takes everything: two players are busted and offered a rebuy
         svc.rig(code, {0: ['Qs', 'Qd'], 1: ['Kh', 'Kc'], 2: ['As', 'Ad']}, ['2c', '7d', '9h', 'Js', '3h'])
         rebuy_seen = {}
