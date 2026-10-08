@@ -165,20 +165,34 @@ in the service env and restart it.
 
 ### 4.4.1 The email sent by the service (`EMAIL_SENDER=resend`)
 1. Page → `POST /v1/email/start { email, lang }` (Bearer). Limits: 5 an hour per network (as above), and for the
-   emails the service sends, 3 an hour and 10 a day per address (by its HMAC hash) and `EMAIL_DAILY_CAP` (90) in
-   any 24 hours in all (Resend's free tier is 100 a day); these counts are kept in `accounts.json` (times and hashes
-   only), so a restart does not reset them. Refused: 429 `rate_limited` with `Retry-After`, nothing sent.
+   emails the service sends: 10 a day per network and 5 a day per asking account; per address 3 an hour from one
+   network (so one network cannot use up the owner's) and 20 a day from all networks (what one inbox can get),
+   counted by the inbox: an HMAC of the lower-cased address without a `+tag`, and at Gmail without dots and with
+   `googlemail.com` as `gmail.com` (the link itself binds the address as typed, by `emailHash`); `EMAIL_DAILY_CAP`
+   (90) in any 24 hours, of which a third is kept for addresses already saved (new addresses, however many, stop at
+   two thirds, so a flood of made-up addresses cannot stop a saved player signing in on a new device); and
+   `EMAIL_MONTHLY_CAP` (1500) in any 30 UTC days (Resend's free tier: 100 a day, 3000 a month, shared with FRAS).
+   The address and cap counts are kept in `accounts.json` (times, inbox hashes, a count per day), so a restart does
+   not reset them; the per-network, per-account and address-from-one-network counts are in memory only. Refused: 429
+   `rate_limited` with `Retry-After`, nothing sent; a shared cap that starts refusing is logged once (`email cap
+   reached`, counts only).
 2. The service stores the pending link as above plus `tokenHash = sha256(t)` of a new single-use token `t` (32 random
    bytes, base64url; same 30-minute life as the link), and sends the email through Resend's HTTP API
    (`POST https://api.resend.com/emails`, `Authorization: Bearer` from `RESEND_API_KEY_FILE`, `Idempotency-Key:
    picasso-signin-<lid>`, from `EMAIL_FROM`, a text and an HTML part) with the link
    `https://yil384.github.io/Picasso-Lab/events/account-link.html?lid=<lid>&t=<t>&lang=<zh|en>`. A network error,
-   a timeout or a 5xx is retried once with the same key (Resend sends a key at most once). The plaintext address is
-   used for this request only: never stored, never logged (the link keeps the masked form and the hash).
+   a timeout or a 5xx is retried once with the same key (Resend sends a key at most once); a retry that finds the
+   first request still running (409 `concurrent_idempotent_requests`) asks once more, which returns the first
+   request's result. Each attempt waits at most 5 s and the whole send ends within 9 s (`SEND_BUDGET_MS`); the page
+   waits 20 s for this answer (`EMAIL_START_TIMEOUT_MS`), so it never gives up on an email that is then sent. The
+   plaintext address is used for this request only: never stored, never logged (the link keeps the masked form and
+   the hash).
 3. Answer `{ lid, poll, code, sent: true, from: "noreply@picasso-lab.com" }`; the page skips Firebase, says who the
    email comes from and to look in spam, shows the code and polls as in step 2 above. Errors: 429 `rate_limited`
    (Resend said 429; not counted), 502 `send_failed` (Resend refused or could not be reached; a refusal is not
-   counted, an outage is). The failed link is dropped. Logged: Resend's status and error name, never the address.
+   counted, an outcome that is not known is: a network error, a timeout, a 5xx, a request still running at Resend,
+   or any answer after one of those). The failed link is dropped. Logged: Resend's status and error name, never the
+   address.
 4. The user opens the link (any device). `account-link.html` takes `t` out of the address bar (kept in this tab's
    sessionStorage for a reload), loads no Firebase script and posts `POST /v1/email/redeem { lid, t, code? }`, with
    the code when it is the device that asked. The service compares `sha256(t)` with `tokenHash` in constant time;
@@ -187,7 +201,9 @@ in the service env and restart it.
    usable, a success binds or merges and marks the link done (single use), and the waiting page's next poll gets the
    token (step 5). The email: subject "Picasso Lab 游戏登录 / Sign in to Picasso Lab games", Chinese first for
    `lang=zh`, one button and the raw link, the expiry, "if you did not ask for this, ignore this email"; table layout
-   with inline styles, at most 520 px wide, no image, no tracking pixel, no emoji (`src/mailer.js`).
+   with inline styles, at most 520 px wide (classic Outlook, which ignores `max-width` and a link's padding: a 520 px
+   table in conditional comments and `mso-padding-alt` on the button cell), no image, no tracking pixel, no emoji
+   (`src/mailer.js`).
 
 ### 4.5 Records attach
 Guandan: at each `roundOver`, the client of every seated human posts `POST /v1/guandan/round { room, round, won,
@@ -201,8 +217,8 @@ All bodies ≤ 8 KB. CORS: `Access-Control-Allow-Origin` echoes an allow-listed 
 `https://yil384.github.io`; tests add `http://127.0.0.1:*`), `Access-Control-Allow-Headers: authorization,
 content-type`, and `Access-Control-Allow-Private-Network: true` on preflight (needed by local tests only; harmless).
 Errors: HTTP 4xx/5xx with `{ error: "<code>", message }`. Rate limits (in memory, per ipKey): session creation 30/h,
-email start 5/h, link redeems 60/h, claims 10/h, other calls 600/min (and the per-address and daily email limits of
-4.4.1). `Authorization: Bearer <token>` where noted (B).
+email start 5/h, link redeems 60/h, claims 10/h, other calls 600/min (and the per-network, per-account,
+per-address, daily and monthly email limits of 4.4.1). `Authorization: Bearer <token>` where noted (B).
 
 | Method & path | Body → Response |
 |---|---|
@@ -516,7 +532,11 @@ restarts a service that does not answer, never one that cannot save), `src/healt
   merge, mismatch, expiry, flag off), the email sent by the service against a fake Resend (the request's body and
   headers, idempotency and the one retry, the email itself, the token: wrong, malformed, expired, replayed, single
   use, the device code, merge and at-table, every limit and the daily cap across a restart, Resend's 429 / 4xx / 5xx
-  / outage, config checks, no address or key in logs, data or a config dump), WebSocket integration with real clients (2-, 6- and 9-seat tables of humans and
+  / outage, config checks, no address or key in logs, data or a config dump; `email-limits.test.js`: per network and
+  per account a day, one inbox counted once, one network not locking an address out for another, the part of the
+  daily cap kept for saved addresses, the monthly cap across a restart, the cap logged once, the mailer's time budget
+  against the page's wait, a retry meeting a request still running at Resend, unknown outcomes counted, the
+  Outlook markup), WebSocket integration with real clients (2-, 6- and 9-seat tables of humans and
   bots, every frame scanned for cards the recipient may not see, chips conserved after every step, reconnect,
   refused actions, protocol limits), graceful restart mid-hand and kill -9 restarts (child process).
 - `npm run test:slow`: all 133,784,560 seven-card hands → exact category counts.

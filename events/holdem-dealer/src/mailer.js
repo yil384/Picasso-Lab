@@ -4,18 +4,26 @@
 //
 //   linkUrl(lid, token, lang) -> the link page URL with ?lid=&t=&lang=
 //   signInEmail({ url, lang, minutes }) -> { subject, text, html }   bilingual, Chinese first for lang zh
-//   createResendMailer({ apiKey, from, apiUrl, fetch, timeoutMs, retryMs, log })
+//   createResendMailer({ apiKey, from, apiUrl, fetch, timeoutMs, retryMs, budgetMs, log })
 //     -> { send({ to, subject, text, html, idempotencyKey, headers }) -> Promise<{ id }> }
 //     rejects with MailError: code rate_limited (Resend answered 429; retryAfter in s) or send_failed;
-//     definite = true when Resend answered (nothing was sent), false when the outcome is unknown (network, timeout)
-//   MailError
+//     definite = true when Resend refused it (nothing was sent), false when the outcome is unknown (network,
+//     timeout, 5xx, a request still running at Resend, or anything after one of those)
+//   MailError, ATTEMPT_TIMEOUT_MS, SEND_BUDGET_MS
 //
 // One retry, with the same Idempotency-Key, after a network error, a timeout or a 5xx: Resend sends a key at most
-// once in 24 hours, so a retry never sends a second email.
+// once in 24 hours, so a retry never sends a second email. A retry that finds the first request still running at
+// Resend (409 concurrent_idempotent_requests) waits and asks once more, which returns the first request's result.
+// The whole send, retries included, ends within budgetMs (SEND_BUDGET_MS): the page waits longer than that for the
+// answer (games-account.js EMAIL_START_TIMEOUT_MS), so it never gives up on an email that is then sent.
 
 export const LINK_PAGE = 'https://yil384.github.io/Picasso-Lab/events/account-link.html';
 export const RESEND_API = 'https://api.resend.com';
 export const SUBJECT = 'Picasso Lab 游戏登录 / Sign in to Picasso Lab games';
+export const ATTEMPT_TIMEOUT_MS = 5_000; // one request to Resend (it usually answers in well under a second)
+export const SEND_BUDGET_MS = 9_000; // the whole send, retries included
+const TRIES = 3; // the first, one retry, and one more only when the retry found the first still running
+const MIN_ATTEMPT_MS = 1_000; // no attempt with less time than this (or a tenth of a shorter budget) left
 
 export class MailError extends Error {
   constructor(code, { status = 0, name = '', retryAfter = 0, definite = true } = {}) {
@@ -70,7 +78,10 @@ function row(text, lang, { size = 15, color = INK, weight = 400, pad = '0 0 10px
 }
 
 // Gmail, Outlook (Word engine) and Apple Mail: tables, inline styles, bgcolor on the button cell, no images, no
-// web fonts, light colour scheme, at most 520 px wide and fluid below that
+// web fonts, light colour scheme, at most 520 px wide and fluid below that. Classic Outlook for Windows ignores
+// max-width and the padding of a link: a 520 px table only it sees (conditional comments) holds the card, and the
+// button cell carries the link's padding as mso-padding-alt (other clients ignore it and pad the link itself).
+const BUTTON_PAD = '13px 28px';
 export function signInEmail({ url, lang = 'zh', minutes = 30 }) {
   const c = copy(minutes);
   const [first, second] = lang === 'en' ? ['en', 'zh'] : ['zh', 'en'];
@@ -91,18 +102,20 @@ export function signInEmail({ url, lang = 'zh', minutes = 30 }) {
   ].join('\n');
   const link = esc(url);
   const html = `<!DOCTYPE html>
-<html lang="${LANG[first]}">
+<html lang="${LANG[first]}" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
 <title>${esc(SUBJECT)}</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 </head>
 <body style="margin:0;padding:0;background-color:#eef1f7;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#eef1f7;font-size:1px;line-height:1px;">${esc(a.expiry)} ${esc(b.expiry)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef1f7" style="background-color:#eef1f7;">
 <tr><td align="center" style="padding:24px 12px;">
+  <!--[if mso]><table role="presentation" width="520" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;width:100%;">
   <tr><td style="padding:0 6px 12px 6px;font-family:${FONT};font-size:13px;font-weight:800;letter-spacing:2px;color:${NAVY};">PICASSO LAB</td></tr>
   <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid #dfe5f0;border-radius:12px;padding:26px 24px 18px 24px;">
@@ -111,8 +124,8 @@ export function signInEmail({ url, lang = 'zh', minutes = 30 }) {
     ${row(b.lead, second, { size: 15, color: MUTED, pad: '0 0 20px 0' })}
     <tr><td style="padding:0 0 18px 0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-        <td bgcolor="${BLUE}" style="background-color:${BLUE};border-radius:8px;">
-          <a href="${link}" target="_blank" lang="${LANG[first]}" style="display:inline-block;padding:13px 28px;font-family:${FONT};font-size:16px;font-weight:700;line-height:1.2;color:#ffffff;text-decoration:none;border-radius:8px;">${esc(a.button)}</a>
+        <td bgcolor="${BLUE}" style="background-color:${BLUE};border-radius:8px;mso-padding-alt:${BUTTON_PAD};">
+          <a href="${link}" target="_blank" lang="${LANG[first]}" style="display:inline-block;padding:${BUTTON_PAD};font-family:${FONT};font-size:16px;font-weight:700;line-height:1.2;color:#ffffff;text-decoration:none;border-radius:8px;">${esc(a.button)}</a>
         </td>
       </tr></table>
     </td></tr>
@@ -128,6 +141,7 @@ export function signInEmail({ url, lang = 'zh', minutes = 30 }) {
   </td></tr>
   <tr><td style="padding:14px 6px 0 6px;font-family:${FONT};font-size:12px;line-height:1.5;color:#7a839b;">Picasso Lab, UC San Diego</td></tr>
   </table>
+  <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
 </body>
@@ -137,14 +151,17 @@ export function signInEmail({ url, lang = 'zh', minutes = 30 }) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export function createResendMailer({ apiKey, from, apiUrl = RESEND_API, fetch: fetchFn = globalThis.fetch, timeoutMs = 10_000, retryMs = 600, log = () => {} }) {
+export function createResendMailer({
+  apiKey, from, apiUrl = RESEND_API, fetch: fetchFn = globalThis.fetch,
+  timeoutMs = ATTEMPT_TIMEOUT_MS, retryMs = 600, budgetMs = SEND_BUDGET_MS, log = () => {},
+}) {
   if (!apiKey) throw new Error('Resend API key required');
   if (!from) throw new Error('sender required');
   const endpoint = `${String(apiUrl || RESEND_API).replace(/\/+$/, '')}/emails`;
 
-  async function attempt(body, idempotencyKey) {
+  async function attempt(body, idempotencyKey, ms) {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const timer = setTimeout(() => ctrl.abort(), ms);
     try {
       const res = await fetchFn(endpoint, {
         method: 'POST',
@@ -166,7 +183,9 @@ export function createResendMailer({ apiKey, from, apiUrl = RESEND_API, fetch: f
         const ra = Number.parseInt(res.headers?.get?.('retry-after') || '', 10);
         throw new MailError('rate_limited', { status: 429, name, retryAfter: Number.isFinite(ra) && ra > 0 ? Math.min(ra, 3600) : 60 });
       }
-      throw new MailError('send_failed', { status: res.status || 0, name, definite: res.status < 500 });
+      // a request with this key is still running at Resend: what it does is not known yet
+      const running = res.status === 409 && name === 'concurrent_idempotent_requests';
+      throw new MailError('send_failed', { status: res.status || 0, name, definite: res.status < 500 && !running });
     } catch (e) {
       if (e instanceof MailError) throw e;
       throw new MailError('send_failed', { name: e.name === 'AbortError' ? 'timeout' : 'network', definite: false });
@@ -177,13 +196,22 @@ export function createResendMailer({ apiKey, from, apiUrl = RESEND_API, fetch: f
 
   async function send({ to, subject, text, html, idempotencyKey, headers }) {
     const body = JSON.stringify({ from, to: [to], subject, text, html, ...(headers ? { headers } : {}) });
-    try {
-      return await attempt(body, idempotencyKey);
-    } catch (e) {
-      if (e.code !== 'send_failed' || (e.status > 0 && e.status < 500)) throw e; // a 4xx: Resend said no
-      log('email send retry', { status: e.status, error: e.provider });
-      await sleep(retryMs);
-      return attempt(body, idempotencyKey);
+    const deadline = Date.now() + budgetMs;
+    let unknown = false; // an earlier attempt may have sent it
+    for (let n = 1; ; n++) {
+      try {
+        return await attempt(body, idempotencyKey, Math.max(1, Math.min(timeoutMs, deadline - Date.now())));
+      } catch (e) {
+        // once an attempt's outcome is unknown, no later answer says the email was not sent
+        if (unknown) e.definite = false;
+        unknown = unknown || e.definite === false;
+        const running = e.status === 409 && e.provider === 'concurrent_idempotent_requests';
+        const again = e.code === 'send_failed' && (n === 1 ? e.definite === false : running);
+        const wait = retryMs * n;
+        if (!again || n >= TRIES || deadline - Date.now() - wait < Math.min(MIN_ATTEMPT_MS, budgetMs / 10)) throw e;
+        log('email send retry', { status: e.status, error: e.provider });
+        await sleep(wait);
+      }
     }
   }
 

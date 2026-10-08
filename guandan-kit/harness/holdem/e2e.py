@@ -16,7 +16,8 @@ Usage: python3 e2e.py [scenario ...]        (no argument: all of them, in this o
             locally signed ID token, a protected name reverted, a Guandan round reported once
   email     save with email when the dealer sends it itself (EMAIL_SENDER=resend) through a local fake Resend: the
             email, the link's single-use token on the asking device and on another one (code), a replay, a second
-            device merging in English, Resend failing; no Firebase script anywhere, no address or key in logs or data
+            device merging in English, Resend failing, Resend slow (the page outwaits the dealer's whole send); no
+            Firebase script anywhere, no address or key in logs or data
 Prints PASS / FAIL lines and a JSON summary per scenario; screenshots in HD_SHOTS (default /tmp/holdem-shots)."""
 import asyncio, json, os, sys, time
 from live import Service, KeyServer, FakeResend, Player, browser, check_frames, done_hands, until, log, station, mixed, pusher, idle, LINK
@@ -734,7 +735,8 @@ async def open_link(ctx, owner, url, wait='.al-mark, #al-code'):
 
 
 async def ask_email(p, address):
-    """账号 -> 用邮箱保存 -> address -> send. Returns ('sent' | the form's error text, None) or (None, error)."""
+    """账号 -> 用邮箱保存 -> address -> send. Returns ('sent' | the form's error text, None) or (None, error). Waits as
+    long as the page does (EMAIL_START_TIMEOUT_MS, 20 s)."""
     if not await p.pg.evaluate("!!document.querySelector('.ga-email-input')"):
         await p.tap('.hud-avatar')
         await p.pg.wait_for_selector('.ga-profile', timeout=5000)
@@ -745,7 +747,7 @@ async def ask_email(p, address):
     await p.pg.evaluate("document.querySelector('.ga-email-err').textContent = ''")
     await p.tap('.ga-email [type=submit]')
     try:
-        await p.pg.wait_for_function("!!document.querySelector('.ga-email.is-sent') || !!(document.querySelector('.ga-email-err')||{}).textContent", timeout=10000)
+        await p.pg.wait_for_function("!!document.querySelector('.ga-email.is-sent') || !!(document.querySelector('.ga-email-err')||{}).textContent", timeout=25000)
     except Exception as e:
         return None, repr(e)
     if await p.pg.evaluate("!!document.querySelector('.ga-email.is-sent')"):
@@ -848,17 +850,26 @@ async def email(br):
             pdone = await until(lambda: p.pg.evaluate("!!document.querySelector('.ga-email.is-done')"), 10)
             pme = svc.me(await p.token())
             sc.check('the phone is signed in to the saved account (its guest merged)', bool(pdone) and pme['pid'] == eme['pid'] and pme['name'] == 'Wen', pme)
-            # 5. Resend fails: a clear message, nothing waits; then it works
+            # 5. Resend fails: a clear message, nothing waits; then it works although Resend is slow (a 500 after
+            # 4.6 s, the retry answered after 3.2 s: the dealer answers after more than 8 s, the page's old limit)
             f = await Player(br, 'portrait', 'Fay', svc).open(game='guandan')
             mail.fail(500, times=2)
             got1, err1 = await ask_email(f, 'fay@ucsd.edu')
             mail.fail(429, retry_after=30, name='rate_limit_exceeded')
             got2, err2 = await ask_email(f, 'fay@ucsd.edu')
+            mail.slow(4.6, status=500)
+            mail.slow(3.2)
+            t0 = time.time()
             got3, err3 = await ask_email(f, 'fay@ucsd.edu')
+            slow_s = round(time.time() - t0, 1)
             sc.check('Resend down: 邮件没有发出去; Resend busy: 发送太频繁; then sent', '邮件没有发出去' in (got1 or '') and '发送太频繁' in (got2 or '') and got3 == 'sent',
                      f'{got1 or err1} / {got2 or err2} / {got3 or err3}')
-            sc.check('emails asked of Resend: 1 + 1 + 2 (one retry, same key) + 1 + 1', len(mail.calls) == 6
-                     and mail.calls[2]['headers'].get('idempotency-key') == mail.calls[3]['headers'].get('idempotency-key'), len(mail.calls))
+            fcode = await f.pg.evaluate("(document.querySelector('.ga-email-code b')||{}).textContent||''")
+            sc.check('Resend slow (the answer after more than 8 s): the page waited, shows the code and polls', got3 == 'sent' and slow_s > 8 and len(fcode) == 4
+                     and await f.pg.evaluate("!!JSON.parse(localStorage.getItem('picasso.games.linkCode')||'null')"), f'{slow_s} s {fcode!r}')
+            sc.check('emails asked of Resend: 1 + 1 + 2 (one retry, same key) + 1 + 2 (one retry, same key)', len(mail.calls) == 7
+                     and mail.calls[2]['headers'].get('idempotency-key') == mail.calls[3]['headers'].get('idempotency-key')
+                     and mail.calls[5]['headers'].get('idempotency-key') == mail.calls[6]['headers'].get('idempotency-key'), len(mail.calls))
             # 6. what the dealer wrote: no address, key, token or link in its log or its data
             await asyncio.sleep(.5)
             with open(svc.logfile.name) as fh:

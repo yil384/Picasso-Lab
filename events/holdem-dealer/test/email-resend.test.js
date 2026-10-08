@@ -9,8 +9,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import util from 'node:util';
-import { startTest, api, newGuest, randomIp, tmpDir, connect } from './service-helpers.js';
-import { LINK_TTL, MAIL_PER_ADDRESS_HOUR, MAIL_PER_ADDRESS_DAY } from '../src/accounts.js';
+import { startTest, api, newGuest, randomIp, tmpDir, connect, fakeResend } from './service-helpers.js';
+import { LINK_TTL, MAIL_PER_ADDRESS_HOUR } from '../src/accounts.js';
 import { loadConfig, ConfigError } from '../src/config.js';
 import { createResendMailer, MailError, signInEmail, linkUrl, SUBJECT, LINK_PAGE } from '../src/mailer.js';
 
@@ -20,22 +20,6 @@ const DAY = 24 * HOUR;
 const KEY = `re_test_${'k'.repeat(10)}_${Date.now().toString(36)}`;
 const keyFile = path.join(tmpDir('resend-key-'), 'resend_api_key');
 fs.writeFileSync(keyFile, `${KEY}\n`, { mode: 0o600 });
-
-// Resend's API as far as the service uses it. Each call is recorded; `plan` holds the next answers (default 200).
-function fakeResend() {
-  const calls = [];
-  const plan = [];
-  let n = 0;
-  async function fetch(url, init) {
-    const headers = Object.fromEntries(Object.entries(init.headers).map(([k, v]) => [k.toLowerCase(), v]));
-    calls.push({ url, method: init.method, headers, body: JSON.parse(init.body) });
-    const step = plan.shift() || { status: 200 };
-    if (step.throw) throw new TypeError('fetch failed');
-    const body = step.body ?? (step.status === 200 ? { id: `em_${++n}` } : { statusCode: step.status, name: 'application_error', message: 'x' });
-    return new Response(JSON.stringify(body), { status: step.status, headers: { 'content-type': 'application/json', ...(step.headers || {}) } });
-  }
-  return { fetch, calls, plan, reset() { calls.length = 0; plan.length = 0; } };
-}
 
 const clock = { offset: 0 };
 const now = () => Date.now() + clock.offset;
@@ -95,7 +79,7 @@ test('start sends one email through Resend: the request, its headers, the sender
   // the service logs the send (Resend's id and the day's count), never the address, the link or the key
   const sent = lines.filter((l) => l.includes('sign-in email sent'));
   assert.ok(sent.length >= 1);
-  assert.deepEqual(Object.keys(JSON.parse(sent.at(-1))).sort(), ['cap', 'id', 'last24h', 'msg']);
+  assert.deepEqual(Object.keys(JSON.parse(sent.at(-1))).sort(), ['cap', 'id', 'last24h', 'last30d', 'msg']);
 });
 
 test('the email: bilingual (Chinese first for zh, English first for en), one button, the raw link, expiry, ignore', async () => {
@@ -281,7 +265,7 @@ test('a merge is refused while the guest sits at a Hold\'em table; the token sta
   assert.equal((await c.waitClose()).code, 4001);
 });
 
-test('limits: 5 links an hour per network (as before), 3 an hour and 10 a day per address', async () => {
+test('limits: 5 links an hour per network (as before), 3 an hour per address from one network (more: email-limits)', async () => {
   resend.reset();
   // per network: the sixth start from one address in an hour is refused before anything is sent
   const ip = randomIp();
@@ -293,42 +277,24 @@ test('limits: 5 links an hour per network (as before), 3 an hour and 10 a day pe
   const over = await start(g6, 'net6@ucsd.edu', { ip });
   assert.deepEqual([over.status, over.data.error], [429, 'rate_limited']);
   assert.equal(resend.calls.length, 5);
-  // per address (case and spaces do not matter): 3 an hour, from any networks and accounts
+  // per address (case and spaces do not matter) from one network: 3 an hour, whichever accounts ask
   resend.reset();
+  const net = randomIp();
   const addr = (k) => (k % 2 ? ' Busy@ucsd.edu' : 'busy@UCSD.edu');
   for (let k = 0; k < MAIL_PER_ADDRESS_HOUR; k++) {
     const g = await newGuest(svc, `Busy${k}`);
-    assert.equal((await start(g, addr(k))).status, 200);
+    assert.equal((await start(g, addr(k), { ip: net })).status, 200);
   }
   const busy = await newGuest(svc, 'Busy3');
-  const r = await start(busy, 'busy@ucsd.edu');
+  const r = await start(busy, 'busy@ucsd.edu', { ip: net });
   assert.deepEqual([r.status, r.data.error], [429, 'rate_limited']);
   assert.ok(Number(r.headers.get('retry-after')) > 3000 && Number(r.headers.get('retry-after')) <= 3600);
   assert.equal(resend.calls.length, MAIL_PER_ADDRESS_HOUR);
-  // another address is not affected
-  assert.equal((await start(busy, 'calm@ucsd.edu')).status, 200);
-  // 10 a day: three more each hour until the day's 10 are used
-  try {
-    let sent = MAIL_PER_ADDRESS_HOUR;
-    while (sent < MAIL_PER_ADDRESS_DAY) {
-      clock.offset += HOUR + 1000;
-      for (let k = 0; k < MAIL_PER_ADDRESS_HOUR && sent < MAIL_PER_ADDRESS_DAY; k++, sent++) {
-        const g = await newGuest(svc, `Day${sent}`);
-        assert.equal((await start(g, 'busy@ucsd.edu')).status, 200, `send ${sent + 1}`);
-      }
-    }
-    clock.offset += HOUR + 1000;
-    const g = await newGuest(svc, 'Day11');
-    const day = await start(g, 'busy@ucsd.edu');
-    assert.deepEqual([day.status, day.data.error], [429, 'rate_limited'], 'the eleventh in a day');
-    clock.offset += DAY;
-    assert.equal((await start(g, 'busy@ucsd.edu')).status, 200, 'a day later');
-  } finally {
-    clock.offset = 0;
-  }
+  // another address from that network is not affected
+  assert.equal((await start(busy, 'calm@ucsd.edu', { ip: net })).status, 200);
   // the refusals are counted per limit in /v1/health, without naming a network or an address
   const h = await api(svc, 'GET', '/v1/health');
-  assert.ok(h.data.limited.email >= 1 && h.data.limited.email_address >= 2, JSON.stringify(h.data.limited));
+  assert.ok(h.data.limited.email >= 1 && h.data.limited.email_address >= 1, JSON.stringify(h.data.limited));
 });
 
 test('the daily cap (EMAIL_DAILY_CAP) holds for everything sent in 24 hours, also across a restart', async () => {
@@ -443,6 +409,8 @@ test('config: the resend sender needs a readable key file; values are checked; t
   fails({ EMAIL_FROM: 'not an address' }, /EMAIL_FROM/);
   fails({ EMAIL_DAILY_CAP: '0' }, /EMAIL_DAILY_CAP/);
   fails({ EMAIL_DAILY_CAP: '2.5' }, /EMAIL_DAILY_CAP/);
+  fails({ EMAIL_MONTHLY_CAP: '0' }, /EMAIL_MONTHLY_CAP/);
+  fails({ EMAIL_MONTHLY_CAP: 'lots' }, /EMAIL_MONTHLY_CAP/);
   fails({ RESEND_API_URL: 'http://127.0.0.1:9/' }, /needs HOLDEM_TEST_HOOKS=1/);
   fails({ HOLDEM_TEST_HOOKS: '1', RESEND_API_URL: 'https://api.example.com' }, /loopback/);
   const c = loadConfig({ ...base, RESEND_API_KEY_FILE: keyFile, EMAIL_FROM: 'Lab Games <games@picasso-lab.com>', EMAIL_DAILY_CAP: '40' });
@@ -456,6 +424,7 @@ test('config: the resend sender needs a readable key file; values are checked; t
   assert.equal(d.emailSender, 'firebase', 'the default; the key file is not read');
   assert.equal(d.emailFrom, 'Picasso Lab <noreply@picasso-lab.com>');
   assert.equal(d.emailDailyCap, 90);
+  assert.equal(d.emailMonthlyCap, 1500);
   assert.equal(d.resendApiKey, null);
   // production accepts the resend sender with a key file
   const p = loadConfig({ NODE_ENV: 'production', GAMES_SECRET: 'a'.repeat(40), IP_SALT: 'b'.repeat(40), TRUST_PROXY: 'fras-caddy-1', ...base, RESEND_API_KEY_FILE: keyFile });

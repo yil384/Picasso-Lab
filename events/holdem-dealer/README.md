@@ -39,7 +39,7 @@ npm run test:slow   # all 133,784,560 seven-card hands (about 2 s)
 
 The service tests start real servers on ephemeral ports in temp directories, sign Firebase-style ID tokens with a
 locally generated RSA key (the key fetcher is injected), send the sign-in email to a fake Resend (the mailer's
-`fetch` is injected; `test/email-resend.test.js`) and never contact Resend, Firebase, Google or any production
+`fetch` is injected; `test/email-resend.test.js`, `test/email-limits.test.js`) and never contact Resend, Firebase, Google or any production
 service. The kill -9 test runs the server as a child process.
 
 ## Configuration (environment)
@@ -51,7 +51,8 @@ service. The kill -9 test runs the server as a child process.
 | `EMAIL_LINK` | `off` | `on` shows "save with email" (after the steps below). |
 | `EMAIL_SENDER` | `firebase` | Who sends the sign-in email: `resend` (this service, from `EMAIL_FROM`, through Resend's HTTP API) or `firebase` (the page, through Firebase Auth; also the rollback). Reported as `features.emailSender`. |
 | `EMAIL_FROM` | `Picasso Lab <noreply@picasso-lab.com>` | `resend` only: the sender, `Name <address>` or an address on a domain verified in Resend. |
-| `EMAIL_DAILY_CAP` | `90` | `resend` only: at most this many emails in any 24 hours, kept across restarts (Resend's free tier is 100 a day, shared with the lab's other senders). |
+| `EMAIL_DAILY_CAP` | `90` | `resend` only: at most this many emails in any 24 hours, kept across restarts (Resend's free tier is 100 a day, shared with the lab's other senders). A third of it is kept for addresses already saved: new addresses use at most the other two thirds. |
+| `EMAIL_MONTHLY_CAP` | `1500` | `resend` only: at most this many emails in any 30 days, kept across restarts (Resend's free tier is 3000 a month for the whole Resend account: leave FRAS its share). |
 | `RESEND_API_KEY_FILE` | - | `resend` only, required: a file holding the Resend API key (compose: `./secrets/resend_api_key`). There is no env value for the key; the service reads the file once at startup and never logs or shows it. |
 | `RESEND_API_URL` | Resend's | Browser harness only (needs `HOLDEM_TEST_HOOKS=1`): a loopback URL standing in for `https://api.resend.com`. |
 | `FIREBASE_PROJECT_ID` | `yichen-5e23e` | Expected `aud` / `iss` of ID tokens. |
@@ -129,9 +130,13 @@ recorded, the pages say so and a new hand is dealt with the same button. Deploy 
 Logs: `docker compose logs -f` (rotated: 3 x 10 MB). One JSON line per lifecycle event, and while any limit refuses
 something, one `rate limited` line a minute saying which limit, how often and from how many networks; the service
 never logs IP addresses, email addresses, tokens, keys or cards. With `EMAIL_SENDER=resend` every email gives one line:
-`sign-in email sent` with Resend's email id (look it up in the Resend dashboard) and the count of the last 24 hours, or
-`sign-in email not sent` with Resend's HTTP status and error name (`invalid_api_key`, `validation_error`,
-`rate_limit_exceeded`, `daily_quota_exceeded`, ...; `network` / `timeout` when Resend did not answer). Caddy logs no IP either for this site (no access log; its own 502s are
+`sign-in email sent` with Resend's email id (look it up in the Resend dashboard) and the counts of the last 24 hours
+and 30 days, or `sign-in email not sent` with Resend's HTTP status and error name (`invalid_api_key`,
+`validation_error`, `rate_limit_exceeded`, `daily_quota_exceeded`, `concurrent_idempotent_requests`, ...; `network` /
+`timeout` when Resend did not answer; `"counted":true` when the email may still have gone out). When a shared cap
+starts refusing, one `email cap reached` line says which (`daily_new`, `daily`, `monthly`) with the counts: many of
+them, or `email_daily_cap` / `email_monthly_cap` growing under `limited` in `/v1/health`, mean someone is using the
+form to send emails. Caddy logs no IP either for this site (no access log; its own 502s are
 debug-level). The FRAS Caddy container itself has no log rotation: add `logging: { driver: json-file, options:
 { max-size: 10m, max-file: "3" } }` to its compose file when convenient.
 
@@ -184,7 +189,8 @@ The page shows "用邮箱保存" only while `/v1/session` reports `features.emai
 
 `picasso-lab.com` is verified in Resend (DKIM `resend._domainkey`, SPF on `send.picasso-lab.com`). The service sends
 the email itself (`POST https://api.resend.com/emails`, from `EMAIL_FROM`, an `Idempotency-Key` per link, one retry
-after a network error or a 5xx) with a single-use token in the link; the page never loads Firebase for it.
+after a network error, a timeout or a 5xx, all within 9 s, which the page outwaits) with a single-use token in the
+link; the page never loads Firebase for it.
 
 1. In Resend: API Keys -> Create API key, permission **Sending access**, domain `picasso-lab.com`. Use a key of its
    own (not the one FRAS uses), so it can be revoked alone. In Domains -> `picasso-lab.com`, open and click tracking
@@ -198,7 +204,7 @@ after a network error or a 5xx) with a single-use token in the link; the page ne
    A key file made by hand works too (one line, `re_...`); `ops/secrets.sh` then sets its mode to 444 like the other
    two secrets (the folder stays 700), which the container's user needs to read it through the bind mount.
 3. In `.env`: `EMAIL_LINK=on`, `EMAIL_SENDER=resend` (and, if they should differ from the defaults, `EMAIL_FROM`,
-   `EMAIL_DAILY_CAP`). Then `docker compose up -d --force-recreate` (the env and the key are read at start; a hand in
+   `EMAIL_DAILY_CAP`, `EMAIL_MONTHLY_CAP`). Then `docker compose up -d --force-recreate` (the env and the key are read at start; a hand in
    progress is called off, chips back).
 4. Check: `docker compose logs --since 2m` has no "invalid configuration" and the `dealer listening` line says
    `"emailSender":"resend"`; `curl -s -X POST -H 'content-type: application/json' -d '{}'
@@ -210,10 +216,11 @@ The service needs outbound HTTPS to `api.resend.com`. A wrong or revoked key sho
 "status":401` or `403` and the page says the email could not be sent. A new key: `ops/resend-key.sh` again, then
 `docker compose up -d --force-recreate`.
 
-Limits (on top of 5 links an hour per network): 3 an hour and 10 a day per address (by its hash), and
-`EMAIL_DAILY_CAP` (90) for everything in any 24 hours; the counts survive restarts (`accounts.json`; backups keep the
-day's count, not the address hashes). Refusals show under `limited` in `/v1/health` (`email_address`,
-`email_daily_cap`, `email_provider` when Resend itself says 429).
+Limits: per network 10 a day (on top of 5 links an hour); per asking account 5 a day; per address 3 an hour from one network and 20 a day from all networks together, counted by the inbox (case, a `+tag`, Gmail dots and `googlemail.com` do not make a new address); `EMAIL_DAILY_CAP` (90) in any 24 hours, of which a third (30) is kept for addresses already saved (players signing in on a new device); `EMAIL_MONTHLY_CAP` (1500) in any 30 days. The address and cap counts survive restarts (`accounts.json`: times, keyed inbox hashes and a
+count per day, never an address; backups keep the counts, not the hashes); the per-network, per-account and
+address-from-one-network counts are kept in memory only. Refusals show under `limited` in `/v1/health`
+(`email_network`, `email_account`, `email_address`, `email_daily_cap`, `email_monthly_cap`, `email_provider` when
+Resend itself says 429).
 
 ### With Firebase Auth (`EMAIL_SENDER=firebase`, the default; also the rollback)
 
@@ -239,7 +246,9 @@ sender. To turn saving off altogether: `EMAIL_LINK=off`.
 ## Limits and housekeeping
 
 Bodies ≤ 8 KB; per network (ipKey): 30 new accounts/h, 5 email links/h, 60 link redeems/h, 10 claims/h, 600
-requests/min; emails the service sends itself: 3/h and 10/day per address, `EMAIL_DAILY_CAP` a day in all. Sockets:
+requests/min; emails the service sends itself: 10/day per network, 5/day per account, 3/h per address from one
+network and 20/day per address in all, `EMAIL_DAILY_CAP` a day (a third kept for saved addresses) and
+`EMAIL_MONTHLY_CAP` in 30 days. Sockets:
 hello within 10 s, frames ≤ 4 KB, ≤ 40 messages/s, ≤ 100 sockets per network. At most 200 open tables, 30 created
 from one network; an account creates or hosts at most 3 and sits at most at 4; a table that never started closes
 after 30 minutes. Every refusal is counted per limit (`limited` in `/v1/health`, and the minute log line). Hourly:

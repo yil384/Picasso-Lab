@@ -205,15 +205,14 @@ class KeyServer:
 class FakeResend:
     """POST /emails on loopback, as the dealer calls it with EMAIL_SENDER=resend (RESEND_API_URL, test hooks only):
     keeps every request (headers + JSON body) and answers like Resend, 200 {id} by default or the next planned
-    failure (fail(status, ...)). The key it expects is a made-up one in a temp file (RESEND_API_KEY_FILE); nothing
-    here reaches the network.
+    answer (fail(status, ...), slow(seconds, status)). The key it expects is a made-up one in a temp file
+    (RESEND_API_KEY_FILE); nothing here reaches the network.
 
         mail = FakeResend(); svc = Service(email_link=True, env=mail.env())
         mail.calls        [{'headers': {...}, 'body': {...}}]
         mail.link(0)      -> ({'url', 'lid', 't', 'lang'}, None) or (None, 'why')"""
 
-    def __init__(self, port=8797):
-        self.port = port
+    def __init__(self, port=0):
         self.calls = []
         self.plan = []
         self.key = 're_harness_' + b64u(os.urandom(12))
@@ -229,8 +228,13 @@ class FakeResend:
                     body = json.loads(raw or b'{}')
                 except ValueError:
                     body = None
-                outer.calls.append({'path': self.path, 'headers': {k.lower(): v for k, v in self.headers.items()}, 'body': body})
-                status, extra, out = outer.plan.pop(0) if outer.plan else (200, {}, {'id': f'em_{len(outer.calls)}'})
+                outer.calls.append({'path': self.path, 'headers': {k.lower(): v for k, v in self.headers.items()}, 'body': body,
+                                    'at': time.time()})
+                status, extra, out, delay = outer.plan.pop(0) if outer.plan else (200, {}, None, 0)
+                if delay:
+                    time.sleep(delay)
+                if out is None:
+                    out = {'id': f'em_{len(outer.calls)}'}
                 data = json.dumps(out).encode()
                 self.send_response(status)
                 self.send_header('content-type', 'application/json')
@@ -242,9 +246,11 @@ class FakeResend:
 
             def log_message(self, *a):
                 pass
+        # a free port by default (a fixed one may be taken by something else on this machine)
         self.httpd = ThreadingHTTPServer(('127.0.0.1', port), H)
+        self.port = self.httpd.server_address[1]
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
-        self.url = f'http://127.0.0.1:{port}'
+        self.url = f'http://127.0.0.1:{self.port}'
 
     def env(self):
         return {'EMAIL_SENDER': 'resend', 'RESEND_API_URL': self.url, 'RESEND_API_KEY_FILE': self.key_file}
@@ -252,7 +258,11 @@ class FakeResend:
     def fail(self, status, retry_after=None, name='application_error', times=1):
         extra = {'retry-after': str(retry_after)} if retry_after else {}
         for _ in range(times):
-            self.plan.append((status, extra, {'statusCode': status, 'name': name, 'message': 'planned failure'}))
+            self.plan.append((status, extra, {'statusCode': status, 'name': name, 'message': 'planned failure'}, 0))
+
+    def slow(self, seconds, status=200, name='application_error'):
+        """The next answer comes after `seconds` (200 {id}, or a failure with that status)."""
+        self.plan.append((status, {}, None if status == 200 else {'statusCode': status, 'name': name, 'message': 'planned failure'}, seconds))
 
     def link(self, i):
         """The sign-in link of email i, the same in its text and HTML parts."""
@@ -270,6 +280,7 @@ class FakeResend:
 
     def close(self):
         self.httpd.shutdown()
+        self.httpd.server_close()
         with contextlib.suppress(OSError):
             os.unlink(self.key_file)
 

@@ -1,8 +1,9 @@
 // REST API (DESIGN.md section 5). JSON in and out, bodies <= 8 KB, CORS for allow-listed origins only (a request
 // with a foreign Origin is refused with 403 and gets no CORS headers), preflight with
 // Access-Control-Allow-Private-Network: true. Rate limits per ipKey (in memory): new accounts 30/h, email start 5/h,
-// claims 10/h, link redeems 60/h, everything 600/min (and, when the service sends the email itself, per address and
-// per day: accounts.js). Errors are { error, message } with a 4xx/5xx status. Never logs IPs or tokens.
+// claims 10/h, link redeems 60/h, everything 600/min (and, when the service sends the email itself, per network,
+// account and address a day, and the daily and monthly caps: accounts.js). Errors are { error, message } with a
+// 4xx/5xx status. Never logs IPs or tokens.
 //
 // GET /v1/health answers 503 { error: "persist_failing" } while changes cannot be written to disk (store.health()),
 // so `docker compose ps` and the watchdog see it, and counts every refusal per limit since the start (`limited`).
@@ -116,7 +117,7 @@ export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, s
       const { account, token } = auth(req);
       if (!config.emailLink) throw new ApiError(403, 'disabled', 'Saving with email is not enabled');
       limit('email', ipKey, 5, HOUR);
-      return accounts.emailStart(account, body.email, accounts.tokenHash(token), { lang: body.lang });
+      return accounts.emailStart(account, body.email, accounts.tokenHash(token), { lang: body.lang, ipKey });
     },
     'POST /v1/email/complete': async (req) => {
       const body = await readBody(req);

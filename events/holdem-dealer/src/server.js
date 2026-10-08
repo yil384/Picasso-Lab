@@ -55,6 +55,7 @@ export async function startServer(config, opts = {}) {
     emailSender: config.emailSender,
     emailFrom: config.emailFromAddress,
     emailDailyCap: config.emailDailyCap,
+    emailMonthlyCap: config.emailMonthlyCap,
     mailer,
     verifier,
     now,

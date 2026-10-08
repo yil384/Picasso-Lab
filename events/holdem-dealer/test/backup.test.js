@@ -12,7 +12,7 @@ import { tmpDir } from './service-helpers.js';
 function seed(dir) {
   const store = new Store({ dir });
   store.load();
-  const state = { accounts: { v: 1, accounts: [{ id: 'u_1', chips: 8000 }], ip: { k1: [{ a: 'u_1', n: 'Ann', at: 1 }] }, links: [], mail: { sent: [5, 6], addr: { h1: [5, 6] } } }, tables: { v: 1, tables: [{ code: 'T', seats: [{ id: 'u_1', stack: 2000 }] }] } };
+  const state = { accounts: { v: 1, accounts: [{ id: 'u_1', chips: 8000 }], ip: { k1: [{ a: 'u_1', n: 'Ann', at: 1 }] }, links: [], mail: { sent: [5, 6], addr: { h1: [5, 6] }, days: { 20000: 2 } } }, tables: { v: 1, tables: [{ code: 'T', seats: [{ id: 'u_1', stack: 2000 }] }] } };
   store.register('accounts', () => state.accounts);
   store.register('tables', () => state.tables);
   store.markDirty('accounts');
@@ -41,7 +41,7 @@ test('save: one moment of both files, no IP memory, mode 600; a flush during the
   const b = JSON.parse(zlib.gunzipSync(fs.readFileSync(out)).toString('utf8'));
   assert.equal(b.files.accounts.data.accounts[0].chips + b.files.tables.data.tables[0].seats[0].stack, 10_000);
   assert.deepEqual(b.files.accounts.data.ip, {}, 'no IP memory in a backup');
-  assert.deepEqual(b.files.accounts.data.mail, { sent: [5, 6], addr: {} }, 'no address hash of an email request; the day\'s count stays');
+  assert.deepEqual(b.files.accounts.data.mail, { sent: [5, 6], addr: {}, days: { 20000: 2 } }, 'no inbox hash of an email request; the day\'s and the month\'s counts stay');
   assert.ok(!JSON.stringify(b).includes('Ann'));
   store.close();
 });

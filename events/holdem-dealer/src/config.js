@@ -13,7 +13,10 @@
 //                                          through Resend's HTTP API from EMAIL_FROM (mailer.js)
 //   EMAIL_FROM        Picasso Lab <noreply@picasso-lab.com>   resend only: the sender ("Name <address>" or an address)
 //   EMAIL_DAILY_CAP   90                   resend only: at most this many emails in any 24 hours (Resend's free tier
-//                                          is 100 a day, shared with the lab's other senders)
+//                                          is 100 a day, shared with the lab's other senders); a third of them is
+//                                          kept for addresses already saved
+//   EMAIL_MONTHLY_CAP 1500                 resend only: at most this many in any 30 days (Resend's free tier is 3000
+//                                          a month for the whole account: leave the lab's other senders their share)
 //   RESEND_API_KEY_FILE  resend only, required: a file holding the Resend API key (sending access is enough). Never
 //                     an env value; read once at startup; the key is never logged or shown (not even in errors)
 //   RESEND_API_URL    (Resend's)           test hooks only: a loopback URL standing in for https://api.resend.com
@@ -139,6 +142,7 @@ export function loadConfig(env = process.env) {
   const fromAddress = senderAddress(emailFrom);
   if (!fromAddress) problems.push(`EMAIL_FROM must be "Name <address@domain>" or an address (got "${env.EMAIL_FROM}")`);
   const emailDailyCap = num(env.EMAIL_DAILY_CAP, 90, { min: 1, max: 100_000, int: true }, 'EMAIL_DAILY_CAP', problems);
+  const emailMonthlyCap = num(env.EMAIL_MONTHLY_CAP, 1500, { min: 1, max: 1_000_000, int: true }, 'EMAIL_MONTHLY_CAP', problems);
   // the key is read only when it is used, and never appears in a message (the path and the error code do)
   let resendApiKey = null;
   if (emailSender === 'resend') {
@@ -210,7 +214,7 @@ export function loadConfig(env = process.env) {
   if (problems.length) throw new ConfigError(problems);
   const config = {
     production, port, host, dataDir, gamesSecret, ipSalt, emailLink, emailSender, emailFrom, emailFromAddress: fromAddress,
-    emailDailyCap, resendApiUrl, firebaseProjectId,
+    emailDailyCap, emailMonthlyCap, resendApiUrl, firebaseProjectId,
     allowedOrigins: Object.freeze(allowedOrigins), trustProxy, botThinkScale, paceScale, testHooks, firebaseJwksUrl,
   };
   // not enumerable: JSON.stringify, console.log and util.inspect of the config never show the key

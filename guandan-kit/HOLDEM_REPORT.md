@@ -73,9 +73,12 @@ single-use token (30 minutes) that `account-link.html` redeems at the dealer (`P
 after that (the 4-digit code on another device, binding, merging, the waiting page's polling) is unchanged, and the
 page loads no Firebase script for it. The default stays `EMAIL_SENDER=firebase`, so nothing changes until the steps in
 4(d) are done on picasso and the new `account-link.html` / `games-account.js` are on Pages (merge, 4(c)). Rollback:
-`EMAIL_SENDER=firebase` and a restart. Limits on top of today's 5 an hour per network: 3 an hour and 10 a day per
-address, 90 a day in all (`EMAIL_DAILY_CAP`; Resend's free tier is 100 a day and FRAS sends from the same domain).
-Tests: section 2.
+`EMAIL_SENDER=firebase` and a restart. Limits on top of today's 5 an hour per network: 10 a day per network, 5 a day
+per account, per address 3 an hour from one network and 20 a day from all networks (counted by the inbox: a `+tag`
+or Gmail dots do not make a new address), 90 a day in all (`EMAIL_DAILY_CAP`, of which 30 are kept for addresses
+already saved) and 1500 in any 30 days (`EMAIL_MONTHLY_CAP`); Resend's free tier is 100 a day and 3000 a month, and
+FRAS sends from the same domain. The dealer's whole send (one retry included) ends within 9 s and the page waits 20 s
+for it. Tests: section 2.
 
 ## 1. What works
 
@@ -118,6 +121,18 @@ Guandan's own components.
 
 ## 2. Test results
 
+After the review of the Resend sender, 2026-10-08 (limits per network, account and inbox, the part of the daily cap
+kept for saved addresses, the monthly cap, the mailer's 9 s budget and the page's 20 s wait, unknown outcomes counted,
+Outlook markup), against a local dealer and a fake Resend on loopback (no email left the machine):
+
+| suite | result |
+| --- | --- |
+| `npm test` | 167 tests: 166 pass, 0 fail, 1 skipped (the slow sweep); new `test/email-limits.test.js` 9 tests, each failing on the build before the review |
+| `npm run test:slow` | 1 pass |
+| `python3 e2e.py` | ALL PASS: 142 checks, 0 failures (checker 8, heads 14, six 12, nine 6, sidepots 14, timeout 15, restart 27, accounts 22, email 24; email's new check: Resend answers after 8.5 s and the page still reaches the sent screen, which the page before the fix did not; email was run again alone after its fake Resend's fixed port turned out to be taken by another program, and now takes a free port) |
+| Guandan `python3 mustkeep.py` | 113 pass, 0 failed |
+| Guandan `python3 play.py desk 1` | round 1 to the end, no console error, no long task over 50 ms |
+
 After the Resend sender (0.1), 2026-10-08, against a local dealer and a fake Resend on loopback (no email left the
 machine):
 
@@ -150,11 +165,16 @@ Review round 3 (before the Resend sender):
 - **A real email is not tested end to end.** The tests send to a fake Resend on loopback (and sign Firebase tokens
   with a local key set). The first real "save with email" after 4(d) is the real test: save one account, check the
   email in Gmail / Outlook / Apple Mail (and the spam folder), and open the link on another device.
-- **Resend's daily quota is shared** with FRAS (same domain, and the same account if FRAS's key is on it). The
-  game stops at 90 emails in any 24 hours (`EMAIL_DAILY_CAP`); lower it if FRAS needs more room.
-- **The daily cap can be used up on purpose.** Someone asking for links to many addresses from many networks (5 an
-  hour each) can reach the 90 a day; saving with email then pauses until the oldest of them is 24 hours old (the page
-  says "try again later"; `email_daily_cap` under `limited` in `/v1/health`). The email's text is fixed, so the
+- **Resend's quota is shared** with FRAS (same domain, and the same account if FRAS's key is on it). The game stops
+  at 90 emails in any 24 hours (`EMAIL_DAILY_CAP`) and 1500 in any 30 days (`EMAIL_MONTHLY_CAP`); lower them if FRAS
+  needs more room.
+- **The caps can still be used up on purpose, by many networks.** One network sends at most 10 a day and one account
+  5, so filling the 60 a day open to new addresses takes at least 6 networks (a VPN or Tor gives many); the 30 kept
+  for addresses already saved still let saved players sign in on a new device, and a saved address is refused only
+  after 20 in a day. Someone who knows a player's address can, from 2 or more networks, send it 20 emails in a day
+  and so block that player's new-device sign-in for the rest of the 24 hours. Made-up addresses bounce, which counts
+  against the domain's reputation in Resend. When a cap starts refusing, the log says `email cap reached` once (and
+  `email_daily_cap` / `email_monthly_cap` grow under `limited` in `/v1/health`). The email's text is fixed, so the
   service cannot be used to send anything else.
 - **Campus NAT.** The per-network limits apply to everyone behind one public address: 30 new accounts an hour,
   5 refills a day, 5 email links an hour, 600 requests a minute, 100 sockets, 30 open tables, and table-code misses
@@ -269,7 +289,8 @@ Keep `events/holdem-dealer/` in main. On Pages it is only static source text (no
    ops/secrets.sh          # keeps the two secrets; makes an empty secrets/resend_api_key if there is none; sets modes
    ops/resend-key.sh       # paste the key + Enter (not shown); skip if secrets/resend_api_key already holds it
    ```
-3. `.env`: `EMAIL_LINK=on`, `EMAIL_SENDER=resend` (`EMAIL_FROM` and `EMAIL_DAILY_CAP` have the right defaults).
+3. `.env`: `EMAIL_LINK=on`, `EMAIL_SENDER=resend` (`EMAIL_FROM`, `EMAIL_DAILY_CAP` and `EMAIL_MONTHLY_CAP` have the
+   right defaults; lower the two caps if FRAS needs more of Resend's 100 a day and 3000 a month).
 4. `docker compose up -d --build --force-recreate` (a hand in progress is called off, chips back).
 5. Check: the `dealer listening` log line says `"emailSender":"resend"`; save once in the game with your own address;
    the email comes from `noreply@picasso-lab.com`; `docker compose logs | grep 'sign-in email'` says `sent` (with

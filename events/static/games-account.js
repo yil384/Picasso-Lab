@@ -13,6 +13,8 @@ const LINK_CODE_KEY = "picasso.games.linkCode"; // { lid, code }: the link page 
 const LINK_URL = "https://yil384.github.io/Picasso-Lab/events/account-link.html";
 const FIREBASE_AUTH = "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 const SESSION_TIMEOUT_MS = 4000;
+// the dealer answers /email/start only once Resend has (its whole send is at most 9 s: SEND_BUDGET_MS in mailer.js)
+const EMAIL_START_TIMEOUT_MS = 20000;
 const POLL_MS = 2500;
 const POLL_FOR_MS = 30 * 60 * 1000;
 const REFILL_BELOW = 2000;
@@ -315,7 +317,7 @@ export function createAccount(ctx) {
             if (btn) btn.disabled = true;
             try {
                 const lang = ctx.lang() === "en" ? "en" : "zh";
-                const out = await request("/email/start", { email, lang });
+                const out = await request("/email/start", { email, lang }, { timeout: EMAIL_START_TIMEOUT_MS });
                 const { lid, poll, code } = out;
                 const sent = out.sent === true;
                 if (!sent) {

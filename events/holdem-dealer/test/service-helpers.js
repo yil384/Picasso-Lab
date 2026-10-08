@@ -302,3 +302,31 @@ export function checkFrames(client, truth, pid) {
   }
   return n;
 }
+
+// Resend's API as far as the service uses it (the mailer's fetch is injected; nothing leaves the machine). Each call is
+// recorded; `plan` holds the next answers (default 200 { id }): { status, body?, headers?, throw?, hang?, delay? }
+// (throw: a network error; hang: never answers until the mailer aborts; delay: ms before answering).
+export function fakeResend() {
+  const calls = [];
+  const plan = [];
+  let n = 0;
+  async function fetch(url, init) {
+    const headers = Object.fromEntries(Object.entries(init.headers).map(([k, v]) => [k.toLowerCase(), v]));
+    calls.push({ url, method: init.method, headers, body: JSON.parse(init.body), at: Date.now() });
+    const step = plan.shift() || { status: 200 };
+    const aborted = () => Object.assign(new Error('aborted'), { name: 'AbortError' });
+    if (step.hang) {
+      return new Promise((_, reject) => init.signal.addEventListener('abort', () => reject(aborted())));
+    }
+    if (step.delay) {
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(resolve, step.delay);
+        init.signal.addEventListener('abort', () => { clearTimeout(t); reject(aborted()); });
+      });
+    }
+    if (step.throw) throw new TypeError('fetch failed');
+    const body = step.body ?? (step.status === 200 ? { id: `em_${++n}` } : { statusCode: step.status, name: 'application_error', message: 'x' });
+    return new Response(JSON.stringify(body), { status: step.status, headers: { 'content-type': 'application/json', ...(step.headers || {}) } });
+  }
+  return { fetch, calls, plan, reset() { calls.length = 0; plan.length = 0; } };
+}
