@@ -188,12 +188,9 @@ export function createTable({ ui, S, send, popups }) {
             ry = Math.min(h * .36, rx * .62);
             cy = h * .46;
             heroY = h - 92;
-            // a tall stage (1280 x 800) would leave my seat on the floor under the felt: the oval moves up a little
-            // and my avatar sits on the bottom rail, my cards on the felt above it
-            if (heroY - (cy + ry) > 40) {
-                cy = h * .44;
-                heroY = cy + ry;
-            }
+            // a tall stage (1280 x 800) would leave my seat on the floor under the felt: my avatar sits on the
+            // bottom rail, my cards on the felt above it (the board keeps its place, so my bet still fits between)
+            if (heroY - (cy + ry) > 40) heroY = cy + ry + 10;
         }
         const angles = (portrait ? ANGLES.port : ANGLES.land)[n] || ANGLES.land[6];
         const margin = portrait ? 72 : 56;
