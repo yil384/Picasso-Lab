@@ -635,7 +635,7 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-act.is-check { background: linear-gradient(180deg, #7ff0a8, #2fb865); box-shadow: 0 2px 0 var(--ok-edge); }
 .hd-act.is-raise, .hd-act.is-bet { background: linear-gradient(180deg, #ffd66b, #f49a1c); color: #7a2a00; box-shadow: 0 2px 0 #b8660c; }
 .hd-act.is-allin { background: linear-gradient(180deg, #ff8a70, #e0402a); box-shadow: 0 2px 0 #8a1408; }
-.hd-seat.is-top .hd-label { top: 54px; }
+/* a top seat's label stays above its avatar like the others' (under it, it covered the stack) */
 /* a won pot: the amount rises over the plate */
 .hd-won { position: absolute; left: 0; top: -84px; z-index: 3; translate: -50% 0; pointer-events: none; }
 .hd-won b { color: #ffe27a; font: 800 32px/1 var(--font-num); -webkit-text-stroke: 4px #6a3a00; paint-order: stroke fill; white-space: nowrap; }

@@ -384,7 +384,7 @@ export function createTable({ ui, S, send, popups }) {
             // a side seat's shown cards lie toward the centre: the button goes past them
             const out = 108 + ((p.side === "left" || p.side === "right") && t.seats[h.button].shown ? 48 : 0);
             const x = k === 0 ? p.x + (V.portrait ? 86 : 80) : p.x + dx * out + px * 84;
-            let y = k === 0 ? p.y - 6 : p.y + dy * out + py * 84;
+            let y = k === 0 ? p.y - 28 : p.y + dy * out + py * 84;
             // never on the board's cards (a side seat of the narrow portrait table): step above or below them,
             // with room for the winning cards' lift
             // (the five slots' box is measured once per layout: no forced layout on every snapshot)

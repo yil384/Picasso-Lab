@@ -124,12 +124,21 @@ class Run:
             await p.tap('.gd-popup-layer.is-open [data-confirm="1"]')
 
     async def to_lobby(self, p):
-        await p.tap('[data-menu]')
-        await p.pg.wait_for_timeout(300)
-        await p.tap('[data-m="lobby"]')
-        await p.pg.wait_for_timeout(400)
-        await self.confirm_if_asked(p)
-        await p.wait_screen('lobby', 8000)
+        for attempt in range(3):
+            if await p.pg.evaluate("document.body.dataset.screen") == 'lobby':
+                return
+            try:
+                if not await p.pg.evaluate("!!document.querySelector('[data-m=\"lobby\"]')"):
+                    await p.tap('[data-menu]')
+                    await p.pg.wait_for_timeout(300)
+                await p.tap('[data-m="lobby"]', timeout=2000)
+                await p.pg.wait_for_timeout(400)
+                await self.confirm_if_asked(p)
+                await p.wait_screen('lobby', 8000)
+                return
+            except Exception:
+                if attempt == 2:
+                    raise
 
     async def join(self, p, code, buy_in=None):
         await p.open(f'?game=holdem&room={code}', wait=600)
@@ -314,6 +323,7 @@ class Run:
             async def heads():
                 self.hero_auto = False
                 h2.paused = True
+                await hero.pg.wait_for_timeout(600)    # the helpers' loop finishes a tap it may have started for me
                 await self.to_lobby(hero)
                 await self.to_lobby(h1)
                 await hero.tap('.lobby-tile.is-holdem')
