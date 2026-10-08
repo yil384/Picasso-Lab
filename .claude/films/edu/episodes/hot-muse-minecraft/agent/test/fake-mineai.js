@@ -2,7 +2,10 @@
 // JSON replies) on 127.0.0.1, the bearer token of our patch 0004, and a tiny world behind the tools our body uses:
 // foreground actions with submission_id / wait_timeout_ms / wait_for_action / cancel_foreground_action and their result
 // gate, view_status, view_blocks, set_survival_policy, recursive crafting with a temporary workstation, collect,
-// smelt, and the rest answering simply. Every call is recorded (calls). Failures and durations are set per tool.
+// smelt, equip (worn and off-hand stacks in the status), and the rest answering simply. Every call is recorded (calls).
+// Failures and durations are set per tool; world.held = {owner, until} makes one of their reflexes hold the body (a
+// submission is refused ACTION_BUSY with no action id until then); world.huntKillAfterMs makes a hunt's progress show a
+// kill after that long while the hunt goes on (no drop came) until cancelled.
 // Run as a process (test/fake-mineai-host.mjs) it stands in for their host.ts.
 
 import http from 'node:http';
@@ -41,6 +44,10 @@ export async function startFakeMineAi(opts = {}) {
     fail: { ...(opts.fail ?? {}) }, // tool -> "[CODE] message"
     blocks: opts.blocks ?? [{ name: 'birch_log', found: 40, listed: [{ x: 14, y: 64, z: -2, distance: 4 }] }],
     hostiles: [],
+    players: [],
+    equipment: new Map(), // slot -> {name, count}
+    held: null, // {owner, until}: a reflex owns the body
+    huntKillAfterMs: null,
     die: null, // a tool whose next run kills the bot
   };
   const calls = [];
@@ -49,7 +56,12 @@ export async function startFakeMineAi(opts = {}) {
   let unretrieved = null;
   const have = (k) => world.inventory.get(k) ?? 0;
   const add = (k, n) => { const v = have(k) + n; if (v > 0) world.inventory.set(k, v); else world.inventory.delete(k); };
-  const stacks = () => [...world.inventory].map(([name, count], i) => ({ slot: 36 + i, location: i < 9 ? 'hotbar' : 'main', name, count, held: i === 0, durability: null }));
+  const SLOT = { head: 5, torso: 6, legs: 7, feet: 8, 'off-hand': 45 };
+  const stacks = () => [
+    ...[...world.inventory].map(([name, count], i) => ({ slot: 36 + i, location: i < 9 ? 'hotbar' : 'main', name, count, held: i === 0, durability: null })),
+    ...[...world.equipment].map(([location, x]) => ({ slot: SLOT[location], location, name: x.name, count: x.count, held: false, durability: null })),
+  ];
+  const slotFor = (name) => (name === 'shield' ? 'off-hand' : /_helmet$/.test(name) ? 'head' : /_chestplate$/.test(name) ? 'torso' : /_leggings$/.test(name) ? 'legs' : /_boots$/.test(name) ? 'feet' : 'hand');
   const planksOf = () => WOODS.map((w) => `${w}_planks`).find((p) => have(p) > 0) ?? `${WOODS.find((w) => have(`${w}_log`) > 0) ?? 'oak'}_planks`;
 
   /** Recursive craft of n item; returns an error string or null. */
@@ -121,6 +133,15 @@ export async function startFakeMineAi(opts = {}) {
       case 'eat_food': if (!have(a.food_name)) return { status: 'failed', error: `[EAT_FOOD_MISSING] no ${a.food_name}` }; add(a.food_name, -1); world.food = Math.min(20, world.food + 6); return { status: 'succeeded' };
       case 'collect_mob_drop': add(a.drop_name, a.count ?? 1); return { status: 'succeeded', hunt: { mob: a.mob_name, drop: a.drop_name, requested: a.count ?? 1, gained: a.count ?? 1, targetDeathsObserved: a.count ?? 1 } };
       case 'drop_item': for (const i of a.items) add(i.item_name, -Math.min(have(i.item_name), i.count ?? have(i.item_name))); return { status: 'succeeded' };
+      case 'equip':
+        for (const i of a.items) {
+          const to = i.destination ?? slotFor(i.item_name);
+          if (!have(i.item_name)) return { status: 'failed', error: `[EQUIP_ITEM_NOT_CARRIED] no ${i.item_name}` };
+          if (to === 'hand') continue;
+          add(i.item_name, -1);
+          world.equipment.set(to, { name: i.item_name, count: 1 });
+        }
+        return { status: 'succeeded', equip: { completed: a.items.length } };
       case 'use_bucket': if (a.action === 'fill') { add('bucket', -1); add(`${a.liquid}_bucket`, 1); } return { status: 'succeeded' };
       default: return { status: 'succeeded' };
     }
@@ -129,13 +150,18 @@ export async function startFakeMineAi(opts = {}) {
   function submit(tool, a) {
     if (unretrieved) return { state: 'refused', code: 'RESULT_NOT_RETRIEVED', error: 'retrieve the earlier result first', unretrievedActionId: unretrieved };
     if (active) return { state: 'refused', code: 'ACTION_BUSY', error: 'another action is running', activeActionId: active };
+    // their exact words when a reflex owns an idle body (src/session/async-actions.ts): no action id to wait for
+    if (world.held && Date.now() < world.held.until) return { state: 'refused', code: 'ACTION_BUSY', error: `No new action started; body owner: ${world.held.owner}. Wait for physical ownership to become available.` };
     const id = crypto.randomUUID();
     const t0 = Date.now();
     const act = { id, tool, state: 'running', output: null, cancel: false, waiters: [] };
     actions.set(id, act);
     active = id;
-    act.timer = setTimeout(() => settle(act, perform(tool, a, () => act.cancel)), world.durations[tool] ?? 20);
+    const hunting = tool === 'collect_mob_drop' && world.huntKillAfterMs !== null;
+    act.timer = setTimeout(() => settle(act, perform(tool, a, () => act.cancel)), hunting ? 600_000 : world.durations[tool] ?? 20);
     act.t0 = t0;
+    act.hunting = hunting;
+    act.args = a;
     return { state: 'accepted', actionId: id, action: tool, admittedAt: new Date(t0).toISOString() };
   }
   function settle(act, result) {
@@ -151,7 +177,11 @@ export async function startFakeMineAi(opts = {}) {
     const act = actions.get(id);
     if (!act) return { state: 'refused', code: 'ACTION_NOT_FOUND', error: 'no such action' };
     if (act.state === 'running' && ms > 0) await new Promise((r) => { const t = setTimeout(r, ms); act.waiters.push(() => { clearTimeout(t); r(); }); });
-    if (act.state !== 'settled') return { state: 'pending', wakeReason: 'timeout', actionId: id, progress: {} };
+    if (act.state !== 'settled') {
+      // their progress: request.evidence.checkpoint (a hunt counts the target deaths it saw)
+      const killed = act.hunting && Date.now() - act.t0 >= world.huntKillAfterMs ? 1 : 0;
+      return { state: 'pending', wakeReason: 'timeout', actionId: id, progress: act.hunting ? { request: { evidence: { checkpoint: { phase: killed ? 'collecting' : 'fighting', attacks: 3, targetDeathsObserved: killed, gained: 0 } } } } : {} };
+    }
     if (unretrieved === id) unretrieved = null;
     return { state: 'settled', wakeReason: 'settled', actionId: id, output: act.output };
   }
@@ -178,7 +208,8 @@ export async function startFakeMineAi(opts = {}) {
       if (!act) return { state: 'refused', code: 'ACTION_NOT_FOUND', error: 'no such action' };
       if (act.state === 'settled') return { state: 'settled', actionId: id };
       act.cancel = true;
-      setTimeout(() => settle(act, { status: 'cancelled', error: 'cancelled on request' }), 10);
+      const hunt = act.hunting ? { hunt: { mob: act.args.mob_name, drop: act.args.drop_name, requested: act.args.count ?? 1, gained: 0, targetDeathsObserved: Date.now() - act.t0 >= world.huntKillAfterMs ? 1 : 0 } } : {};
+      setTimeout(() => settle(act, { status: 'cancelled', error: 'cancelled on request', ...hunt }), 10);
       return { state: 'cancellation_requested', actionId: id, cancellation: { kind: 'cancellation_requested', action: act.tool, startedAt: '', reason: 'x' } };
     });
     reg('view_status', () => ({
@@ -186,7 +217,7 @@ export async function startFakeMineAi(opts = {}) {
       result: { status: 'succeeded', situation: {
         dimension: 'overworld', lastDeath: world.lastDeath, vitals: { health: world.health, food: world.food, airSupplyTicks: null },
         clock: { timeOfDay: 1000, phase: 'day' }, position: { ...world.position, headingDegrees: 90 },
-        inventory: { stacks: stacks() }, nearby: { hostiles: world.hostiles, mobs: [{ name: 'cow', kind: 'animal', count: 2, nearest: { entityId: 5, distance: 7, position: { x: 15, y: 64, z: -1 } } }] },
+        inventory: { stacks: stacks() }, nearby: { players: world.players, hostiles: world.hostiles, mobs: [{ name: 'cow', kind: 'animal', count: 2, nearest: { entityId: 5, distance: 7, position: { x: 15, y: 64, z: -1 } } }] },
       } },
       survivalPolicy: { revision: world.revision },
     }));

@@ -28,6 +28,7 @@ import { consoleLine } from './stations.js';
 import { createHostManager } from './mineai/host.js';
 import { createMineAiBody } from './mineai/body.js';
 import { MINEAI_SKILLS } from './mineai/skills.js';
+import { check as checkRuntime } from '../scripts/mineai-fetch.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -264,6 +265,12 @@ export async function startAgent(opts = {}) {
   const createFakeBot = opts.fakeBot ? (await import('../test/fake-bot.js')).createFakeBot : null;
   // BODY=mineai: every guest bot is a Mine AI MCP host of its own (src/mineai/); the fake world always uses ours
   const mineai = config.body.kind === 'mineai' && !createFakeBot;
+  // their runtime must be exactly the pin plus every patch of mineai/UPSTREAM.json (the host token of 0004, the player
+  // name off the command line of 0005, ...): an older or unpatched folder is refused before anything is served
+  if (mineai && !opts.hosts) {
+    const built = checkRuntime(config.mineai.dir);
+    if (!built.ok) throw new Error(`BODY=mineai: ${built.why}; build the runtime with mineai/fetch-and-patch.sh <new folder> and set MINEAI_DIR to it`);
+  }
   const hosts = mineai ? (opts.hosts ?? createHostManager({ config, log })) : null;
 
   // The model is needed only by the Ask queue; guests drive their bots by hand or through their own agent. Viewer text

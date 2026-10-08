@@ -76,14 +76,15 @@ fi
 if [ "$INSTALL" = 1 ]; then "$NODE" "$HERE/../scripts/mineai-fetch.mjs" "$TARGET" --check; fi
 
 if [ "$CHECK" = 1 ]; then
-  echo "== typecheck and crafting tests"
+  echo "== typecheck, crafting tests and the config test (0005)"
   (cd "$TARGET" && "$BUN" x --bun tsc -p tsconfig.check.json --noEmit)
   (cd "$TARGET" && "$BUN" test src/world/crafting.test.ts src/world/confirmed-craft.test.ts src/actions/craft-item \
-    src/utils/craft-plan.test.ts src/actions/temporary-workstation.test.ts src/actions/smelt-item src/actions/use-container)
+    src/utils/craft-plan.test.ts src/actions/temporary-workstation.test.ts src/actions/smelt-item src/actions/use-container \
+    src/server/config.test.ts)
 fi
 
 cat <<EOF
 == ready: $TARGET
-   one bot (Bun):  cd $TARGET && $BUN src/server/host.ts --minecraft-port 25566 --username Tst_rv_X --listen-port 25691 --data-root <dir>
+   one bot (Bun):  cd $TARGET && MINEAI_USERNAME=Tst_rv_X $BUN src/server/host.ts --minecraft-port 25566 --listen-port 25691 --data-root <dir>
    with Node 24+:  cd $TARGET && node --import tsx src/server/host.ts ...same flags...
 EOF

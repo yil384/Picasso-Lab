@@ -43,7 +43,8 @@ fingerprint() {
 
 staging() {
   local S=picasso:workspace/muse-staging
-  x ssh picasso 'mkdir -p ~/workspace/muse-staging/{app,data,logs,mineai-data}'
+  # mineai-data holds the Mine AI runtime's per-bot SQLite (the bots' private names): this user only
+  x ssh picasso 'mkdir -p ~/workspace/muse-staging/{app,data,logs,mineai-data} && chmod 700 ~/workspace/muse-staging/mineai-data'
   # production's compose files stay out of the staging copy: a bare `docker compose` there must never reach production
   (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --exclude deploy/compose.yaml --exclude deploy/camera-test.compose.yaml --relative src scripts deploy mineai package.json package-lock.json README.md .dockerignore $S/app/)
   (cd "$A/server" && x rsync -azL paper.jar $S/app/paper.jar && x rsync -azL --delete --include '*.jar' --exclude '*' plugins/ $S/app/plugins/)

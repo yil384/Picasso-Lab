@@ -1,4 +1,4 @@
-<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper, the watchdog window, the host token), how to build it, and what was measured. -->
+<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper, the watchdog window, the host token, the player name off the command line, the runtime's exit), how to build it, and what was measured. -->
 # Mine AI MCP as the bot body: pinned upstream, our patches
 
 Decision (2026-10-08, after the M0 reuse spike, `../../../../research/muse-reuse-spike.md`): run the Mine AI MCP
@@ -6,7 +6,7 @@ runtime (https://github.com/aibengineering/mine-ai-mcp, MIT) as the body of a gu
 code never enters this repository. We keep a pinned upstream commit and our patch files, and
 `fetch-and-patch.sh` clones that commit into a folder, applies the patches and installs the dependencies at build
 time. How the agent runs it (`BODY=mineai`, one host per guest game) is in `../README.md`, section "The Mine AI MCP
-body"; this folder is the runtime itself: the pin, our four patches, the build, and the measurements of the crafting
+body"; this folder is the runtime itself: the pin, our six patches, the build, and the measurements of the crafting
 fix (their crafting failed on Paper, the server we deploy).
 
 | File | What it is |
@@ -17,7 +17,9 @@ fix (their crafting failed on Paper, the server we deploy).
 | `patches/0001-craft-by-confirmed-window-clicks.patch` | the fix: crafting by confirmed window clicks (below) |
 | `patches/0002-confirmed-crafting-tests.patch` | its tests: a bot double with a server's side of windows that also sends Paper's result burst |
 | `patches/0003-unresponsive-window-from-env.patch` | their supervisor's 5 s event-loop watchdog widened by `MINEAI_UNRESPONSIVE_MS` (5-120 s) for a loaded machine |
-| `patches/0004-host-token.patch` | with `MINEAI_HOST_TOKEN` set (from the agent, per host, environment only), their host and its runtime refuse requests without `Authorization: Bearer <token>` (their host had no authentication) |
+| `patches/0004-host-token.patch` | with `MINEAI_HOST_TOKEN` set (from the agent, per host, environment only), their host and its runtime refuse requests without `Authorization: Bearer <token>` (their host had no authentication); the agent checks that a request without it gets 401 before it uses a host |
+| `patches/0005-player-name-off-the-command-line.patch` | the player name from `MINEAI_USERNAME`, and the runtime's bootstrap (which holds the name) in the runtime's environment instead of its command line: on a whitelisted server the private name is the secret, and every user of the machine can read command lines; with a test of its own in `src/server/config.test.ts` |
+| `patches/0006-runtime-exits-once-stopped.patch` | their runtime process exits once a SIGTERM's stop is done (its IPC channel kept it alive until their supervisor's SIGKILL, `MINEAI_UNRESPONSIVE_MS` later, on every game end) |
 | `LICENSE-mine-ai-mcp` | their MIT notice, kept with the patches |
 | `bench/` | the scripted checks behind the numbers below (no model): crafting, smelting, chests, equip and drop against the server's own record, and the strict iron route on their tools; `gateway-iron.mjs`: the strict iron route through our `/mcp` (`../test/e2e/mcp-iron.mjs`), n games in turn or at once, with every host's and runtime's memory and CPU, the agent's event loop and the bots' deaths |
 
@@ -38,9 +40,9 @@ No patch to their mineflayer fork is needed: the fix replaces the one call into 
 
 ```sh
 BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime   # under a minute with a warm Bun cache
-node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check        # the pin plus our 4 patches, installed
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check        # the pin plus our 6 patches, installed
 BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime MINEAI_RUNTIME=bun npm start   # the agent, one host per game
-cd ~/picasso-work/mineai-runtime && bun src/server/host.ts --minecraft-port 25566 --username Tst_rv_cp \
+cd ~/picasso-work/mineai-runtime && MINEAI_USERNAME=Tst_rv_cp bun src/server/host.ts --minecraft-port 25566 \
   --listen-port 25691 --data-root <dir>                                     # or one host by hand
 ```
 

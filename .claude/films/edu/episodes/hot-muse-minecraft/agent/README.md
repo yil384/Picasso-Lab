@@ -57,11 +57,11 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `scripts/a11y-chrome.mjs` | the same tree and check through a Chrome that is already installed (DevTools protocol, JavaScript off); no Playwright |
 | `test/e2e/mcp-iron.mjs`, `test/e2e/two-starts.mjs` | the scripted MCP runs against a running agent, no model (section "Scripted runs over MCP") |
 | `deploy/slim-modules.mjs` | run in the agent image after `npm ci`: keeps the game data of one Minecraft version only |
-| `src/mineai/host.js` | `BODY=mineai`: one Mine AI MCP host per guest game (their runtime from `MINEAI_DIR`), on a loopback port of a private range with a token of its own, watched by heartbeat, restarted once after a crash, killed with its game (section "The Mine AI MCP body") |
+| `src/mineai/host.js` | `BODY=mineai`: one Mine AI MCP host per guest game (their runtime from `MINEAI_DIR`), on a loopback port of a private range with a token and the player name in its environment only, watched by heartbeat, restarted once after a crash, stopped with its game (its whole process group), its bot data deleted after the game unless the game failed (section "The Mine AI MCP body") |
 | `src/mineai/body.js` | a Body (`src/contracts.js`) driving that host as an MCP client: our skills onto their actions, their status as our state, stop and time limits through their cancel |
 | `src/mineai/skills.js` | the mapping (our 10 skills and `craft_batch` onto their tools, their results and codes back) and the extra skills MCP offers with this body (`equip`, `hunt`, `sleep`, `bucket`, `chest`, `explore`, `policy`, `pick_up`, `drop`) |
-| `src/mineai/preload.mjs` | loaded into their host's processes: ends the host with the agent, serves `/eyes` and `/watch` from inside the bot's process |
-| `mineai/` | `UPSTREAM.json` (their repository, the pinned commit and our patches in order), `patches/` (ours: crafting on Paper and its tests, the watchdog window, the host token), `fetch-and-patch.sh` (the build), `LICENSE-mine-ai-mcp` (their MIT notice), `bench/` (crafting and window flows on their tools; `gateway-iron.mjs`: the iron route through our `/mcp` with resources), `README.md` (the pins, the Paper fix and its numbers); their code is never in this repo |
+| `src/mineai/preload.mjs` | loaded into their host's processes: ends the host when the agent closes its stdin (game end) or goes away, serves `/eyes` and `/watch` from inside the bot's process |
+| `mineai/` | `UPSTREAM.json` (their repository, the pinned commit and our patches in order), `patches/` (ours: crafting on Paper and its tests, the watchdog window, the host token, the player name off the command line, the runtime's exit), `fetch-and-patch.sh` (the build), `LICENSE-mine-ai-mcp` (their MIT notice), `bench/` (crafting and window flows on their tools; `gateway-iron.mjs`: the iron route through our `/mcp` with resources), `README.md` (the pins, the Paper fix and its numbers); their code is never in this repo |
 | `scripts/mineai-fetch.mjs` | the same fetch in Node (also updates a folder in place); `--check` says whether a folder is exactly the pin plus our patches |
 | `test/fake-mineai.js`, `test/fake-mineai-host.mjs` | a stand-in Mine AI host (MCP tools, `/health`, the token, a tiny world) in-process and as a process |
 | `test/mock-llm.js` | local mock of the chat (and Responses) endpoint, also `npm run mock` |
@@ -337,7 +337,9 @@ copy, which every agent image copies).
 
 Staging plays with `BODY=mineai` (section "The Mine AI MCP body"): `staging.compose.yaml` builds its agent image with
 `--build-arg MINEAI=1` (the runtime fetched and patched at build time, 163 MB in `/opt/mine-ai-mcp`; the image 794 MB
-against 470 MB without it) and mounts `~/workspace/muse-staging/mineai-data` at `/mineai-data` for their per-bot SQLite.
+against 470 MB without it) and mounts `~/workspace/muse-staging/mineai-data` (mode 700: `push.sh` makes it so; the
+bots' private names are in it) at `/mineai-data` for their per-bot SQLite; the agent there runs under an init
+(`init: true`) that reaps whatever a host leaves behind.
 Which body plays is set in staging's `deploy/.env` only, next to its admin token: `BODY=mineai`,
 `MINEAI_DIR=/opt/mine-ai-mcp`, `MINEAI_DATA_DIR=/mineai-data`, and `MC_USERNAME=Tst_rv` (staging's bots are test
 bots: `Tst_rv_` and random letters). Remove the `BODY` line (and `docker compose -p muse-staging -f staging.compose.yaml
@@ -599,7 +601,8 @@ server is offline-mode; that is the operator's call, not a default).
 | `MINEAI_PORT_BASE`, `MINEAI_PORTS`, `MINEAI_MAX_HOSTS` | `27100`, `64`, `WEB_MAX_SESSIONS` | loopback ports: hosts from the base, their live views two ranges above; hosts at once |
 | `MINEAI_START_MS`, `MINEAI_HEARTBEAT_MS`, `MINEAI_HEARTBEAT_MISSES` | `90000`, `5000`, `3` | time to be ready; our `/health` heartbeat and how many may go unanswered before a restart |
 | `MINEAI_UNRESPONSIVE_MS` | `5000` | their own event-loop watchdog (patch 0003), up to 120000 for a loaded machine |
-| `MINEAI_DATA_DIR`, `MINEAI_VIEWS` | (none: temporary), `true` | their per-bot SQLite; the live views from inside the host |
+| `MINEAI_DATA_DIR`, `MINEAI_VIEWS` | (none: temporary), `true` | their per-bot SQLite (made mode 700); the live views from inside the host |
+| `MINEAI_KEEP_FAILED`, `MINEAI_DATA_DAYS` | `10`, `3` | a game's bot data and incidents are deleted when it ends, except the last N games that crashed or failed to join; at agent start, game folders older than this many days go |
 | `STEP_CAP`, `COST_CAP_RUN`, `COST_CAP_HOUR` | `300`, `1.00`, `3.00` | per run, per run in US$, rolling hour in US$ |
 | `ERROR_CAP`, `LOOP_REPEAT` | `8`, `3` | errors in a row (8 leaves room to explore for ore); same call failing (or changing nothing) before a hint |
 | `NOTES_PATH`, `ASK_NOTES_PATH`, `SHORT_MEMORY` | `notes.json`, `notes-ask.json`, `8` | long-term notes of the filmed runs, of the Ask brain (viewer requests never write `notes.json`), steps kept verbatim |
@@ -789,27 +792,44 @@ Their code stays out of this repo: `mineai/UPSTREAM.json` pins the commit and li
 them, and `mineai/fetch-and-patch.sh` puts the two together in a folder of its own at build time (`mineai/README.md`):
 
 ```sh
-BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime   # clone 2fe1306, the 4 patches, bun install, fork check, typecheck, crafting tests
-node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check
-BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
+BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime-6   # clone 2fe1306, the 6 patches, bun install, fork check, typecheck, crafting tests
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime-6 --check
+BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime-6 MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
 ```
+
+The agent runs that same check when it starts with `BODY=mineai`: a folder that is not exactly the pin plus every patch
+of `UPSTREAM.json` (an older build, or a plain clone of theirs) is refused before anything is served.
 
 Our patches: `0001` crafts by confirmed window clicks, so crafting works on Paper (their fork's craft read the result
 slot before Paper's burst of slot updates had settled; `mineai/README.md`), `0002` its tests; `0003` lets
 `MINEAI_UNRESPONSIVE_MS` (5-120 s) widen their supervisor's 5 s event-loop watchdog for a loaded machine; `0004` makes
 their host and its runtime refuse any request without `Authorization: Bearer $MINEAI_HOST_TOKEN` (their host had no
-authentication).
+authentication); `0005` takes the player name from `MINEAI_USERNAME` and hands their runtime its bootstrap (which holds
+the name) through its environment instead of its command line, so the name is on no command line at all; `0006` lets
+their runtime exit once a stop is done (its IPC channel kept it alive until their supervisor's SIGKILL).
 
 How a host runs (`src/mineai/host.js`): one per guest game, their `src/server/host.ts` under Node with tsx (their own
 dev dependency; Node 24.15 or newer) or Bun (`MINEAI_RUNTIME=bun`, `MINEAI_EXEC`), with `--listen-host 127.0.0.1` on
-`MINEAI_PORT_BASE` + slot (never 0.0.0.0), the server, port and player name on its command line and a random token per
-host in its environment only; none of our keys, tokens or stream URLs reach it. Ready when its `/health` says the bot
-is connected (`MINEAI_START_MS`). Then a heartbeat (`MINEAI_HEARTBEAT_MS`; each unanswered one is logged as
+`MINEAI_PORT_BASE` + slot (never 0.0.0.0; a slot is used only when its host port and both live-view ports are free),
+the server and port on its command line, and the player name and a random token per host in its environment only:
+every user of the machine can read command lines, and on a whitelisted server the private name is what keeps anyone
+else from logging in as the bot. None of our keys, tokens or stream URLs reach it. Ready when its `/health` says the
+bot is connected under that name (`MINEAI_START_MS`) and a `/health` without the token is refused (401): a runtime
+without patch 0004 or 0005 is never used. Then a heartbeat (`MINEAI_HEARTBEAT_MS`; each unanswered one is logged as
 `mineai_heartbeat_miss`): `MINEAI_HEARTBEAT_MISSES` unanswered in a row, a runtime their supervisor gave up on
 (`RUNTIME_UNRESPONSIVE`, `RUNTIME_EXITED`), a bot that lost its connection or a process that exited is a crash: the host is started again once (the bot rejoins where it was), a second crash ends the
-game ("the body could not go on"). It is killed when its game ends (end_game, the lease, the operator's `{"end": true}`,
-an agent stop) and with the agent even when the agent is killed (`src/mineai/preload.mjs` watches the stdin pipe). At
-most `MINEAI_MAX_HOSTS` at once. Bot data is temporary unless `MINEAI_DATA_DIR` is set.
+game ("the body could not go on"); a step sent while the host is being started again answers `NOT_STARTED` at once
+("send the step again in a few seconds"). It is stopped when its game ends (end_game, the lease, the operator's
+`{"end": true}`, an agent stop) and with the agent even when the agent is killed: the agent closes the host's stdin,
+`src/mineai/preload.mjs` turns that into one SIGTERM and lets go of the pipe, and their host ends in milliseconds (it
+never calls `process.exit`, so a pipe still read kept it alive until our SIGKILL: every game end used to take 8 s). The
+host runs in a process group of its own; after their stop's own allowance (`MINEAI_UNRESPONSIVE_MS` + 5 s) the whole
+group is killed, and once the host is gone whatever is left of the group too, so a runtime whose event loop is stuck
+never outlives its host or keeps the view ports of its slot. At most `MINEAI_MAX_HOSTS` at once (a closing host no
+longer counts; its ports stay taken until its processes are gone). Bot data is temporary unless `MINEAI_DATA_DIR` is
+set; then the folder is made mode 700, a game's folders (`<data>/<world>/bots/<uuid of its player name>` and
+`<data>/host-incidents/<game>`) are deleted when it ends, except those of the last `MINEAI_KEEP_FAILED` games whose host
+crashed or never got ready (kept for diagnosis), and at agent start folders untouched for `MINEAI_DATA_DAYS` go.
 
 What a guest's skill becomes (`src/mineai/skills.js`):
 
@@ -818,25 +838,27 @@ What a guest's skill becomes (`src/mineai/skills.js`):
 | `get_state` | `view_status` | their status in our state text (`renderState`); notable blocks from `view_blocks` (two finds of 8 names, in the background, every 20 s at most) |
 | `go_to {x, y, z}` | `navigate` | `BODY_MAX_TRAVEL` checked first |
 | `collect {block, n}` | `collect_block` | their search covers every loaded chunk; more than 32 is two calls |
-| `craft {item, n}`, `craft_batch {items}` | `craft_item` (recursive, one call) | a carried table is put down for the call and picked up again (`temporary_workstation`); 2x2 recipes put none down |
-| `smelt {item, n}` | `smelt_item` | at most 24 a call; one fuel, chosen as the check plans it; a carried furnace put down and picked up, else a furnace within 24 blocks; waits for the whole load |
+| `craft {item, n}`, `craft_batch {items}` | `craft_item` (recursive), one call per item, in order | a table carried at that point (also one made earlier in the batch) is put down for the item and picked up again (`temporary_workstation`); 2x2 recipes put none down |
+| `smelt {item, n}` | `smelt_item`, one call per fuel | at most 24 a call; fuel as the check plans it (`FUEL_ORDER` and `fuelPlan` in `src/game.js`: one kind after another when one is not enough); a carried furnace put down and picked up, else a furnace within 24 blocks; waits for the whole load |
 | `place {block, pos}` | `place_block` | |
 | `build {blueprint, material}` | `build_structure` | our blueprints as cells, anchored as our build skill anchors them, by their compass heading |
-| `attack {target}` | `collect_mob_drop` (the mob's usual drop, 1) | ok once the mob died; hostile mobs fought without a shield; `nearest_hostile` from their status |
+| `attack {target}` | `collect_mob_drop` (the mob's usual drop, 1) | the fight is read every 2 s and ended as soon as the mob died (their hunt would chase the next one for a drop the first did not give): ok; hostile mobs fought without a shield; `nearest_hostile` from their status |
 | `eat {}` | `eat_food` | the best safe food carried, as ours picks it |
 | `say {text}` | `send_message` | |
-| `equip {item, to?}` | `equip` | extra skill |
+| `equip {item, to?}` | `equip` | extra skill; what is worn and in the off-hand shows in the state (`wearing: ...; off-hand: ...`, `equipment` in the short state) and an equip changes no inventory count |
 | `hunt {mob, drop, n, without_shield?}` | `collect_mob_drop` | extra; never players, villagers, pets or golems |
 | `sleep {}` | `sleep` | extra |
-| `bucket {action, liquid?, pos?}` | `use_bucket` | extra |
-| `chest {action, pos, items?}` | `use_container` | extra; inspect, deposit, withdraw |
+| `bucket {action, liquid?, pos?}` | `use_bucket` | extra; the world is shared: lava is never poured (filling is fine), nothing within 32 blocks of where the bot joined (the world spawn) or 4 of another player |
+| `chest {action, pos, items?}` | `use_container` | extra; inspect, deposit, withdraw; never a chest another game's bot put down (the bodies record the chests they place) |
 | `explore {heading, chunks?, biome?}` | `explore_frontier` | extra |
 | `policy {retreat_health?, raw_food?, fight?}` | `set_survival_policy` | extra; for the rest of the game, with the revision read from their status; none of them: back to the defaults |
 | `pick_up {item?, death_items?}` | `pick_up_items` | extra |
 | `drop {item, n}` | `drop_item` | extra |
 
 Every call of ours carries a fresh `submission_id`, a fixed one-sentence rationale (their log only) and asks for JSON;
-the body waits with `wait_for_action` up to the skill's limit, cancels with `cancel_foreground_action` on stop or
+when one of their reflexes holds an idle body (a fight, a meal: their `ACTION_BUSY` with no action id) the body submits
+again every 0.5 s until the skill's limit, then says what held it (`HOSTILE_CONTACT` for a fight); the body waits with
+`wait_for_action` up to the skill's limit, cancels with `cancel_foreground_action` on stop or
 timeout, and always reads the final result before the next call (their result gate; a result left unread by a cut call
 is read first). Results come back in our words with the inventory change from their status before and after; their
 codes become ours (`CRAFT_MATERIALS_MISSING`, `SMELT_FUEL_STARVED`, `TARGET_UNMINEABLE`, `BED_NOT_FOUND`... `NEED_ITEMS`;
@@ -942,7 +964,7 @@ blocks from spawn, so not the same spots).
 23 hosts in all on staging that day (the deploy's check, the 18 games above, one re-run, three sessions): 0 heartbeats
 missed, 0 restarts, 0 runtimes stopped by their watchdog, so the defaults hold at this load; picasso's load is mostly
 niced batch work, and our containers run at normal priority. Their per-bot SQLite took 108 MB for the 23 bots
-(`~/workspace/muse-staging/mineai-data`; nothing prunes it yet).
+(`~/workspace/muse-staging/mineai-data`; since the review below, the agent deletes a game's data when it ends).
 
 Every failure, with its cause:
 - Spot 1 (1800 0), one at a time: `collect oak_log 6` got 1 log in its 180 s; their SQLite shows the bot travelled 118
@@ -970,7 +992,8 @@ Every failure, with its cause:
   planner treats every listed item as a gain to keep ("one shared inventory plan"): the 12 planks stay, and the stick,
   table and pickaxe need 9 more planks from the 1 log left, so it asks for 2 logs of the first wood it knows. Our
   dry-run check simulates the list in order, each item using what the earlier ones made (as our body crafts it), and
-  let the call through. Not fixed yet: `craft_batch` should become one `craft_item` per item, in order. The same session
+  let the call through. Fixed since: `craft_batch` is one `craft_item` per item, in order, and a table made earlier in
+  the list is put down and picked up for the items after it (section "After the review"). The same session
   with separate crafts worked: a stone pickaxe in 72 s, 10 MCP calls, no reply over 34 s; the repeat came back as
   `DUPLICATE` with the first call's steps and ran nothing; the other steps under the same `request_id` were refused
   (`BAD_ARGS`); both live views answered 200 through Caddy; `tools/list` 25.4 KB.
@@ -989,6 +1012,57 @@ docker run --rm --network host --pid host --user $(id -u):$(id -g) -v $PWD/accep
 
 Not yet: a whole 30-minute lease, more than 8 games at once, the End lab, Muse itself as the client (the sessions above
 were scripted), production.
+
+### After the review (2026-10-08)
+
+A review of this body found eleven defects; each is fixed, with a test in `test/mineai.test.js` (and the fake host
+models what was missing: a body held by one of their reflexes, a hunt whose kill drops nothing, worn stacks):
+
+- The private player name was on their host's command line and, inside the bootstrap, on their runtime's (`ps` shows
+  every process on picasso, container ones included; the whitelist name is what keeps an offline-mode client from
+  taking a guest's bot over). Patch 0005: the name comes from `MINEAI_USERNAME` and the bootstrap goes through the
+  runtime's environment. The data folder is mode 700.
+- Stopping: the preload's stdin kept their host alive until our SIGKILL (8.0 s on every game end) and a runtime
+  whose event loop was stuck could outlive its host and keep its slot's view ports. Now the agent closes stdin (one
+  SIGTERM), the host runs in a group of its own that is killed after `MINEAI_UNRESPONSIVE_MS` + 5 s and once the host
+  is gone, staging's agent has an init, and patch 0006 lets their runtime exit once its stop is done (its IPC channel
+  kept it until their supervisor's SIGKILL, 5 s later). A closing host no longer counts against `MINEAI_MAX_HOSTS`; a
+  slot is used only with all three of its ports free, and one found busy is tried again later.
+- The host token failed open on a runtime without patch 0004: a host must now refuse a `/health` without it (401) and
+  report the bot under its own name, and the agent refuses to start on a runtime folder that is not the pin plus every
+  patch.
+- Per-game data grew without bound (4.7 MB a game): see `MINEAI_KEEP_FAILED` and `MINEAI_DATA_DAYS` above.
+- `craft_batch` sent the list as one `craft_item` (staging failure 4, and a table bought twice when none was carried):
+  now one call per item, a table made earlier in the list put down for the items after it.
+- A body one of their reflexes held refused the next step at once (`ACTION_BUSY` without an action id), and the queue
+  dropped the rest: now waited for, up to the step's limit.
+- An attack whose kill dropped nothing chased the next mob of that kind for 60 s and ended `STOPPED`: it now ends at
+  the kill, ok.
+- A step sent while a crashed host was down reported the whole inventory as gained: now `NOT_STARTED` at once, or the
+  restart text, with no change counted.
+- The smelt fuel differed from the check's (sticks) and one fuel had to cover the load: `FUEL_ORDER` is shared, and a
+  load takes one fuel after another, a call each. `smelt`, `craft`, `craft_batch`, `collect` and `go_to` describe this
+  body's behaviour to Muse.
+- What is worn or in the off-hand vanished from the state and counted as lost: now `wearing: ...; off-hand: ...`.
+- `bucket` and `chest` could harm other guests: lava is never poured, nothing within 32 blocks of the world spawn or 4
+  of another player, and no chest another game's bot put down is opened.
+
+Measured on this Mac (local Paper 1.21.4 on 25565, the runtime built with all six patches, Bun 1.4.2): the agent
+refused a folder with the four older patches and the spike's unpatched clone; a host started with the name in its
+environment joined under it, answered 401 without the token, and neither the host's nor the runtime's command line
+held the name or the bootstrap; stopping a host by closing its stdin took 33-41 ms (5.0 s with patch 0005 alone, 8.0 s
+before), with and without the live views; the game end in the agent's log took 41 ms, its data deleted, while a game
+whose runtime was killed twice kept its data (`data: "kept"`); after the runtime was killed mid-game a step was ok again
+4.6 s later (about 9 s before); `scripts/staging-check.mjs` passed (wooden pickaxe in 18.2 s, 3 MCP calls); and staging
+failure 4's sequence (collect 4 oak logs, then `craft_batch [oak_planks 12, stick 4, crafting_table 1, wooden_pickaxe 1]`)
+ended with the pickaxe and the table carried, both live views answering 200.
+
+On staging (picasso, deployed by `deploy/push.sh` the same day, the image's runtime built with all six patches, under
+`docker-init`): the agent started (so the image's runtime passed the start check), the staging check passed (wooden
+pickaxe in 19.4 s, 3 MCP calls), `ps` on picasso showed both of their processes of a running game (as root) with no
+player name and no bootstrap on either command line, staging failure 4's sequence passed (birch, 22.4 s, the table
+carried at the end) with both live views at 200 through Caddy, and the two game ends closed their hosts in 150 and 245
+ms (8.00-8.01 s before) with the games' bot data deleted (23 bot folders before and after).
 
 ## What is mocked
 
@@ -1071,7 +1145,9 @@ were scripted), production.
   fixed block and item names and numbers. Viewer text goes to the Standard tier unless the operator opts in.
 - Minecraft stays on localhost/LAN (any other `MC_HOST` is refused); on picasso, where every local user can reach the
   compose network, Paper lets in only the bots the agent lists (`MC_WHITELIST`), under names nobody can guess, and
-  shows no names in the server list. Only the web port is meant to be exposed, and with `WEB_PROXY_SECRET` only the
+  shows no names in the server list. Those names never go on a command line (every local user can read command lines):
+  with `BODY=mineai` they reach their host and runtime through the environment only (patch 0005), and their per-bot data
+  folder is mode 700. Only the web port is meant to be exposed, and with `WEB_PROXY_SECRET` only the
   proxy (and this machine) may talk to it.
 - Strangers' text stays out: other players' chat never reaches a page, reply or API, the log is the operator's, and an
   `/ask` request's text is shown only to its sender. Replies to agents carry no links and no tokens; resume handles and

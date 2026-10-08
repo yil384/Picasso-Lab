@@ -245,6 +245,10 @@ export function loadConfig(env = process.env) {
     // the runtime's own watchdog (its child's event loop), patched to read this: 5 s upstream, more for a loaded host
     unresponsiveMs: r.int('MINEAI_UNRESPONSIVE_MS', 5_000, 5_000, 120_000),
     dataDir: mineaiData ? path.resolve(ROOT, mineaiData) : '', // per-bot SQLite; empty: temporary, gone with the host
+    // a game's bot data and incidents are deleted when it ends, except the last keepFailed games that crashed or failed
+    // to join (for diagnosis); at agent start, game folders older than dataDays go
+    keepFailed: r.int('MINEAI_KEEP_FAILED', 10, 0, 1_000),
+    dataDays: r.num('MINEAI_DATA_DAYS', 3, 0.01, 365),
     views: r.bool('MINEAI_VIEWS', true), // the live views (/eyes, /watch) from a viewer inside the host's bot process
   };
   if (body.kind === 'mineai' && !mineai.dir) problems.push('BODY=mineai needs MINEAI_DIR, the folder with the Mine AI MCP runtime (mineai/fetch-and-patch.sh <dir>)');

@@ -5,8 +5,8 @@
 // results turned into our result text and typed codes. Pure functions: no network here (src/mineai/body.js calls).
 // Their 37 tools, their 1.36 MB tools/list and their required rationales never reach a guest: only these skills do.
 
-import { skillSet, TOOL_TIMEOUTS_MS, SMELT_PER_CALL, SCHEMAS } from '../contracts.js';
-import { BLUEPRINTS, FUEL, PLANKS, LOGS, SMELT } from '../game.js';
+import { skillSet, TOOL_TIMEOUTS_MS, SMELT_PER_CALL, CRAFT_BATCH_MAX, SCHEMAS } from '../contracts.js';
+import { BLUEPRINTS, SMELT, fuelPlan } from '../game.js';
 import { facingOf } from '../state.js';
 import { registryFor, requireMc } from '../mc.js';
 
@@ -24,6 +24,12 @@ export const HUNT_MOBS = Object.freeze([
   'blaze', 'magma_cube', 'ghast', 'wither_skeleton', 'phantom', 'silverfish', 'zombified_piglin', 'hoglin',
 ]);
 const EQUIP_TO = ['hand', 'off-hand', 'head', 'torso', 'legs', 'feet'];
+/** No bucket is poured this close (blocks, flat) to where the bot joined (the world spawn, give or take its 10). */
+export const SPAWN_GUARD = 32;
+/** ...or this close to another player. */
+export const PLAYER_GUARD = 4;
+/** The blocks a chest skill opens (and whose placement a body records as its own). */
+export const CONTAINER_BLOCKS = new Set(['chest', 'trapped_chest', 'barrel']);
 const RAW_FOOD = ['never', 'emergency_only', 'always'];
 
 /**
@@ -41,10 +47,10 @@ export const EXTRA_DEFS = Object.freeze([
     'Sleep in the nearest free bed (or put down the one you carry): through the night, and it sets your respawn point.',
     obj({})],
   ['bucket',
-    'fill: scoop water or lava into an empty bucket from the nearest source (or the source at pos); pour: empty a full bucket into the cell at pos.',
+    `fill: scoop water or lava into an empty bucket from the nearest source (or the source at pos); pour: empty a water bucket into the cell at pos (never lava, never within ${SPAWN_GUARD} blocks of the world spawn or ${PLAYER_GUARD} of another player: the world is shared).`,
     obj({ action: pick('fill or pour', ['fill', 'pour']), liquid: pick('which liquid (default water)', ['water', 'lava']), pos: POS }, ['action'])],
   ['chest',
-    'Use the chest (or barrel) at pos: inspect what is in it, deposit or withdraw items.',
+    'Use the chest (or barrel) at pos: inspect what is in it, deposit or withdraw items. Your own chests (ones you put down) and ones nobody put down; never one another player\'s bot put down.',
     obj({
       action: pick('what to do', ['inspect', 'deposit', 'withdraw']),
       pos: POS,
@@ -64,8 +70,21 @@ export const EXTRA_DEFS = Object.freeze([
     obj({ item: NAME('a carried item'), n: int('how many, 1 to 2304', 1, 2304) })],
 ]);
 
+/**
+ * What some of the 10 skills and craft_batch do on this body, where it differs from ours (src/contracts.js): their
+ * searches cover every loaded chunk, a table or furnace you carry is put down for the step and picked up again, a smelt
+ * waits for the whole load in one furnace, and fuel goes one kind after another.
+ */
+export const MINEAI_DESCRIPTIONS = Object.freeze({
+  go_to: 'Walk to a block position; the body finds its own way (it may dig, bridge, pillar or swim). The target must be within 256 blocks. Seconds to two minutes; a walk that finds no way ends and says why.',
+  collect: 'Mine n blocks of one type and pick up the drops: the body searches every loaded chunk around you (not only the nearest 32 blocks), walks there and uses the best tool you carry. stone drops cobblestone; iron_ore drops raw_iron and needs a stone pickaxe or better.',
+  craft: 'Craft n of an item from your inventory (rounded up to whole recipe batches; planks and sticks it lacks are made from what you carry). When the recipe needs a crafting table, the one you carry is put down for the craft and picked up again; carrying none, a table within reach is used, else one is made from 4 planks and left standing.',
+  craft_batch: `Craft several items in order in ONE skill, one after another, each as craft: later items use what the earlier ones made, and a crafting table you carry (or one made earlier in the list) is put down for each item that needs it and picked up again. Up to ${CRAFT_BATCH_MAX} items; stops at the first item that cannot be made and says what is missing.`,
+  smelt: `Smelt n items in one furnace and wait until all are done (about 10 s an item). item is the INPUT (raw_iron -> iron_ingot, oak_log -> charcoal, cobblestone -> stone). A furnace you carry is put down for it and picked up again; else a furnace within 24 blocks is used. Fuel from your inventory (coal, charcoal, planks, sticks, logs), one kind after another when one is not enough. At most ${SMELT_PER_CALL} a call; call again for the rest.`,
+});
+
 /** What MCP's play and play_sequence take with BODY=mineai: the 10 skills, craft_batch and the extra ones. */
-export const MINEAI_SKILLS = skillSet(EXTRA_DEFS);
+export const MINEAI_SKILLS = skillSet(EXTRA_DEFS, MINEAI_DESCRIPTIONS);
 
 /** Each skill's time limit with this body (the 10 as ours; walking and fighting ones longer). */
 export const MINEAI_TIMEOUTS = Object.freeze({
@@ -99,19 +118,10 @@ export function bestFood(inventory) {
   return Object.keys(inventory).filter((n) => inventory[n] > 0 && foods[n] && !UNSAFE_FOOD.has(n)).sort((a, b) => score(b) - score(a))[0] ?? null;
 }
 
-const FUEL_ORDER = ['coal', 'charcoal', 'coal_block', ...PLANKS, ...LOGS];
-/** One fuel for n items, as the check plans it: the first that covers all of them, else the one covering most. */
-export function chooseFuel(inventory, input, n) {
-  let best = null;
-  for (const name of FUEL_ORDER) {
-    if (name === input) continue;
-    const covers = Math.floor((inventory[name] ?? 0) * FUEL[name]);
-    if (covers < 1) continue;
-    if (covers >= n) return name;
-    if (!best || covers > best.covers) best = { name, covers };
-  }
-  return best?.name ?? null;
-}
+/** The fuels for n items, one kind after another, as the check plans them (src/game.js fuelPlan): [{name, units, covers}]. */
+export const fuelsFor = (inventory, input, n) => fuelPlan((name) => inventory[name] ?? 0, input, n);
+/** The first fuel of that plan (null: nothing burns). */
+export const chooseFuel = (inventory, input, n) => fuelsFor(inventory, input, n)[0]?.name ?? null;
 
 /** The drop an attack waits for (the runtime's hunt ends on a drop); the fight itself is the point. */
 const ATTACK_DROP = {
@@ -145,6 +155,7 @@ export const DIRECT_TOOLS = new Set(['set_survival_policy']);
 
 const refuse = (result, code = 'FAILED') => ({ refused: { ok: false, result, code, delta: {} } });
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+const at = (p) => `${p.x} ${p.y} ${p.z}`;
 
 /**
  * One of our skill calls as the runtime's action calls.
@@ -152,7 +163,10 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
  * @param {object} args   already validated (MINEAI_SKILLS.validate)
  * @param {{inventory: Record<string, number>, position?: {x,y,z}|null, heading?: number, food?: number,
  *   hostiles?: Array<{name: string, distance: number}>, furnace?: {x,y,z}|null, policyRevision?: string|null,
- *   maxTravel?: number}} ctx  what the body knows now
+ *   maxTravel?: number, spawn?: {x,y,z}|null, players?: Array<{position: {x,y,z}|null}>, gameId?: string,
+ *   containerOwner?: (pos: {x,y,z}) => string|null}} ctx  what the body knows now (spawn: where the bot joined, the
+ *   world spawn give or take; players: the other players its status sees; containerOwner: the game whose bot put the
+ *   chest at pos down, or null)
  * @returns {{calls: Array<{tool: string, args: object, label?: string}>, note?: string} | {local: 'state'} | {refused: object}}
  */
 export function toTheirs(skill, args, ctx) {
@@ -172,21 +186,31 @@ export function toTheirs(skill, args, ctx) {
     case 'craft':
     case 'craft_batch': {
       const items = skill === 'craft' ? [{ item: args.item, n: args.n }] : args.items;
-      const table = items.some(({ item }) => needsTable(item));
-      // a carried table is put down for the call and picked up again (their temporary workstation); none carried: a table
-      // within reach is used, or the call fails asking for one (the MCP check adds a table craft before it)
-      const temporary = table && carries('crafting_table');
-      return { calls: [{ tool: 'craft_item', args: { items: items.map(({ item, n }) => ({ item_name: item, count: n })), ...(temporary ? { temporary_workstation: true } : {}) } }] };
+      // one craft_item per item, in order (their planner keeps every item listed in one call, so the planks the first
+      // item makes would not feed the later ones). A table carried at that point (also one made earlier in the list)
+      // is put down for the item and picked up again (their temporary workstation); none carried: a table within reach
+      // is used, else their craft makes one and leaves it standing (the MCP check adds a table craft before it)
+      let tables = inv.crafting_table ?? 0;
+      return {
+        calls: items.map(({ item, n }) => {
+          const temporary = needsTable(item) && tables > 0;
+          if (item === 'crafting_table') tables += n;
+          return { tool: 'craft_item', args: { items: [{ item_name: item, count: n }], ...(temporary ? { temporary_workstation: true } : {}) } };
+        }),
+      };
     }
     case 'smelt': {
       const n = Math.min(args.n, SMELT_PER_CALL, inv[args.item] ?? 0);
       if (n < 1) return refuse(`you have no ${args.item} to smelt`, 'NEED_ITEMS');
-      const fuel = chooseFuel(inv, args.item, n);
-      if (!fuel) return refuse('no fuel: coal, charcoal, planks or logs', 'NEED_ITEMS');
+      // their smelt takes one fuel: one call per fuel, in the order the check burns them (src/game.js fuelPlan)
+      const fuels = fuelsFor(inv, args.item, n);
+      if (!fuels.length) return refuse('no fuel: coal, charcoal, planks, sticks or logs', 'NEED_ITEMS');
+      const covered = fuels.reduce((k, f) => k + f.covers, 0);
+      if (covered < n) return refuse(`not enough fuel: what you carry burns ${covered} of the ${n} ${args.item}; coal or charcoal smelt 8 each, planks or logs 1.5`, 'NEED_ITEMS');
       const where = carries('furnace') ? { temporary_workstation: true } : ctx.furnace ? { x: ctx.furnace.x, y: ctx.furnace.y, z: ctx.furnace.z } : null;
       if (!where) return refuse('no furnace: carry one (craft furnace from 8 cobblestone) or stand near an empty one', 'NEED_ITEMS');
       const note = n < args.n ? `smelts ${n} of the ${args.n} (at most ${SMELT_PER_CALL} a call, and what you carry); call again for the rest` : null;
-      return { calls: [{ tool: 'smelt_item', args: { item_name: args.item, count: n, fuel_item_name: fuel, ...where } }], ...(note ? { note } : {}), expect: SMELT[args.item] };
+      return { calls: fuels.map((f) => ({ tool: 'smelt_item', args: { item_name: args.item, count: f.covers, fuel_item_name: f.name, ...where } })), ...(note ? { note } : {}), expect: SMELT[args.item] };
     }
     case 'place': return { calls: [{ tool: 'place_block', args: { block_name: args.block, x: args.pos.x, y: args.pos.y, z: args.pos.z } }] };
     case 'build': {
@@ -215,11 +239,19 @@ export function toTheirs(skill, args, ctx) {
     case 'hunt': return { calls: [{ tool: 'collect_mob_drop', args: { mob_name: args.mob, drop_name: args.drop, count: args.n, ...(args.without_shield ? { allow_without_shield: true } : {}) } }] };
     case 'sleep': return { calls: [{ tool: 'sleep', args: {} }] };
     case 'bucket': {
-      if (args.action === 'pour' && !args.pos) return refuse('pour needs pos: the cell to pour into', 'BAD_ARGS');
+      if (args.action === 'pour') {
+        // the world is shared: no lava for anyone, nothing where new players land, nothing onto another player
+        if (!args.pos) return refuse('pour needs pos: the cell to pour into', 'BAD_ARGS');
+        if (args.liquid === 'lava') return refuse('lava is never poured on this shared server (filling a bucket with lava is fine); pour water', 'BAD_ARGS');
+        if (ctx.spawn && Math.hypot(args.pos.x - ctx.spawn.x, args.pos.z - ctx.spawn.z) <= SPAWN_GUARD) return refuse(`nothing is poured within ${SPAWN_GUARD} blocks of the world spawn (about ${Math.round(ctx.spawn.x)} ${Math.round(ctx.spawn.z)}), where new players arrive`, 'BAD_ARGS');
+        if ((ctx.players ?? []).some((p) => p?.position && dist(p.position, args.pos) <= PLAYER_GUARD)) return refuse(`another player is within ${PLAYER_GUARD} blocks of ${at(args.pos)}: pour somewhere else`);
+      }
       return { calls: [{ tool: 'use_bucket', args: { action: args.action, liquid: args.liquid ?? 'water', ...(args.pos ? { x: args.pos.x, y: args.pos.y, z: args.pos.z } : {}) } }] };
     }
     case 'chest': {
       if (args.action !== 'inspect' && !args.items) return refuse(`${args.action} needs items: which items and how many`, 'BAD_ARGS');
+      const owner = ctx.containerOwner?.(args.pos) ?? null;
+      if (owner && owner !== ctx.gameId) return refuse(`the chest at ${at(args.pos)} was put down by another player's bot: use your own chests, or ones nobody put down`, 'BAD_ARGS');
       return { calls: [{ tool: 'use_container', args: { operation: args.action, x: args.pos.x, y: args.pos.y, z: args.pos.z, ...(args.action !== 'inspect' ? { items: args.items.map(({ item, n }) => ({ item_name: item, count: n })) } : {}) } }] };
     }
     case 'explore': return { calls: [{ tool: 'explore_frontier', args: { heading: args.heading, chunks: args.chunks ?? 1, ...(args.biome ? { biome: args.biome } : {}) } }] };

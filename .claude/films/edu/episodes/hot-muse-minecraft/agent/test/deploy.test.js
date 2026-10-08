@@ -83,6 +83,7 @@ test('BODY=mineai: staging builds the Mine AI MCP runtime and keeps its bot data
   assert.match(stg.agent.text, /build: \{ context: \.\., dockerfile: deploy\/Dockerfile\.agent, args: \{ MINEAI: "1" \} \}/);
   assert.doesNotMatch(prod.agent.text, /MINEAI/, 'production: no runtime in its image (Dockerfile.agent: MINEAI=0)');
   assert.match(stg.agent.text, /"\.\.\/\.\.\/mineai-data:\/mineai-data"/, 'their per-bot SQLite outlives the container, next to staging\'s world and logs');
+  assert.match(stg.agent.text, /^ {4}init: true/m, 'an init reaps what a host leaves behind');
   // which body plays is deploy/.env's business on picasso, never the compose file's (the settings test compares them)
   for (const s of [prod, stg]) assert.ok(!('BODY' in s.agent.env) && !('MINEAI_DIR' in s.agent.env));
   // every image copies mineai/ (the pin and our patches), so both deploys must send it; the fetch comes before src/
@@ -127,7 +128,7 @@ test('push.sh: staging by default; production only with --prod and only after th
   const stg = push([]);
   assert.equal(stg.code, 0, stg.err);
   const joined = stg.calls.join('\n');
-  assert.match(joined, /ssh picasso mkdir -p ~\/workspace\/muse-staging\/\{app,data,logs,mineai-data\}/);
+  assert.match(joined, /ssh picasso mkdir -p ~\/workspace\/muse-staging\/\{app,data,logs,mineai-data\} && chmod 700 ~\/workspace\/muse-staging\/mineai-data$/m, 'the bots\' data: this user only');
   assert.match(joined, /rsync -az --delete .*--exclude deploy\/compose\.yaml --exclude deploy\/camera-test\.compose\.yaml .*--relative src scripts deploy mineai .* picasso:workspace\/muse-staging\/app\//);
   assert.match(joined, /docker compose -p muse-staging -f staging\.compose\.yaml up -d --build/);
   // staging prunes our dangling images too; picasso's docker wrapper refuses prune to non-root users, and that must not

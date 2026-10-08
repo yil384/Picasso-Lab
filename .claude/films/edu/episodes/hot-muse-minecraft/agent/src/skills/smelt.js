@@ -9,7 +9,7 @@
 // skill (github.com/mindcraft-bots/mindcraft, MIT License), rewritten here.
 
 import { Vec3 } from '../mc.js';
-import { SMELT, FUEL, PLANKS, LOGS } from '../game.js';
+import { SMELT, FUEL, FUEL_ORDER, PLANKS, LOGS } from '../game.js';
 import { SMELT_PER_CALL } from '../contracts.js';
 import { REUSE_RADIUS } from '../stations.js';
 import { done, fail, countOf, fmt, walkNear, eyeDistance, describeError, SkillStop, REACH, timed, faceAt } from './util.js';
@@ -20,8 +20,7 @@ import { craftItem } from './craft.js';
 export const MAX_PARALLEL = 3;
 /** Game time to smelt one item in a furnace (200 ticks). */
 export const ITEM_MS = 10_000;
-// Cheapest fuel first: coal before wood, planks before logs (a log is worth 4 planks).
-const FUEL_ORDER = ['coal', 'charcoal', 'coal_block', ...PLANKS, 'stick', ...LOGS];
+// Cheapest fuel first: FUEL_ORDER (src/game.js: coal before wood, planks before logs; a log is worth 4 planks).
 // For a few items per furnace (a load split over several): fuel that burns out with them first, so no coal burns for
 // one item; never sticks (the tools still to be crafted need them).
 const SMALL_ORDER = [...PLANKS, 'charcoal', 'coal', 'coal_block', ...LOGS];

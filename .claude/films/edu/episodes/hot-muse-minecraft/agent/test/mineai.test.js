@@ -8,11 +8,13 @@
 // script's pin.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import net from 'node:net';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { loadConfig, ConfigError } from '../src/config.js';
@@ -20,10 +22,11 @@ import { createLogger } from '../src/log.js';
 import { createWeb } from '../src/web.js';
 import { startAgent } from '../src/index.js';
 import { createPlanner } from '../src/plan.js';
-import { blueprintBlockCount } from '../src/game.js';
-import { MINEAI_SKILLS, EXTRA_DEFS, toTheirs, fromTheirs, codeFor, needsTable, bestFood, chooseFuel, blueprintCells } from '../src/mineai/skills.js';
-import { createMineAiBody, inventoryOfStacks } from '../src/mineai/body.js';
-import { createHostManager, hostCommand, hostEnv } from '../src/mineai/host.js';
+import { blueprintBlockCount, fuelPlan, FUEL_ORDER } from '../src/game.js';
+import { MCP_SKILLS } from '../src/contracts.js';
+import { MINEAI_SKILLS, EXTRA_DEFS, SPAWN_GUARD, toTheirs, fromTheirs, codeFor, needsTable, bestFood, chooseFuel, blueprintCells } from '../src/mineai/skills.js';
+import { createMineAiBody, inventoryOfStacks, equipmentOfStacks } from '../src/mineai/body.js';
+import { createHostManager, hostCommand, hostEnv, offlineUuid, killGrace, PRELOAD } from '../src/mineai/host.js';
 import { readUpstream, check as checkFetched, main as fetchMain } from '../scripts/mineai-fetch.mjs';
 import { startFakeMineAi, fakeHosts } from './fake-mineai.js';
 
@@ -57,9 +60,11 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   assert.deepEqual(toTheirs('craft', { item: 'wooden_pickaxe', n: 1 }, ctx).calls[0], { tool: 'craft_item', args: { items: [{ item_name: 'wooden_pickaxe', count: 1 }], temporary_workstation: true } });
   assert.deepEqual(toTheirs('craft', { item: 'birch_planks', n: 12 }, ctx).calls[0].args, { items: [{ item_name: 'birch_planks', count: 12 }] }, 'no table put down for a 2x2 recipe');
   assert.equal(toTheirs('craft', { item: 'wooden_pickaxe', n: 1 }, { ...ctx, inventory: { birch_log: 3 } }).calls[0].args.temporary_workstation, undefined, 'none carried: a table in reach, or their error');
-  assert.deepEqual(toTheirs('craft_batch', { items: [{ item: 'stick', n: 4 }, { item: 'stone_pickaxe', n: 1 }] }, ctx).calls[0].args.items, [{ item_name: 'stick', count: 4 }, { item_name: 'stone_pickaxe', count: 1 }]);
-  const smelt = toTheirs('smelt', { item: 'raw_iron', n: 30 }, ctx);
-  assert.deepEqual(smelt.calls[0].args, { item_name: 'raw_iron', count: 24, fuel_item_name: 'coal', temporary_workstation: true });
+  // one craft_item per item, in order (their planner would keep every listed item for itself)
+  assert.deepEqual(toTheirs('craft_batch', { items: [{ item: 'stick', n: 4 }, { item: 'stone_pickaxe', n: 1 }] }, ctx).calls.map((c) => c.args), [{ items: [{ item_name: 'stick', count: 4 }] }, { items: [{ item_name: 'stone_pickaxe', count: 1 }], temporary_workstation: true }]);
+  assert.match(toTheirs('smelt', { item: 'raw_iron', n: 30 }, ctx).refused.result, /not enough fuel: what you carry burns 20 of the 24 raw_iron/, '2 coal and 3 logs burn 16 + 4');
+  const smelt = toTheirs('smelt', { item: 'raw_iron', n: 30 }, { ...ctx, inventory: { ...inv, coal: 3 } });
+  assert.deepEqual(smelt.calls.map((c) => c.args), [{ item_name: 'raw_iron', count: 24, fuel_item_name: 'coal', temporary_workstation: true }]);
   assert.match(smelt.note, /smelts 24 of the 30/);
   assert.equal(toTheirs('smelt', { item: 'raw_iron', n: 3 }, { ...ctx, inventory: { raw_iron: 3, coal: 1 }, furnace: { x: 1, y: 2, z: 3 } }).calls[0].args.x, 1, 'a furnace nearby by its position');
   assert.equal(toTheirs('smelt', { item: 'raw_iron', n: 3 }, { ...ctx, inventory: { raw_iron: 3, coal: 1 } }).refused.code, 'NEED_ITEMS');
@@ -488,7 +493,7 @@ test('mineai kill switch: stop cancels their running action; end closes every ho
 
 test('mineai switch: BODY=mineai in startAgent gives guests Mine AI bodies and the extra skills; ours is the default', async () => {
   const dir = tmp('mineai-agent-');
-  const hosts = fakeHosts();
+  const hosts = fakeHosts(() => ({ inventory: { shield: 1 } }));
   const agent = await startAgent({ config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '', BODY: 'mineai', MINEAI_DIR: dir }), hosts, print: () => {}, loopStatsMs: 0 });
   const c = await mcpClient(agent.url);
   try {
@@ -568,4 +573,278 @@ test('mineai fetch: the pin, the patches and the stamp; their code stays out of 
   // nothing of theirs is checked in here
   const ours = spawnSync('git', ['ls-files', '.'], { cwd: ROOT, encoding: 'utf8' }).stdout;
   assert.doesNotMatch(ours, /\.ts\n/);
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// after the review (2026-10-08): the player name, stopping hosts, their data, and the skills' edges
+
+test('mineai host: the player name and the token stay off every command line; a runtime without 0004 or 0005 is refused', async () => {
+  const cmd = hostCommand(hostConfig(), { port: 27_123, username: 'Tst_rv_secret', instanceId: 'g1' });
+  assert.ok(!cmd.args.includes('--username'));
+  assert.doesNotMatch(cmd.args.join(' '), /Tst_rv_secret/);
+  const cfg = hostConfig();
+  const hosts = createHostManager({ config: cfg, log, spawnFn: fakeSpawn(), preload: null });
+  const h = await hosts.start({ instanceId: 'g1', username: 'Tst_rv_secret' });
+  try {
+    await h.ready;
+    const health = await h.health();
+    assert.equal(health.minecraft.username, 'Tst_rv_secret', 'the name went through MINEAI_USERNAME');
+    assert.ok(health.envKeys.includes('MINEAI_USERNAME'));
+  } finally { await h.close('test'); }
+  // their host without patch 0004 answers without the token: never used
+  const open = createHostManager({ config: hostConfig(), log, spawnFn: fakeSpawn({ FAKE_MODE: 'open' }), preload: null });
+  const ho = await open.start({ instanceId: 'g2', username: 'Tst_rv_k' });
+  await assert.rejects(ho.ready, /does not enforce its token \(patch 0004 missing/);
+  assert.equal(open.count, 0);
+  // without patch 0005 it would join under its default name
+  const other = createHostManager({ config: hostConfig(), log, spawnFn: fakeSpawn({ MINEAI_USERNAME: 'MineAI' }), preload: null });
+  const hn = await other.start({ instanceId: 'g3', username: 'Tst_rv_l' });
+  await assert.rejects(hn.ready, /joined under another player name \(patch 0005 missing/);
+  // their stop's allowance follows the watchdog window it waits for
+  assert.equal(killGrace(hostConfig({ MINEAI_UNRESPONSIVE_MS: '60000' }).mineai), 65_000);
+  assert.equal(createHostManager({ config: hostConfig(), log, spawnFn: fakeSpawn(), preload: null }).killGraceMs, 10_000);
+});
+
+/** spawn the fake host with the real preload in front of it (as their host.ts runs), keeping the flags */
+const preloadSpawn = (extraEnv = {}) => (exec, args, opts) => {
+  const i = args.findIndex((a) => a.endsWith('host.ts'));
+  return spawn(process.execPath, ['--import', pathToFileURL(PRELOAD).href, FAKE_HOST, ...args.slice(i + 1)], { ...opts, env: { ...opts.env, ...extraEnv } });
+};
+
+test('mineai host: with the real preload, a host that ends as theirs does (no process.exit) is gone at once; a child left behind dies with its group', async () => {
+  const cfg = hostConfig();
+  let child = null;
+  const hosts = createHostManager({ config: cfg, log, spawnFn: (...a) => { child = preloadSpawn({ FAKE_MODE: 'natural' })(...a); return child; } });
+  const h = await hosts.start({ instanceId: 'g1', username: 'Tst_rv_m' });
+  await h.ready;
+  const t0 = Date.now();
+  await h.close('test');
+  assert.ok(Date.now() - t0 < 3_000, `closed in ${Date.now() - t0} ms, not after the kill grace`);
+  assert.equal(alive(child.pid), false);
+
+  const pidFile = path.join(tmp('mineai-orphan-'), 'pid');
+  const orphans = createHostManager({ config: hostConfig(), log, spawnFn: preloadSpawn({ FAKE_MODE: 'orphan', FAKE_CHILD: pidFile }) });
+  const ho = await orphans.start({ instanceId: 'g2', username: 'Tst_rv_n' });
+  await ho.ready;
+  for (let i = 0; i < 20 && !fs.existsSync(pidFile); i++) await sleep(50);
+  const orphan = Number(fs.readFileSync(pidFile, 'utf8'));
+  assert.equal(alive(orphan), true);
+  await ho.close('test');
+  for (let i = 0; i < 20 && alive(orphan); i++) await sleep(50);
+  assert.equal(alive(orphan), false, 'what the host left behind is killed with its process group');
+});
+
+test('mineai host: a slot whose live-view ports are taken is skipped and tried again later', async () => {
+  const cfg = hostConfig();
+  const m = cfg.mineai;
+  const blocker = net.createServer();
+  await new Promise((r) => blocker.listen(m.portBase + m.ports, '127.0.0.1', r)); // slot 0's watch port
+  const hosts = createHostManager({ config: cfg, log, spawnFn: fakeSpawn(), preload: null });
+  const views = { watch: '/watch/x', eyes: '/eyes/x' };
+  const h = await hosts.start({ instanceId: 'g1', username: 'Tst_rv_o', views });
+  await h.ready;
+  assert.equal(h.port, m.portBase + 1);
+  assert.deepEqual(h.viewPorts, { watch: m.portBase + m.ports + 1, eyes: m.portBase + 2 * m.ports + 1 });
+  await new Promise((r) => blocker.close(r));
+  const h2 = await hosts.start({ instanceId: 'g2', username: 'Tst_rv_p', views });
+  await h2.ready;
+  assert.equal(h2.port, m.portBase, 'slot 0 was not kept busy');
+  await hosts.closeAll();
+});
+
+test('mineai host: a game\'s bot data goes when it ends, a failed game\'s is kept (the last N), old folders go at start', async () => {
+  // their folder for a bot: the offline UUID of its name (checked against a folder their runtime wrote)
+  assert.equal(offlineUuid('Tst_rv_gb9bf48'), '2518b873-58e5-3353-96a7-c99263913f54');
+  const root = path.join(tmp('mineai-data-'), 'data');
+  const seg = (name) => { const u = offlineUuid(name); return `${u}-${crypto.createHash('sha256').update(u).digest('hex').slice(0, 12)}`; };
+  const plant = (name, game) => {
+    const bot = path.join(root, 'server-host-x-port-1-seedHash-1-abc', 'bots', seg(name));
+    const inc = path.join(root, 'host-incidents', game);
+    for (const d of [bot, inc]) { fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, 'x'), 'x'); }
+    return [bot, inc];
+  };
+  const old = plant('Tst_rv_old', 'gold');
+  const ten = (Date.now() - 10 * 86_400_000) / 1000;
+  for (const d of old) { fs.utimesSync(path.join(d, 'x'), ten, ten); fs.utimesSync(d, ten, ten); }
+  const fresh = plant('Tst_rv_fresh', 'gfresh');
+  const cfg = hostConfig({ MINEAI_DATA_DIR: root, MINEAI_KEEP_FAILED: '1' });
+  const ok = createHostManager({ config: cfg, log, spawnFn: fakeSpawn(), preload: null });
+  assert.ok(old.every((d) => !fs.existsSync(d)), 'older than MINEAI_DATA_DAYS: gone at start');
+  assert.ok(fresh.every((d) => fs.existsSync(d)));
+  assert.equal(fs.statSync(root).mode & 0o777, 0o700, 'a folder only this user can open');
+
+  const done = plant('Tst_rv_q', 'g1');
+  const h = await ok.start({ instanceId: 'g1', username: 'Tst_rv_q' });
+  await h.ready;
+  await h.close('the game ended');
+  assert.ok(done.every((d) => !fs.existsSync(d)), 'a game that ended well leaves nothing');
+
+  // each game's host crashes once (its first start), then runs
+  const states = tmp('mineai-st-');
+  const crashOnce = (exec, args, opts) => fakeSpawn({ FAKE_MODE: 'crash', FAKE_STATE: path.join(states, args[args.indexOf('--instance-id') + 1]), FAKE_BAD_STARTS: '1' })(exec, args, opts);
+  const mgr = createHostManager({ config: cfg, log, spawnFn: crashOnce, preload: null });
+  const failedGame = async (n) => {
+    const dirs = plant(`Tst_rv_f${n}`, `gf${n}`);
+    const hf = await mgr.start({ instanceId: `gf${n}`, username: `Tst_rv_f${n}` });
+    const restarted = new Promise((r) => hf.on('restart', r));
+    await hf.ready;
+    await restarted;
+    await hf.close('the game ended');
+    return dirs;
+  };
+  const first = await failedGame(1);
+  assert.ok(first.every((d) => fs.existsSync(d)), 'a game whose host crashed is kept for diagnosis');
+  const second = await failedGame(2);
+  assert.ok(second.every((d) => fs.existsSync(d)));
+  assert.ok(first.every((d) => !fs.existsSync(d)), 'only the last MINEAI_KEEP_FAILED failed games are kept');
+  assert.deepEqual(mgr.kept().map((k) => k.game), ['gf2']);
+});
+
+test('mineai body: craft_batch crafts item by item; a table made in the list is put down for the next item and carried at the end', async () => {
+  const { body, fake } = await bodyOn({ inventory: { oak_log: 6 } });
+  try {
+    const r = await body.run('craft_batch', { items: [{ item: 'oak_planks', n: 12 }, { item: 'stick', n: 4 }, { item: 'crafting_table', n: 1 }, { item: 'wooden_pickaxe', n: 1 }] });
+    assert.equal(r.ok, true, r.result);
+    assert.equal(body.inventory().crafting_table, 1, 'the table came back');
+    assert.equal(body.inventory().wooden_pickaxe, 1);
+    const crafts = fake.tools('craft_item').map((c) => c.args);
+    assert.deepEqual(crafts.map((c) => c.items.map((i) => i.item_name)), [['oak_planks'], ['stick'], ['crafting_table'], ['wooden_pickaxe']]);
+    assert.deepEqual(crafts.map((c) => Boolean(c.temporary_workstation)), [false, false, false, true]);
+  } finally { await body.close(); }
+});
+
+test('mineai body: a body one of their reflexes holds is waited for; past the step\'s time it says what held it', async () => {
+  const { body, fake } = await bodyOn({ inventory: { oak_log: 3 } }, { timeouts: { craft: 2_500, collect: 60_000 } });
+  try {
+    fake.world.held = { owner: 'hunger_reflex', until: Date.now() + 1_200 };
+    const r = await body.run('craft', { item: 'oak_planks', n: 4 });
+    assert.equal(r.ok, true, r.result);
+    assert.ok(r.ms >= 1_000, `waited for the meal (${r.ms} ms)`);
+    fake.world.held = { owner: 'hostile_reflex', until: Date.now() + 60_000 };
+    const busy = await body.run('craft', { item: 'oak_planks', n: 4 });
+    assert.equal(busy.ok, false);
+    assert.equal(busy.code, 'HOSTILE_CONTACT');
+    assert.match(busy.result, /^did not start: the body was fighting a hostile mob on its own for \d s/);
+    const run = body.run('collect', { block: 'stone', n: 1 });
+    await sleep(300);
+    await body.stop('stop pressed');
+    const stopped = await run;
+    assert.equal(stopped.code, 'STOPPED');
+    assert.match(stopped.result, /^stopped: stop pressed \(before it started: the body was fighting a hostile mob\)/);
+    fake.world.held = null;
+  } finally { await body.close(); }
+});
+
+test('mineai body: an attack ends once the mob died, even with no drop, and is ok', async () => {
+  const { body, fake } = await bodyOn();
+  try {
+    fake.world.huntKillAfterMs = 300;
+    const t0 = Date.now();
+    const r = await body.run('attack', { target: 'zombie' });
+    assert.equal(r.ok, true, r.result);
+    assert.equal(r.result, 'fought the zombie and killed it');
+    assert.ok(Date.now() - t0 < 6_000, 'no chase after the next zombie');
+    assert.equal(fake.tools('cancel_foreground_action').length, 1);
+  } finally { await body.close(); }
+});
+
+test('mineai body: a crash before or during a step never reports the whole inventory as gained', async () => {
+  const { body, hosts, fake } = await bodyOn({ inventory: { cobblestone: 40, oak_planks: 12, raw_iron: 3 }, durations: { collect_block: 3_000 } });
+  const host = hosts.started[0];
+  try {
+    host.restarting = true;
+    const wait = await body.run('collect', { block: 'stone', n: 3 });
+    assert.equal(wait.code, 'NOT_STARTED');
+    assert.match(wait.result, /being started again/);
+    host.restarting = false;
+    const run = body.run('collect', { block: 'stone', n: 3 });
+    await sleep(400);
+    host.emit('crash', { why: 'test' });
+    await fake.close();
+    const mid = await run;
+    assert.equal(mid.ok, false);
+    assert.match(mid.result, /stopped in the middle of it .* send the step again in a few seconds/);
+    assert.deepEqual(mid.delta, {});
+    const after = await body.run('collect', { block: 'stone', n: 3 }); // the host still down: the call itself fails
+    assert.equal(after.ok, false);
+    assert.deepEqual(after.delta, {}, 'not +40 cobblestone, +12 oak_planks, +3 raw_iron');
+  } finally { await body.close(); }
+});
+
+test('mineai body: what is worn or in the off-hand stays in the state, and an equip is not a loss', async () => {
+  assert.deepEqual(equipmentOfStacks([{ name: 'shield', count: 1, location: 'off-hand' }, { name: 'dirt', count: 3, location: 'main' }]), { 'off-hand': { name: 'shield', count: 1 } });
+  const { body } = await bodyOn({ inventory: { shield: 1, iron_chestplate: 1, dirt: 2 } });
+  try {
+    const r = await body.run('equip', { item: 'shield', to: 'off-hand' });
+    assert.equal(r.ok, true, r.result);
+    assert.deepEqual(r.delta, {}, 'not shield -1');
+    await body.run('equip', { item: 'iron_chestplate' });
+    assert.match(body.state(), /\nwearing: iron_chestplate \(torso\); off-hand: shield\n/);
+    assert.deepEqual(body.equipment(), { 'off-hand': 'shield', torso: 'iron_chestplate' });
+    assert.deepEqual(body.inventory(), { dirt: 2 }, 'a craft never takes what is worn');
+  } finally { await body.close(); }
+});
+
+test('mineai skills: no lava poured, nothing poured at spawn or onto a player, no chest of another game opened', () => {
+  const ctx = { inventory: {}, spawn: { x: 0, y: 64, z: 0 }, players: [{ position: { x: 200, y: 64, z: 200 } }], gameId: 'gA', containerOwner: (p) => (p.x === 7 ? 'gB' : p.x === 8 ? 'gA' : null) };
+  const pour = (liquid, pos) => toTheirs('bucket', { action: 'pour', liquid, pos }, ctx);
+  assert.equal(pour('lava', { x: 500, y: 64, z: 500 }).refused.code, 'BAD_ARGS');
+  assert.match(pour('water', { x: 10, y: 64, z: 10 }).refused.result, new RegExp(`within ${SPAWN_GUARD} blocks of the world spawn`));
+  assert.match(pour('water', { x: 201, y: 64, z: 201 }).refused.result, /another player is within 4 blocks/);
+  assert.doesNotMatch(pour('water', { x: 201, y: 64, z: 201 }).refused.result, /Tst_|gB/, 'no player names');
+  assert.deepEqual(pour('water', { x: 300, y: 64, z: 300 }).calls[0].args, { action: 'pour', liquid: 'water', x: 300, y: 64, z: 300 });
+  assert.equal(toTheirs('bucket', { action: 'fill', liquid: 'lava' }, ctx).calls[0].args.liquid, 'lava', 'filling stays allowed');
+  const chest = (x, action = 'withdraw') => toTheirs('chest', { action, pos: { x, y: 64, z: 0 }, items: [{ item: 'dirt', n: 1 }] }, ctx);
+  assert.match(chest(7).refused.result, /put down by another player's bot/);
+  assert.equal(chest(7, 'inspect').refused.code, 'BAD_ARGS');
+  assert.equal(chest(8).calls[0].tool, 'use_container', 'its own');
+  assert.equal(chest(9).calls[0].tool, 'use_container', 'one nobody put down (a village chest)');
+});
+
+test('mineai body: a chest one game put down is closed to another game until the first ends; a pour near where it joined is refused', async () => {
+  const hosts = fakeHosts(() => ({ inventory: { chest: 1, water_bucket: 1, dirt: 4 } }));
+  const a = createMineAiBody({ config, log, hosts, gameId: 'gchestA', username: 'Tst_rv_ca' });
+  const b = createMineAiBody({ config, log, hosts, gameId: 'gchestB', username: 'Tst_rv_cb' });
+  await Promise.all([a.ready, b.ready]);
+  try {
+    assert.equal((await a.run('place', { block: 'chest', pos: { x: 30, y: 64, z: 30 } })).ok, true);
+    const taken = await b.run('chest', { action: 'withdraw', pos: { x: 30, y: 64, z: 30 }, items: [{ item: 'dirt', n: 1 }] });
+    assert.equal(taken.code, 'BAD_ARGS');
+    assert.equal((await a.run('chest', { action: 'deposit', pos: { x: 30, y: 64, z: 30 }, items: [{ item: 'dirt', n: 1 }] })).ok, true, 'its own');
+    const spawnPour = await b.run('bucket', { action: 'pour', pos: { x: 12, y: 64, z: 0 } });
+    assert.equal(spawnPour.code, 'BAD_ARGS', 'the bot joined at 10 64 -4: the world spawn');
+    await a.close();
+    assert.equal((await b.run('chest', { action: 'inspect', pos: { x: 30, y: 64, z: 30 } })).ok, true, 'its game ended');
+  } finally { await a.close(); await b.close(); }
+});
+
+test('mineai smelt: fuel one kind after another, in the order the check burns it', () => {
+  assert.equal(FUEL_ORDER.indexOf('stick') > FUEL_ORDER.indexOf('oak_planks') && FUEL_ORDER.indexOf('stick') < FUEL_ORDER.indexOf('oak_log'), true);
+  const have = (inv) => (n) => inv[n] ?? 0;
+  assert.deepEqual(fuelPlan(have({ coal: 1, oak_planks: 4 }), 'raw_iron', 12), [{ name: 'coal', units: 1, covers: 8 }, { name: 'oak_planks', units: 3, covers: 4 }]);
+  assert.deepEqual(fuelPlan(have({ stick: 4, oak_log: 2 }), 'raw_iron', 2), [{ name: 'stick', units: 4, covers: 2 }]);
+  assert.deepEqual(fuelPlan(have({ stick: 3 }), 'raw_iron', 5), [{ name: 'stick', units: 2, covers: 1 }], 'what there is');
+  const p = createPlanner();
+  const mixed = { raw_iron: 12, coal: 1, oak_planks: 4, furnace: 1 };
+  assert.equal(p.check([{ skill: 'smelt', args: { item: 'raw_iron', n: 12 } }], { inventory: mixed, temporaryStations: true, table: false, furnace: false }).ok, true);
+  assert.deepEqual(toTheirs('smelt', { item: 'raw_iron', n: 12 }, { inventory: mixed }).calls.map((c) => [c.args.fuel_item_name, c.args.count]), [['coal', 8], ['oak_planks', 4]]);
+  // sticks first, the logs kept for the table: the check and the body agree
+  const sticks = { raw_iron: 2, stick: 4, oak_log: 2, furnace: 1 };
+  const plan = p.check([{ skill: 'smelt', args: { item: 'raw_iron', n: 2 } }, { skill: 'craft', args: { item: 'crafting_table', n: 1 } }], { inventory: sticks, temporaryStations: true, table: false, furnace: false });
+  assert.equal(plan.ok, true, JSON.stringify(plan.missing));
+  assert.deepEqual(toTheirs('smelt', { item: 'raw_iron', n: 2 }, { inventory: sticks }).calls.map((c) => c.args.fuel_item_name), ['stick']);
+});
+
+test('mineai skills: Muse reads what this body\'s craft, smelt, collect and go_to do; ours keep their own words', () => {
+  const desc = (list, name) => list.find((t) => t.function.name === name).function.description;
+  assert.match(desc(MINEAI_SKILLS.mcpSkills, 'smelt'), /one furnace and wait until all are done/);
+  assert.match(desc(MINEAI_SKILLS.mcpSkills, 'collect'), /every loaded chunk/);
+  assert.match(desc(MINEAI_SKILLS.mcpSkills, 'craft_batch'), /one after another/);
+  assert.match(desc(MCP_SKILLS, 'smelt'), /Loads up to 3 furnaces/, 'our body unchanged');
+  assert.deepEqual(MINEAI_SKILLS.schemas.smelt, MCP_SKILLS.find((t) => t.function.name === 'smelt').function.parameters, 'the same arguments');
+});
+
+test('mineai switch: the agent refuses a runtime folder that is not the pin plus every patch', async () => {
+  const dir = tmp('mineai-unbuilt-');
+  await assert.rejects(startAgent({ config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '', BODY: 'mineai', MINEAI_DIR: dir }), print: () => {}, loopStatsMs: 0 }), /BODY=mineai: .*has no \.muse-mineai\.json.*fetch-and-patch\.sh/);
 });

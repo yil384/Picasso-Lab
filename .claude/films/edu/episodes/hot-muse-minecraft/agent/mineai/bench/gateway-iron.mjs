@@ -78,12 +78,16 @@ function processTree() {
     }
   }
   rows ??= procRows();
-  const under = new Set([agentPid]);
+  // under an init (compose init: true, docker inspect gives its pid) the agent is its node child
+  const self = rows.find((r) => r.pid === agentPid);
+  const agent = self && !/src\/index\.js/.test(self.cmd) ? rows.find((r) => r.ppid === agentPid && /src\/index\.js/.test(r.cmd))?.pid ?? agentPid : agentPid;
+  const under = new Set([agent]);
   let grew = true;
+  // the hosts run in process groups of their own, but stay the agent's children
   while (grew) { grew = false; for (const r of rows) if (!under.has(r.pid) && under.has(r.ppid)) { under.add(r.pid); grew = true; } }
   return rows.filter((r) => under.has(r.pid)).map((r) => ({
     ...r,
-    role: r.pid === agentPid ? 'agent' : /host\.ts/.test(r.cmd) ? 'host' : r.ppid !== agentPid && /bun|node/.test(r.cmd) ? 'runtime' : 'other',
+    role: r.pid === agent ? 'agent' : /host\.ts/.test(r.cmd) ? 'host' : r.ppid !== agent && /bun|node/.test(r.cmd) ? 'runtime' : 'other',
   }));
 }
 const samples = [];

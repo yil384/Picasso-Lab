@@ -10,12 +10,11 @@
 // (warnings) instead of refusing: where the bot ends up is only roughly known.
 
 import { registryFor, requireMc } from './mc.js';
-import { SMELT, FUEL, PLANKS, LOGS, WOODS, blueprintBlockCount } from './game.js';
+import { SMELT, FUEL, FUEL_ORDER, PLANKS, LOGS, WOODS, blueprintBlockCount, fuelPlan } from './game.js';
 import { SMELT_PER_CALL, CRAFT_BATCH_MAX } from './contracts.js';
 
-// the smelt skill's fuel order (src/skills/smelt.js chooseFuel): cheapest first, coal before wood, planks before logs;
-// for a load split over several furnaces, fuel that burns out with a few items first, never sticks (SMALL_ORDER)
-const FUEL_ORDER = ['coal', 'charcoal', 'coal_block', ...PLANKS, 'stick', ...LOGS];
+// the smelt skill's fuel order is FUEL_ORDER (src/game.js: cheapest first, coal before wood, planks before logs); for
+// a load split over several furnaces, fuel that burns out with a few items first, never sticks (SMALL_ORDER)
 const SMALL_ORDER = [...PLANKS, 'charcoal', 'coal', 'coal_block', ...LOGS];
 // the smelt skill's parallel load (src/skills/smelt.js MAX_PARALLEL) and the cobblestone an extra furnace takes
 const MAX_PARALLEL = 3;
@@ -279,10 +278,10 @@ export function createPlanner({ version = '1.21.4' } = {}) {
     const lack = want - have(st, item);
     if (lack > 0) { miss({ item, need: lack }); add(st, item, lack); }
     if (!hasFurnace(st)) simCraft(st, 'furnace', 1, ops, (x) => miss({ ...x, for: 'a furnace' }), 'a furnace', true);
-    if (st.keep) { // one furnace, put down and picked up again within the step, one fuel; the output comes at once
-      const fuel = chooseFuel(st, item, want);
-      if (fuel) add(st, fuel.name, -fuel.units);
-      const left = want - (fuel?.covers ?? 0);
+    if (st.keep) { // one furnace, put down and picked up again, one fuel after another (a call each); the output comes at once
+      const fuels = fuelPlan((name) => have(st, name), item, want);
+      for (const f of fuels) add(st, f.name, -f.units);
+      const left = want - fuels.reduce((k, f) => k + f.covers, 0);
       if (left > 0) miss({ item: 'coal', need: Math.ceil(left / FUEL.coal), note: `fuel for ${left} more ${item}: coal or charcoal (1 per 8 items), or planks or logs (2 per 3 items)` });
       add(st, item, -want);
       add(st, SMELT[item], want);

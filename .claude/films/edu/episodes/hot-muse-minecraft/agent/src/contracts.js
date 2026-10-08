@@ -215,15 +215,18 @@ export function validateArgs(tool, args, schemas = SKILL_SCHEMAS) {
  * The skills the MCP endpoint offers in play and play_sequence: the 10 tools and craft_batch, plus a body's own extra
  * skills (src/mineai/skills.js for BODY=mineai). The brain's tools, the web page and openapi.json keep the 10.
  * @param {Array<[string, string, object]>} [extra]  [name, description, parameters JSON Schema] per extra skill
+ * @param {Record<string, string>} [descriptions]  other descriptions for some of the 10 skills and craft_batch
  * @returns {{names: string[], schemas: Record<string, object>, mcpSkills: object[], validate: (tool: string, args: unknown) => ArgCheck}}
  */
-export function skillSet(extra = []) {
-  if (!extra.length) return DEFAULT_SKILLS;
+export function skillSet(extra = [], descriptions = {}) {
+  if (!extra.length && !Object.keys(descriptions).length) return DEFAULT_SKILLS;
   const schemas = deepFreeze({ ...SKILL_SCHEMAS, ...Object.fromEntries(extra.map(([name, , params]) => [name, params])) });
+  // a body whose skills work differently says so in their descriptions (the arguments stay the same)
+  const base = MCP_SKILLS.map((t) => (descriptions[t.function.name] ? { ...t, function: { ...t.function, description: descriptions[t.function.name] } } : t));
   return Object.freeze({
     names: Object.freeze([...SKILL_NAMES, ...extra.map(([name]) => name)]),
     schemas,
-    mcpSkills: deepFreeze([...MCP_SKILLS, ...extra.map(([name, description, parameters]) => ({ type: 'function', function: { name, description, parameters } }))]),
+    mcpSkills: deepFreeze([...base, ...extra.map(([name, description, parameters]) => ({ type: 'function', function: { name, description, parameters } }))]),
     validate: (tool, args) => validateArgs(tool, args, schemas),
   });
 }
@@ -366,6 +369,8 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {boolean} isDay
  * @property {Record<string, number>} inventory
  * @property {string|null} held
+ * @property {Record<string, string>} [equipment]  what is worn and in the off-hand, by slot (head, torso, legs, feet,
+ *   off-hand): BODY=mineai only; those items are not in inventory
  * @property {Array<{name:string, count:number, nearest:{x:number,y:number,z:number}, distance:number, capped?:true}>} nearbyBlocks
  *   notable blocks within 32 (wood, ores, stone, crafting_table, furnace, chest, water, lava); count stops at 64 and
  *   capped:true then means "64 or more"

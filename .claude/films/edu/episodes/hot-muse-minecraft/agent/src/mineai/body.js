@@ -16,7 +16,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { inventoryDelta } from '../contracts.js';
 import { renderState, describeCall, describeDelta } from '../state.js';
 import { NOTABLE_BLOCKS } from '../state.js';
-import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, toTheirs, fromTheirs } from './skills.js';
+import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, toTheirs, fromTheirs } from './skills.js';
 
 /** Every call of ours says why in one sentence (their rationale is required and goes into their own log only). */
 const RATIONALE = 'Requested by the player through the game gateway.';
@@ -30,6 +30,14 @@ const SCAN_NAMES = [
   ['oak_log', 'spruce_log', 'birch_log', 'jungle_log', 'acacia_log', 'dark_oak_log', 'mangrove_log', 'cherry_log'],
   ['coal_ore', 'iron_ore', 'copper_ore', 'crafting_table', 'furnace', 'chest', 'gravel', 'sand'],
 ];
+const BUSY_RETRY_MS = 500; // a body one of their reflexes holds (no action of ours runs): submit again this often
+const ATTACK_POLL_MS = 2_000; // an attack reads its fight this often, to end it once the mob died
+const KILLED = 'the mob died';
+/** Their reflexes (the body's owner while one acts), in our words. */
+const OWNERS = {
+  hostile_reflex: 'fighting a hostile mob', hunger_reflex: 'eating', fire_reflex: 'getting out of fire',
+  breath_reflex: 'swimming up for air', recover_footing: 'getting its footing back', dragon_reflex: 'dodging the dragon',
+};
 const RADIUS = 32;
 const REACH = 4.5; // a crafting table their craft uses without walking
 const STATION_RADIUS = 24;
@@ -48,6 +56,25 @@ export function inventoryOfStacks(stacks = []) {
   }
   return out;
 }
+
+const WORN = ['head', 'torso', 'legs', 'feet', 'off-hand'];
+/** {slot: {name, count}} of what is worn and in the off-hand (their status lists those stacks by slot). */
+export function equipmentOfStacks(stacks = []) {
+  const out = {};
+  for (const s of stacks) if (s?.name && WORN.includes(s.location)) out[s.location] = { name: s.name, count: Number(s.count) || 1 };
+  return out;
+}
+
+/** Carried plus worn: what an equip moves stays in it, so a delta over it shows no loss. */
+export function allItems(inventory = {}, equipment = {}) {
+  const out = { ...inventory };
+  for (const { name, count } of Object.values(equipment)) out[name] = (out[name] ?? 0) + count;
+  return out;
+}
+
+/** Chests, trapped chests and barrels a game's bot put down, per Minecraft server: no other game opens them. */
+const CONTAINERS = new Map(); // "host:port" -> Map("x,y,z" -> game id)
+const keyOf = (p) => `${Math.floor(p.x)},${Math.floor(p.y)},${Math.floor(p.z)}`;
 
 /** The default way to reach a host: the MCP SDK's client over streamable HTTP, with the host's token. */
 async function connectSdk(host) {
@@ -83,7 +110,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   let connecting = null;
   let status = null; // view_status situation
   let statusAt = 0;
-  let latest = { position: null, health: 20, food: 20, inventory: {}, held: null }; // the newest of status and /health
+  let latest = { position: null, health: 20, food: 20, inventory: {}, equipment: {}, held: null }; // the newest of status and /health
+  let spawnAt = null; // where the bot joined, before the spread: the world spawn, give or take
+  let crashes = 0;
+  const server = `${config.mc.host}:${config.mc.port}`;
+  if (!CONTAINERS.has(server)) CONTAINERS.set(server, new Map());
+  const containers = CONTAINERS.get(server);
   let lastDeath = null;
   let policyRevision = null;
   let scan = { blocks: [], at: 0, from: null };
@@ -108,6 +140,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     on(name, fn) { emitter.on(name, fn); return () => emitter.off(name, fn); },
     setGoal(g) { goal = g ?? null; },
     inventory: () => ({ ...latest.inventory }),
+    /** What is worn and in the off-hand, {slot: name} (not in inventory(): crafts do not take it). */
+    equipment: () => Object.fromEntries(Object.entries(latest.equipment ?? {}).map(([slot, x]) => [slot, x.name])),
     smelting: () => ({}), // their smelt waits for the whole load: nothing cooks between calls
     stationNear(name) {
       if ((latest.inventory[name] ?? 0) > 0) return true;
@@ -150,9 +184,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
 
   /** One tool call on the host: its JSON data, or {state: 'error', error} when the call itself failed. */
   async function rpc(tool, args, timeoutMs = 30_000) {
-    const c = await ensureClient();
     let r;
     try {
+      const c = await ensureClient(); // fails while a crashed host is being started again
       r = await c.callTool({ name: tool, arguments: { ...args, rationale: RATIONALE, response_format: 'json' } }, undefined, { timeout: timeoutMs });
     } catch (err) {
       return { state: 'error', error: String(err?.message ?? err) };
@@ -171,7 +205,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       ...(mc.position ? { position: mc.position } : {}),
       ...(Number.isFinite(mc.health) ? { health: mc.health } : {}),
       ...(Number.isFinite(mc.food) ? { food: mc.food } : {}),
-      ...(Array.isArray(mc.inventory) && !body.busy ? { inventory: inventoryOfStacks(mc.inventory) } : {}),
+      ...(Array.isArray(mc.inventory) && !body.busy ? { inventory: inventoryOfStacks(mc.inventory), equipment: equipmentOfStacks(mc.inventory) } : {}),
     };
   }
 
@@ -189,6 +223,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       health: s.vitals?.health ?? latest.health,
       food: s.vitals?.food ?? latest.food,
       inventory: inventoryOfStacks(stacks),
+      equipment: equipmentOfStacks(stacks),
       held: stacks.find((x) => x.held)?.name ?? null,
     };
     const death = s.lastDeath ? JSON.stringify(s.lastDeath) : null;
@@ -242,6 +277,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       isDay: s.clock ? s.clock.phase === 'day' : true,
       inventory: { ...latest.inventory },
       held: latest.held,
+      equipment: Object.fromEntries(Object.entries(latest.equipment ?? {}).map(([slot, x]) => [slot, x.count > 1 ? `${x.name} ${x.count}` : x.name])),
       nearbyBlocks,
       mobs,
       goal,
@@ -261,11 +297,18 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     furnace: (() => { const f = scan.blocks.find((b) => b.name === 'furnace'); return f && latest.position && dist(f.nearest, latest.position) <= STATION_RADIUS ? f.nearest : null; })(),
     policyRevision,
     maxTravel: config.body?.maxTravel ?? 256,
+    spawn: spawnAt,
+    players: (status?.nearby?.players ?? []).map((p) => ({ position: p?.position ?? null })), // never their names
+    gameId,
+    containerOwner: (pos) => containers.get(keyOf(pos)) ?? null,
   });
 
   /**
    * Submit one action and wait for its final result (their result gate: always read it before the next), cancelling
-   * it on stop or when the skill's time runs out. Returns {output, stopped} or {error}.
+   * it on stop or when the skill's time runs out. A body one of their reflexes holds (a fight, a meal: no action of ours
+   * runs, so their refusal carries no action id) is waited for and the action submitted again. An attack reads its
+   * fight as it goes and ends it once the mob died (their hunt would chase the next one for a drop the first did not
+   * give). Returns {output, stopped} or {error, code (theirs), ours (our code), said (our text)}.
    */
   async function act(call, deadline, ctl) {
     if (DIRECT_TOOLS.has(call.tool)) { // answers at once with the action's output
@@ -277,27 +320,50 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const waitFor = () => Math.max(0, Math.min(WAIT_MAX_MS, left()));
     // a short first wait: a stop needs the action's id, which only the reply to the submission carries
     const first = () => Math.min(FIRST_WAIT_MS, waitFor());
-    let data = await rpc(call.tool, { ...call.args, submission_id: submission, wait_timeout_ms: first() }, first() + RPC_SLACK_MS);
+    let tries = 0;
+    const submit = () => rpc(call.tool, { ...call.args, submission_id: tries++ ? `${submission}-${tries}` : submission, wait_timeout_ms: first() }, first() + RPC_SLACK_MS);
+    let data = await submit();
     // a result of an earlier action not read yet (a call cut short), or an action still running: read it, then once more
     if (data.state === 'refused' && (data.unretrievedActionId || data.activeActionId)) {
       const other = data.unretrievedActionId ?? data.activeActionId;
       if (data.activeActionId) await rpc('cancel_foreground_action', { action_id: other, reason: 'an earlier step was left running' });
       await rpc('wait_for_action', { action_id: other, timeout_ms: 15_000 }, 35_000);
-      data = await rpc(call.tool, { ...call.args, submission_id: `${submission}-b`, wait_timeout_ms: first() }, first() + RPC_SLACK_MS);
+      data = await submit();
+    }
+    // the body is busy looking after itself (one of their reflexes owns it): wait for it, up to the skill's limit
+    const heldBy = (d) => (d.state === 'refused' && d.code === 'ACTION_BUSY' && !d.activeActionId ? /body owner: ([a-z_]+)/.exec(String(d.error ?? ''))?.[1] ?? 'its own business' : null);
+    if (heldBy(data)) {
+      const since = Date.now();
+      let owner = heldBy(data);
+      while (owner && !ctl.stopped && left() > 0) {
+        await new Promise((r) => { setTimeout(r, Math.min(BUSY_RETRY_MS, Math.max(50, left()))); });
+        if (ctl.stopped || left() <= 0) break;
+        data = await submit();
+        owner = heldBy(data) ?? null;
+      }
+      if (owner) {
+        const doing = OWNERS[owner] ?? owner.replace(/_/g, ' ');
+        const s = Math.round((Date.now() - since) / 1000);
+        if (ctl.stopped) return { error: data.error, code: data.code, ours: 'STOPPED', said: `stopped: ${ctl.stopped} (before it started: the body was ${doing})` };
+        return { error: data.error, code: data.code, ours: owner === 'hostile_reflex' || owner === 'dragon_reflex' ? 'HOSTILE_CONTACT' : 'FAILED', said: `did not start: the body was ${doing} on its own for ${s} s, until the step's time ran out; send it again` };
+      }
     }
     let cancelled = false;
-    const cancel = async (why) => {
+    // self: a cancel of our own making that is not a stop (an attack whose mob died)
+    const cancel = async (why, { self = false } = {}) => {
       if (cancelled || !ctl.actionId) return;
       cancelled = true;
-      ctl.stopped ??= why;
+      if (!self) ctl.stopped ??= why;
       await rpc('cancel_foreground_action', { action_id: ctl.actionId, reason: String(why).slice(0, 200) });
     };
     ctl.cancel = cancel;
+    const deaths = (d) => Number(d?.progress?.request?.evidence?.checkpoint?.targetDeathsObserved) || 0;
     while (data.state === 'accepted' || data.state === 'pending') {
       ctl.actionId ??= data.actionId;
-      if (ctl.stopped) await cancel(ctl.stopped);
+      if (ctl.attack && !cancelled && deaths(data) > 0) { ctl.killed = deaths(data); await cancel(KILLED, { self: true }); }
+      else if (ctl.stopped) await cancel(ctl.stopped);
       else if (left() <= 0) await cancel(`timed out after ${Math.round((timeouts[ctl.skill] ?? 60_000) / 1000)} s`);
-      const ms = cancelled ? 15_000 : Math.max(1_000, waitFor());
+      const ms = cancelled ? 15_000 : ctl.attack ? Math.max(500, Math.min(ATTACK_POLL_MS, waitFor())) : Math.max(1_000, waitFor());
       data = await rpc('wait_for_action', { action_id: ctl.actionId, timeout_ms: ms }, ms + RPC_SLACK_MS);
     }
     if (data.state === 'settled' || data.state === 'storage_failed') return { output: data.output, stopped: ctl.stopped };
@@ -309,52 +375,66 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const t0 = Date.now();
     if (ended) return { ok: false, result: 'not connected to the game', delta: {}, ms: 0, code: 'NOT_STARTED' };
     if (!body.connected) return { ok: false, result: 'not in the game yet', delta: {}, ms: 0, code: 'NOT_STARTED' };
+    if (host?.restarting) return { ok: false, result: 'the body is being started again after it stopped; send the step again in a few seconds', delta: {}, ms: 0, code: 'NOT_STARTED' };
     if (body.busy) return { ok: false, result: `busy: ${doing ?? 'a skill'} is still running`, delta: {}, ms: 0 };
     const v = MINEAI_SKILLS.validate(tool, args ?? {});
     if (!v.ok) return { ok: false, result: `bad arguments: ${v.error}`, delta: {}, ms: 0, code: 'BAD_ARGS' };
     body.busy = true;
     doing = describeCall(tool, v.args);
-    const ctl = { skill: tool, actionId: null, stopped: null, cancel: null };
+    const ctl = { skill: tool, actionId: null, stopped: null, cancel: null, attack: null, killed: 0 };
     current = ctl;
     emit('skill', { phase: 'start', tool, args: v.args });
     let r;
-    let before = {};
+    // the inventory change is counted from here: carried and worn (an equip moves an item, it does not lose it); a
+    // status read that fails keeps the copy from before, never an empty one
+    let before = allItems(latest.inventory, latest.equipment);
     let deathBefore = lastDeath;
+    const crashesBefore = crashes;
+    const restartText = (why) => `the body stopped in the middle of it (${why}) and is being started again; send the step again in a few seconds`;
     try {
       await refresh();
-      before = { ...latest.inventory };
+      before = allItems(latest.inventory, latest.equipment);
       deathBefore = lastDeath;
       const plan = toTheirs(tool, v.args, context());
       if (plan.local === 'state') r = { ok: true, result: renderState(snapshot()), code: null };
       else if (plan.refused) r = plan.refused;
       else {
         const deadline = t0 + (timeouts[tool] ?? 60_000);
+        ctl.attack = plan.attack ?? null;
         const parts = [];
+        let rescued = false;
         for (const call of plan.calls) {
           if (ctl.stopped) break;
           ctl.actionId = null;
           const out = await act(call, deadline, ctl);
           if (out.error) {
-            const down = /\[(RUNTIME_EXITED|RUNTIME_UNRESPONSIVE)\]/.exec(out.error)?.[1];
-            const said = down ? `the body stopped in the middle of it (${down}) and is being started again; send the step again in a few seconds` : `failed: ${String(out.error).replace(/^MCP error -?\d+: /, '').slice(0, 300)}`;
-            parts.push({ ok: false, result: said, code: out.code === 'INVALID_ARGUMENTS' ? 'BAD_ARGS' : 'FAILED' });
+            const down = /\[(RUNTIME_EXITED|RUNTIME_UNRESPONSIVE)\]/.exec(out.error)?.[1] ?? (crashes !== crashesBefore ? 'its host crashed' : null);
+            const said = down ? restartText(down) : out.said ?? `failed: ${String(out.error).replace(/^MCP error -?\d+: /, '').slice(0, 300)}`;
+            parts.push({ ok: false, result: said, code: down ? 'FAILED' : out.ours ?? (out.code === 'INVALID_ARGUMENTS' ? 'BAD_ARGS' : 'FAILED') });
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped });
-          // an attack is a hunt for one drop: a fight won without that drop still counts
-          if (!res.ok && plan.attack && out.output?.result?.hunt?.targetDeathsObserved > 0) res = { ok: true, result: `fought the ${plan.attack} and killed it (${res.result})`, code: null };
+          // an attack is a hunt for one drop, ended once the mob died: a fight won without that drop still counts
+          const kills = Math.max(ctl.killed, Number(out.output?.result?.hunt?.targetDeathsObserved) || 0);
+          if (!res.ok && plan.attack && kills > 0) {
+            const got = Number(out.output?.result?.hunt?.gained) || 0;
+            res = { ok: true, result: `fought the ${plan.attack} and killed it${got > 0 ? `; picked up ${got} ${out.output.result.hunt.drop ?? ''}`.trimEnd() : ''}`, code: null };
+            rescued = true;
+          }
+          if (res.ok && call.tool === 'place_block' && CONTAINER_BLOCKS.has(call.args.block_name)) containers.set(keyOf(call.args), gameId);
           parts.push(res);
           if (!res.ok) break;
         }
         const failed = parts.find((x) => !x.ok);
         const text = parts.map((x) => x.result).join('; ') || (ctl.stopped ? `stopped: ${ctl.stopped}` : 'nothing ran');
-        r = { ok: !failed && !ctl.stopped, result: `${text}${plan.note ? ` (${plan.note})` : ''}`, code: failed?.code ?? (ctl.stopped ? 'STOPPED' : null) };
+        const stopped = ctl.stopped && !rescued;
+        r = { ok: !failed && !stopped, result: `${text}${plan.note ? ` (${plan.note})` : ''}`, code: failed?.code ?? (stopped ? 'STOPPED' : null) };
       }
     } catch (err) {
-      r = { ok: false, result: `error: ${String(err?.message ?? err).slice(0, 300)}`, code: 'FAILED' };
+      r = { ok: false, result: crashes !== crashesBefore ? restartText('its host crashed') : `error: ${String(err?.message ?? err).slice(0, 300)}`, code: 'FAILED' };
     }
     try { await refresh(); } catch { /* the state stays as it was */ }
-    const delta = inventoryDelta(before, latest.inventory);
+    const delta = inventoryDelta(before, allItems(latest.inventory, latest.equipment));
     if (lastDeath && lastDeath !== deathBefore) {
       const at = status?.lastDeath?.position;
       r = { ok: false, result: `you died${at ? ` at ${floorPos(at).x} ${floorPos(at).y} ${floorPos(at).z}` : ''}; your items dropped there (pick_up with death_items: true within 5 minutes). ${r.result}`, code: 'DIED' };
@@ -395,6 +475,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       await stop('the game ended').catch(() => {});
       await dropClient();
       await host?.close('the game ended');
+      for (const [k, owner] of containers) if (owner === gameId) containers.delete(k);
       end('the game ended');
     })();
     return closed;
@@ -412,6 +493,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       if (!ended && Date.now() - statusAt > STATUS_MS) refresh().catch(() => {});
     });
     host.on('crash', ({ why }) => {
+      crashes += 1;
       dropClient();
       emit('error', { message: `the body stopped (${why}); starting it again` });
       event('mineai_body_crash', { why });
@@ -421,6 +503,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     await host.ready;
     if (closed) throw new Error('the game ended while the bot was joining');
     await refresh();
+    spawnAt ??= latest.position ? { ...latest.position } : null; // before the spread moves it (src/index.js)
     body.connected = true;
     event('bot_ready', { username, body: 'mineai', pos: latest.position ? floorPos(latest.position) : null });
     emit('ready', {});

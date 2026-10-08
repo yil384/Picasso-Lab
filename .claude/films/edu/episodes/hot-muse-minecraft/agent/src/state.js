@@ -197,6 +197,13 @@ export function renderState(s) {
   lines.push(`holding: ${s.held ?? 'nothing'}`);
   const inv = Object.entries(s.inventory).sort(([a], [b]) => a.localeCompare(b));
   lines.push(`inventory: ${inv.length ? inv.map(([k, v]) => `${k} ${v}`).join(', ') : 'empty'}`);
+  // a body that reports what is worn (BODY=mineai): armor by slot, and the off-hand
+  const worn = Object.entries(s.equipment ?? {});
+  if (worn.length) {
+    const armor = worn.filter(([slot]) => slot !== 'off-hand').map(([slot, item]) => `${item} (${slot})`);
+    const off = s.equipment['off-hand'];
+    lines.push(`wearing: ${armor.length ? armor.join(', ') : 'no armor'}${off ? `; off-hand: ${off}` : ''}`);
+  }
   lines.push(`nearby blocks (within ${RADIUS}): ${s.nearbyBlocks.length
     ? s.nearbyBlocks.map((b) => `${b.name} ${b.count}${b.capped ? '+' : ''} (nearest ${b.distance} away at ${xyz(b.nearest)})`).join('; ')
     : 'nothing notable'}`);

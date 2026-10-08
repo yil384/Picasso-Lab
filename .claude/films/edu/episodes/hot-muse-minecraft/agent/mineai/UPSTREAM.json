@@ -8,6 +8,8 @@
     "patches/0001-craft-by-confirmed-window-clicks.patch",
     "patches/0002-confirmed-crafting-tests.patch",
     "patches/0003-unresponsive-window-from-env.patch",
-    "patches/0004-host-token.patch"
+    "patches/0004-host-token.patch",
+    "patches/0005-player-name-off-the-command-line.patch",
+    "patches/0006-runtime-exits-once-stopped.patch"
   ]
 }

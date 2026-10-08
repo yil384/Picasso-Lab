@@ -1,8 +1,10 @@
 // src/mineai/preload.mjs - loaded (--import, or Bun's --preload) into the Mine AI MCP host's processes by
 // src/mineai/host.js; their runtime child inherits the flag. No change to their code. Two jobs:
-// 1. In the host process (it has no IPC channel): end it when the agent goes away. The agent holds the host's stdin
-//    open; when that pipe closes (the agent stopped or crashed) the host gets SIGTERM and shuts down as it does on
-//    Ctrl-C, taking its runtime and bot with it. MINEAI_EXIT_WITH_PARENT=1 turns this on.
+// 1. In the host process (it has no IPC channel): end it when the agent goes away or ends its game. The agent holds
+//    the host's stdin open; when that pipe closes (the agent closed it to stop this host, or the agent stopped or
+//    crashed) the host gets one SIGTERM and shuts down as it does on Ctrl-C, taking its runtime and bot with it. Their
+//    host never calls process.exit: it ends when nothing is left to wait for, so stdin is let go on any SIGTERM (a
+//    stdin still read would keep it alive until the agent's SIGKILL). MINEAI_EXIT_WITH_PARENT=1 turns this on.
 // 2. In the runtime process (the one with the bot): the live views. With MINEAI_VIEWS set, once the bot has spawned,
 //    two read-only prismarine-viewer servers (our copy of the package, from MINEAI_VIEWS.viewer) listen on 127.0.0.1
 //    only, under the game's /watch/<view id> and /eyes/<view id> prefixes, so src/web.js proxies them exactly as it
@@ -21,6 +23,12 @@ if (!hasIpc && process.env.MINEAI_EXIT_WITH_PARENT === '1' && process.stdin && !
   process.stdin.on('close', end);
   process.stdin.on('error', end);
   process.stdin.resume();
+  // kept for the process's life: a second SIGTERM must not kill the host in the middle of its stop (their own
+  // listener is a once); the agent's SIGKILL of the whole group stays the backstop
+  process.on('SIGTERM', () => {
+    ended = true; // the pipe closing below is this same stop, not a new one
+    try { process.stdin.pause(); process.stdin.destroy(); } catch { /* gone */ }
+  });
 }
 
 if (hasIpc && process.env.MINEAI_VIEWS) {

@@ -12,7 +12,9 @@
 # Keep the settings in step with compose.yaml (test/deploy.test.js compares them).
 # BODY=mineai on staging: its agent image is built with the Mine AI MCP runtime (build arg MINEAI=1, see
 # Dockerfile.agent), and their per-bot SQLite (status, inventory, every action) goes to ~/workspace/muse-staging/
-# mineai-data. Which body plays is set in deploy/.env on picasso, never here (production keeps compose.yaml's settings):
+# mineai-data (mode 700: the bots' private names are in it; the agent deletes a game's data when it ends and keeps the
+# last MINEAI_KEEP_FAILED failed games). Which body plays is set in deploy/.env on picasso, never here (production
+# keeps compose.yaml's settings):
 #   BODY=mineai  MINEAI_DIR=/opt/mine-ai-mcp  MINEAI_DATA_DIR=/mineai-data
 # (README, "The Mine AI MCP body"); without them the image plays with our body as before.
 name: muse-staging
@@ -26,6 +28,7 @@ services:
   agent:
     build: { context: .., dockerfile: deploy/Dockerfile.agent, args: { MINEAI: "1" } }
     restart: unless-stopped
+    init: true # an init as PID 1 reaps what a Mine AI host leaves behind (production needs it too once it plays BODY=mineai)
     depends_on: [ paper ]
     env_file: [ .env ]
     environment:

@@ -221,6 +221,8 @@ export function createMcp(hooks) {
     }
     const inventory = safely(() => s.body.inventory?.());
     if (inventory) out.inventory = inventory;
+    const equipment = safely(() => s.body.equipment?.()); // worn and off-hand (BODY=mineai), apart from the inventory
+    if (equipment && Object.keys(equipment).length) out.equipment = equipment;
     return out;
   }
 
