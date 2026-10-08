@@ -152,10 +152,12 @@ function showBusy() {
     body.innerHTML = `<span class="al-ring" aria-hidden="true"></span><p class="al-text">${L("Saving your account…", "正在保存账号…")}</p>`;
 }
 
-function showDone(name) {
+// nameReserved false: another saved account already holds this name, so it is not protected for this one
+function showDone(name, reserved = true) {
     body.innerHTML = `<span class="al-mark">${CHECK}</span>
         <p class="al-text">${L("Done. You can go back to the game.", "已完成，可以回到游戏")}</p>
         ${name ? `<p class="al-sub">${L(`Your account ${esc(name)} is saved with this email. The game picks it up within a few seconds.`, `账号 ${esc(name)} 已绑定这个邮箱，游戏里几秒内就会更新。`)}</p>` : ""}
+        ${name && !reserved ? `<p class="al-sub">${L("Another saved account already uses this name: pick a new nickname in the game to keep yours.", "这个昵称已被另一个绑定邮箱的账号使用，请在游戏里换一个昵称。")}</p>` : ""}
         ${back}`;
 }
 
@@ -193,7 +195,7 @@ async function complete(email) {
     await signOut(auth).catch(() => {});
     if (res?.ok) {
         try { localStorage.removeItem(LINK_EMAIL_KEY); } catch (_) {}
-        return showDone(data.name || "");
+        return showDone(data.name || "", data.nameReserved !== false);
     }
     showFailed(!res ? L("The game service is unavailable. Please try again later.", "游戏服务暂不可用，请稍后再试。")
         : {

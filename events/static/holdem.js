@@ -26,7 +26,13 @@ const ERRORS = {
     table_full: ["The table is full", "牌桌已满"],
     cannot_show: ["Nothing to show", "现在不能亮牌"],
     not_waiting: ["The game has already started", "牌局已经开始"],
-    rate_limited: ["Too fast, slow down a little", "操作太快了"]
+    rate_limited: ["Too fast, slow down a little", "操作太快了"],
+    too_many_tables: ["You already host 3 open tables", "你已经开了 3 张牌桌，先解散一张"],
+    restarting: ["The table service is restarting. Try again in a moment", "牌桌服务正在重启，请稍后再试"],
+    bad_seat: ["That seat does not exist", "没有这个座位"],
+    not_seated: ["You are not seated", "你还没有入座"],
+    bad_phase: ["Not possible right now", "现在不能这样操作"],
+    server_error: ["Something went wrong at the table service", "牌桌服务出错了，请稍后再试"]
 };
 
 export function mountHoldem(ui) {
@@ -135,7 +141,9 @@ export function mountHoldem(ui) {
         S.net?.close();
         S.net = null;
         S.code = "";
-        if (code === "no_table" || code === "closed") ui.showToast(L("This table does not exist or has closed", "牌桌不存在或已解散"), 2400);
+        const text = code === "insufficient_chips" ? ["Not enough chips to sit. Tap your photo to get free chips", "筹码不足，点头像在账号页领取筹码"]
+            : code === "closed" ? ERRORS.no_table : ERRORS[code];
+        if (text) ui.showToast(L(text[0], text[1]), 2600);
         else down();
         start?.resolve();
     }

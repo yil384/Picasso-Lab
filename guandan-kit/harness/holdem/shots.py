@@ -58,6 +58,9 @@ async def run(vp, lang, only, d):
                 continue
             scene = {'raise': 'preflop', 'menu': 'flop', 'last': 'turn', 'topup': 'river', 'hands': 'river', 'reconnect': 'turn'}.get(step, step)
             await s.scene(scene)
+            if step != 'reconnect':
+                # after the reconnect step the socket may still be backing off: wait for the live table first
+                await s.pg.wait_for_function("!document.querySelector('.hd-stage.is-stale')", timeout=20000)
             await s.pg.wait_for_timeout(2400 if scene in ('showdown', 'split', 'quads') else 1500)
             if step == 'raise':
                 await s.press('[data-act="raise"]')

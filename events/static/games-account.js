@@ -42,12 +42,12 @@ export function createAccount(ctx) {
         if (token) storageSet(TOKEN_KEY, token);
     }
 
-    // A token the service no longer knows (401 auth: its data was reset) gets a fresh session and one retry.
+    // A token the service no longer knows (401 auth / bad_token: its data was reset) gets a fresh session and one retry.
     async function request(path, body, opts = {}) {
         try {
             return await send(path, body, opts);
         } catch (err) {
-            if (err.code !== "auth" || path === "/session" || opts.retried) throw err;
+            if ((err.code !== "auth" && err.code !== "bad_token") || path === "/session" || opts.retried) throw err;
             await openSession();
             return send(path, body, { ...opts, retried: true });
         }
