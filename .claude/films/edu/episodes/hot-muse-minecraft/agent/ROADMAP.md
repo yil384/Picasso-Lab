@@ -328,6 +328,14 @@ a connection drops.
 | S11 | Bot view distance 6 instead of mineflayer's `'far'` | About 40% less chunk traffic per bot |
 | — | Cache the nearby-block scan: recompute only after 4 blocks of movement, a block change in range, or 5 s | — |
 
+**Status 2026-10-07 (body work done, branch `muse-body`; README, "The body on its own"):** S1, S2 (stone family,
+safe blocks only), S3 (an axe carried is used; nothing crafts one on its own), S4, S5 (up to 3 furnaces, background
+smelt), S6, S8 (2 s search for a view of a block, then dig to it within 7 blocks; staircase steps 4 s, radius 16),
+S10, S11, the cached scan, the basic reflexes, and a fix found on the way (mineflayer timed iron ore with a stone
+pickaxe at 4.55 s instead of 1.15 s). Measured on a private copy of the local Paper server on the Mac, not on
+staging: the iron route from an empty inventory at 5 fixed fresh spots, two rounds, 229.7 s before and 148.2 s after
+(medians of 10 runs), 8 and 10 of 10 runs made the pickaxe. Still open: staging numbers (the MCP parts below are built too).
+
 **Build, basic reflexes** (moved up from the first draft's M4) [C8]. They act with no Muse call and are reported afterwards ("fought 2
 zombies, ate 1 bread"):
 - fight back or flee by a simple policy (flee below 8 health), instead of stopping to ask;
@@ -349,6 +357,9 @@ zombies, ate 1 bread"):
 - **Typed, compact replies** (moved up from the first draft's M11) [B1]. `structuredContent` with what changed and a short state, plus
   typed codes: `NEED_ITEMS`, `HOSTILE_CONTACT`, `RETREATED_LOW_HEALTH`, `INVENTORY_FULL`, `DIED`, `NOT_STARTED`,
   `DUPLICATE`. The text stays for readers. `get_state {full: true}` gives the rest.
+- Status 2026-10-07: the five MCP items above are built (README, "MCP calls"): `src/mcp-queue.js`, `src/plan.js`,
+  `craft_batch` (`src/skills/craft-batch.js`, MCP only). Tested with stub bodies and the fake world (`npm test`) and
+  once on the local Paper server (`test/real-mcp.test.js`), not yet on staging or with Muse.
 
 **Acceptance, scripted** (strict harness on staging on picasso, iron pickaxe from an empty inventory at 10 fresh
 spots, locked daylight, Easy):
@@ -908,6 +919,18 @@ changed:
 - **E1 (RAM over target):** the arithmetic is accepted, but the 160 GB cap was our own on a 1.5 TB machine. The answer
   is a 200 GB ask and shorter freezing, not a design change.
 - **B1 and A4** keep their causes marked UNVERIFIED (a script; injection filters), but their fixes are adopted.
+- **Code review of M0 and M2 (2026-10-07), fixed on `claude/edu-series`, not deployed:** M0 item 6 cannot work by
+  address on picasso (every connection to a published port comes from the Docker gateway): the proxy now proves itself
+  with a shared secret (`WEB_PROXY_SECRET`, Caddy `header_up`), to be set in Caddy and `.env` together. Item 7: only
+  different unknown view ids count as misses, and a live game's view is always served. Paper on the compose network
+  is reachable by every user on picasso: whitelist on, players hidden from the server list, bots listed by the agent
+  under names nobody can guess (`MC_WHITELIST`). S4 never retires a busy furnace or a station in use. S1 sweeps the
+  drops of chance blocks and of a try a reflex interrupted; a block another bot took is not counted. Forced head
+  turns (the reviewer measured the scripted route at 35.8 -> 23.0 s; the "12 stone <= 15 s" target needs them). B4: a
+  reply counts as delivered only once its HTTP response was written out, and the same call without a `request_id` is
+  a repeat only until its results reached the client. B1: cancelled calls carry the cause's code, a repeat keeps the
+  first call's failure code, a reused `request_id` and the SDK's own input errors are `BAD_ARGS`. The dry-run check
+  follows `go_to` and warns about stations and furnace output left behind; replies leave within 45 s with the state.
 
 ## 9. Open questions (UNVERIFIED)
 

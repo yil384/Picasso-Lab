@@ -1,0 +1,27 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0006: the runtime process exits once a SIGTERM's stop is done; its IPC channel kept it alive until the supervisor's
+SIGKILL, MINEAI_UNRESPONSIVE_MS later, on every stop (5 s on every game end, up to 120 s with a wider window).
+
+diff --git a/src/server/runtime-process.ts b/src/server/runtime-process.ts
+index 4899bb9..b130fb2 100644
+--- a/src/server/runtime-process.ts
++++ b/src/server/runtime-process.ts
+@@ -21,8 +21,14 @@ try {
+     void host.close().catch(reportFailure);
+   };
+   host.server.on("error", requestStop);
+-  process.once("SIGINT", () => requestStop());
+-  process.once("SIGTERM", () => requestStop());
++  // Patched for Muse plays Minecraft (picasso-lab): a stop ends the process once
++  // the host is closed (the IPC channel would otherwise keep it alive until the
++  // supervisor's SIGKILL, RUNTIME_UNRESPONSIVE_MS later, on every stop).
++  const stopAndExit = () => {
++    void host.close().catch(reportFailure).finally(() => process.exit());
++  };
++  process.once("SIGINT", stopAndExit);
++  process.once("SIGTERM", stopAndExit);
+   const address = host.server.address();
+   if (!address || typeof address === "string") throw new Error("Minecraft MCP requires a TCP listener.");
+   process.send?.({ kind: "ready", port: address.port });

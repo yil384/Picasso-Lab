@@ -2,6 +2,8 @@
 // admin token and the stream URLs (they hold stream keys) are non-enumerable, so JSON.stringify(config) and
 // console.log(config) never print them.
 
+import net from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -40,6 +42,31 @@ export function isLanHost(host) {
 /** True when a URL points at this machine (the mock LLM), false for any remote API. */
 export function isLocalUrl(url) {
   try { return isLoopbackHost(new URL(url).hostname); } catch { return false; }
+}
+
+/** An IP address or an IP/prefix range (CIDR) such as 172.24.0.5 or 172.24.0.0/16: [address, prefix|null], or null. */
+export function parseAddressRange(text) {
+  const m = String(text ?? '').trim().match(/^([^/\s]+)(?:\/(\d{1,3}))?$/);
+  if (!m) return null;
+  const ip = m[1].replace(/^\[|\]$/g, '');
+  const family = net.isIP(ip);
+  if (!family) return null;
+  if (m[2] === undefined) return [ip, null];
+  const prefix = Number(m[2]);
+  return prefix <= (family === 4 ? 32 : 128) ? [ip, prefix] : null;
+}
+
+/** The Facebook video plugin URL that plays a live video (its public URL) inside another page's frame. */
+export function facebookEmbedUrl(videoUrl) {
+  return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(videoUrl)}&show_text=false`;
+}
+
+/** True for an https URL on facebook.com (or fb.watch): the only live-video player the muse.ai panel frames. */
+export function isFacebookVideoUrl(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && (/(^|\.)facebook\.com$/i.test(u.hostname) || /^fb\.watch$/i.test(u.hostname)) && !u.username;
+  } catch { return false; }
 }
 
 function reader(env, problems) {
@@ -138,6 +165,9 @@ export function loadConfig(env = process.env) {
     port: r.int('MC_PORT', 25565, 1, 65535),
     version: r.str('MC_VERSION', '1.21.4'),
     username: r.str('MC_USERNAME', 'Muse'),
+    // the server lets in only listed players (the Paper container on picasso): each guest bot gets a name nobody can
+    // guess and is put on the list through the console (MC_CONSOLE) just before it joins, and taken off when it leaves
+    whitelist: r.bool('MC_WHITELIST', false),
     auth: 'offline',
     viewerPort: r.int('MC_VIEWER_PORT', 3007, 0, 65535),
   };
@@ -150,13 +180,23 @@ export function loadConfig(env = process.env) {
   if (trustRaw === 'cloudflare' || trustRaw === 'off') trustProxy = trustRaw;
   else if (/^[1-5]$/.test(trustRaw)) trustProxy = Number(trustRaw);
   else problems.push(`WEB_TRUST_PROXY must be off, cloudflare or a number of proxy hops from 1 to 5 (got "${trustRaw}")`);
+  // The proxy's own address(es): forwarded headers count only on connections from there, and any other peer that is
+  // not this machine is refused (on picasso: the Caddy container in front of the published port).
+  const trustedProxies = r.str('WEB_TRUSTED_PROXIES', '').split(',').map((x) => x.trim()).filter(Boolean);
+  for (const t of trustedProxies) if (!parseAddressRange(t)) problems.push(`WEB_TRUSTED_PROXIES must be IP addresses or ranges such as 172.24.0.5 or 172.24.0.0/16, separated by commas (got "${t}")`);
+  if (trustedProxies.length && trustProxy === 'off') problems.push('WEB_TRUSTED_PROXIES needs WEB_TRUST_PROXY (cloudflare, or the number of proxies that append to X-Forwarded-For)');
+  const maxSessions = r.int('WEB_MAX_SESSIONS', 4, 1, 64);
   const web = {
     host: r.str('WEB_HOST', '127.0.0.1'),
     port: r.int('WEB_PORT', 8787, 0, 65535),
     publicUrl: r.str('WEB_PUBLIC_URL', '').replace(/\/+$/, ''),
     trustProxy,
+    trustedProxies,
     leaseMs: r.int('WEB_LEASE_MS', 600_000, 10_000, 86_400_000),
-    maxSessions: r.int('WEB_MAX_SESSIONS', 4, 1, 64),
+    maxSessions,
+    // live MCP games one address may hold: connector users arrive from their agent's cloud, so many people can share an
+    // address (probe T8 measures how many); set it to WEB_MAX_SESSIONS to cap MCP games only by the global limit
+    mcpGamesPerAddress: r.int('WEB_MCP_GAMES_PER_ADDRESS', Math.max(2, Math.floor(maxSessions / 2)), 1, 64),
     askPerHour: r.int('WEB_ASK_PER_HOUR', 3, 1, 10_000),
     askMaxChars: r.int('WEB_ASK_MAX_CHARS', 300, 20, 4_000),
     askAllowContributor: r.bool('WEB_ASK_ALLOW_CONTRIBUTOR', false),
@@ -172,10 +212,47 @@ export function loadConfig(env = process.env) {
     problems.push('WEB_ADMIN_TOKEN must be at least 24 characters (make one with: openssl rand -base64 24)');
   }
   hidden(web, 'adminToken', adminToken);
+  // A secret the proxy in front adds to every request it forwards (X-Muse-Proxy; Caddy: header_up). On picasso the
+  // published port goes through docker-proxy, so every connection arrives from the bridge gateway, Caddy's and any
+  // local user's alike: the address cannot tell them apart, the secret can.
+  const proxySecret = r.str('WEB_PROXY_SECRET', '');
+  if (proxySecret && (proxySecret.length < 24 || !/^[\x21-\x7e]+$/.test(proxySecret))) {
+    problems.push('WEB_PROXY_SECRET must be at least 24 printable characters without spaces (make one with: openssl rand -hex 24)');
+  }
+  if (proxySecret && trustProxy === 'off') problems.push('WEB_PROXY_SECRET needs WEB_TRUST_PROXY (cloudflare, or the number of proxies that append to X-Forwarded-For)');
+  hidden(web, 'proxySecret', proxySecret);
 
+  // Which body plays a guest game: ours (mineflayer in this process, src/body.js) or mineai (one Mine AI MCP host per
+  // game in its own process, src/mineai/). Production keeps ours until the switch is flipped.
   const body = {
+    kind: r.oneOf('BODY', 'ours', ['ours', 'mineai']),
     maxTravel: r.int('BODY_MAX_TRAVEL', 256, 8, 10_000),
   };
+  // BODY=mineai: the Mine AI MCP runtime (built by mineai/fetch-and-patch.sh), one host per guest game on
+  // a loopback port of a private range, with a random token per host (never on a command line)
+  const mineaiDir = r.str('MINEAI_DIR', '');
+  const mineaiData = r.str('MINEAI_DATA_DIR', '');
+  const mineai = {
+    dir: mineaiDir ? path.resolve(ROOT, mineaiDir) : '',
+    runtime: r.oneOf('MINEAI_RUNTIME', 'node', ['node', 'bun']),
+    exec: r.str('MINEAI_EXEC', ''), // the node (24.15 or newer) or bun binary; default: this node, or "bun" on the PATH
+    portBase: r.int('MINEAI_PORT_BASE', 27100, 1024, 65_000),
+    ports: r.int('MINEAI_PORTS', 64, 1, 512),
+    maxHosts: r.int('MINEAI_MAX_HOSTS', maxSessions, 1, 64),
+    startMs: r.int('MINEAI_START_MS', 90_000, 5_000, 600_000),
+    heartbeatMs: r.int('MINEAI_HEARTBEAT_MS', 5_000, 200, 60_000),
+    heartbeatMisses: r.int('MINEAI_HEARTBEAT_MISSES', 3, 1, 100),
+    // the runtime's own watchdog (its child's event loop), patched to read this: 5 s upstream, more for a loaded host
+    unresponsiveMs: r.int('MINEAI_UNRESPONSIVE_MS', 5_000, 5_000, 120_000),
+    dataDir: mineaiData ? path.resolve(ROOT, mineaiData) : '', // per-bot SQLite; empty: temporary, gone with the host
+    // a game's bot data and incidents are deleted when it ends, except the last keepFailed games that crashed or failed
+    // to join (for diagnosis); at agent start, game folders older than dataDays go
+    keepFailed: r.int('MINEAI_KEEP_FAILED', 10, 0, 1_000),
+    dataDays: r.num('MINEAI_DATA_DAYS', 3, 0.01, 365),
+    views: r.bool('MINEAI_VIEWS', true), // the live views (/eyes, /watch) from a viewer inside the host's bot process
+  };
+  if (body.kind === 'mineai' && !mineai.dir) problems.push('BODY=mineai needs MINEAI_DIR, the folder with the Mine AI MCP runtime (mineai/fetch-and-patch.sh <dir>)');
+  if (mineai.portBase + 3 * mineai.ports > 65_535) problems.push('MINEAI_PORT_BASE + 3 x MINEAI_PORTS must stay under 65536 (each host takes a port and its two live views two more)');
 
   const caps = {
     steps: r.int('STEP_CAP', 300, 1, 100_000),
@@ -200,8 +277,13 @@ export function loadConfig(env = process.env) {
   const outputs = r.str('STREAM_RTMP_URL', '').split(',').map((x) => x.trim()).filter(Boolean);
   if (outputs.some((o) => !/^rtmps?:\/\/[^\s/]+\/\S+$/i.test(o))) problems.push('STREAM_RTMP_URL must be rtmp:// or rtmps:// URLs with their stream key, separated by commas');
   const outDir = r.str('STREAM_OUT_DIR', '');
+  // the public URL of the live video each output feeds (same order as STREAM_RTMP_URL; one URL serves every output):
+  // what live_view {format: "embed"} turns into the Facebook player's embed URL while a game's stream runs
+  const videoUrls = r.str('STREAM_VIDEO_URL', '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (videoUrls.some((v) => !isFacebookVideoUrl(v))) problems.push('STREAM_VIDEO_URL must be https URLs of Facebook live videos (facebook.com or fb.watch), separated by commas');
   const stream = {
     enabled: r.bool('STREAM_ENABLED', false),
+    videoUrls,
     serviceUrl: r.str('STREAM_SERVICE_URL', '').replace(/\/+$/, ''),
     outDir: outDir ? fromRoot(outDir) : '',
     max: r.int('STREAM_MAX', 1, 0, 16),
@@ -211,15 +293,42 @@ export function loadConfig(env = process.env) {
     far: r.int('STREAM_FAR', 48, 16, 256),
     maxRssMB: r.int('STREAM_MAX_RSS_MB', 1600, 300, 16_000),
     noSandbox: r.bool('STREAM_NO_SANDBOX', false),
+    // 'viewer': prismarine-viewer in headless Chromium (src/stream.js); 'client': the real Minecraft client as a
+    // spectator in the bot's head (src/camera.js, the camera container)
+    source: r.oneOf('STREAM_SOURCE', 'viewer', ['viewer', 'client']),
+    camera: {
+      mcDir: r.str('CAMERA_MC_DIR', '/opt/mc'),
+      home: path.resolve(r.str('CAMERA_HOME', path.join(os.tmpdir(), 'muse-camera'))),
+      authDir: r.str('CAMERA_AUTH_DIR', '') ? path.resolve(r.str('CAMERA_AUTH_DIR', '')) : '',
+      auth: r.oneOf('CAMERA_AUTH', 'msa', ['msa', 'offline']),
+      name: r.str('CAMERA_NAME', ''),
+      gl: r.oneOf('CAMERA_GL', 'cpu', ['cpu', 'gpu']),
+      glThreads: r.int('CAMERA_GL_THREADS', 8, 1, 64),
+      javaThreads: r.int('CAMERA_JAVA_THREADS', 4, 1, 64),
+      heapMB: r.int('CAMERA_HEAP_MB', 2048, 512, 16_384),
+      maxFps: r.int('CAMERA_MAX_FPS', 30, 10, 120),
+      renderDistance: r.int('CAMERA_RENDER_DISTANCE', 8, 2, 32),
+      graphics: r.oneOf('CAMERA_GRAPHICS', 'fancy', ['fast', 'fancy']),
+      display: r.int('CAMERA_DISPLAY', 99, 1, 900),
+      scale: r.num('CAMERA_SCALE', 1, 0.5, 1),
+      javaNice: r.int('CAMERA_NICE', 5, 0, 19),
+      idleMs: r.int('CAMERA_IDLE_MS', 600_000, 0, 86_400_000),
+      console: r.str('MC_CONSOLE', ''),
+    },
   };
   hidden(stream, 'outputs', outputs);
+  if (stream.camera.name && !/^[A-Za-z0-9_]{3,16}$/.test(stream.camera.name)) problems.push(`CAMERA_NAME must be 3-16 letters, digits or _ (got "${stream.camera.name}")`);
+  if (stream.enabled && stream.source === 'client' && !stream.serviceUrl) {
+    if (!stream.camera.console) problems.push('STREAM_SOURCE=client needs MC_CONSOLE: the camera is put in spectator mode through the server console');
+    if (stream.camera.auth === 'msa' && !stream.camera.authDir) problems.push('STREAM_SOURCE=client needs CAMERA_AUTH_DIR, the folder with the camera account\'s login (scripts/camera-login.mjs)');
+  }
   if (stream.serviceUrl && !(/^http:/.test(stream.serviceUrl) && isLocalUrl(stream.serviceUrl))) problems.push('STREAM_SERVICE_URL must be an http URL on this machine (loopback)');
   if (stream.enabled && !stream.serviceUrl && !outputs.length && !stream.outDir) {
     problems.push('STREAM_ENABLED needs STREAM_RTMP_URL (or STREAM_OUT_DIR to write files, or STREAM_SERVICE_URL for the stream container)');
   }
 
   if (problems.length) throw new ConfigError(problems);
-  return deepFreeze({ root: ROOT, model, mc, web, body, caps, memory, log, stream });
+  return deepFreeze({ root: ROOT, model, mc, web, body, mineai, caps, memory, log, stream });
 }
 
 /** The process-wide config, read from process.env at first import. */

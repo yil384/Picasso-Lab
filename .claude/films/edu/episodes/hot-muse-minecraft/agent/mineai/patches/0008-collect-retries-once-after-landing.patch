@@ -1,0 +1,404 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0008: a collect_block whose path search gave up ("no path found"; nothing gained, nothing broken) within 30 s of a
+landing (the server moved the bot more than 16 blocks: spreadplayers, a teleport, a respawn) is tried once more,
+after the 5x5 chunks around the bot have loaded (mineflayer's wait, at most 10 s) and a 2 s pause. Staging, 8 games
+at once: `collect oak_log 6` found no path 2.3 s after landing in one of 8 regions generating at once and gave up;
+the same spot alone passed. The runtime owns the landing watch (src/world/landing.ts: mineflayer's `move`, then
+`forcedMove`) and disposes of it with the bot's other listeners. With tests.
+
+diff --git a/src/actions/collect-block/collect-block.test.ts b/src/actions/collect-block/collect-block.test.ts
+index 4e71160..1958251 100644
+--- a/src/actions/collect-block/collect-block.test.ts
++++ b/src/actions/collect-block/collect-block.test.ts
+@@ -3,7 +3,15 @@ import test from "node:test";
+ import { Vec3 } from "vec3";
+ import { collectBlockInputSchema, formatCollectBlockResult, parseCollectBlockRequest } from "./index.js";
+ import type { Bot } from "mineflayer";
+-import { inventoryStop, pursuedInventoryStop, settle } from "./collect-block.js";
++import {
++  inventoryStop,
++  LANDING_RETRY_WINDOW_MS,
++  mineAfterLanding,
++  pursuedInventoryStop,
++  retryAfterLanding,
++  settle,
++} from "./collect-block.js";
++import type { MineResult } from "../../navigation/processes/mining/mine-process.js";
+ 
+ test("capacity admission allows a clearing break with free space or a compatible partial stack", () => {
+   let empty = 4;
+@@ -142,3 +150,53 @@ test("exact collection accepts one or omitted count and rejects larger counts at
+     }]);
+   }
+ });
++
++/**
++ * Patched for Muse plays Minecraft (picasso-lab). Staging, 8 games at once:
++ * `collect oak_log 6` found no path 2.3 s after the bot was spread into a
++ * region still generating, and gave up; the same spot alone passed. Such a
++ * collect is tried once more after the chunks around the landing arrive.
++ */
++test("a collect that finds no path right after a landing is tried once more, and only then", async () => {
++  // what the staging game got: the route's own stop ("stopped"), or every target given up ("unreachable")
++  const noPath: MineResult = { status: "stopped", broken: [], reason: "no path found after 234 ms compute; visited 5097 nodes" };
++  const done: MineResult = { status: "satisfied", broken: [{ x: 1, y: 70, z: 2 }], reason: null };
++  const landed = 10_000;
++  assert.equal(retryAfterLanding(noPath, 0, landed, landed + 2_300), true);
++  assert.equal(retryAfterLanding(noPath, 0, landed, landed + LANDING_RETRY_WINDOW_MS + 1), false, "long after the landing");
++  assert.equal(retryAfterLanding(noPath, 0, null, landed), false, "no landing seen");
++  assert.equal(retryAfterLanding(noPath, 1, landed, landed + 100), false, "something was gained");
++  assert.equal(retryAfterLanding({ ...noPath, broken: [{ x: 0, y: 64, z: 0 }] }, 0, landed, landed + 100), false, "a block was broken");
++  assert.equal(retryAfterLanding({ ...noPath, status: "unreachable" }, 0, landed, landed + 100), true);
++  assert.equal(retryAfterLanding({ ...noPath, status: "no_targets" }, 0, landed, landed + 100), false);
++  assert.equal(retryAfterLanding({ ...noPath, reason: "Pickaxe tier lost: stone_pickaxe broke." }, 0, landed, landed + 100), false, "a stop for another reason");
++  assert.equal(retryAfterLanding({ ...noPath, status: "unreachable", reason: "3 lava faces, 1 block carried" }, 0, landed, landed + 100), false);
++
++  const runs = (results: MineResult[]) => {
++    const calls = { run: 0, settle: 0 };
++    const run = async () => results[calls.run++]!;
++    return { calls, run };
++  };
++  const facts = (calls: { settle: number }, startedAt: number) => ({
++    startedAt,
++    landedAt: () => landed,
++    gained: () => 0,
++    settle: async () => {
++      calls.settle += 1;
++    },
++  });
++
++  const fixed = runs([noPath, done]);
++  assert.deepEqual(await mineAfterLanding(fixed.run, facts(fixed.calls, landed + 2_300)), done);
++  assert.deepEqual(fixed.calls, { run: 2, settle: 1 });
++
++  const twice = runs([noPath, noPath, done]);
++  const result = await mineAfterLanding(twice.run, facts(twice.calls, landed + 2_300));
++  assert.equal(result.status, "stopped");
++  assert.match(result.reason ?? "", /no path found.*\(tried once more after the chunks around the landing loaded\)/);
++  assert.deepEqual(twice.calls, { run: 2, settle: 1 }, "one retry, never a second");
++
++  const late = runs([noPath, done]);
++  assert.deepEqual(await mineAfterLanding(late.run, facts(late.calls, landed + 60_000)), noPath);
++  assert.deepEqual(late.calls, { run: 1, settle: 0 });
++});
+diff --git a/src/actions/collect-block/collect-block.ts b/src/actions/collect-block/collect-block.ts
+index 6f3f4a6..985d63e 100644
+--- a/src/actions/collect-block/collect-block.ts
++++ b/src/actions/collect-block/collect-block.ts
+@@ -30,6 +30,7 @@ import { droppedItemName } from "../../world/item-pickup.js";
+ import { useItemAt } from "../../world/item-use.js";
+ import { observeToolTierLoss } from "../../world/tool-loss.js";
+ import { carriedSolidBlocks, placeSolidBlockInto } from "../../world/placement.js";
++import { settleAfterLanding, type LandingClock } from "../../world/landing.js";
+ import { defineAction, type ActionContext } from "../action.js";
+ import { blockMatchesSelector, expectedDropName, inventoryCounts, inventoryGains } from "./collection-facts.js";
+ import { createCollectionMovements } from "./collection-movements.js";
+@@ -152,6 +153,50 @@ function exactTargetStop(
+ 
+ // ── Action execution ──────────────────────────────────────────────────────────────────────
+ 
++/**
++ * Patched for Muse plays Minecraft (picasso-lab): a collect that found no path
++ * within this long of a landing is tried once more, after the chunks around the
++ * bot have arrived. Staging, 8 games at once: `collect oak_log 6` failed 2.3 s
++ * after the bot was spread into one of 8 regions generating at once ("no path
++ * found ... visited 5097 nodes") and did not try another tree; the same spot
++ * alone passed.
++ */
++export const LANDING_RETRY_WINDOW_MS = 30_000;
++
++/** The routing stop of a path search that gave up (process-events: "no path found after ..."). */
++const NO_PATH = /\bno path found\b/;
++
++/** Whether a mine run is worth one more try: no path, nothing gained or broken, and a landing just before. */
++export function retryAfterLanding(result: MineResult, gained: number, landedAt: number | null, startedAt: number): boolean {
++  return (
++    (result.status === "unreachable" || result.status === "stopped") &&
++    NO_PATH.test(result.reason ?? "") &&
++    result.broken.length === 0 &&
++    gained === 0 &&
++    landedAt !== null &&
++    startedAt - landedAt <= LANDING_RETRY_WINDOW_MS
++  );
++}
++
++/** Run the mine process, and once more after `settle` when `retryAfterLanding` says so. */
++export async function mineAfterLanding(
++  run: () => Promise<MineResult>,
++  facts: {
++    readonly startedAt: number;
++    readonly landedAt: () => number | null;
++    readonly gained: () => number;
++    readonly settle: () => Promise<void>;
++  },
++): Promise<MineResult> {
++  const first = await run();
++  if (!retryAfterLanding(first, facts.gained(), facts.landedAt(), facts.startedAt)) return first;
++  await facts.settle();
++  const again = await run();
++  if (again.status !== "unreachable" && again.status !== "stopped") return again;
++  const reason = `${again.reason ?? "no route was found"} (tried once more after the chunks around the landing loaded)`;
++  return { ...again, reason };
++}
++
+ export async function collectBlock(
+   bot: Bot,
+   navigation: NavigationRuntime,
+@@ -171,6 +216,7 @@ function beginCollectBlock(
+   discarded: DiscardedItems,
+   observe: ObserveRequest = () => {},
+   lifetime?: AbortSignal,
++  landings?: LandingClock,
+ ) {
+   const inventoryBefore = inventoryCounts(bot);
+   const start = bot.entity.position.clone();
+@@ -194,6 +240,7 @@ function beginCollectBlock(
+   }));
+   return async (context: ActionContext): Promise<CollectBlockResult> => {
+     context.signal?.throwIfAborted();
++    const startedAt = Date.now();
+     const gained = () => sumValues(inventoryGains(bot, inventoryBefore, collectable));
+     if (gained() >= request.requested) {
+       return settle(bot, request, inventoryBefore, collectable, start, { status: "satisfied", broken, reason: null });
+@@ -244,7 +291,7 @@ function beginCollectBlock(
+       return frame;
+     }, highlights.signal);
+     try {
+-      const result = await mine(bot, {
++      const run = () => mine(bot, {
+         ignoredDropIds: discarded.ignored(),
+         route: (options) => navigation.navigate({ ...options, onToolSelected: toolLoss.select }),
+         breakInPlace: (options) => navigation.breakBlockInPlace({ ...options, onToolSelected: toolLoss.select }),
+@@ -272,6 +319,12 @@ function beginCollectBlock(
+         },
+         onBroken: (position) => broken.push(position),
+       });
++      const result = await mineAfterLanding(run, {
++        startedAt,
++        landedAt: () => landings?.landedAt() ?? null,
++        gained,
++        settle: () => settleAfterLanding(bot, context.signal),
++      });
+ 
+       return settle(
+         bot, request, inventoryBefore, collectable, start,
+@@ -392,6 +445,7 @@ export function createCollectBlockAction(
+   bot: Bot,
+   navigation: NavigationRuntime,
+   discarded: DiscardedItems = createDiscardedItems(),
++  landings?: LandingClock,
+ ) {
+   return defineAction({
+     checkpointSchema: collectCheckpointSchema,
+@@ -407,6 +461,7 @@ export function createCollectBlockAction(
+       openWorldHint: true,
+     },
+     parse: parseCollectBlockRequest,
+-    begin: (request, lifetime, observe) => beginCollectBlock(bot, navigation, request, discarded, observe, lifetime),
++    begin: (request, lifetime, observe) =>
++      beginCollectBlock(bot, navigation, request, discarded, observe, lifetime, landings),
+   });
+ }
+diff --git a/src/actions/index.ts b/src/actions/index.ts
+index ba63c49..79b0b72 100644
+--- a/src/actions/index.ts
++++ b/src/actions/index.ts
+@@ -1,4 +1,5 @@
+ import type { Budgets } from "../survival/state/budgets.js";
++import type { LandingClock } from "../world/landing.js";
+ import { createSetSurvivalPolicyAction } from "./set-survival-policy/index.js";
+ /**
+  * Every model-runnable action this host offers, built once with its dependencies.
+@@ -64,6 +65,8 @@ export interface ActionDependencies {
+   readonly combat: CombatController;
+   readonly cancelForegroundAction: (reason: string) => ForegroundCancellation;
+   readonly observeStatusActivity: ObserveStatusActivity;
++  /** Patched for Muse plays Minecraft (picasso-lab): when the server last moved the bot far (a collect retries after it). */
++  readonly landings?: LandingClock;
+ }
+ 
+ export interface ActionCatalogOptions {
+@@ -81,6 +84,7 @@ export function createActions(
+     combat,
+     cancelForegroundAction,
+     observeStatusActivity,
++    landings,
+   }: ActionDependencies,
+   options: ActionCatalogOptions = {},
+ ) {
+@@ -94,7 +98,7 @@ export function createActions(
+     createShootDragonAction(bot, combat),
+     createBuildStructureAction(bot, navigation),
+     createCancelForegroundAction(cancelForegroundAction),
+-    createCollectBlockAction(bot, navigation, discarded),
++    createCollectBlockAction(bot, navigation, discarded, landings),
+     createCraftItemAction(bot, navigation),
+     createDropItemAction(bot, navigation, discarded),
+     createBarterAction(bot, navigation),
+diff --git a/src/runtime/minecraft-runtime.ts b/src/runtime/minecraft-runtime.ts
+index b85790d..f4ccc07 100644
+--- a/src/runtime/minecraft-runtime.ts
++++ b/src/runtime/minecraft-runtime.ts
+@@ -1,4 +1,5 @@
+ import type { BlockHighlighter } from "@aibengineering/minecraft-block-highlighter";
++import { observeLandings } from "../world/landing.js";
+ import type { Bot } from "mineflayer";
+ import { randomUUID } from "node:crypto";
+ import os from "node:os";
+@@ -314,6 +315,8 @@ export async function createMinecraftRuntime(
+     bot.off("physicsTick", sampleProgress); bot.off("forcedMove", resetProgress);
+     bot.off("death", resetProgress); bot.off("game", resetProgress);
+   });
++  // Patched for Muse plays Minecraft (picasso-lab): landings (a spread, a teleport) for collect's one retry.
++  const landings = resources.use(observeLandings(bot));
+   const reflexes = resources.use(new ReflexDriver(bot, runner));
+   const navigation = resources.use(createNavigationRuntime(bot));
+   installMinecraftKnowledge(botData, bot.registry);
+@@ -438,6 +441,7 @@ export async function createMinecraftRuntime(
+       strongholdEyeFlights,
+       combat,
+       cancelForegroundAction: runner.cancelActive,
++      landings,
+       observeStatusActivity: () => {
+         const { owner, activeAction } = runner.status();
+         return { owner, activeAction };
+diff --git a/src/world/landing.test.ts b/src/world/landing.test.ts
+new file mode 100644
+index 0000000..d831991
+--- /dev/null
++++ b/src/world/landing.test.ts
+@@ -0,0 +1,62 @@
++import assert from "node:assert/strict";
++import { EventEmitter } from "node:events";
++import test from "node:test";
++import type { Bot } from "mineflayer";
++import { Vec3 } from "vec3";
++import { observeLandings, settleAfterLanding } from "./landing.js";
++
++/** Patched for Muse plays Minecraft (picasso-lab): a landing is a server move, not a correction. */
++function fakeBot() {
++  const bot = new EventEmitter() as EventEmitter & { entity: { position: Vec3 }; waitForChunksToLoad?: () => Promise<void> };
++  bot.entity = { position: new Vec3(0.5, 64, 0.5) };
++  return bot;
++}
++
++test("a spread or a teleport is a landing; a small correction is not", () => {
++  const bot = fakeBot();
++  let t = 1_000;
++  const clock = observeLandings(bot as unknown as Bot, () => t);
++  assert.equal(clock.landedAt(), null);
++  // what mineflayer does on a server move: send the new position back (`move`, with the old one), then `forcedMove`
++  const serverMove = (to: Vec3) => {
++    const from = bot.entity.position;
++    bot.entity.position = to;
++    bot.emit("move", from);
++    bot.emit("forcedMove");
++  };
++  bot.emit("move", new Vec3(0.5, 64, 0.4)); // a step of its own
++  t = 2_000;
++  serverMove(new Vec3(0.5, 64, 2.5)); // the server set the bot back two blocks
++  assert.equal(clock.landedAt(), null);
++  t = 3_000;
++  serverMove(new Vec3(-3825.5, 70, 761.5)); // spreadplayers
++  assert.equal(clock.landedAt(), 3_000);
++  t = 9_000;
++  serverMove(new Vec3(-3824.5, 70, 761.5));
++  assert.equal(clock.landedAt(), 3_000, "a correction after the landing keeps the landing's time");
++  t = 12_000;
++  serverMove(new Vec3(0.5, 64, 0.5)); // a respawn at the world spawn
++  assert.equal(clock.landedAt(), 12_000);
++  assert.equal(bot.listenerCount("forcedMove"), 1);
++  clock[Symbol.dispose]();
++  assert.equal(bot.listenerCount("forcedMove"), 0);
++  assert.equal(bot.listenerCount("move"), 0);
++});
++
++test("settling after a landing waits for the chunks and a pause, and a cancellation ends it", async () => {
++  const bot = fakeBot();
++  let waited = 0;
++  bot.waitForChunksToLoad = async () => {
++    waited += 1;
++  };
++  const t0 = Date.now();
++  await settleAfterLanding(bot as unknown as Bot, undefined, 30);
++  assert.equal(waited, 1);
++  assert.ok(Date.now() - t0 >= 25);
++  bot.waitForChunksToLoad = () => Promise.reject(new Error("Timeout waiting for 3 chunks to load after 10000ms"));
++  await settleAfterLanding(bot as unknown as Bot, undefined, 0);
++  bot.waitForChunksToLoad = () => new Promise(() => {});
++  const stop = new AbortController();
++  setTimeout(() => stop.abort(new Error("cancelled")), 20);
++  await assert.rejects(settleAfterLanding(bot as unknown as Bot, stop.signal, 10_000), /cancelled/);
++});
+diff --git a/src/world/landing.ts b/src/world/landing.ts
+new file mode 100644
+index 0000000..6e13d94
+--- /dev/null
++++ b/src/world/landing.ts
+@@ -0,0 +1,64 @@
++/**
++ * Patched for Muse plays Minecraft (picasso-lab): when the bot last landed
++ * somewhere it did not walk to — the server moved it (`spreadplayers`, `/tp`, a
++ * respawn, a portal) farther than a correction would. Right after a landing the
++ * chunks around the new spot may still be arriving, and a path search there can
++ * see a closed region that is not closed (staging, 8 games at once: "no path
++ * found" 2.3 s after landing; the same spot alone passed).
++ */
++import type { Bot } from "mineflayer";
++import { setTimeout as delay } from "node:timers/promises";
++import type { Vec3 } from "vec3";
++
++/** A server move farther than this is a landing, not a correction of the bot's own step. */
++export const LANDING_DISTANCE = 16;
++/** After the chunks around a landing have arrived, a little longer for their neighbours and the light. */
++export const LANDING_SETTLE_PAUSE_MS = 2_000;
++
++export interface LandingClock {
++  /** When the bot last landed (ms since the epoch), or null if it has not since the clock started. */
++  readonly landedAt: () => number | null;
++}
++
++/**
++ * Watch one bot's landings; the runtime owns it and disposes of it with the
++ * bot's other listeners. Mineflayer answers a server move by sending the new
++ * position back, which emits `move` with where the bot was, then `forcedMove`.
++ */
++export function observeLandings(bot: Bot, now: () => number = Date.now): LandingClock & Disposable {
++  let landedAt: number | null = null;
++  let from: Vec3 | null = null;
++  const moved = (previous: Vec3) => {
++    from = previous;
++  };
++  const forced = () => {
++    if (from === null || from.distanceTo(bot.entity.position) > LANDING_DISTANCE) landedAt = now();
++    from = null;
++  };
++  bot.on("move", moved);
++  bot.on("forcedMove", forced);
++  return {
++    landedAt: () => landedAt,
++    [Symbol.dispose]() {
++      bot.off("move", moved);
++      bot.off("forcedMove", forced);
++    },
++  };
++}
++
++/**
++ * Wait for the ground around a fresh landing: the 5x5 chunks around the bot
++ * (mineflayer's own wait, at most its 10 s), then a short pause. Never throws
++ * for a slow server; only a cancellation ends it early.
++ */
++export async function settleAfterLanding(
++  bot: Bot,
++  signal?: AbortSignal,
++  pauseMs: number = LANDING_SETTLE_PAUSE_MS,
++): Promise<void> {
++  signal?.throwIfAborted();
++  const cancelled = new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
++  await Promise.race([Promise.resolve(bot.waitForChunksToLoad?.()).catch(() => undefined), cancelled]);
++  signal?.throwIfAborted();
++  await delay(pauseMs, undefined, signal ? { signal } : undefined);
++}

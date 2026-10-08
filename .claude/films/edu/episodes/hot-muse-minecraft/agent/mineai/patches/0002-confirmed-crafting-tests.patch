@@ -1,0 +1,554 @@
+Subject: Tests for crafting by confirmed window clicks, with Paper's result burst
+
+Applies to: https://github.com/aibengineering/mine-ai-mcp at 2fe1306a0ac51efa99154048e65f2caff00a8934 plus
+0001-craft-by-confirmed-window-clicks.patch (MIT, Copyright (c) 2026 AI Bengineering; see
+mineai/LICENSE-mine-ai-mcp). Patched for Muse plays Minecraft: kept by Picasso Lab (UC San Diego).
+
+src/test-support/click-server.ts is a bot double with a server's side of windows (ported from the agent's
+test/fake-bot.js): it applies each window_click to its own copy of the window with vanilla's click rules and the
+version's recipes, answers with a resync after a lag, and with `paper: true` also sends Paper's burst around a
+crafting result (the result slot empty, then filled, then one more resync). src/world/confirmed-craft.test.ts runs
+executeCraftPlan against it: the 2x2 grid and a table under Paper's bursts with exact server counts, batches that use
+the room a batch frees, the inventory-room refusal before any click, a silent server, a table that never opens, and
+cancellation half way (the grid is still handed back). Run with `bun test src/world/confirmed-craft.test.ts`.
+
+diff --git a/src/test-support/click-server.ts b/src/test-support/click-server.ts
+new file mode 100644
+index 0000000..d3abcd3
+--- /dev/null
++++ b/src/test-support/click-server.ts
+@@ -0,0 +1,391 @@
++/**
++ * A bot double with a server's side of windows, for the confirmed window clicks (world/confirmed-window.ts).
++ * Ported from the "Muse plays Minecraft" agent's test/fake-bot.js (Picasso Lab, UC San Diego).
++ *
++ * The server applies each window_click to its own copy of the window (vanilla left, right and shift click rules,
++ * crafting results from the version's recipes, any planks or logs for the wood tags) and answers a click whose state
++ * id is stale with a full resync after `lagMs`. The client's windows only change through those packets, applied as
++ * Mineflayer applies them, so a crafter that decides on a window it has not settled sees a stale picture, as on a real
++ * server. `paper: true` adds what Paper 1.21.4 sends around a crafting result: before the resync, a burst of set_slot
++ * packets (the clicked slot, the result slot empty and then filled, the grid) and one more full resync.
++ * `deaf: true` drops every click; `noOpen: true` never opens a table.
++ */
++import { EventEmitter } from "node:events";
++import { createRequire } from "node:module";
++import minecraftData from "minecraft-data";
++import type { Bot } from "mineflayer";
++import type { Item } from "prismarine-item";
++import type { Window } from "prismarine-windows";
++import { Vec3 } from "vec3";
++
++export const clickRegistry = minecraftData("1.21.4");
++const require = createRequire(import.meta.url);
++const ItemClass = (require("prismarine-item") as (registry: object) => typeof Item)(clickRegistry);
++const windows = (require("prismarine-windows") as (version: string) => {
++  createWindow: (id: number, type: string, title: string, slots?: number) => Window;
++})("1.21.4");
++const Recipe = (require("prismarine-recipe") as (registry: object) => {
++  Recipe: { find(id: number, metadata: number | null): ReturnType<Bot["recipesAll"]> };
++})(clickRegistry).Recipe;
++
++const WOOD = /^(oak|spruce|birch|jungle|acacia|dark_oak|mangrove|cherry|pale_oak|bamboo|crimson|warped)_(planks|log)$/;
++
++interface Stack {
++  type: number;
++  count: number;
++}
++interface ServerWindow {
++  readonly id: number;
++  readonly width: number;
++  readonly slots: (Stack | null)[];
++  carried: Stack | null;
++  readonly invStart: number;
++  readonly invEnd: number;
++}
++
++export interface ClickServerOptions {
++  readonly carried?: Readonly<Record<string, number>>;
++  readonly lagMs?: number;
++  readonly paper?: boolean;
++  readonly deaf?: boolean;
++  readonly noOpen?: boolean;
++}
++
++export interface ClickServerBot {
++  readonly bot: Bot;
++  /** Every packet the bot wrote, by name. */
++  readonly written: { name: string; packet: Record<string, unknown> }[];
++  /** set_slot packets for the result slot that showed it empty while the grid was full (Paper's intermediate state). */
++  readonly emptyResultFlashes: () => number;
++  readonly table: { position: Vec3; name: string; type: number };
++  /** The server's count of an item in the player's inventory (and, with a table open, in that window). */
++  serverCount(name: string): number;
++}
++
++const copy = (stack: Stack | null | undefined): Stack | null => (stack ? { type: stack.type, count: stack.count } : null);
++
++export function clickServerBot(options: ClickServerOptions = {}): ClickServerBot {
++  const { lagMs = 2, paper = false, deaf = false, noOpen = false } = options;
++  const registry = clickRegistry;
++  const stackSize = (type: number) => registry.items[type]?.stackSize ?? 64;
++  const canon = (type: number) => {
++    const name = registry.items[type]?.name ?? "";
++    const wood = WOOD.exec(name);
++    return wood ? `oak_${wood[2]}` : name;
++  };
++  const exact = (type: number) => registry.items[type]?.name ?? "";
++
++  const client = new EventEmitter() as EventEmitter & { write: (name: string, packet: Record<string, unknown>) => void };
++  const written: { name: string; packet: Record<string, unknown> }[] = [];
++  let flashes = 0;
++  const inventory = windows.createWindow(0, "minecraft:inventory", "Inventory");
++  const bot = Object.assign(new EventEmitter(), {
++    version: "1.21.4",
++    registry,
++    _client: client,
++    inventory,
++    currentWindow: null as Window | null,
++    supportFeature: (feature: string) => feature === "stateIdUsed",
++    lookAt: async () => undefined,
++    recipesAll: (id: number, _metadata: number | null, table: unknown) =>
++      Recipe.find(id, null).filter((recipe) => !recipe.requiresTable || Boolean(table)),
++    craft: async () => {
++      throw new Error("Mineflayer's craft() must not be used");
++    },
++  }) as unknown as Bot;
++
++  let slot = 9;
++  for (const [name, total] of Object.entries(options.carried ?? {})) {
++    const type = registry.itemsByName[name]!.id;
++    for (let left = total; left > 0; left -= stackSize(type)) {
++      inventory.updateSlot(slot++, new ItemClass(type, Math.min(left, stackSize(type))));
++    }
++  }
++
++  // ---- the server's side ----------------------------------------------------------------------------------------
++  let stateId = 0;
++  const server = new Map<number, ServerWindow>();
++  server.set(0, {
++    id: 0,
++    width: 2,
++    slots: inventory.slots.map((item) => copy(item)),
++    carried: null,
++    invStart: 9,
++    invEnd: 45,
++  });
++  const table = { position: new Vec3(2, 64, 0), name: "crafting_table", type: registry.blocksByName.crafting_table!.id };
++
++  function matchGrid(w: ServerWindow, key: (type: number) => string): Stack | null {
++    const n = w.width;
++    const cells: { x: number; y: number; it: Stack }[] = [];
++    for (let y = 0; y < n; y++)
++      for (let x = 0; x < n; x++) {
++        const it = w.slots[1 + x + n * y];
++        if (it) cells.push({ x, y, it });
++      }
++    if (cells.length === 0) return null;
++    const x0 = Math.min(...cells.map((c) => c.x));
++    const x1 = Math.max(...cells.map((c) => c.x));
++    const y0 = Math.min(...cells.map((c) => c.y));
++    const y1 = Math.max(...cells.map((c) => c.y));
++    const shape: (string | null)[][] = [];
++    for (let y = y0; y <= y1; y++) {
++      const row: (string | null)[] = [];
++      for (let x = x0; x <= x1; x++) {
++        const it = w.slots[1 + x + n * y];
++        row.push(it ? key(it.type) : null);
++      }
++      shape.push(row);
++    }
++    const same = (a: (string | null)[][], b: (string | null)[][]) =>
++      a.length === b.length && a.every((row, i) => row.length === b[i]!.length && row.every((v, j) => v === b[i]![j]));
++    const idOf = (v: unknown): number | null =>
++      v == null ? null : typeof v === "object" ? ((v as { id?: number }).id ?? null) : (v as number);
++    const bag = cells
++      .map((c) => key(c.it.type))
++      .sort()
++      .join(",");
++    for (const [resultId, list] of Object.entries(registry.recipes as Record<string, unknown[]>)) {
++      for (const raw of list) {
++        const recipe = raw as { inShape?: unknown[][]; ingredients?: unknown[]; result: { count: number } };
++        if (recipe.inShape) {
++          const want = recipe.inShape.map((row) =>
++            row.map((v) => {
++              const id = idOf(v);
++              return id == null || id === -1 ? null : key(id);
++            }),
++          );
++          if (same(want, shape) || same(want.map((row) => [...row].reverse()), shape))
++            return { type: Number(resultId), count: recipe.result.count };
++        } else if (recipe.ingredients) {
++          const want = recipe.ingredients
++            .map((v) => key(idOf(v) ?? -1))
++            .sort()
++            .join(",");
++          if (want === bag) return { type: Number(resultId), count: recipe.result.count };
++        }
++      }
++    }
++    return null;
++  }
++  const resultOf = (w: ServerWindow) => matchGrid(w, exact) ?? matchGrid(w, canon);
++  function consume(w: ServerWindow) {
++    for (let s = 1; s <= w.width * w.width; s++) {
++      const it = w.slots[s];
++      if (it && --it.count <= 0) w.slots[s] = null;
++    }
++  }
++  /** Move a stack into the inventory part (into matching stacks first, then empty slots); returns what did not fit. */
++  function insert(w: ServerWindow, it: Stack, reverse: boolean): number {
++    const order: number[] = [];
++    for (let s = w.invStart; s < w.invEnd; s++) order.push(s);
++    if (reverse) order.reverse();
++    for (const s of order) {
++      const o = w.slots[s];
++      if (it.count && o && o.type === it.type && o.count < stackSize(o.type)) {
++        const moved = Math.min(it.count, stackSize(o.type) - o.count);
++        o.count += moved;
++        it.count -= moved;
++      }
++    }
++    for (const s of order)
++      if (it.count && !w.slots[s]) {
++        w.slots[s] = { type: it.type, count: Math.min(it.count, stackSize(it.type)) };
++        it.count -= w.slots[s]!.count;
++      }
++    return it.count;
++  }
++  function roomFor(w: ServerWindow, it: Stack): boolean {
++    let room = 0;
++    for (let s = w.invStart; s < w.invEnd; s++) {
++      const o = w.slots[s];
++      if (!o) room += stackSize(it.type);
++      else if (o.type === it.type) room += stackSize(o.type) - o.count;
++    }
++    return room >= it.count;
++  }
++  function click(w: ServerWindow, slotId: number, button: number, mode: number) {
++    if (mode === 5) return; // the end of a drag that never started
++    if (mode === 1) {
++      if (slotId === 0) {
++        for (let r = resultOf(w); r && roomFor(w, r); r = resultOf(w)) {
++          consume(w);
++          insert(w, r, true);
++        }
++      } else if (slotId >= 1 && slotId <= w.width * w.width && w.slots[slotId]) {
++        const it = w.slots[slotId]!;
++        const left = insert(w, { ...it }, false);
++        w.slots[slotId] = left ? { type: it.type, count: left } : null;
++      }
++      return;
++    }
++    if (mode !== 0) return;
++    if (slotId === -999) {
++      if (w.carried && (button === 0 || --w.carried.count <= 0)) w.carried = null;
++      return;
++    }
++    if (slotId === 0) {
++      const r = resultOf(w);
++      if (!r) return;
++      if (!w.carried) {
++        w.carried = r;
++        consume(w);
++      } else if (w.carried.type === r.type && w.carried.count + r.count <= stackSize(r.type)) {
++        w.carried.count += r.count;
++        consume(w);
++      }
++      return;
++    }
++    const s = w.slots[slotId] ?? null;
++    const c = w.carried;
++    if (button === 0) {
++      if (!c) {
++        w.carried = s;
++        w.slots[slotId] = null;
++      } else if (!s) {
++        w.slots[slotId] = c;
++        w.carried = null;
++      } else if (s.type === c.type) {
++        const moved = Math.min(stackSize(s.type) - s.count, c.count);
++        s.count += moved;
++        c.count -= moved;
++        if (!c.count) w.carried = null;
++      } else {
++        w.slots[slotId] = c;
++        w.carried = s;
++      }
++    } else if (!c) {
++      if (s) {
++        const half = Math.ceil(s.count / 2);
++        w.carried = { type: s.type, count: half };
++        s.count -= half;
++        if (!s.count) w.slots[slotId] = null;
++      }
++    } else if (!s || (s.type === c.type && s.count < stackSize(s.type))) {
++      w.slots[slotId] = { type: c.type, count: (s?.count ?? 0) + 1 };
++      if (--c.count <= 0) w.carried = null;
++    } else {
++      w.slots[slotId] = c;
++      w.carried = s;
++    }
++  }
++
++  // ---- the client's side: what Mineflayer does with the packets ---------------------------------------------------
++  const clientWindow = (id: number): Window | null => {
++    const current = bot.currentWindow as Window | null;
++    if (id === 0) return inventory;
++    return current && current.id === id ? current : null;
++  };
++  // prismarine-windows declares updateSlot for an Item only; null empties the slot
++  const toItem = (it: Stack | null) => (it ? new ItemClass(it.type, it.count) : null) as Item;
++  client.on("set_slot", (packet: { windowId: number; slot: number; item: Stack | null }) => {
++    const win = clientWindow(packet.windowId);
++    if (win && packet.slot >= 0) win.updateSlot(packet.slot, toItem(packet.item));
++  });
++  client.on("window_items", (packet: { windowId: number; items: (Stack | null)[]; carriedItem: Stack | null }) => {
++    const win = clientWindow(packet.windowId);
++    if (!win) return;
++    packet.items.forEach((it, i) => {
++      if (i < win.slots.length) win.updateSlot(i, toItem(it));
++    });
++    win.selectedItem = toItem(packet.carriedItem);
++  });
++
++  const later = (fire: () => void, extra = 0) => setTimeout(fire, lagMs + extra);
++  function resync(w: ServerWindow, extra = 0) {
++    const items = w.slots.map(copy);
++    items[0] = resultOf(w);
++    const carriedItem = copy(w.carried);
++    const packet = { windowId: w.id, stateId: ++stateId, items, carriedItem };
++    later(() => client.emit("window_items", packet), extra);
++  }
++  /** Paper's burst around a crafting result: the clicked slot, the result empty then filled, the grid, a resync. */
++  function paperBurst(w: ServerWindow, slotId: number) {
++    const set = (s: number, item: Stack | null) =>
++      later(() => client.emit("set_slot", { windowId: w.id, stateId, slot: s, item }));
++    if (slotId >= 0) set(slotId, copy(w.slots[slotId]));
++    const result = resultOf(w);
++    if (result) flashes += 1;
++    set(0, null);
++    set(0, null);
++    set(0, result);
++    for (let s = 1; s <= w.width * w.width; s++) set(s, copy(w.slots[s]));
++    resync(w);
++  }
++
++  client.write = (name: string, packet: Record<string, unknown>) => {
++    written.push({ name, packet });
++    if (deaf) return;
++    if (name === "close_window") {
++      const w = server.get(packet.windowId as number);
++      if (!w) return;
++      // the grid and the cursor go back into the inventory
++      for (let s = 1; s <= w.width * w.width; s++) {
++        if (!w.slots[s]) continue;
++        const left = insert(w, { ...w.slots[s]! }, false);
++        w.slots[s] = left ? { type: w.slots[s]!.type, count: left } : null;
++      }
++      if (w.carried && !insert(w, w.carried, false)) w.carried = null;
++      if (w.id !== 0) {
++        const inv = server.get(0)!;
++        for (let s = 10; s < 46; s++) inv.slots[s - 1] = copy(w.slots[s]);
++        server.delete(w.id);
++        resync(inv);
++      } else {
++        resync(w);
++      }
++      return;
++    }
++    if (name !== "window_click") return;
++    const w = server.get(packet.windowId as number);
++    const open = (bot.currentWindow as Window | null)?.id ?? 0;
++    if (!w || open !== packet.windowId) return;
++    const slotId = packet.slot as number;
++    const gridBefore = JSON.stringify(w.slots.slice(1, 1 + w.width * w.width));
++    click(w, slotId, packet.mouseButton as number, packet.mode as number);
++    const gridChanged = gridBefore !== JSON.stringify(w.slots.slice(1, 1 + w.width * w.width));
++    if (paper && (gridChanged || slotId === 0)) paperBurst(w, slotId);
++    resync(w, paper ? 1 : 0);
++  };
++
++  let nextId = 0;
++  Object.assign(bot, {
++    activateBlock: async (block: { position: Vec3 }) => {
++      if (noOpen || !block.position.equals(table.position)) return;
++      const id = (nextId++ % 100) + 1;
++      const inv = server.get(0)!;
++      const slots: (Stack | null)[] = new Array(46).fill(null);
++      for (let s = 9; s < 45; s++) slots[s + 1] = copy(inv.slots[s]);
++      server.set(id, { id, width: 3, slots, carried: null, invStart: 10, invEnd: 46 });
++      later(() => {
++        const win = windows.createWindow(id, "minecraft:crafting", "Crafting");
++        slots.forEach((it, i) => win.updateSlot(i, toItem(it)));
++        Object.assign(bot, { currentWindow: win });
++        client.emit("window_items", { windowId: id, stateId: ++stateId, items: slots, carriedItem: null });
++        bot.emit("windowOpen", win);
++      });
++    },
++    closeWindow: (win: Window) => {
++      if (!win || win.id === 0) return;
++      // like Mineflayer: tell the server, copy the window's inventory part into the player inventory at once
++      client.write("close_window", { windowId: win.id });
++      for (let s = win.inventoryStart; s < win.inventoryEnd; s++) inventory.updateSlot(s - 1, (win.slots[s] ?? null) as Item);
++      if (bot.currentWindow === win) Object.assign(bot, { currentWindow: null });
++      bot.emit("windowClose", win);
++    },
++  });
++
++  return {
++    bot,
++    written,
++    emptyResultFlashes: () => flashes,
++    table,
++    serverCount(name: string) {
++      const type = registry.itemsByName[name]!.id;
++      const inv = server.get(0)!;
++      let n = 0;
++      for (let s = inv.invStart; s < inv.invEnd; s++) if (inv.slots[s]?.type === type) n += inv.slots[s]!.count;
++      return n;
++    },
++  };
++}
+diff --git a/src/world/confirmed-craft.test.ts b/src/world/confirmed-craft.test.ts
+new file mode 100644
+index 0000000..b19b242
+--- /dev/null
++++ b/src/world/confirmed-craft.test.ts
+@@ -0,0 +1,137 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { clickServerBot } from "../test-support/click-server.js";
++import { planCraftingFromInventory } from "../utils/craft-plan.js";
++import { gridOf } from "./confirmed-craft.js";
++import { canConfirmClicks, confirmedWindowTiming, planPut } from "./confirmed-window.js";
++import { executeCraftPlan } from "./crafting.js";
++
++function plan(bot: ReturnType<typeof clickServerBot>["bot"], targets: Record<string, number>) {
++  const preparation = planCraftingFromInventory(
++    bot,
++    Object.entries(targets).map(([name, count]) => {
++      const item = bot.registry.itemsByName[name]!;
++      return { id: item.id, name: item.name, count };
++    }),
++  );
++  assert.equal(preparation.kind, "ready");
++  return preparation.applications;
++}
++
++const carried = (bot: ReturnType<typeof clickServerBot>["bot"], name: string) =>
++  bot.inventory.items().reduce((sum, item) => sum + (item.name === name ? item.count : 0), 0);
++
++test("gridOf and planPut: shaped recipes land in their slots; a stack is picked up once and the rest goes back", () => {
++  const { bot } = clickServerBot({ carried: { oak_planks: 12 } });
++  const id = (name: string) => bot.registry.itemsByName[name]!.id;
++  const pickaxe = bot.recipesAll(id("wooden_pickaxe"), null, true).find((r) => r.inShape?.[0]?.[0]?.id === id("oak_planks"))!;
++  assert.deepEqual([...gridOf(pickaxe, 3)!], [
++    [id("oak_planks"), [1, 2, 3]],
++    [id("stick"), [5, 8]],
++  ]);
++  assert.equal(gridOf(pickaxe, 2), null, "a 3x3 recipe does not fit the 2x2 grid");
++  assert.deepEqual(planPut(bot.inventory, id("oak_planks"), [1, 2], 3), [
++    [9, 0, 0],
++    [1, 1, 0],
++    [1, 1, 0],
++    [1, 1, 0],
++    [2, 1, 0],
++    [2, 1, 0],
++    [2, 1, 0],
++    [9, 0, 0],
++  ]);
++  assert.equal(planPut(bot.inventory, id("oak_planks"), [1, 2, 3], 5), null, "15 needed, 12 carried");
++});
++
++test("Paper's result burst: logs to planks, sticks and a table in the 2x2 grid, exact counts on the server", async () => {
++  const fake = clickServerBot({ carried: { birch_log: 3 }, paper: true });
++  const { bot } = fake;
++  assert.equal(canConfirmClicks(bot), true);
++  for (const [target, count] of [
++    ["birch_planks", 12],
++    ["stick", 4],
++    ["crafting_table", 1],
++  ] as const) {
++    const result = await executeCraftPlan(bot, plan(bot, { [target]: count }), null);
++    assert.deepEqual(result, { kind: "completed", completedSteps: 1 }, target);
++  }
++  assert.ok(fake.emptyResultFlashes() > 0, "the server showed the result slot empty before filling it");
++  assert.equal(fake.serverCount("birch_log"), 0);
++  assert.equal(fake.serverCount("birch_planks"), 6, "12 made, 2 for the sticks, 4 for the table");
++  assert.equal(fake.serverCount("stick"), 4);
++  assert.equal(fake.serverCount("crafting_table"), 1);
++  assert.equal(carried(bot, "birch_planks"), 6, "the bot's view is the server's");
++  assert.equal(carried(bot, "stick"), 4);
++  assert.ok(fake.written.some((p) => p.name === "close_window" && p.packet.windowId === 0), "the 2x2 grid is closed");
++  assert.ok(fake.written.filter((p) => p.name === "window_click").every((p) => p.packet.stateId === -1));
++});
++
++test("a table plan with Paper's bursts: a wooden pickaxe and sticks crafted in one window, many batches at once", async () => {
++  const fake = clickServerBot({ carried: { oak_planks: 40 }, paper: true });
++  const { bot } = fake;
++  const applications = plan(bot, { wooden_pickaxe: 1, stick: 24 });
++  const result = await executeCraftPlan(bot, applications, fake.table as never);
++  assert.equal(result.kind, "completed");
++  assert.equal(fake.serverCount("wooden_pickaxe"), 1);
++  assert.equal(fake.serverCount("stick"), 26, "7 applications of 4 = 28 sticks, 2 used by the pickaxe");
++  assert.equal(fake.serverCount("oak_planks"), 40 - 3 - 14);
++  assert.equal(carried(bot, "stick"), 26);
++  assert.equal(bot.currentWindow, null, "the table window is closed");
++  const opens = fake.written.filter((p) => p.name === "close_window" && p.packet.windowId !== 0).length;
++  assert.equal(opens, 1, "one table window for the whole plan");
++});
++
++test("batches use the room a batch frees: two logs from a full inventory make eight planks in the freed slot", async () => {
++  const fake = clickServerBot({ carried: { cobblestone: 35 * 64, oak_log: 2 } });
++  const result = await executeCraftPlan(fake.bot, plan(fake.bot, { oak_planks: 8 }), null);
++  assert.deepEqual(result, { kind: "completed", completedSteps: 1 });
++  assert.equal(fake.serverCount("oak_planks"), 8);
++  assert.equal(fake.serverCount("oak_log"), 0);
++});
++
++test("a full inventory is refused before any click, with the inventory-room error", async () => {
++  // a full stack of logs: taking one frees no slot, so four planks have nowhere to go
++  const fake = clickServerBot({ carried: { cobblestone: 35 * 64, oak_log: 64 } });
++  const result = await executeCraftPlan(fake.bot, plan(fake.bot, { oak_planks: 4 }), null);
++  assert.equal(result.kind, "failed");
++  assert.match(String(result.kind === "failed" && result.cause), /needs inventory room to store 4 oak_planks/);
++  assert.equal(fake.serverCount("oak_log"), 64);
++  assert.equal(fake.written.filter((p) => p.name === "window_click" && p.packet.slot !== -999).length, 0);
++});
++
++test("a server that never answers fails within the settle limit instead of crafting on a guess", async () => {
++  const saved = confirmedWindowTiming.settleMs;
++  confirmedWindowTiming.settleMs = 200;
++  try {
++    const fake = clickServerBot({ carried: { oak_log: 1 }, deaf: true });
++    const result = await executeCraftPlan(fake.bot, plan(fake.bot, { oak_planks: 4 }), null);
++    assert.equal(result.kind, "failed");
++    assert.match(String(result.kind === "failed" && result.cause), /did not answer the window clicks in time/);
++  } finally {
++    confirmedWindowTiming.settleMs = saved;
++  }
++});
++
++test("a table that never opens fails after two tries", async () => {
++  const saved = confirmedWindowTiming.openMs;
++  confirmedWindowTiming.openMs = 100;
++  try {
++    const fake = clickServerBot({ carried: { oak_planks: 3, stick: 2 }, noOpen: true });
++    const result = await executeCraftPlan(fake.bot, plan(fake.bot, { wooden_pickaxe: 1 }), fake.table as never);
++    assert.equal(result.kind, "failed");
++    assert.match(String(result.kind === "failed" && result.cause), /crafting table did not open/);
++  } finally {
++    confirmedWindowTiming.openMs = saved;
++  }
++});
++
++test("cancellation stops the clicks and still hands the grid back", async () => {
++  const fake = clickServerBot({ carried: { oak_log: 8 }, lagMs: 20 });
++  const controller = new AbortController();
++  setTimeout(() => controller.abort(new Error("cancelled by the test")), 30);
++  await assert.rejects(executeCraftPlan(fake.bot, plan(fake.bot, { oak_planks: 32 }), null, controller.signal), /cancelled/);
++  await new Promise((resolve) => setTimeout(resolve, 100));
++  const planks = fake.serverCount("oak_planks");
++  assert.equal(fake.serverCount("oak_log") * 4 + planks, 32, "every log is either a log or four planks");
++  assert.ok(fake.written.some((p) => p.name === "close_window" && p.packet.windowId === 0));
++});

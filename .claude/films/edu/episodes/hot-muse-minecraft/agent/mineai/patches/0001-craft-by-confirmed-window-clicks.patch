@@ -1,0 +1,636 @@
+Subject: Craft by confirmed window clicks, so crafting works on Paper
+
+Applies to: https://github.com/aibengineering/mine-ai-mcp at 2fe1306a0ac51efa99154048e65f2caff00a8934 (MIT,
+Copyright (c) 2026 AI Bengineering; see mineai/LICENSE-mine-ai-mcp). Patched for Muse plays Minecraft: kept by
+Picasso Lab (UC San Diego), applied in order (mineai/UPSTREAM.json) by mineai/fetch-and-patch.sh with `git apply`.
+
+Why: on Paper 1.21.4 their fork of mineflayer (9fa1140) fails most crafts. After the click that completes a recipe,
+Paper answers with a burst (the clicked slot, the result slot empty and then filled, the grid, a full resync) where
+vanilla sends one set_slot. craft.js reads the result slot as soon as its click resolves ("Server did not supply the
+expected crafting result"), and at a table the resync leaves mineflayer's cursor model wrong, so later clicks put a
+stick where a plank belongs.
+
+What: executeCraftPlan crafts through confirmed clicks whenever the bot talks to a real 1.17.1+ server
+(src/world/confirmed-window.ts, src/world/confirmed-craft.ts, ported from the agent's src/skills/window.js and
+src/skills/craft.js). Every click carries state id -1, which the server always answers with exactly one full resync;
+clicks are planned only on a window the server has confirmed (a settle counts the resyncs, then waits for a quiet
+spell); the result slot is checked before it is taken; the result is shift-clicked and what arrived is counted. One
+window serves the whole plan (the table opens once), and each recipe runs in batches of up to a stack per grid slot
+when the outputs fit (the same room rule as the native path, applied per batch). The native per-application path
+stays for test doubles without a protocol client and for pre-1.17 servers. Smelting, containers, equip and drop
+were measured on Paper and need no change.
+
+diff --git a/src/world/confirmed-craft.ts b/src/world/confirmed-craft.ts
+new file mode 100644
+index 0000000..d632b48
+--- /dev/null
++++ b/src/world/confirmed-craft.ts
+@@ -0,0 +1,244 @@
++// Crafting by confirmed window clicks (see confirmed-window.ts). Ported from the "Muse plays Minecraft" agent (Picasso
++// Lab, UC San Diego, src/skills/craft.js). Mineflayer's craft() reads the result slot as soon as its click
++// resolves and keeps predicting the cursor through Paper's resync bursts; on Paper 1.21.4 that fails most 2x2 crafts
++// ("Server did not supply the expected crafting result") and puts sticks where planks belong at a table.
++//
++// One batch of k applications: put k of each ingredient in its grid slots, settle, check that the server shows the
++// recipe's result, shift-click it (the server crafts while the grid holds a full set), settle, and count what arrived.
++// Anything left in the grid (remainders, or what a full inventory refused) goes back into the inventory. Every step is
++// planned on a window the server has confirmed.
++import type { Bot } from "mineflayer";
++import type { CraftApplication } from "../utils/craft-plan.js";
++import {
++  ConfirmedClicks,
++  closePlayerInventory,
++  countIn,
++  emptySlotIn,
++  openBlockWindow,
++  planPut,
++  syncPlayerInventory,
++  type BotWindow,
++  type Click,
++} from "./confirmed-window.js";
++
++type Recipe = CraftApplication["recipe"];
++type RecipeItem = NonNullable<Recipe["ingredients"]>[number];
++type CraftingTable = Parameters<Bot["activateBlock"]>[0];
++
++const present = (item: RecipeItem | null | undefined): item is RecipeItem => item != null && item.id != null && item.id !== -1;
++
++/** Grid slots per ingredient id for a recipe in a w x w grid (slot 1 is the top left), or null if it does not fit. */
++export function gridOf(recipe: Pick<Recipe, "inShape" | "ingredients">, width: number): Map<number, number[]> | null {
++  const out = new Map<number, number[]>();
++  const add = (id: number, slot: number) => out.set(id, [...(out.get(id) ?? []), slot]);
++  if (recipe.inShape && recipe.inShape.length > 0) {
++    if (recipe.inShape.length > width || recipe.inShape.some((row) => row.length > width)) return null;
++    recipe.inShape.forEach((row, y) =>
++      row.forEach((ingredient, x) => {
++        if (present(ingredient)) add(ingredient.id, 1 + x + width * y);
++      }),
++    );
++  } else {
++    const list = (recipe.ingredients ?? []).filter(present);
++    if (list.length > width * width) return null;
++    list.forEach((ingredient, index) => add(ingredient.id, 1 + index));
++  }
++  return out.size > 0 ? out : null;
++}
++
++/** Remainders a recipe leaves in the grid per application (returned containers): id -> count. */
++function remaindersOf(recipe: Recipe): Map<number, number> {
++  const out = new Map<number, number>();
++  for (const row of recipe.outShape ?? [])
++    for (const item of row) if (present(item) && item.count > 0) out.set(item.id, (out.get(item.id) ?? 0) + item.count);
++  return out;
++}
++
++/**
++ * Would k applications fit? Takes the ingredients from the inventory stacks the way planPut does (fullest first),
++ * then stores k results and the remainders as the server does (into matching stacks first, then empty slots).
++ */
++function fits(bot: Bot, window: BotWindow, recipe: Recipe, grid: Map<number, number[]>, k: number): boolean {
++  const slots: ({ type: number; count: number } | null)[] = [];
++  for (let slot = window.inventoryStart; slot < window.inventoryEnd; slot++) {
++    const item = window.slots[slot];
++    slots.push(item ? { type: item.type, count: item.count } : null);
++  }
++  for (const [id, destinations] of grid) {
++    let need = destinations.length * k;
++    const stacks = slots
++      .map((stack, index) => ({ stack, index }))
++      .filter((entry): entry is { stack: { type: number; count: number }; index: number } => entry.stack?.type === id)
++      .sort((a, b) => b.stack.count - a.stack.count);
++    for (const { stack, index } of stacks) {
++      if (need === 0) break;
++      const take = Math.min(need, stack.count);
++      stack.count -= take;
++      need -= take;
++      if (stack.count === 0) slots[index] = null;
++    }
++    if (need > 0) return false;
++  }
++  const store = (id: number, count: number): boolean => {
++    const stackSize = bot.registry.items[id]?.stackSize ?? 64;
++    for (const stack of slots) {
++      if (count === 0) break;
++      if (stack && stack.type === id && stack.count < stackSize) {
++        const moved = Math.min(count, stackSize - stack.count);
++        stack.count += moved;
++        count -= moved;
++      }
++    }
++    for (let index = 0; index < slots.length && count > 0; index++) {
++      if (slots[index]) continue;
++      const moved = Math.min(count, stackSize);
++      slots[index] = { type: id, count: moved };
++      count -= moved;
++    }
++    return count === 0;
++  };
++  if (!store(recipe.result.id, recipe.result.count * k)) return false;
++  for (const [id, count] of remaindersOf(recipe)) if (!store(id, count * k)) return false;
++  return true;
++}
++
++const itemName = (bot: Bot, id: number | undefined) => (id == null ? "nothing" : (bot.registry.items[id]?.name ?? String(id)));
++
++/** A crafting window (a table's, or the player's own 2x2 grid) open for a run of confirmed batches. */
++export class ConfirmedCraftingSession {
++  readonly #bot: Bot;
++  readonly #window: BotWindow;
++  readonly #clicks: ConfirmedClicks;
++  readonly #width: number;
++  readonly #table: boolean;
++  readonly #signal?: AbortSignal;
++  #closed = false;
++
++  private constructor(bot: Bot, window: BotWindow, table: boolean, signal?: AbortSignal) {
++    this.#bot = bot;
++    this.#window = window;
++    this.#table = table;
++    this.#width = table ? 3 : 2;
++    this.#signal = signal;
++    this.#clicks = new ConfirmedClicks(bot, window, signal);
++  }
++
++  /** Open the table's window, or use the player's own 2x2 grid; the window is settled before the first click. */
++  static async open(bot: Bot, table: CraftingTable | null, signal?: AbortSignal): Promise<ConfirmedCraftingSession> {
++    if (table) {
++      const window = await openBlockWindow(bot, table, "minecraft:crafting", "crafting table", signal);
++      return new ConfirmedCraftingSession(bot, window, true, signal);
++    }
++    if (bot.currentWindow) bot.closeWindow(bot.currentWindow);
++    return new ConfirmedCraftingSession(bot, bot.inventory, false, signal);
++  }
++
++  /** Craft `applications` applications of one recipe in batches; throws with what the server showed on a failure. */
++  async craft(recipe: Recipe, applications: number): Promise<void> {
++    const bot = this.#bot;
++    const window = this.#window;
++    const resultName = itemName(bot, recipe.result.id);
++    const grid = gridOf(recipe, this.#width);
++    if (!grid) throw new Error(`The ${resultName} recipe does not fit a ${this.#width}x${this.#width} grid.`);
++    const perSlot = Math.min(64, ...[...grid.keys()].map((id) => bot.registry.items[id]?.stackSize ?? 64));
++    await this.#clicks.settle();
++    await this.#clearGrid();
++    let left = applications;
++    while (left > 0) {
++      this.#signal?.throwIfAborted();
++      let k = Math.min(left, perSlot);
++      while (k > 0 && !fits(bot, window, recipe, grid, k)) k -= 1;
++      if (k === 0) {
++        for (const [id, destinations] of grid)
++          if (countIn(window, id) < destinations.length)
++            throw new Error(`Missing ingredient ${itemName(bot, id)} for ${resultName}.`);
++        throw new Error(
++          `This crafting execution needs inventory room to store ${recipe.result.count} ${resultName} before the next recipe application.`,
++        );
++      }
++      const plan: Click[] = [];
++      for (const [id, destinations] of grid) {
++        const clicks = planPut(window, id, destinations, k);
++        if (!clicks) throw new Error(`Missing ingredient ${itemName(bot, id)} for ${resultName}.`);
++        plan.push(...clicks);
++      }
++      await this.#clicks.clicks(plan);
++      await this.#clicks.settle();
++      const shown = window.slots[0];
++      if (!shown || shown.type !== recipe.result.id) {
++        await this.#clearGrid();
++        throw new Error(`The server shows ${itemName(bot, shown?.type)} for this arrangement, not ${resultName}.`);
++      }
++      const before = countIn(window, recipe.result.id);
++      await this.#clicks.click(0, 0, 1);
++      await this.#clicks.settle();
++      const got = countIn(window, recipe.result.id) - before;
++      await this.#clearGrid();
++      if (got < k * recipe.result.count) {
++        throw new Error(
++          got <= 0
++            ? `The server did not hand over the ${resultName} result.`
++            : `The server made only ${got} of ${k * recipe.result.count} ${resultName}.`,
++        );
++      }
++      left -= k;
++    }
++  }
++
++  /** Put the cursor and the grid back into the inventory part of the window; throws when something does not fit. */
++  async #clearGrid(): Promise<void> {
++    const window = this.#window;
++    if (window.selectedItem) {
++      const slot = emptySlotIn(window);
++      if (slot === null) throw new Error("The cursor holds an item and the inventory has no room for it.");
++      await this.#clicks.click(slot, 0, 0);
++      await this.#clicks.settle();
++    }
++    const busy: Click[] = [];
++    for (let slot = 1; slot <= this.#width * this.#width; slot++) if (window.slots[slot]) busy.push([slot, 0, 1]);
++    if (busy.length === 0) return;
++    await this.#clicks.clicks(busy);
++    await this.#clicks.settle();
++    for (let slot = 1; slot <= this.#width * this.#width; slot++)
++      if (window.slots[slot]) throw new Error("The crafting grid holds items that do not fit back into the inventory.");
++  }
++
++  /**
++   * Close the window (the server hands back anything left in the grid and on the cursor) and wait until the player
++   * inventory shows the server's state. Safe to call twice.
++   */
++  async close(): Promise<void> {
++    if (this.#closed) return;
++    this.#closed = true;
++    const bot = this.#bot;
++    if (this.#table) {
++      try {
++        if (bot.currentWindow === this.#window) bot.closeWindow(this.#window as NonNullable<Bot["currentWindow"]>);
++      } catch {
++        // already closed
++      }
++    } else {
++      closePlayerInventory(bot);
++    }
++    await syncPlayerInventory(bot);
++  }
++}
++
++/** Craft every application of a plan through confirmed clicks, in one window. Throws on the first failure. */
++export async function craftConfirmed(
++  bot: Bot,
++  applications: readonly CraftApplication[],
++  table: CraftingTable | null,
++  signal?: AbortSignal,
++  onStep?: () => void,
++): Promise<void> {
++  const session = await ConfirmedCraftingSession.open(bot, table, signal);
++  try {
++    for (const application of applications) {
++      await session.craft(application.recipe, application.applications);
++      onStep?.();
++    }
++  } finally {
++    await session.close();
++  }
++}
+diff --git a/src/world/confirmed-window.ts b/src/world/confirmed-window.ts
+new file mode 100644
+index 0000000..0c5cc80
+--- /dev/null
++++ b/src/world/confirmed-window.ts
+@@ -0,0 +1,301 @@
++// Window clicks the server confirms. Ported from the "Muse plays Minecraft" agent (Picasso Lab, UC San Diego,
++// src/skills/window.js) for Paper servers.
++//
++// Mineflayer sends each click with the client's own prediction of the window and goes on. A 1.17.1+ server answers a
++// click whose state id is stale with a full window resync, and Paper also answers the click that completes or takes
++// a crafting result with a burst (the source slot, the result slot three times: empty, then the result, the grid
++// slot, then a full window resync, all within 0-2 ms). Those packets describe the window as it was a few clicks
++// earlier; applied over the client's prediction, the next click is decided on a stale window: the result slot is read
++// before it is filled, or a stick goes where a plank belongs.
++//
++// Here every sequence of clicks is planned from a window state the server has confirmed, sent as packets that carry
++// state id -1 (the server applies the click to its own state, then always answers with exactly one full resync), and
++// followed by a settle that waits until the answer to the last click is in, plus a short quiet spell. "Settled" is a
++// count, not a guess.
++import { createRequire } from "node:module";
++import type { Bot } from "mineflayer";
++import type { Item } from "prismarine-item";
++
++export type BotWindow = NonNullable<Bot["currentWindow"]> | Bot["inventory"];
++/** [slot, mouse button, mode]; mode 1 is a shift-click. */
++export type Click = readonly [slot: number, button: number, mode: number];
++
++/** How long the server gets to open a window, and to answer the clicks sent so far (tests shorten these). */
++export const confirmedWindowTiming = { openMs: 5_000, settleMs: 4_000 };
++/** Packets in a row before a short pause (Paper kicks a client that sends more than 500 packets a second). */
++const BURST = 24;
++const BURST_GAP_MS = 60;
++/** After the expected answers are in: a short quiet spell in which nothing more for this window arrives. */
++const QUIET_MS = 50;
++const POLL_MS = 20;
++
++type ItemLoader = (registry: Bot["registry"]) => typeof Item;
++const loadItem = createRequire(import.meta.url)("prismarine-item") as ItemLoader;
++
++interface Tracker {
++  /** Full resyncs (window_items) received per window id. */
++  readonly full: Map<number, number>;
++  /** When the server last touched each window id. */
++  readonly last: Map<number, number>;
++}
++
++const trackers = new WeakMap<Bot, Tracker>();
++
++/** True for a bot that talks to a 1.17.1+ server through minecraft-protocol, where state id -1 forces a resync. */
++export function canConfirmClicks(bot: Bot): boolean {
++  const client = (bot as Partial<Bot>)._client;
++  return (
++    typeof client?.write === "function" &&
++    typeof client.on === "function" &&
++    typeof bot.supportFeature === "function" &&
++    bot.supportFeature("stateIdUsed")
++  );
++}
++
++/** Per bot: how many full resyncs each window id has received and when the server last touched it. */
++export function windowTracker(bot: Bot): Tracker {
++  const known = trackers.get(bot);
++  if (known) return known;
++  const tracker: Tracker = { full: new Map(), last: new Map() };
++  const touch = (id: number): void => {
++    tracker.last.set(id, Date.now());
++  };
++  bot._client.on("window_items", (packet: { windowId: number }) => {
++    tracker.full.set(packet.windowId, (tracker.full.get(packet.windowId) ?? 0) + 1);
++    touch(packet.windowId);
++  });
++  bot._client.on("set_slot", (packet: { windowId: number }) => touch(packet.windowId));
++  bot._client.on("set_player_inventory", () => touch(0));
++  trackers.set(bot, tracker);
++  return tracker;
++}
++
++function pause(milliseconds: number, signal?: AbortSignal): Promise<void> {
++  return new Promise((resolve, reject) => {
++    const timer = setTimeout(done, milliseconds);
++    const aborted = () => done(signal?.reason ?? new Error("Window clicks were cancelled."));
++    function done(cause?: unknown) {
++      clearTimeout(timer);
++      signal?.removeEventListener("abort", aborted);
++      if (cause !== undefined) reject(cause);
++      else resolve();
++    }
++    if (signal?.aborted) aborted();
++    else signal?.addEventListener("abort", aborted, { once: true });
++  });
++}
++
++const openWindow = (bot: Bot): BotWindow => bot.currentWindow ?? bot.inventory;
++
++/**
++ * A planned, confirmed click session on one window. `click` only sends; `settle` waits until the server has answered
++ * every click sent so far (and mineflayer's window shows the server's state).
++ */
++export class ConfirmedClicks {
++  readonly #bot: Bot;
++  readonly #tracker: Tracker;
++  readonly #empty: unknown;
++  readonly #signal?: AbortSignal;
++  #expect: number;
++  #sinceGap = 0;
++  #pending = false;
++
++  constructor(
++    bot: Bot,
++    readonly window: BotWindow,
++    signal?: AbortSignal,
++  ) {
++    this.#bot = bot;
++    this.#tracker = windowTracker(bot);
++    this.#empty = loadItem(bot.registry).toNotch(null);
++    this.#signal = signal;
++    this.#expect = this.#tracker.full.get(window.id) ?? 0;
++  }
++
++  async #send(slot: number, mouseButton: number, mode: number): Promise<void> {
++    this.#signal?.throwIfAborted();
++    if (this.window !== openWindow(this.#bot)) throw new Error("The window was closed.");
++    this.#bot._client.write("window_click", {
++      windowId: this.window.id,
++      stateId: -1,
++      slot,
++      mouseButton,
++      mode,
++      changedSlots: [],
++      cursorItem: this.#empty,
++    });
++    this.#expect += 1;
++    this.#pending = true;
++    if (++this.#sinceGap >= BURST) {
++      this.#sinceGap = 0;
++      await pause(BURST_GAP_MS, this.#signal);
++    }
++  }
++
++  /** Left (0) or right (1) click on a slot; mode 1 is a shift-click. */
++  click(slot: number, button = 0, mode = 0): Promise<void> {
++    return this.#send(slot, button, mode);
++  }
++
++  async clicks(list: readonly Click[]): Promise<void> {
++    for (const [slot, button, mode] of list) await this.#send(slot, button, mode);
++  }
++
++  /**
++   * Wait until the server has answered every click sent so far. With no click pending, ask for a resync (the end of
++   * a drag that never started changes nothing). Throws when the server stays silent for the settle limit.
++   */
++  async settle(timeoutMs = confirmedWindowTiming.settleMs): Promise<void> {
++    if (!this.#pending) await this.#send(-999, 2, 5);
++    this.#pending = false;
++    this.#sinceGap = 0;
++    const id = this.window.id;
++    const until = Date.now() + timeoutMs;
++    while ((this.#tracker.full.get(id) ?? 0) < this.#expect) {
++      if (Date.now() > until) throw new Error("The server did not answer the window clicks in time.");
++      if (this.window !== openWindow(this.#bot)) throw new Error("The window was closed.");
++      await pause(POLL_MS, this.#signal);
++    }
++    while (Date.now() - (this.#tracker.last.get(id) ?? 0) < QUIET_MS && Date.now() < until) {
++      await pause(QUIET_MS / 2, this.#signal);
++    }
++    this.#expect = Math.max(this.#expect, this.#tracker.full.get(id) ?? 0);
++  }
++}
++
++/**
++ * Close the player's own inventory screen as the vanilla client does: the server puts what is in the 2x2 grid and on
++ * the cursor back into the inventory (or drops it when the inventory is full). Mineflayer never sends this for window
++ * 0, so items left in the grid would stay where nothing counts them.
++ */
++export function closePlayerInventory(bot: Bot): void {
++  if (bot.currentWindow) return;
++  try {
++    bot._client.write("close_window", { windowId: 0 });
++  } catch {
++    return;
++  }
++  bot.inventory.selectedItem = null;
++}
++
++/**
++ * Wait until the player inventory shows what the server has (one resync of window 0 and a quiet spell after it).
++ * Never throws; false when a container is open or the server did not answer.
++ */
++export async function syncPlayerInventory(bot: Bot, timeoutMs = 1_500, signal?: AbortSignal): Promise<boolean> {
++  if (!canConfirmClicks(bot) || bot.currentWindow) return false;
++  try {
++    await new ConfirmedClicks(bot, bot.inventory, signal).settle(timeoutMs);
++    return true;
++  } catch {
++    signal?.throwIfAborted();
++    return false;
++  }
++}
++
++/**
++ * Open the window of a block (crafting table): face it, use it, and wait for the window with a time limit. One more
++ * try after a short pause (a block placed a moment ago).
++ */
++export async function openBlockWindow(
++  bot: Bot,
++  block: Parameters<Bot["activateBlock"]>[0],
++  typePrefix: string,
++  what: string,
++  signal?: AbortSignal,
++): Promise<NonNullable<Bot["currentWindow"]>> {
++  windowTracker(bot);
++  if (bot.currentWindow) bot.closeWindow(bot.currentWindow);
++  for (let attempt = 1; ; attempt += 1) {
++    signal?.throwIfAborted();
++    try {
++      // facing the block first means activateBlock has nothing left to turn before it uses the block
++      await bot.lookAt(block.position.offset(0.5, 0.5, 0.5), true);
++      const ms = confirmedWindowTiming.openMs;
++      const window = await new Promise<NonNullable<Bot["currentWindow"]>>((resolve, reject) => {
++        const timer = setTimeout(() => finish(new Error(`The ${what} did not open within ${ms / 1000} s.`)), ms);
++        const aborted = () => finish(signal?.reason ?? new Error(`Opening the ${what} was cancelled.`));
++        const opened = (window: NonNullable<Bot["currentWindow"]>) => finish(undefined, window);
++        function finish(cause?: unknown, window?: NonNullable<Bot["currentWindow"]>) {
++          clearTimeout(timer);
++          bot.removeListener("windowOpen", opened);
++          signal?.removeEventListener("abort", aborted);
++          if (window) resolve(window);
++          else reject(cause);
++        }
++        bot.on("windowOpen", opened);
++        signal?.addEventListener("abort", aborted, { once: true });
++        Promise.resolve()
++          .then(() => bot.activateBlock(block))
++          .catch(() => undefined);
++      });
++      if (!String(window.type).startsWith(typePrefix)) {
++        bot.closeWindow(window);
++        throw new Error(`That block opened a ${String(window.type)} window, not a ${what}.`);
++      }
++      return window;
++    } catch (cause) {
++      signal?.throwIfAborted();
++      if (attempt >= 2 || /opened a/.test(String(cause))) throw cause;
++      await pause(300, signal);
++    }
++  }
++}
++
++/** Inventory slots of a window (main + hotbar) holding an item id, fullest first. */
++export function stacksOf(window: BotWindow, id: number): { slot: number; count: number }[] {
++  const out: { slot: number; count: number }[] = [];
++  for (let slot = window.inventoryStart; slot < window.inventoryEnd; slot++) {
++    const item = window.slots[slot];
++    if (item && item.type === id) out.push({ slot, count: item.count });
++  }
++  return out.sort((a, b) => b.count - a.count);
++}
++
++/** How many of an item id the window's inventory part holds, plus the cursor. */
++export function countIn(window: BotWindow, id: number): number {
++  let count = window.selectedItem?.type === id ? window.selectedItem.count : 0;
++  for (let slot = window.inventoryStart; slot < window.inventoryEnd; slot++) {
++    const item = window.slots[slot];
++    if (item && item.type === id) count += item.count;
++  }
++  return count;
++}
++
++/** The first empty slot of the window's inventory part, or null. */
++export function emptySlotIn(window: BotWindow): number | null {
++  for (let slot = window.inventoryStart; slot < window.inventoryEnd; slot++) if (!window.slots[slot]) return slot;
++  return null;
++}
++
++/**
++ * Clicks that put `perSlot` of item `id` into each of `destinations`, taken from the inventory stacks (fullest first):
++ * pick a stack up, right-click one at a time into each destination (or one left click when everything held goes
++ * there), and put what is left back into the slot it came from. Planned on a settled window. Null when the inventory
++ * does not hold enough.
++ */
++export function planPut(window: BotWindow, id: number, destinations: readonly number[], perSlot: number): Click[] | null {
++  const stacks = stacksOf(window, id);
++  if (stacks.reduce((sum, stack) => sum + stack.count, 0) < destinations.length * perSlot) return null;
++  const out: Click[] = [];
++  let held = 0;
++  let from: { slot: number; count: number } | undefined;
++  let next = 0;
++  for (const destination of destinations) {
++    let want = perSlot;
++    while (want > 0) {
++      if (held === 0) {
++        from = stacks[next++]!;
++        out.push([from.slot, 0, 0]);
++        held = from.count;
++      }
++      const put = Math.min(want, held);
++      if (put === held && put > 1) out.push([destination, 0, 0]);
++      else for (let i = 0; i < put; i++) out.push([destination, 1, 0]);
++      held -= put;
++      want -= put;
++    }
++  }
++  if (held > 0 && from) out.push([from.slot, 0, 0]);
++  return out;
++}
+diff --git a/src/world/crafting.ts b/src/world/crafting.ts
+index 2c2dc03..b6e5571 100644
+--- a/src/world/crafting.ts
++++ b/src/world/crafting.ts
+@@ -2,6 +2,8 @@ import { createRequire } from "node:module";
+ import type { Bot } from "mineflayer";
+ import type { Item } from "prismarine-item";
+ import type { CraftApplication } from "../utils/craft-plan.js";
++import { craftConfirmed } from "./confirmed-craft.js";
++import { canConfirmClicks } from "./confirmed-window.js";
+ 
+ export type CraftExecution =
+   | { readonly kind: "completed"; readonly completedSteps: number }
+@@ -54,13 +56,18 @@ function requireApplicationRoom(bot: Bot, recipe: CraftApplication["recipe"]): v
+   }
+ }
+ 
+-/** Execute one native recipe application at a time and close the inventory afterward. */
++/**
++ * Execute a craft plan. Against a real 1.17.1+ server every recipe is crafted by confirmed window clicks
++ * (confirmed-craft.ts), which works on Paper as well as vanilla; otherwise one native recipe application at a time,
++ * closing the inventory afterward.
++ */
+ export async function executeCraftPlan(
+   bot: Bot,
+   applications: readonly CraftApplication[],
+   craftingTable: NonNullable<Parameters<Bot["craft"]>[2]> | null,
+   signal?: AbortSignal,
+ ): Promise<CraftExecution> {
++  if (canConfirmClicks(bot)) return executeConfirmedCraftPlan(bot, applications, craftingTable, signal);
+   let completedSteps = 0;
+   if (bot.currentWindow) bot.closeWindow(bot.currentWindow);
+   bot.closeWindow(bot.inventory);
+@@ -82,3 +89,23 @@ export async function executeCraftPlan(
+     bot.closeWindow(bot.inventory);
+   }
+ }
++
++/** The same plan through confirmed clicks: one window for the whole plan, batches of applications per recipe. */
++async function executeConfirmedCraftPlan(
++  bot: Bot,
++  applications: readonly CraftApplication[],
++  craftingTable: NonNullable<Parameters<Bot["craft"]>[2]> | null,
++  signal?: AbortSignal,
++): Promise<CraftExecution> {
++  let completedSteps = 0;
++  try {
++    await craftConfirmed(bot, applications, craftingTable, signal, () => {
++      completedSteps += 1;
++    });
++    signal?.throwIfAborted();
++    return { kind: "completed", completedSteps };
++  } catch (cause) {
++    signal?.throwIfAborted();
++    return { kind: "failed", completedSteps, cause };
++  }
++}

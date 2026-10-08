@@ -7,7 +7,8 @@
 // it; an ffmpeg that dies is restarted with a backoff. createStreamManager ties streams to games: one per game at most,
 // never more than STREAM_MAX or than output URLs, each stopped with its game. createStreamService and
 // createRemoteStreamManager run the same manager in a separate container (deploy/compose.yaml, profile "stream")
-// behind a loopback-only HTTP API.
+// behind a loopback-only HTTP API. The same manager and service also drive the real-client camera (src/camera.js,
+// STREAM_SOURCE=client), whose streams have this interface too.
 
 import { spawn, execFile } from 'node:child_process';
 import { EventEmitter } from 'node:events';
@@ -92,9 +93,10 @@ export function poseOf(body) {
 const filterPath = (p) => `'${String(p).replace(/\\/g, '/').replace(/'/g, "'\\''").replace(/:/g, '\\:')}'`;
 
 /**
- * ffmpeg arguments: JPEG frames on stdin at a constant rate, silent stereo AAC paced in real time, scaled to width x
- * height (with the caption from captionFile, when there is a font), H.264 CBR with a closed GOP of keyframeSec; FLV for
- * a network output, MP4 (faststart) for a file.
+ * ffmpeg arguments: JPEG frames on stdin at a constant rate (or, with o.x11 = {display, width, height}, an X display
+ * grabbed at that rate: src/camera.js), silent stereo AAC paced in real time, scaled to width x height (with the
+ * caption from captionFile, when there is a font), H.264 CBR with a closed GOP of keyframeSec; FLV for a network
+ * output, MP4 (faststart) for a file. o.progress: key=value progress on stdout every 5 s.
  */
 export function ffmpegArgs(o) {
   const fps = o.fps ?? STREAM_DEFAULTS.fps;
@@ -108,9 +110,12 @@ export function ffmpegArgs(o) {
     ? `,drawtext=fontfile=${filterPath(o.font)}:textfile=${filterPath(o.captionFile)}:reload=1:fontsize=${size}:fontcolor=0xF4F1EA`
       + `:box=1:boxcolor=0x0C0E10@0.62:boxborderw=${Math.round(size / 2)}:x=${Math.round(height / 20)}:y=h-th-${Math.round(height / 18)}`
     : '';
+  const video = o.x11
+    ? ['-thread_queue_size', '64', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', String(fps), '-video_size', `${o.x11.width ?? width}x${o.x11.height ?? height}`, '-i', String(o.x11.display)]
+    : ['-thread_queue_size', '64', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', 'pipe:0'];
   return [
-    '-hide_banner', '-nostdin', '-loglevel', 'warning', '-nostats',
-    '-thread_queue_size', '64', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', 'pipe:0',
+    '-hide_banner', '-nostdin', '-loglevel', 'warning', '-nostats', ...(o.progress ? ['-progress', 'pipe:1', '-stats_period', '5'] : []),
+    ...video,
     '-re', '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
     '-map', '0:v', '-map', '1:a',
     '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption},format=yuv420p`,
@@ -199,7 +204,7 @@ export function findFont(env = process.env) {
 }
 
 /** spawn, below normal priority when `nice` is there (the agent and the game come first). */
-function spawnNiced(file, args, niceness, options) {
+export function spawnNiced(file, args, niceness, options) {
   const niceBin = ['/usr/bin/nice', '/bin/nice'].find(executable);
   if (niceness > 0 && niceBin) return spawn(niceBin, ['-n', String(niceness), file, ...args], options);
   return spawn(file, args, options);
@@ -778,10 +783,11 @@ export function createStreamManager({ config, log, create = createStream } = {})
   const api = {
     get enabled() { return enabled; },
     /**
-     * Start the stream of a game (body, optional: captions from its skill events, stop when it ends). Returns the
-     * stream, the one already running for this id, or null (off, every slot or output in use).
+     * Start the stream of a game (body, optional: captions from its skill events, stop when it ends; player: the bot's
+     * name, which the real-client camera spectates). Returns the stream, the one already running for this id, or null
+     * (off, every slot or output in use).
      */
-    start(id, { source, body, pose } = {}) {
+    start(id, { source, body, pose, player } = {}) {
       if (!enabled || !source) return null;
       const running = streams.get(id);
       if (running) return running.stopping ? null : running.stream;
@@ -789,7 +795,7 @@ export function createStreamManager({ config, log, create = createStream } = {})
       const output = freeOutput(id);
       if (!output) { event('stream_skipped', { session: id, reason: 'every output URL is in use' }); return null; }
       const stream = create({
-        ...(cfg.options ?? {}), source, output, pose: body ? () => poseOf(body) : pose ?? null,
+        ...(cfg.options ?? {}), source, output, player, pose: body ? () => poseOf(body) : pose ?? null,
         event: (kind, data) => event(kind, { session: id, ...data }),
       });
       const entry = { stream, output, offs: [], stopping: null };
@@ -825,6 +831,13 @@ export function createStreamManager({ config, log, create = createStream } = {})
       e.stream.caption(text);
     },
     has: (id) => Boolean(streams.get(id) && !streams.get(id).stopping),
+    /** Which output URL (its index in STREAM_RTMP_URL) a game's running stream holds; null for files or no stream. */
+    slot(id) {
+      const e = streams.get(id);
+      if (!e || e.stopping || !outputs.length) return null;
+      const i = outputs.indexOf(e.output);
+      return i >= 0 ? i : null;
+    },
     get size() { return streams.size; },
     list: () => [...streams.entries()].map(([id, e]) => ({ id, state: e.stream.state, output: maskOutput(e.output) })),
     stats: (id) => streams.get(id)?.stream.stats({ resources: true }) ?? null,
@@ -842,17 +855,27 @@ export function createStreamManager({ config, log, create = createStream } = {})
 
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
-/** A source the service accepts: a local eyes page of that session, and nothing else. */
-export function validSource(source, id) {
+/**
+ * A source the service accepts: a local eyes page of that game (under its view id, `view`, or its session id), and
+ * nothing else.
+ */
+export function validSource(source, view) {
+  if (!ID_RE.test(String(view ?? ''))) return false;
   try {
     const u = new URL(source);
-    return u.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) && u.pathname === `/eyes/${id}/` && !u.search && !u.username;
+    return u.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) && u.pathname === `/eyes/${view}/` && !u.search && !u.username;
   } catch { return false; }
 }
 
+/** The view id in a local eyes page's path (http://127.0.0.1:<port>/eyes/<view id>/), or null. */
+export const viewOf = (source) => {
+  try { return new URL(source).pathname.match(/^\/eyes\/([A-Za-z0-9_-]{1,40})\/$/)?.[1] ?? null; } catch { return null; }
+};
+
 /**
- * The control API around a manager: PUT /streams/<id> {source} starts, DELETE /streams/<id> stops,
- * POST /streams/<id>/caption {text}, GET /streams lists, GET /streams/<id> gives the numbers.
+ * The control API around a manager: PUT /streams/<id> {source, view?, pose?, player?} starts (and answers with the
+ * output slot it holds), DELETE /streams/<id> stops, POST /streams/<id>/caption {text}, GET /streams lists,
+ * GET /streams/<id> gives the numbers.
  */
 export function createStreamService({ manager, log } = {}) {
   const json = (res, status, body) => {
@@ -882,9 +905,10 @@ export function createStreamService({ manager, log } = {}) {
       }
       if (req.method === 'PUT') {
         const body = await readJson(req);
-        if (!body || !validSource(body.source, id)) return json(res, 400, { error: 'source must be http://127.0.0.1:<port>/eyes/<id>/' });
-        const s = manager.start(id, { source: body.source, pose: cleanPose(body.pose) });
-        return json(res, s ? 200 : 409, s ? { started: true } : { started: false, error: 'not started (off, or every slot in use)' });
+        if (!body || !validSource(body.source, body.view ?? id)) return json(res, 400, { error: 'source must be http://127.0.0.1:<port>/eyes/<view>/' });
+        if (body.player !== undefined && !/^[A-Za-z0-9_]{3,16}$/.test(String(body.player))) return json(res, 400, { error: 'player must be a Minecraft name' });
+        const s = manager.start(id, { source: body.source, pose: cleanPose(body.pose), player: body.player });
+        return json(res, s ? 200 : 409, s ? { started: true, slot: manager.slot?.(id) ?? null } : { started: false, error: 'not started (off, or every slot in use)' });
       }
       if (req.method === 'DELETE') {
         // ffmpeg may take seconds to close the file or the ingest: answer now, the slot frees up once it has
@@ -907,18 +931,21 @@ export function createStreamService({ manager, log } = {}) {
 export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) {
   const base = String(url).replace(/\/+$/, '');
   const live = new Map(); // id -> offs
+  const slots = new Map(); // id -> the output slot the service gave its stream
   const event = (kind, data) => { try { log?.event(kind, data); } catch { /* best effort */ } };
   const call = (method, p, body) => fetch(`${base}${p}`, {
     method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs),
   }).then(async (r) => ({ status: r.status, body: await r.json().catch(() => ({})) }));
   const api = {
     enabled: true,
-    start(id, { source, body } = {}) {
+    start(id, { source, body, player } = {}) {
       if (!source || live.has(id)) return null;
       const offs = [];
       live.set(id, offs);
-      call('PUT', `/streams/${encodeURIComponent(id)}`, { source, pose: poseOf(body) }).then((r) => {
-        if (r.status !== 200) { event('stream_skipped', { session: id, reason: clip(r.body?.error ?? `HTTP ${r.status}`) }); api.forget(id); }
+      const view = viewOf(source);
+      call('PUT', `/streams/${encodeURIComponent(id)}`, { source, ...(view && view !== id ? { view } : {}), pose: poseOf(body), ...(player ? { player } : {}) }).then((r) => {
+        if (r.status !== 200) { event('stream_skipped', { session: id, reason: clip(r.body?.error ?? `HTTP ${r.status}`) }); api.forget(id); return; }
+        if (live.has(id) && Number.isInteger(r.body?.slot)) slots.set(id, r.body.slot);
       }, (err) => { event('stream_error', { session: id, message: `stream service: ${clip(err?.message ?? err)}` }); api.forget(id); });
       if (typeof body?.on === 'function') {
         try {
@@ -931,6 +958,7 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) 
     forget(id) {
       for (const off of live.get(id) ?? []) { try { off?.(); } catch { /* ignore */ } }
       live.delete(id);
+      slots.delete(id);
     },
     async stop(id) {
       if (!live.has(id)) return;
@@ -941,6 +969,7 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) 
       if (live.has(id)) call('POST', `/streams/${encodeURIComponent(id)}/caption`, { text: cleanCaption(text), pose }).catch(() => {});
     },
     has: (id) => live.has(id),
+    slot: (id) => (live.has(id) ? slots.get(id) ?? null : null),
     get size() { return live.size; },
     list: () => [...live.keys()].map((id) => ({ id })),
     stats: (id) => call('GET', `/streams/${encodeURIComponent(id)}`).then((r) => r.body, () => null),

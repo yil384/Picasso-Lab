@@ -1,11 +1,37 @@
 # The Muse Minecraft agent (web page, MCP endpoint, live views) for play.picasso-lab.com. Build context: agent/.
+# node_modules keeps the game data of MC_VERSION only (deploy/slim-modules.mjs, in the same layer as npm ci, so the
+# other versions never reach the image): about 270 MB instead of 950. The label lets deploy/push.sh prune our own
+# dangling images and nobody else's.
 FROM node:22-bookworm-slim
+LABEL org.picasso-lab.app="muse-minecraft"
+ARG MC_VERSION=1.21.4
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+COPY deploy/slim-modules.mjs ./deploy/slim-modules.mjs
+RUN npm ci --omit=dev && node deploy/slim-modules.mjs "$MC_VERSION" node_modules && npm cache clean --force
+# BODY=mineai (both compose files pass MINEAI=1): the Mine AI MCP runtime at the pinned commit with our patches
+# (mineai/), fetched at build time into /opt and run with Bun (mineai/fetch-and-patch.sh: the patches in order, the
+# frozen lockfile, the mineflayer fork checked, typecheck and the tests of our patches), then slimmed to the game data
+# of MC_VERSION like ours (their minecraft-data: 446 MB of every version). Off unless built with --build-arg MINEAI=1.
+# The runtime only runs when deploy/.env says BODY=mineai; the agent refuses a folder that is not the pin plus every
+# patch. Before src/ is copied, so a change to our code reuses this layer and only a change of the pin or the patches
+# fetches again.
+ARG MINEAI=0
+ARG BUN_VERSION=1.4.2
+COPY mineai ./mineai
+COPY scripts/mineai-fetch.mjs ./scripts/mineai-fetch.mjs
+RUN if [ "$MINEAI" = "1" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends git ca-certificates curl unzip \
+      && curl -fsSL "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64.zip" -o /tmp/bun.zip \
+      && unzip -q /tmp/bun.zip -d /tmp && mv /tmp/bun-linux-x64/bun /usr/local/bin/bun && rm -rf /tmp/bun.zip /tmp/bun-linux-x64 \
+      && BUN=/usr/local/bin/bun bash mineai/fetch-and-patch.sh /opt/mine-ai-mcp \
+      && node deploy/slim-modules.mjs "$MC_VERSION" /opt/mine-ai-mcp/node_modules \
+      && rm -rf /var/lib/apt/lists/* /root/.bun/install/cache; \
+    fi
 COPY src ./src
 COPY scripts ./scripts
 COPY README.md ./
+ENV MINEAI_DIR=/opt/mine-ai-mcp MINEAI_RUNTIME=bun MINEAI_EXEC=/usr/local/bin/bun
 ENV WEB_HOST=0.0.0.0 WEB_PORT=8787 LOG_DIR=/logs NODE_ENV=production
 EXPOSE 8787
 CMD ["node", "src/index.js"]

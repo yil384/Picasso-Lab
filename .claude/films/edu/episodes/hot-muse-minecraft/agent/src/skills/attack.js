@@ -2,7 +2,7 @@
 // hostile mob) with the best weapon carried, until it dies, gets away or the swing limit is reached. Players are never
 // targets: the filter rejects them before the name is even compared.
 
-import { done, fail, goals, describeError, SkillStop, vec } from './util.js';
+import { done, fail, goals, describeError, SkillStop, vec, isDead } from './util.js';
 
 const FIND_RADIUS = 16;
 const ESCAPE_RADIUS = 24;
@@ -30,7 +30,7 @@ function cooldownTicks(held) {
 /** The entity filter for a target name. Only mobs from the registry's mob categories; never players. */
 function matcher(bot, target) {
   return (e) => {
-    if (!e || e === bot.entity || e.type === 'player' || e.isValid === false || !e.position) return false;
+    if (!e || e === bot.entity || e.type === 'player' || e.isValid === false || !e.position || isDead(bot, e)) return false;
     const category = bot.registry.entitiesByName[e.name]?.category;
     if (category !== 'Hostile mobs' && category !== 'Passive mobs') return false;
     if (target === 'nearest_hostile' ? category !== 'Hostile mobs' : e.name !== target) return false;
@@ -43,6 +43,15 @@ export async function attack(ctx, { target }) {
   const { bot } = ctx;
   const mob = bot.nearestEntity(matcher(bot, target));
   if (!mob) return fail(target === 'nearest_hostile' ? `no hostile mob within ${FIND_RADIUS} blocks` : `no ${target} within ${FIND_RADIUS} blocks`);
+  return fightEntity(ctx, mob);
+}
+
+/**
+ * Fight one mob (an entity the caller picked: attack's target, or the mob a reflex fights back) with the best weapon
+ * carried until it dies, gets away or maxSwings is reached; then walk over its drops. Returns {ok, result}.
+ */
+export async function fightEntity(ctx, mob, { maxSwings = MAX_SWINGS, loot = true, stopIf = null } = {}) {
+  const { bot } = ctx;
   const name = mob.name;
 
   const weapon = WEAPONS.map((w) => bot.inventory.items().find((i) => i.name === w)).find(Boolean);
@@ -51,14 +60,16 @@ export async function attack(ctx, { target }) {
   let dead = false;
   const onDead = (e) => { if (e === mob || e?.id === mob.id) dead = true; };
   bot.on('entityDead', onDead);
-  const gone = () => dead || mob.isValid === false || !bot.entities[mob.id] || (Number.isFinite(mob.health) && mob.health <= 0);
+  // a mob that died before this fight began (in its death animation) is gone too: its entityDead came already
+  const gone = () => dead || isDead(bot, mob) || mob.isValid === false || !bot.entities[mob.id] || (Number.isFinite(mob.health) && mob.health <= 0);
   let swings = 0;
   let stuck = 0;
   let lastPos = mob.position.clone();
   try {
     while (!gone()) {
       ctx.check();
-      if (swings >= MAX_SWINGS) return fail(`the ${name} is still alive after ${swings} swings`);
+      if (stopIf?.()) return fail(`stopped fighting the ${name} after ${swings} swing${swings === 1 ? '' : 's'}: health is low`);
+      if (swings >= maxSwings) return fail(`the ${name} is still alive after ${swings} swings`);
       lastPos = mob.position.clone();
       const d = mob.position.distanceTo(bot.entity.position);
       if (d > ESCAPE_RADIUS) return fail(`the ${name} got away`);
@@ -85,6 +96,7 @@ export async function attack(ctx, { target }) {
     bot.removeListener('entityDead', onDead);
   }
   ctx.check();
+  if (!loot) return done(`killed the ${name} in ${swings} swing${swings === 1 ? '' : 's'}`);
 
   // Walk over the spot to pick up the drops (best effort).
   try {

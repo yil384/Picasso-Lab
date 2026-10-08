@@ -1,0 +1,109 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0005: the player name from MINEAI_USERNAME and the runtime's bootstrap through its environment, so a private player
+name is never on a command line (every user of the machine can read those).
+
+diff --git a/src/server/config.test.ts b/src/server/config.test.ts
+index 5b8438a..cd723e1 100644
+--- a/src/server/config.test.ts
++++ b/src/server/config.test.ts
+@@ -47,3 +47,17 @@ test("rejects unknown bot-data choices at the host boundary", () => {
+     /--bot-data-scope must be one of bot, shared/,
+   );
+ });
++
++// Patched for Muse plays Minecraft (picasso-lab): the player name from the environment.
++test("takes the player name from MINEAI_USERNAME unless --username gives one", () => {
++  const before = process.env.MINEAI_USERNAME;
++  process.env.MINEAI_USERNAME = "Private_name_1";
++  try {
++    assert.equal(parseHostOptions([]).username, "Private_name_1");
++    assert.equal(parseHostOptions(["--username", "Other"]).username, "Other");
++  } finally {
++    if (before === undefined) delete process.env.MINEAI_USERNAME;
++    else process.env.MINEAI_USERNAME = before;
++  }
++  assert.equal(parseHostOptions([]).username, before || "MineAI");
++});
+diff --git a/src/server/config.ts b/src/server/config.ts
+index 38ba0af..80efebb 100644
+--- a/src/server/config.ts
++++ b/src/server/config.ts
+@@ -44,7 +44,9 @@ export function parseHostOptions(args: readonly string[] = process.argv.slice(2)
+       "listen-port": { type: "string", default: "25575" },
+       "minecraft-host": { type: "string", default: "127.0.0.1" },
+       "minecraft-port": { type: "string", default: "25566" },
+-      username: { type: "string", default: "MineAI" },
++      // Patched for Muse plays Minecraft (picasso-lab): the player name may come from
++      // MINEAI_USERNAME, so a private name never has to be on a command line.
++      username: { type: "string", default: process.env.MINEAI_USERNAME || "MineAI" },
+       auth: { type: "string", default: "offline" },
+       version: { type: "string", default: "1.21.4" },
+       "connect-timeout-ms": { type: "string", default: "45000" },
+diff --git a/src/server/host.ts b/src/server/host.ts
+index 54e45a5..eef435c 100644
+--- a/src/server/host.ts
++++ b/src/server/host.ts
+@@ -8,6 +8,9 @@ import type { SourceIdentity } from "../diagnostics/incident-recorder.js";
+ import { parseHostOptions, type HostOptions } from "./config.js";
+ import { startMcpSupervisor } from "./runtime-supervisor.js";
+ 
++/** The environment variable that carries the runtime bootstrap to the child. */
++export const RUNTIME_BOOTSTRAP_ENV = "MINEAI_RUNTIME_BOOTSTRAP";
++
+ /** Private parent-to-child bootstrap, written only by this package's host. */
+ export interface RuntimeBootstrap {
+   readonly source: SourceIdentity;
+@@ -29,9 +32,12 @@ export async function startHost(
+     import.meta.url.endsWith(".ts") ? "./runtime-process.ts" : "./runtime-process.js",
+     import.meta.url,
+   );
++  // Patched for Muse plays Minecraft (picasso-lab): the bootstrap (it holds the
++  // player name) goes to the runtime through its environment, never its command line.
+   const supervisor = await startMcpSupervisor({
+     executable: process.execPath,
+-    args: [...process.execArgv, fileURLToPath(runtimeFile), JSON.stringify(bootstrap)],
++    args: [...process.execArgv, fileURLToPath(runtimeFile)],
++    env: { ...process.env, [RUNTIME_BOOTSTRAP_ENV]: JSON.stringify(bootstrap) },
+     host: configuration.listenHost,
+     port: configuration.listenPort,
+     instanceId: configuration.instanceId,
+diff --git a/src/server/runtime-process.ts b/src/server/runtime-process.ts
+index daae429..4899bb9 100644
+--- a/src/server/runtime-process.ts
++++ b/src/server/runtime-process.ts
+@@ -9,7 +9,11 @@ process.once("exit", () => reporting[Symbol.dispose]());
+ 
+ try {
+   // Our parent serializes this typed bootstrap; it is not a public input boundary.
+-  const { source, configuration }: RuntimeBootstrap = JSON.parse(process.argv[2]!);
++  // Patched for Muse plays Minecraft (picasso-lab): it comes in the environment
++  // (the command line is readable by every user of the machine), then leaves it.
++  const raw = process.env.MINEAI_RUNTIME_BOOTSTRAP ?? process.argv[2]!;
++  delete process.env.MINEAI_RUNTIME_BOOTSTRAP;
++  const { source, configuration }: RuntimeBootstrap = JSON.parse(raw);
+   const { startRuntimeHost } = await import("./runtime-host.js");
+   const host = await startRuntimeHost(source, { ...configuration, listenHost: "127.0.0.1", listenPort: 0 });
+   const requestStop = (failure?: unknown) => {
+diff --git a/src/server/runtime-supervisor.ts b/src/server/runtime-supervisor.ts
+index 41c0752..94de521 100644
+--- a/src/server/runtime-supervisor.ts
++++ b/src/server/runtime-supervisor.ts
+@@ -43,6 +43,8 @@ type RuntimeState =
+ export interface McpSupervisorOptions {
+   readonly executable: string;
+   readonly args: readonly string[];
++  /** The child's environment (patched for Muse plays Minecraft: default, this process's). */
++  readonly env?: NodeJS.ProcessEnv;
+   readonly host: string;
+   readonly port: number;
+   readonly instanceId: string;
+@@ -221,6 +223,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
+   });
+   child = spawn(options.executable, [...options.args], {
+     windowsHide: true,
++    ...(options.env ? { env: options.env } : {}),
+     stdio: ["ignore", "inherit", "inherit", "ipc"],
+   });
+   child.on("message", (raw: unknown) => {

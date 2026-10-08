@@ -11,9 +11,14 @@ export const { goals } = pf;
 
 /** How far from the eyes the bot works on a block (survival interaction range is 4.5). */
 export const REACH = 4.25;
-/** Ticks to wait after a dig for its drops to appear, and the most time spent walking over them. */
-const DROP_TICKS = 10;
+/**
+ * Ticks to wait after a dig for its drops to appear (the item entity spawns on the tick the block breaks and reaches
+ * the client a tick or two later; it was 10), and the most time spent walking over them.
+ */
+const DROP_TICKS = 3;
 const PICKUP_MS = 5_000;
+/** How long a walk onto one drop may wait at the drop for the pickup (the server hands it over within a tick or two). */
+const PICKUP_WAIT_MS = 600;
 
 /** Blocks a placed block may replace. */
 export const REPLACEABLE = new Set([
@@ -29,6 +34,20 @@ const FACES = [[0, -1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 
 /** Thrown inside a skill once the run was stopped or timed out; the body turns it into the result. */
 export class SkillStop extends Error {
   constructor(reason) { super(`stopped: ${reason}`); this.name = 'SkillStop'; }
+}
+
+/** Run fn as one phase of the skill's time (the body's ctx.phase); a plain call where there is none (tests). */
+export const timed = (ctx, name, fn) => (typeof ctx?.phase === 'function' ? ctx.phase(name, fn) : fn());
+
+/**
+ * Turn the head to a point at once. The server needs no turn before a dig, a placement or opening a block, but
+ * mineflayer turns at 3 rad/s and waits for the turn first (up to about 1 s per action); after this its own look at
+ * the same point finds nothing left to turn. The live views smooth the camera themselves.
+ */
+export async function faceAt(ctx, point) {
+  const { bot } = ctx;
+  if (typeof bot.lookAt !== 'function' || !point) return;
+  await ctx.wait(bot.lookAt(point, true));
 }
 
 export const done = (result) => ({ ok: true, result });
@@ -164,7 +183,9 @@ export async function placeAt(ctx, name, pos, { move = true, avoid = null } = {}
       if (eyeDistance(bot, p) > REACH + 0.75) return fail(`could not get close enough to ${fmt(p)}`);
     }
     await equip(ctx, name);
-    await ctx.wait(bot.placeBlock(ref.block, ref.face));
+    // the point mineflayer's placeBlock looks at (the middle of the face built on), faced at once
+    await faceAt(ctx, ref.block.position.offset(0.5 + ref.face.x * 0.5, 0.5 + ref.face.y * 0.5, 0.5 + ref.face.z * 0.5));
+    await timed(ctx, 'place', () => ctx.wait(bot.placeBlock(ref.block, ref.face)));
     ctx.check();
     const now = bot.blockAt(p);
     if (!now || now.name === target.name) return fail(`${name} did not appear at ${fmt(p)}`);
@@ -239,30 +260,76 @@ function entityGone(bot, entity, ms) {
   });
 }
 
-/** Walk over item drops to pick them up: at most `ms` in all, so a drop out of reach never holds up a skill. */
-export async function collectDrops(ctx, drops, ms = PICKUP_MS) {
+/**
+ * Wait (at most `ms`) until the bot stands on the ground. The game digs 5 times slower in the air, and a walk often
+ * ends with the bot still stepping down or landing from a jump: stone with a wooden pickaxe takes 5.6 s instead of 1.1.
+ */
+export async function landed(ctx, ms = 750) {
+  const { bot } = ctx;
+  for (let t = 0; t < ms && bot.entity?.onGround === false; t += 50) await ctx.wait(bot.waitForTicks(1));
+}
+
+const deadByBot = new WeakMap();
+/**
+ * Keep the ids of entities the server reported dead: mineflayer leaves a dead mob in bot.entities, still valid, for
+ * its death animation (about a second), so it looks like a live mob until it is gone.
+ */
+export function trackDeaths(bot) {
+  if (deadByBot.has(bot) || typeof bot?.on !== 'function') return;
+  const dead = new Set();
+  deadByBot.set(bot, dead);
+  bot.on('entityDead', (e) => { if (e?.id != null) dead.add(e.id); });
+  bot.on('entityGone', (e) => { if (e?.id != null) dead.delete(e.id); });
+}
+/** True for an entity the server reported dead (trackDeaths) that is still in its death animation. */
+export const isDead = (bot, e) => Boolean(e && deadByBot.get(bot)?.has(e.id));
+
+/** True while an item entity still lies in the world (not picked up, not despawned). */
+export const lying = (bot, e) => Boolean(bot.entities[e.id]) && e.isValid !== false && Boolean(e.position);
+
+/**
+ * Walk over item drops to pick them up: at most `ms` in all, so a drop out of reach never holds up a skill. One sweep:
+ * always the nearest drop still lying next (drops picked up on the way are skipped), never back and forth.
+ */
+export function collectDrops(ctx, drops, ms = PICKUP_MS) {
+  // the walks onto the drops count as pickup, not path (a phase inside another counts toward the outer one)
+  return timed(ctx, 'pickup', () => sweep(ctx, drops, ms));
+}
+
+async function sweep(ctx, drops, ms) {
   const { bot } = ctx;
   const until = Date.now() + ms;
-  for (const e of drops) {
-    const left = until - Date.now();
-    if (left <= 0) return;
-    if (!bot.entities[e.id] || e.isValid === false || !e.position) continue;
+  const left = new Set(drops);
+  while (left.size) {
+    let e = null;
+    let best = Infinity;
+    for (const d of left) {
+      if (!lying(bot, d)) { left.delete(d); continue; }
+      const dist = d.position.distanceTo(bot.entity.position);
+      if (dist < best) { best = dist; e = d; }
+    }
+    if (!e) return;
+    left.delete(e);
+    const remaining = until - Date.now();
+    if (remaining <= 0) return;
     if (e.position.distanceTo(bot.entity.position) > 1) {
       // stand where the drop lies: next to it is not enough when it fell into the hole the dig left
       const at = vec(e.position);
       try {
-        await ctx.goto(new goals.GoalBlock(at.x, at.y, at.z), { timeoutMs: left });
+        await ctx.goto(new goals.GoalBlock(at.x, at.y, at.z), { timeoutMs: remaining });
       } catch (err) {
         if (err instanceof SkillStop) throw err;
+        const rest = until - Date.now(); // (a time limit of 0 would mean none)
+        if (rest <= 0) return;
         try {
-          await ctx.goto(new goals.GoalNear(at.x, at.y, at.z, 1), { timeoutMs: Math.max(0, until - Date.now()) });
+          await ctx.goto(new goals.GoalNear(at.x, at.y, at.z, 1), { timeoutMs: rest });
         } catch (err2) {
           if (err2 instanceof SkillStop) throw err2;
           continue;
         }
       }
     }
-    await ctx.wait(entityGone(bot, e, Math.max(0, Math.min(1_000, until - Date.now()))));
+    await ctx.wait(entityGone(bot, e, Math.max(0, Math.min(PICKUP_WAIT_MS, until - Date.now()))));
   }
 }
 
@@ -276,55 +343,69 @@ export function dropsNear(bot, radius = 8) {
 
 /**
  * Mine one block where it is and pick up what it drops: walk into reach (by the body's walking rules), equip the best
- * tool, dig, then walk over the drops with a time limit. collectblock's collect() is not used: its pickup waits
- * without a limit for a drop it may never reach. Equipping for harvest and waiting a few ticks for the drops follow
- * Mindcraft's collectBlock skill (github.com/mindcraft-bots/mindcraft, MIT License). Returns {ok, result}.
+ * tool, dig, then walk over the drops with a time limit. With pickup false it does not wait for the drops at all: the
+ * caller sweeps them up once at the end (collect). collectblock's collect() is not used: its pickup waits without a
+ * limit for a drop it may never reach. Equipping for harvest and waiting a few ticks for the drops follow Mindcraft's
+ * collectBlock skill (github.com/mindcraft-bots/mindcraft, MIT License). walk: options for the walk into reach
+ * (thinkMs, searchRadius; digTo: {within, timeoutMs, thinkMs, searchRadius} to dig to a block no spot sees when it is
+ * within `within` blocks). Returns {ok, result}.
  */
-export async function mineBlock(ctx, block, { walkMs = 0 } = {}) {
+export async function mineBlock(ctx, block, { walkMs = 0, walk = {}, pickup = true } = {}) {
   const { bot } = ctx;
   const p = vec(block.position);
   // a block can be within reach but out of sight: let pathfinder settle on a spot that sees it (at once when it does)
-  await ctx.goto(new goals.GoalLookAtBlock(p, bot.world, { reach: REACH }), { timeoutMs: walkMs });
+  const { digTo = null, ...look } = walk;
+  // the block may go while the bot walks to it (another player or bot mines it, a creeper blows it up): GoalLookAtBlock
+  // can never be met then, so the walk is called off at once instead of re-planning until the progress watch gives up
+  let gone = false;
+  const onUpdate = (oldB, newB) => {
+    if (gone || !newB?.position || !newB.position.equals(p) || newB.type === block.type) return;
+    gone = true;
+    try { bot.pathfinder?.setGoal(null); } catch { /* not walking */ }
+  };
+  const goneResult = () => ({ ok: false, gone: true, result: `the ${block.name} at ${fmt(p)} was gone before you got there` });
+  bot.on('blockUpdate', onUpdate);
+  try {
+    try {
+      await ctx.goto(new goals.GoalLookAtBlock(p, bot.world, { reach: REACH }), { timeoutMs: walkMs, ...look });
+    } catch (err) {
+      if (gone && !(err instanceof SkillStop)) return goneResult();
+      // no spot in reach sees it (buried, or behind a wall): that search only ends when it runs out of time or room.
+      // With digTo, dig a way to stand right next to it instead (pathfinder digs; the face it stands at is open)
+      if (err instanceof SkillStop || !digTo || !['Timeout', 'NoPath'].includes(err.name)) throw err;
+      if (eyeDistance(bot, p) > digTo.within) throw err;
+      try {
+        await ctx.goto(new goals.GoalGetToBlock(p.x, p.y, p.z), { timeoutMs: digTo.timeoutMs, thinkMs: digTo.thinkMs, searchRadius: digTo.searchRadius });
+      } catch (err2) {
+        if (gone && !(err2 instanceof SkillStop)) return goneResult();
+        throw err2;
+      }
+    }
+  } finally {
+    bot.removeListener('blockUpdate', onUpdate);
+  }
   const b = bot.blockAt(p);
-  if (!b || b.type !== block.type) return fail(`the ${block.name} at ${fmt(p)} is gone`);
+  if (gone || !b || b.type !== block.type) return goneResult();
   if (eyeDistance(bot, p) > REACH + 0.75) return fail(`could not get within reach of ${fmt(p)}`);
   if (bot.tool?.equipForBlock) await ctx.wait(bot.tool.equipForBlock(b, { requireHarvest: true }));
   if (b.harvestTools && !(bot.heldItem && b.canHarvest(bot.heldItem.type))) return fail(`no tool that can harvest ${b.name}`);
+  await landed(ctx);
+  if (!pickup) {
+    await timed(ctx, 'dig', () => ctx.wait(bot.dig(b, true)));
+    return done(`mined ${b.name} at ${fmt(p)}`);
+  }
   const drops = [];
   const middle = p.offset(0.5, 0.5, 0.5);
   const onDrop = (e) => { if (e?.position && e.position.distanceTo(middle) <= 1.5) drops.push(e); };
   bot.on('itemDrop', onDrop);
   try {
-    await ctx.wait(bot.dig(b));
-    await ctx.wait(bot.waitForTicks(DROP_TICKS));
+    await timed(ctx, 'dig', () => ctx.wait(bot.dig(b, true)));
+    await timed(ctx, 'drop', () => ctx.wait(bot.waitForTicks(DROP_TICKS)));
   } finally {
     bot.removeListener('itemDrop', onDrop);
   }
   await collectDrops(ctx, drops);
   return done(`mined ${b.name} at ${fmt(p)}`);
-}
-
-/**
- * Mine a block the bot placed itself (a crafting table, a furnace) to get it back. Best effort, never throws for a
- * game failure: 'back' (in the inventory), 'there' (still standing), 'ground' (mined, but the item was not picked up)
- * or 'gone' (someone else took it).
- * @returns {Promise<'back'|'there'|'ground'|'gone'>}
- */
-export async function pickUp(ctx, block) {
-  const { bot } = ctx;
-  const name = block.name;
-  const had = countOf(bot, name);
-  try {
-    const now = bot.blockAt(block.position);
-    if (!now || now.type !== block.type) return 'gone';
-    if (now.harvestTools && !bot.inventory.items().some((i) => Object.hasOwn(now.harvestTools, i.type))) return 'there';
-    await mineBlock(ctx, now);
-    ctx.check();
-  } catch (err) {
-    if (err instanceof SkillStop) throw err;
-  }
-  if (bot.blockAt(block.position)?.type === block.type) return 'there';
-  return countOf(bot, name) > had ? 'back' : 'ground';
 }
 
 /** Dig one block in place (equips the best tool first). Returns {ok, result}. */
@@ -335,21 +416,15 @@ export async function digAt(ctx, pos) {
     const b = bot.blockAt(p);
     if (!b || b.name === 'air' || isPassable(b)) return done(`${fmt(p)} is already clear`);
     if (!b.diggable) return fail(`${b.name} at ${fmt(p)} cannot be dug`);
+    if (ctx.stations && !ctx.stations.usable(p)) return fail(`the ${b.name} at ${fmt(p)} belongs to another bot`);
     await walkNear(ctx, p);
     if (bot.tool?.equipForBlock) await ctx.wait(bot.tool.equipForBlock(b, {}));
-    await ctx.wait(bot.dig(bot.blockAt(p)));
+    await landed(ctx);
+    await timed(ctx, 'dig', () => ctx.wait(bot.dig(bot.blockAt(p), true)));
     ctx.check();
     return done(`dug ${b.name} at ${fmt(p)}`);
   } catch (err) {
     if (err instanceof SkillStop) throw err;
     return fail(`could not dig at ${fmt(p)}: ${describeError(err)}`);
   }
-}
-
-/** The note for a result after pickUp: " (placed a furnace and took it back)" and so on. */
-export function pickUpNote(state, what, pos) {
-  if (state === 'back') return ` (placed a ${what} and took it back)`;
-  if (state === 'ground') return ` (placed a ${what} and mined it again, but it is still on the ground near ${fmt(pos)})`;
-  if (state === 'gone') return ` (placed a ${what}; it is no longer there)`;
-  return ` (placed a ${what}; it is still there at ${fmt(pos)})`;
 }

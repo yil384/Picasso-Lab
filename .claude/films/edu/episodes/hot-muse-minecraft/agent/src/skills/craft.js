@@ -1,14 +1,17 @@
 // src/skills/craft.js - craft: make n of an item from the inventory on the recipes minecraft-data has for the game
-// version, in as many whole batches as the ingredients allow. A recipe that needs a crafting table uses one within 32
-// blocks (walking to it) or places one from the inventory and picks it up again afterwards, as Mindcraft's
-// craftRecipe skill does (github.com/mindcraft-bots/mindcraft, MIT License); rewritten for this body. On a real server
-// the clicks are planned on a window state the server confirmed and checked against it afterwards (window.js), never
-// left to mineflayer's craft(), whose clicks race the server's resyncs (wrong items in the grid, ghost results).
+// version, in as many whole batches as the ingredients allow. A recipe that needs a crafting table uses the nearest one
+// the bot may use within 24 blocks (its own, or one nobody owns; walking to it), or puts the carried one down, or makes
+// one from 4 planks and puts that down; a table the bot placed stays where it is for its next crafts (src/stations.js:
+// it belongs to the bot, no other bot uses it, and it goes when the game ends). Items still in the bot's furnaces
+// (a background smelt) are fetched first when the recipe needs them. Finding or placing a table follows Mindcraft's
+// craftRecipe skill (github.com/mindcraft-bots/mindcraft, MIT License); rewritten for this body. On a real server the
+// clicks are planned on a window state the server confirmed and checked against it afterwards (window.js), never left
+// to mineflayer's craft(), whose clicks race the server's resyncs (wrong items in the grid, ghost results).
 
-import { done, fail, walkNear, placeNearby, pickUp, pickUpNote, describeError, SkillStop } from './util.js';
+import { done, fail, countOf, describeError, SkillStop, timed } from './util.js';
+import { useStation, planksCarried } from './station.js';
+import { fetchSmelted, pendingFor } from './smelt.js';
 import { canClick, clicker, openBlockWindow, closeCurrent, closeInventory, settleInventory, planPut, countIn, emptySlotIn } from './window.js';
-
-const TABLE_RADIUS = 32;
 
 /** Whole batches of a recipe the inventory can pay for. */
 function affordable(bot, recipe) {
@@ -70,19 +73,64 @@ function woodVariants(bot, recipes) {
   return out;
 }
 
-/** craft {item, n} */
-export async function craft(ctx, { item, n }) {
+/**
+ * True when the planks (and logs, at 4 planks each) carried pay for a crafting table and still for `batches` of the
+ * recipe: a table is never made from planks the craft itself needs.
+ */
+function tableAffordable(bot, recipe, batches) {
+  const planks = planksCarried(bot);
+  const need = recipe.delta.filter((d) => d.count < 0 && /_planks$/.test(bot.registry.items[d.id]?.name ?? '')).reduce((n, d) => n - d.count * batches, 0);
+  return planks >= 4 + need;
+}
+
+/** A crafting table into the inventory from 4 planks of one wood (from a log first if need be): useStation's make. */
+async function makeTable(ctx) {
   const { bot } = ctx;
+  const planks = bot.inventory.items().filter((i) => /_planks$/.test(i.name)).map((i) => i.name);
+  const enough = [...new Set(planks)].find((name) => countOf(bot, name) >= 4);
+  if (!enough) {
+    const log = bot.inventory.items().find((i) => /_log$/.test(i.name));
+    if (!log) return fail('you need 4 planks of one wood (or a log) for a crafting table');
+    const r = await craftItem(ctx, `${log.name.replace(/_log$/, '')}_planks`, 4, { progress: false });
+    if (!r.ok) return r;
+  }
+  const r = await craftItem(ctx, 'crafting_table', 1, { progress: false });
+  if (!r.ok) return fail(r.result);
+  return done('made a crafting table from 4 planks');
+}
+
+/** craft {item, n}; after an interruption (ctx.resumed: what the first try made) only what is still missing. */
+export async function craft(ctx, { item, n }) {
+  const before = ctx.resumed?.made ?? 0;
+  return craftItem(ctx, item, Math.max(1, n - before), { offset: before, asked: n });
+}
+
+/**
+ * Make n of an item: the work of craft, also used by smelt (furnaces) and for a table. offset / asked: items made
+ * before an interruption and the number first asked for (result text); progress: report what was made to the body.
+ */
+export async function craftItem(ctx, item, n, { offset = 0, asked = n + offset, progress = true } = {}) {
+  const { bot } = ctx;
+  const report = (made) => { if (progress) ctx.progress?.({ made }); };
   const id = bot.registry.itemsByName[item]?.id;
-  const all = id === undefined ? [] : woodVariants(bot, bot.recipesAll(id, null, true));
+  const recipesOf = () => (id === undefined ? [] : woodVariants(bot, bot.recipesAll(id, null, true)));
+  let all = recipesOf();
   if (!all.length) return fail(`there is no crafting recipe for ${item}`);
 
   const perBatch = (r) => r.result.count;
   const wanted = (r) => Math.ceil(n / perBatch(r));
+  const missingNow = () => { const r = closest(bot, all, wanted(all[0])); return missingFor(bot, r, wanted(r)); };
+  let fetched = '';
+  // what is missing may still be in the bot's furnaces (a background smelt): fetch it first
+  const need = new Set(missingNow().map((m) => m.name));
+  if (need.size && pendingFor(ctx, need)) {
+    fetched = await fetchSmelted(ctx, { only: need, wait: true });
+    all = recipesOf();
+  }
   const canAfford = all.filter((r) => affordable(bot, r) > 0);
   if (!canAfford.length) {
     const r = closest(bot, all, wanted(all[0]));
-    return fail(`not enough ingredients for ${item}: missing ${listMissing(missingFor(bot, r, wanted(r)))}`);
+    return fail(`not enough ingredients for ${item}: missing ${listMissing(missingFor(bot, r, wanted(r)))}${fetched}`);
   }
 
   // Prefer a recipe that works without a table; otherwise the one that makes the most.
@@ -90,35 +138,17 @@ export async function craft(ctx, { item, n }) {
   const inHand = canAfford.filter((r) => !r.requiresTable);
   let recipe = inHand.length ? best(inHand) : best(canAfford);
   let table = null;
-  let placed = null;
+  let tableNote = '';
 
   if (recipe.requiresTable) {
-    const tableId = bot.registry.blocksByName.crafting_table.id;
-    const found = bot.findBlock({ matching: tableId, maxDistance: TABLE_RADIUS });
-    const carried = () => bot.inventory.items().some((i) => i.name === 'crafting_table');
-    let unreachable = null;
-    if (found) {
-      try {
-        await walkNear(ctx, found.position);
-        table = bot.blockAt(found.position);
-      } catch (err) {
-        if (err instanceof SkillStop) throw err;
-        unreachable = `could not reach the crafting table at ${found.position.x} ${found.position.y} ${found.position.z}: ${describeError(err)}`;
-        if (!carried()) return fail(unreachable);
-      }
-    }
-    if (!table && carried()) {
-      // none nearby, or the one nearby is out of reach (behind a wall, in a cave): put down the one carried
-      const r = await placeNearby(ctx, 'crafting_table');
-      if (!r.ok) return fail(`${item} needs a crafting table and placing one failed: ${r.result}${unreachable ? `; ${unreachable}` : ''}`);
-      table = r.block;
-      placed = r.block;
-      ctx.stopNote(`a crafting table you placed is at ${placed.position.x} ${placed.position.y} ${placed.position.z}`);
-    } else if (!table) {
-      return fail(`${item} needs a crafting table: none within ${TABLE_RADIUS} blocks and none in your inventory (craft crafting_table from 4 planks)`);
-    }
-    // the table is there now; recheck which table recipes the inventory pays for
+    const make = tableAffordable(bot, recipe, Math.min(affordable(bot, recipe), wanted(recipe))) ? () => makeTable(ctx) : null;
+    const st = await useStation(ctx, 'crafting_table', { make });
+    if (!st.ok) return fail(`${item} needs a crafting table: ${st.result}${/making one failed/.test(st.result) ? '' : ' (craft crafting_table from 4 planks)'}${fetched}`);
+    table = st.block;
+    tableNote = st.note;
+    // the table is there now; recheck which table recipes the inventory pays for (making a table used planks)
     recipe = best(woodVariants(bot, bot.recipesFor(id, null, 1, table)).filter((r) => affordable(bot, r) > 0)) ?? recipe;
+    if (!affordable(bot, recipe)) return fail(`not enough ingredients for ${item}: missing ${listMissing(missingFor(bot, recipe, wanted(recipe)))}${fetched}${tableNote}`);
   }
 
   const batches = Math.min(affordable(bot, recipe), wanted(recipe));
@@ -130,23 +160,24 @@ export async function craft(ctx, { item, n }) {
     } else {
       // a bot without a protocol client (test/fake-bot.js): its craft() is exact, one batch at a time
       for (let b = 0; b < batches; b++) {
-        await ctx.wait(bot.craft(recipe, 1, recipe.requiresTable ? table : null));
+        await timed(ctx, 'clicks', () => ctx.wait(bot.craft(recipe, 1, recipe.requiresTable ? table : null)));
         made += perBatch(recipe);
+        report(offset + made);
       }
     }
   } catch (err) {
     if (err instanceof SkillStop) throw err;
     error = describeError(err);
   }
+  report(offset + made);
   ctx.check();
 
-  let tableNote = '';
-  if (placed) tableNote = pickUpNote(await pickUp(ctx, placed), 'crafting table', placed.position);
-
-  if (error) return fail(made ? `crafted ${made} of ${n} ${item}, then it failed: ${error}${tableNote}` : `crafting ${item} failed: ${error}${tableNote}`);
-  if (made >= n) return done(`crafted ${made} ${item}${tableNote}`);
-  const short = missingFor(bot, recipe, Math.ceil((n - made) / perBatch(recipe)));
-  return fail(`crafted ${made} of ${n} ${item}; for the rest you are missing ${listMissing(short)}${tableNote}`);
+  const total = offset + made;
+  const notes = `${fetched}${tableNote}`;
+  if (error) return fail(total ? `crafted ${total} of ${asked} ${item}, then it failed: ${error}${notes}` : `crafting ${item} failed: ${error}${notes}`);
+  if (made >= n) return done(`crafted ${total} ${item}${notes}`);
+  const left = missingFor(bot, recipe, Math.ceil((n - made) / perBatch(recipe)));
+  return fail(`crafted ${total} of ${asked} ${item}; for the rest you are missing ${listMissing(left)}${notes}`);
 }
 
 /** Grid slots per ingredient id for a recipe in a w x w grid (slot 1 is the top left), or null if it does not fit. */
@@ -190,7 +221,11 @@ async function clearGrid(ctx, c, w) {
 /**
  * Craft `batches` batches of a recipe by clicking: put k of each ingredient in its grid slots, check that the server
  * shows the result, shift-click it (the server crafts while the grid holds a full set), then count what arrived. Every
- * step is planned on a settled window, so the server and the client never disagree about the grid.
+ * step is planned on a settled window, so the server and the client never disagree about the grid. Settles that add
+ * nothing are skipped (roadmap M2, S10): none before the first clicks on a window the server has just sent whole (a
+ * table that just opened, the player inventory synced a moment ago and untouched since), and after the last
+ * shift-click the window is closed at once and one settle of the player inventory counts the result (closing hands
+ * back anything left in the grid, which a separate clearing pass did before).
  * @returns {Promise<{made: number, error: string|null}>}
  */
 async function craftByClicks(ctx, recipe, id, batches, table, item) {
@@ -217,11 +252,20 @@ async function craftByClicks(ctx, recipe, id, batches, table, item) {
     window = bot.inventory;
   }
 
+  const inInventory = () => countIn(bot.inventory, id);
+  const before = inInventory();
   let made = 0;
   let error = null;
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    if (opened) opened.close();
+    else closeInventory(bot);
+  };
   try {
     const c = clicker(ctx, window);
-    await c.settle();
+    if (!opened && !c.fresh()) await c.settle();
     if (!(await clearGrid(ctx, c, w))) error = 'the crafting grid holds items that do not fit back into your inventory';
     const start = countIn(window, id);
     let left = batches;
@@ -243,6 +287,19 @@ async function craftByClicks(ctx, recipe, id, batches, table, item) {
         break;
       }
       await c.click(0, 0, 1); // shift-click the result
+      if (left - k <= 0) {
+        // the last batch: close the window now (the server crafts on the click, then hands back what is left in the
+        // grid and on the cursor) and count the result in the player inventory once the server has synced it
+        close();
+        // the 2x2 grid is part of the player inventory: its resync after the shift-click is the one to wait for
+        if (opened) await settleInventory(ctx); else await c.settle();
+        const got = inInventory() - before - made;
+        if (got <= 0) { error = emptySlotIn(bot.inventory) === null ? 'your inventory is full' : 'the server did not hand over the result'; break; }
+        made += got;
+        left -= Math.ceil(got / per);
+        if (got < k * per) error = emptySlotIn(bot.inventory) === null ? 'your inventory is full' : `the server made only ${got} of ${k * per}`;
+        break;
+      }
       await c.settle();
       const got = countIn(window, id) - start - made;
       const roomy = await clearGrid(ctx, c, w);
@@ -254,9 +311,11 @@ async function craftByClicks(ctx, recipe, id, batches, table, item) {
   } finally {
     // also on a stop or an error half way: the table's window, or the 2x2 grid of the player's own inventory, gives
     // back what is in its grid and on the cursor
-    if (opened) opened.close();
-    else closeInventory(bot);
+    if (!closed) {
+      close();
+      closed = 'late';
+    }
   }
-  await settleInventory(ctx);
+  if (closed === 'late') await settleInventory(ctx);
   return { made, error };
 }

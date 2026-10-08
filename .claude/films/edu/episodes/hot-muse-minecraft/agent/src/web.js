@@ -1,15 +1,23 @@
-// src/web.js - the viewer channel, node:http only. GET / says what this is (18+); GET /play/<token> is a zero-JS control
-// page an agent browser can drive from the accessibility tree (state as text, one form per skill, a stop button, the
-// session's last actions); /api offers the same actions as JSON, described by /openapi.json (OpenAPI 3.1); POST /ask
-// queues a natural-language instruction for our own brain (18+, per-address limits, length cap); GET /log is the public
-// JSONL tail. Each guest gets a random token, a bot of its own and a lease (one live session per address). Viewer input
-// is data: every argument is checked against the tool whitelist before a body sees it, every string is HTML-escaped,
-// tokens never reach the log, and state-changing requests from other sites are refused.
+// src/web.js - the viewer channel, node:http only. GET / says what this is (18+, privacy, not an official Minecraft
+// service); GET /play/<token> is a zero-JS control page an agent browser can drive from the accessibility tree (state
+// as text, one form per skill, a stop button, the session's last actions); /api offers the same actions as JSON,
+// described by /openapi.json (OpenAPI 3.1); POST /ask queues a natural-language instruction for our own brain (18+,
+// per-address limits, length cap); GET /log is the JSONL tail for the operator (admin token). Each guest gets a random
+// token, a bot of its own and a lease (one live session per address); when every bot is in use, callers wait in a
+// queue with a place and an ETA. The live 3D views live under unguessable 128-bit view ids. Viewer input is data: every
+// argument is checked against the tool whitelist before a body sees it, every string is HTML-escaped, tokens never
+// reach the log, other players' chat never reaches a page or reply, and state-changing requests from other sites are
+// refused. Behind a proxy, forwarded headers count only on requests that carry the proxy's shared secret
+// (WEB_PROXY_SECRET, header X-Muse-Proxy) and/or come from the proxy's own address (WEB_TRUSTED_PROXIES); with either
+// set, any other peer that is not loopback is refused.
 
+import fs from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
+import path from 'node:path';
 import crypto from 'node:crypto';
-import { config as defaultConfig, isLoopbackHost } from './config.js';
+import { createRequire } from 'node:module';
+import { config as defaultConfig, isLoopbackHost, parseAddressRange } from './config.js';
 import { TOOLS, TOOL_NAMES, SCHEMAS, validateArgs, coerceArgs } from './contracts.js';
 import { createLogger, scrub } from './log.js';
 import { reportedDone } from './brain.js';
@@ -34,6 +42,50 @@ const VIEW_IDLE_MS = 90_000;
 const VIEW_BUFFER_MAX = 8 * 1024 * 1024;
 /** A socket.io request that opens a new connection (a handshake: no sid yet). */
 const opensView = (url) => /\/socket\.io\/?\?/.test(url) && !/[?&]sid=/.test(url);
+/** The live-view crack overlay's event stream: a comment this often keeps proxies (and VIEW_IDLE_MS) from closing it. */
+const FX_PING_MS = 20_000;
+/** A live view's id: 128 random bits (base64url), separate from the game id that logs and bot names show. */
+const VIEW_ID_BYTES = 16;
+/**
+ * Different live-view ids that do not exist, asked for by one address in an hour, before its requests for unknown ids
+ * get 429 (a guesser needs many different ids; a tab left open on an old view repeats one, and counts once).
+ */
+const VIEW_MISSES_PER_HOUR = 60;
+const MISSED_KEPT = 20_000; // (address, unknown view id) pairs remembered for the hour
+/** The header the proxy in front adds with WEB_PROXY_SECRET (never passed on to the live views). */
+export const PROXY_HEADER = 'x-muse-proxy';
+/** A place in the queue for a bot is kept this long after its caller last asked. */
+const QUEUE_HOLD_MS = 90_000;
+/** The Mojang brand guidelines' line for anything that is not theirs. */
+export const NOT_OFFICIAL = 'NOT AN OFFICIAL MINECRAFT SERVICE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.';
+
+/**
+ * The live-view page with src/live-view-fx.js added (eased first-person turns, the crack on the block being broken):
+ * prismarine-viewer's own index.html plus one script after its client, the script with its settings in front, and the
+ * folder of the destroy_stage textures for the game version. null when prismarine-viewer is not installed or its page
+ * changed (the page is then served as it is).
+ */
+let viewFxCache;
+export function viewFx(version = '1.21.4') {
+  if (viewFxCache !== undefined) return viewFxCache;
+  viewFxCache = null;
+  try {
+    const req = createRequire(import.meta.url);
+    const pageFile = req.resolve('prismarine-viewer/public/index.html');
+    const page = fs.readFileSync(pageFile, 'utf8');
+    const tag = '<script type="text/javascript" src="index.js"></script>';
+    if (!page.includes(tag)) return null;
+    const textures = path.join(path.dirname(pageFile), 'textures');
+    const has = (v) => fs.existsSync(path.join(textures, v, 'blocks', 'destroy_stage_0.png'));
+    const newest = fs.readdirSync(textures).filter((v) => /^\d+\.\d+(\.\d+)?$/.test(v) && has(v))
+      .sort((a, b) => a.localeCompare(b, 'en', { numeric: true })).at(-1);
+    const folder = has(version) ? version : newest;
+    const settings = { textures: folder ? `textures/${folder}/blocks/` : null, events: 'muse-fx/events' };
+    const script = `window.__museFx = ${JSON.stringify(settings)};\n${fs.readFileSync(new URL('./live-view-fx.js', import.meta.url), 'utf8')}`;
+    viewFxCache = { page: page.replace(tag, `${tag}\n    <script type="text/javascript" src="muse-fx.js"></script>`), script };
+  } catch { /* not installed: the stock page */ }
+  return viewFxCache;
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // HTML: html`` escapes every interpolated value unless it is already Html (built by html`` or raw()).
@@ -107,8 +159,8 @@ ${refresh > 0 ? html`<meta http-equiv="refresh" content="${refresh}">\n` : ''}${
 <body>
 <div class="wrap">
 ${main}
-<footer><p class="muted">A research demo by Picasso Lab, UC San Diego. Not affiliated with or endorsed by Meta, Mojang or
-Microsoft. For adults (18+). <a href="/">Home</a> · <a href="/openapi.json">OpenAPI</a> · <a href="/log">Public log</a></p></footer>
+<footer><p class="muted">A research demo by Picasso Lab, UC San Diego. ${NOT_OFFICIAL} Not affiliated with or endorsed by
+Meta. For adults (18+). <a href="/">Home</a> · <a href="/openapi.json">OpenAPI</a></p></footer>
 </div>
 </body>
 </html>
@@ -119,7 +171,8 @@ Microsoft. For adults (18+). <a href="/">Home</a> · <a href="/openapi.json">Ope
 // Small helpers
 
 class HttpError extends Error {
-  constructor(status, message, headers = {}) { super(message); this.status = status; this.headers = headers; }
+  /** extra: more fields for a JSON error body (e.g. the queue place), next to error. */
+  constructor(status, message, headers = {}, extra = null) { super(message); this.status = status; this.headers = headers; this.extra = extra; }
 }
 
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -145,6 +198,7 @@ function leaseWords(ms) {
 function fmtArgs(args) {
   return Object.entries(args ?? {}).map(([k, v]) => {
     if (isPlainObject(v)) return `${k}=${Object.values(v).join(',')}`;
+    if (Array.isArray(v)) return `${k}=${v.map((x) => (isPlainObject(x) ? Object.values(x).join(' ') : String(x))).join(', ')}`; // craft_batch items
     return `${k}=${typeof v === 'string' && /\s/.test(v) ? JSON.stringify(v) : v}`;
   }).join(' ');
 }
@@ -282,7 +336,7 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
         summary: 'Get a bot of your own for one lease',
         description: `Starts a ${leaseWords(leaseMs)} session with its own bot. Adults only: send {"adult": true} to confirm you are 18 or older.`,
         requestBody: { required: true, content: json({ type: 'object', properties: { adult: { type: 'boolean', const: true, description: 'I am 18 or older' } }, required: ['adult'], additionalProperties: false }) },
-        responses: { 201: { description: 'session started (the bot joins within seconds)', content: json(ref('Session')) }, 400: err('not confirmed 18+'), 429: err('too many sessions from this address'), 503: err('every bot is in use') },
+        responses: { 201: { description: 'session started (the bot joins within seconds)', content: json(ref('Session')) }, 400: err('not confirmed 18+'), 429: err('too many sessions from this address'), 503: err('every bot is in use: queue gives your place and an estimate; ask again within holdSeconds to keep the place') },
       },
     },
     '/api/{token}': {
@@ -337,7 +391,17 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
     paths,
     components: {
       schemas: {
-        Error: { type: 'object', properties: { error: { type: 'string' } }, required: ['error'] },
+        Error: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            queue: {
+              type: 'object', description: 'only when every bot is in use',
+              properties: { position: { type: 'integer' }, waiting: { type: 'integer' }, etaSeconds: { type: 'integer', description: 'at the latest, when enough leases end' }, holdSeconds: { type: 'integer' } },
+            },
+          },
+          required: ['error'],
+        },
         Session: {
           type: 'object',
           properties: {
@@ -373,8 +437,9 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
 /**
  * @param {object} opts
  * @param {import('./contracts.js').Config} [opts.config]
- * @param {(sessionId: string) => import('./contracts.js').Body | Promise<import('./contracts.js').Body>} opts.makeBody
- *   one bot per guest session; 'house' is the bot the /ask queue drives
+ * @param {(sessionId: string, opts?: {viewId: string}) => import('./contracts.js').Body | Promise<import('./contracts.js').Body>} opts.makeBody
+ *   one bot per guest session (viewId: the path its live views listen under, /watch/<viewId>/ and /eyes/<viewId>/);
+ *   'house' is the bot the /ask queue drives
  * @param {(body: object) => import('./contracts.js').Brain | Promise<import('./contracts.js').Brain>} [opts.makeBrain]
  *   our own brain for /ask; without it the queue is closed
  * @param {import('./contracts.js').Logger} [opts.log]
@@ -383,6 +448,12 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
  * @param {'off'|'cloudflare'|number} [opts.trustProxy]   where the client address comes from (default
  *   config.web.trustProxy, WEB_TRUST_PROXY): 'off' the socket; 'cloudflare' the CF-Connecting-IP header; N the Nth
  *   X-Forwarded-For entry from the right (N trusted proxies that each append one). Never trusted unless set.
+ * @param {string[]} [opts.trustedProxies]   the proxy's addresses or ranges (default config.web.trustedProxies,
+ *   WEB_TRUSTED_PROXIES): when set, forwarded headers count only on connections from there, and any other peer that is
+ *   not loopback is refused
+ * @param {string} [opts.proxySecret]        the secret the proxy sends in X-Muse-Proxy (default config.web.proxySecret,
+ *   WEB_PROXY_SECRET): when set, forwarded headers count only on requests that carry it, and any other request from a
+ *   peer that is not loopback is refused
  * @param {number} [opts.apiWaitMs]          how long an /api action call waits for its result before answering 202
  * @param {number} [opts.formWaitMs]         how long a form post waits before redirecting back
  * @param {number} [opts.startTimeoutMs]     how long a bot may take to join
@@ -392,12 +463,17 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
  * @param {string} [opts.askNotice]          a line shown above the Ask form (e.g. a data-use disclosure)
  * @param {number} [opts.askQueueMax]        waiting /ask instructions
  * @param {number} [opts.askSteps]           brain steps one /ask instruction may use
- * @param {number} [opts.mcpGamesPerAddress] live MCP games one address may hold (default half the slots, at least 2)
+ * @param {number} [opts.mcpGamesPerAddress] live MCP games one address may hold (default config.web.mcpGamesPerAddress)
  * @param {number} [opts.mcpStartsPerHour]   MCP game starts per address per hour (default 60)
  * @param {number} [opts.mcpInitsPerHour]    new MCP sessions per address per hour (default 1200)
  * @param {{sessions?: number, perAddress?: number}} [opts.mcpLimits]  live MCP sessions in all and per address
  * @param {number} [opts.mcpCallMs]          how long one MCP call may wait before it answers (tests)
+ * @param {ReturnType<typeof import('./contracts.js').skillSet>} [opts.skills]  the skills MCP's play and play_sequence
+ *   take (default: the 10 tools and craft_batch; BODY=mineai adds its extra skills)
  * @param {number} [opts.viewsPerHour]       new live-view connections per address per hour (default 120)
+ * @param {number} [opts.viewMissesPerHour]  requests for live views that do not exist, per address per hour (default 60)
+ * @param {(gameId: string) => ({videoUrl: string, embedUrl: string}|null)} [opts.liveVideo]  the live video of a game
+ *   while its stream runs (STREAM_VIDEO_URL), for MCP's live_view {format: "embed"}
  * @returns {import('./contracts.js').Web & {sweep: () => void}}
  */
 export function createWeb(opts = {}) {
@@ -416,7 +492,7 @@ export function createWeb(opts = {}) {
   const askSteps = opts.askSteps ?? 40;
   const sessionsPerAddress = opts.sessionsPerAddress ?? 1;
   const sessionCooldownMs = opts.sessionCooldownMs ?? 60_000;
-  const mcpGamesPerAddress = opts.mcpGamesPerAddress ?? Math.max(2, Math.floor(web.maxSessions / 2));
+  const mcpGamesPerAddress = opts.mcpGamesPerAddress ?? web.mcpGamesPerAddress ?? Math.max(2, Math.floor(web.maxSessions / 2));
   const askNotice = opts.askNotice ?? null;
   const adminToken = web.adminToken ?? '';
 
@@ -428,6 +504,12 @@ export function createWeb(opts = {}) {
   const mcpStartLimiter = createLimiter(opts.mcpStartsPerHour ?? 60, now);
   const mcpInitLimiter = createLimiter(opts.mcpInitsPerHour ?? 1_200, now);
   const viewLimiter = createLimiter(opts.viewsPerHour ?? 120, now);
+  const viewMisses = createLimiter(opts.viewMissesPerHour ?? VIEW_MISSES_PER_HOUR, now);
+  const endedViews = new Map(); // view id -> when its game ended: a watcher still asking gets 410, not a counted miss
+  const missedViews = new Map(); // 'address id' -> when first asked: an unknown id counts as a miss once per hour
+  const waiting = []; // the queue for a bot when all are in use: [{key, since, seen}], first come first served
+  const proxyRefusals = createLimiter(1, now); // one log row per refused peer and hour
+  const proxySeen = createLimiter(1, now); // without WEB_TRUSTED_PROXIES: one row per peer and hour that forwards
   const viewConns = new Map(); // 'ws@address' | 'ws#session' | 'http@address' -> open connections
   const viewSockets = new Set(); // upgraded live-view sockets (the server does not track them), closed on stop()
   const cooldowns = new Map(); // address key -> when it may start a session again
@@ -441,13 +523,59 @@ export function createWeb(opts = {}) {
   const playPath = (s) => `/play/${s.token}`;
   const firstValue = (v) => String(v ?? '').split(',')[0].trim().toLowerCase();
 
+  // The proxy in front (WEB_TRUSTED_PROXIES): its forwarded headers are believed only on its own connections.
+  const proxyList = opts.trustedProxies ?? web.trustedProxies ?? [];
+  const proxies = proxyList.length ? new net.BlockList() : null;
+  for (const t of proxyList) {
+    const r = parseAddressRange(t);
+    if (!r) throw new TypeError(`not an address or range: ${t}`);
+    const family = net.isIPv4(r[0]) ? 'ipv4' : 'ipv6';
+    if (r[1] === null) proxies.addAddress(r[0], family); else proxies.addSubnet(r[0], r[1], family);
+  }
+  // The proxy's shared secret (WEB_PROXY_SECRET): proof that a request came through it, whatever the peer address.
+  const proxySecret = Buffer.from(String(opts.proxySecret ?? web.proxySecret ?? ''));
+  const hasSecret = (req) => {
+    const v = req.headers[PROXY_HEADER];
+    if (!proxySecret.length || typeof v !== 'string') return false;
+    const got = Buffer.from(v);
+    return got.length === proxySecret.length && crypto.timingSafeEqual(got, proxySecret);
+  };
+  const peerOf = (req) => {
+    const a = String(req.socket?.remoteAddress ?? '');
+    const mapped = a.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i);
+    return mapped ? mapped[1] : a;
+  };
+  const isLoopbackPeer = (ip) => ip === '::1' || /^127\./.test(ip);
+  /** May this request's forwarded headers be believed? Only with WEB_TRUST_PROXY on, and only from the proxy. */
+  function forwarded(req) {
+    if (trustProxy === 'off') return false;
+    if (proxySecret.length && !hasSecret(req)) return false;
+    if (!proxies) {
+      if (proxySecret.length) return true;
+      // which peer sends forwarded headers: the address WEB_TRUSTED_PROXIES should name (on picasso, Caddy's)
+      const ip = peerOf(req);
+      if (!isLoopbackPeer(ip) && (req.headers['x-forwarded-for'] || req.headers['cf-connecting-ip']) && proxySeen.take(ip).ok) log.event('proxy_peer', { peer: ip.slice(0, 64) });
+      return true;
+    }
+    const ip = peerOf(req);
+    return net.isIP(ip) ? proxies.check(ip, net.isIPv4(ip) ? 'ipv4' : 'ipv6') : false;
+  }
+  /** With WEB_PROXY_SECRET or WEB_TRUSTED_PROXIES set, a request that is neither the proxy's nor this machine's is refused. */
+  function refusedPeer(req) {
+    if ((!proxies && !proxySecret.length) || forwarded(req)) return false;
+    const ip = peerOf(req);
+    if (isLoopbackPeer(ip)) return false;
+    if (proxyRefusals.take(ip).ok) log.event('proxy_refused', { peer: ip.slice(0, 64) });
+    return true;
+  }
+
   /**
    * The public base URL for links, the agent prompt and openapi.json: WEB_PUBLIC_URL, else (behind a trusted proxy)
    * the host the viewer used, else the local listen address.
    */
   function base(req) {
     if (web.publicUrl) return web.publicUrl;
-    if (req && trustProxy !== 'off') {
+    if (req && forwarded(req)) {
       const host = firstValue(req.headers['x-forwarded-host'] ?? req.headers.host);
       if (HOST_RE.test(host)) {
         const proto = firstValue(req.headers['x-forwarded-proto']);
@@ -458,8 +586,9 @@ export function createWeb(opts = {}) {
     return url || `http://${web.host}:${web.port}`;
   }
 
-  /** The client address: from the socket, unless a proxy is explicitly trusted (WEB_TRUST_PROXY). */
+  /** The client address: from the socket, unless a proxy is explicitly trusted (WEB_TRUST_PROXY, WEB_TRUSTED_PROXIES). */
   function clientIp(req) {
+    if (!forwarded(req)) return req.socket.remoteAddress ?? 'unknown';
     if (trustProxy === 'cloudflare') {
       const v = String(req.headers['cf-connecting-ip'] ?? '').trim();
       if (net.isIP(v)) return v;
@@ -483,7 +612,7 @@ export function createWeb(opts = {}) {
     try { host = new URL(origin).host.toLowerCase(); } catch { return true; }
     const allowed = new Set([String(req.headers.host ?? '').toLowerCase()]);
     for (const u of [base(req), url]) { try { if (u) allowed.add(new URL(u).host.toLowerCase()); } catch { /* not a URL */ } }
-    if (trustProxy !== 'off') allowed.add(firstValue(req.headers['x-forwarded-host']));
+    if (forwarded(req)) allowed.add(firstValue(req.headers['x-forwarded-host']));
     return !allowed.has(host);
   }
 
@@ -499,7 +628,8 @@ export function createWeb(opts = {}) {
       token: crypto.randomBytes(24).toString('base64url'),
       client, // the key for the per-client limits (an address, or mcp:<MCP session>); never shown or logged
       address, // the address key; never shown or logged
-      id: `g${crypto.randomBytes(3).toString('hex')}`,
+      id: `g${crypto.randomBytes(3).toString('hex')}`, // the game id: logs, replies and the bot's name show it
+      viewId: crypto.randomBytes(VIEW_ID_BYTES).toString('base64url'), // the live views' path: never logged
       created: now(),
       expiresAt: now() + web.leaseMs,
       status: 'starting',
@@ -517,15 +647,16 @@ export function createWeb(opts = {}) {
     log.event('session_start', { session: s.id, leaseMs: web.leaseMs });
     addLine(s, 'session started; the bot is joining the world');
     s.ready = (async () => {
-      const body = await makeBody(s.id);
+      const body = await makeBody(s.id, { viewId: s.viewId });
       if (s.ended) { await Promise.resolve(body?.close?.()).catch(() => {}); return; }
       s.body = body;
       const joined = await within(Promise.resolve(body.ready), startTimeoutMs);
       if (joined === TIMEOUT) throw new Error('the bot did not join in time');
       if (s.ended) return;
       if (typeof body.on === 'function') {
+        // other players' chat stays out of the session's lines (and so out of /play, the API and MCP replies): it is
+        // abuse and prompt injection from strangers, and the guest never asked for it
         s.offs.push(
-          body.on('chat', (d = {}) => addLine(s, `<${d.username}> ${d.message}`)),
           body.on('death', () => addLine(s, 'the bot died and respawned')),
           body.on('error', (d = {}) => addLine(s, `error: ${d.message ?? 'unknown'}`)),
           body.on('end', (d = {}) => endSession(s, `the bot left the server${d.reason ? ` (${d.reason})` : ''}`)),
@@ -551,8 +682,10 @@ export function createWeb(opts = {}) {
     s.ended = reason;
     sessions.delete(s.token);
     ended.set(s.token, { reason, at: now() });
+    endedViews.set(s.viewId, now());
     if (cooldown && s.client && !s.client.startsWith('mcp:') && sessionCooldownMs > 0) cooldowns.set(s.client, now() + sessionCooldownMs);
     while (ended.size > ENDED_KEPT) ended.delete(ended.keys().next().value);
+    while (endedViews.size > ENDED_KEPT) endedViews.delete(endedViews.keys().next().value);
     for (const off of s.offs) { try { off?.(); } catch { /* ignore */ } }
     log.event('session_end', { session: s.id, reason });
     const body = s.body;
@@ -566,12 +699,17 @@ export function createWeb(opts = {}) {
     const t = now();
     for (const s of [...sessions.values()]) if (t >= s.expiresAt) endSession(s, 'the lease ended');
     for (const [k, until] of cooldowns) if (until <= t) cooldowns.delete(k);
+    pruneQueue();
     sessionLimiter.prune();
     askLimiter.prune();
     adminFails.prune();
     mcpStartLimiter.prune();
     mcpInitLimiter.prune();
     viewLimiter.prune();
+    viewMisses.prune();
+    for (const [k, at] of missedViews) { if (t - at < HOUR) break; missedViews.delete(k); }
+    proxyRefusals.prune();
+    proxySeen.prune();
   }
 
   /** The live session for a token, or an HttpError (404 unknown, 410 ended). */
@@ -600,14 +738,17 @@ export function createWeb(opts = {}) {
     s.notice = null;
     const promise = Promise.resolve()
       .then(() => s.body.run(tool, args))
-      .then((r) => ({ ok: Boolean(r?.ok), result: String(r?.result ?? ''), delta: isPlainObject(r?.delta) ? r.delta : {}, ms: r?.ms }),
-        (e) => ({ ok: false, result: `error: ${e?.message ?? e}`, delta: {} }))
+      .then((r) => ({
+        ok: Boolean(r?.ok), result: String(r?.result ?? ''), delta: isPlainObject(r?.delta) ? r.delta : {}, ms: r?.ms,
+        ...(isPlainObject(r?.phases) ? { phases: r.phases } : {}), ...(typeof r?.code === 'string' ? { code: r.code } : {}),
+      }), (e) => ({ ok: false, result: `error: ${e?.message ?? e}`, delta: {} }))
       .then((r) => {
         s.running = null;
         s.last = { tool, args, ...r, at: now() };
         const delta = fmtDelta(r.delta);
         addLine(s, `${tool} ${fmtArgs(args)} -> ${r.ok ? 'ok' : 'not done'}: ${r.result}${delta ? ` [${delta}]` : ''}`);
-        log.event('viewer_action', { session: s.id, tool, args, ok: r.ok, result: r.result.slice(0, 600), delta: r.delta, ms: r.ms ?? null });
+        // phases: where the skill's time went, in ms (path, dig, drop, sync, place, open, clicks, pickup, cook, other)
+        log.event('viewer_action', { session: s.id, tool, args, ok: r.ok, result: r.result.slice(0, 600), delta: r.delta, ms: r.ms ?? null, phases: r.phases ?? null });
         return r;
       });
     return { ok: true, promise };
@@ -617,7 +758,8 @@ export function createWeb(opts = {}) {
     const wasRunning = Boolean(s.running);
     if (s.body) await within(Promise.resolve().then(() => s.body.stop?.(reason)).catch(() => {}), 5_000);
     addLine(s, wasRunning ? `stop pressed: ${reason}` : 'stop pressed (nothing was running)');
-    log.event('viewer_stop', { session: s.id, wasRunning });
+    // a guest (the /play page, the API or an MCP client) pressed stop; the live views are not affected
+    log.event('viewer_stop', { session: s.id, reason, wasRunning });
     return wasRunning;
   }
 
@@ -726,11 +868,14 @@ export function createWeb(opts = {}) {
     return shell({
       title: 'Muse plays Minecraft',
       main: html`<header><h1>Muse plays Minecraft</h1>
-<p>A research demo by Picasso Lab at UC San Diego. A bot in a private Minecraft world acts only through 10 fixed skills
-(walk, mine, craft, smelt, place, build, fight, eat, chat, read its state). Meta's Muse Spark model plays it on our side,
-and you can drive a bot yourself, by hand or through your own AI agent.</p>
-<p><strong>Adults only (18+).</strong> Not affiliated with or endorsed by Meta, Mojang or Microsoft. No login and no
-personal data; actions and Ask requests appear in the <a href="/log">public log</a>.</p></header>
+<p>A research demo by Picasso Lab at UC San Diego. A bot in our own Minecraft world (one world, shared by every
+guest's bot) acts only through 10 fixed skills (walk, mine, craft, smelt, place, build, fight, eat, chat, read its
+state). Meta's Muse Spark model plays it on our side, and you can drive a bot yourself, by hand or through your own AI
+agent.</p>
+<p class="notice"><strong>${NOT_OFFICIAL}</strong> Not affiliated with or endorsed by Meta, Mojang or Microsoft.</p>
+<p><strong>Adults only (18+).</strong> The world is shared with strangers and with bots that other people's AI agents
+drive, nothing in it is moderated, and none of it is made for children; we cannot check ages, so everyone who plays
+confirms they are 18 or older.</p></header>
 <main>
 <section aria-labelledby="h-start"><h2 id="h-start">Get a bot</h2>
 <p>You get a bot of your own for a ${lease} lease, then the slot goes to the next guest. Bots in use: ${sessions.size} of ${web.maxSessions}.</p>
@@ -750,6 +895,13 @@ ${askNotice ? html`<p class="notice">${askNotice}</p>` : ''}${closed ? html`<p c
 <div class="check"><input type="checkbox" id="ask-adult" name="adult" value="yes" required><label for="ask-adult">I am 18 or older</label></div>
 <button type="submit">Queue instruction</button>
 </form>`}</section>
+<section aria-labelledby="h-privacy"><h2 id="h-privacy">Privacy</h2>
+<p>No account, no cookies, nothing to sign in with. The server keeps a log of each game: the skills the bot was asked
+to run with their arguments (the text it was told to say included), the results and the times, and the name and
+version an agent's MCP client reports. Only the people who run this demo at Picasso Lab can read that log; no page
+shows it. Network addresses are held in memory only, to apply the limits per address, and are not written to the log.
+Whatever the bot says in the game, other players in the world see. Instructions sent to "Ask our Muse" go to Meta's
+model API, which carries them out.</p></section>
 </main>`,
     });
   }
@@ -824,7 +976,7 @@ ${!s.refresh ? html`Auto-refresh is off. <a href="${playPath(s)}?refresh=1">Turn
 ${s.notice ? html`<p class="notice" role="alert">${s.notice}</p>` : ''}<h3 id="h-last">Last result</h3>
 <p>${last}</p>
 <div class="row"><form method="post" action="${playPath(s)}/stop" aria-label="Stop" novalidate><button class="stop" type="submit">Stop the current action</button></form></div></section>
-<p>For people (an agent needs only this page): <a href="/eyes/${s.id}/" target="_blank" rel="noopener">see through the bot's eyes</a> or <a href="/watch/${s.id}/" target="_blank" rel="noopener">watch it from behind</a>, live in 3D (each opens a new tab).</p>
+<p>Live 3D views for people (an agent needs only this page): <a href="/eyes/${s.viewId}/">through the bot's eyes</a>, <a href="/watch/${s.viewId}/">from behind</a>.</p>
 <section aria-labelledby="h-state"><h2 id="h-state">Game state</h2>
 <pre>${stateText(s)}</pre></section>
 <section aria-labelledby="h-actions"><h2 id="h-actions">Actions</h2>
@@ -840,9 +992,10 @@ ${lines.length ? html`<ol class="log">${lines.map((l) => html`<li>${clock(l.at).
     });
   }
 
-  function askPage(queuedId) {
+  /** The Ask queue; the text of a request only to the address that sent it (one visitor's words are not a public page). */
+  function askPage(queuedId, viewer) {
     const mine = Number.isInteger(queuedId) ? ask.queue.findIndex((q) => q.id === queuedId) : -1;
-    const row = (q) => html`<li>#${q.id} ${q.text}${q.status === 'waiting' ? '' : html` - ${q.status}${q.reason ? `: ${q.reason}` : ''}${Number.isFinite(q.steps) ? `, ${q.steps} steps` : ''}`}</li>`;
+    const row = (q) => html`<li>#${q.id} ${q.client === viewer ? q.text : "(another visitor's request)"}${q.status === 'waiting' ? '' : html` - ${q.status}${q.reason ? `: ${q.reason}` : ''}${Number.isFinite(q.steps) ? `, ${q.steps} steps` : ''}`}</li>`;
     return shell({
       title: 'Ask queue - Muse plays Minecraft',
       refresh: 10,
@@ -878,9 +1031,38 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     };
   }
 
+  /** Drop the queue places whose callers have not asked again for QUEUE_HOLD_MS. */
+  function pruneQueue() {
+    const t = now();
+    for (let i = waiting.length - 1; i >= 0; i--) if (t - waiting[i].seen > QUEUE_HOLD_MS) waiting.splice(i, 1);
+  }
+
   /**
-   * Ask for a session: 18+ confirmed, no live session and no cooldown for this address, a free slot, the hourly
-   * per-address limit. Returns the session or throws.
+   * Every bot is in use for this caller (the free ones, if any, are promised to callers ahead in the queue): keep or
+   * give it a place and refuse with the place and an estimate. The estimate is when enough leases end; games often end
+   * sooner (end_game, 5 idle minutes).
+   */
+  function queued(key, mcp, free) {
+    const t = now();
+    let at = waiting.findIndex((w) => w.key === key);
+    if (at < 0) { waiting.push({ key, since: t, seen: t }); at = waiting.length - 1; } else waiting[at].seen = t;
+    const place = at + 1;
+    const ends = [...sessions.values()].map((x) => x.expiresAt).sort((a, b) => a - b);
+    const k = Math.max(1, place - free); // the leases that must end before this caller's turn
+    const etaMs = ends.length ? Math.max(0, ends[(k - 1) % ends.length] + web.leaseMs * Math.floor((k - 1) / ends.length) - t) : 0;
+    const again = mcp ? 'call start_game again' : 'ask again (press Start, or POST /api/session)';
+    const hold = Math.round(QUEUE_HOLD_MS / 1000);
+    throw new HttpError(
+      503,
+      `all ${web.maxSessions} bots are in use; you are number ${place} in the queue (${waiting.length} waiting), and your turn comes in about ${duration(etaMs)} at the latest, when enough leases end (games often end sooner); ${again} within ${hold} s to keep your place`,
+      { 'retry-after': String(Math.max(1, Math.min(Math.ceil(etaMs / 1000), Math.floor(hold / 3)))) },
+      { queue: { position: place, waiting: waiting.length, etaSeconds: Math.round(etaMs / 1000), holdSeconds: hold } },
+    );
+  }
+
+  /**
+   * Ask for a session: 18+ confirmed, no live session and no cooldown for this address, a free slot (callers who
+   * waited in the queue go first), the hourly per-address limit. Returns the session or throws.
    * MCP games (mcp = {key, address}) are one per MCP session (key): every connector user arrives from the agent's own
    * cloud, so one address can stand for many people. Per address they get a looser cap (mcpGamesPerAddress live
    * games, mcpStartsPerHour starts), so one caller cannot take every bot.
@@ -900,17 +1082,17 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (mcp) {
       const fromAddress = [...sessions.values()].filter((x) => x.address === address && x.client.startsWith('mcp:'));
       if (fromAddress.length >= mcpGamesPerAddress) {
-        throw new HttpError(429, `your connector's address already plays ${mcpGamesPerAddress} games, the most one address may hold; the next one frees up in about ${duration(soonestOf(fromAddress))}`, retry(soonestOf(fromAddress)));
+        throw new HttpError(429, `your connector's address already plays ${mcpGamesPerAddress} game${mcpGamesPerAddress === 1 ? '' : 's'}, the most one address may hold; the next one frees up in about ${duration(soonestOf(fromAddress))}`, retry(soonestOf(fromAddress)));
       }
     }
     const cool = (cooldowns.get(key) ?? 0) - now();
     if (cool > 0) throw new HttpError(429, `your last session just ended; the next guest goes first, try again in about ${duration(cool)}`, retry(cool));
-    if (sessions.size >= web.maxSessions) {
-      const all = [...sessions.values()];
-      throw new HttpError(503, `all ${web.maxSessions} bots are in use; the next one frees up in about ${duration(soonestOf(all))}`, retry(soonestOf(all)));
-    }
+    const free = Math.max(0, web.maxSessions - sessions.size);
+    const at = waiting.findIndex((w) => w.key === key);
+    if ((at < 0 ? waiting.length : at) >= free) queued(key, mcp, free);
     const limit = mcp ? mcpStartLimiter.take(address) : sessionLimiter.take(key);
     if (!limit.ok) throw new HttpError(429, `too many sessions from your ${mcp ? "connector's " : ''}address; try again in ${duration(limit.retryMs)}`, retry(limit.retryMs));
+    if (at >= 0) waiting.splice(at, 1);
     return startSession(key, address);
   }
 
@@ -951,16 +1133,27 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     return crypto.timingSafeEqual(a, b);
   }
 
-  async function adminStop(req, res) {
+  /**
+   * The operator's routes: 404 without WEB_ADMIN_TOKEN, 401 for a wrong token (5 a hour lock the address out), else
+   * nothing. fields: a parsed body that may carry the token (the kill switch's form); otherwise the Bearer header only.
+   */
+  function adminGate(req) {
     if (!adminToken) throw new HttpError(404, 'not found');
-    const key = clientKey(req);
-    const locked = adminFails.blocked(key);
+    const locked = adminFails.blocked(clientKey(req));
     if (!locked.ok) throw new HttpError(429, `too many wrong admin tokens from your address; try again in ${duration(locked.retryMs)}`, { 'retry-after': String(Math.ceil(locked.retryMs / 1000)) });
-    const { fields } = await readFields(req, web.maxBodyBytes);
+  }
+  function requireAdmin(req, fields = null) {
+    adminGate(req);
     if (!isAdmin(req, fields)) {
-      adminFails.take(key);
+      adminFails.take(clientKey(req));
       throw new HttpError(401, 'wrong or missing admin token', { 'www-authenticate': 'Bearer' });
     }
+  }
+
+  async function adminStop(req, res) {
+    adminGate(req); // 404 and the lock-out before the body is read
+    const { fields } = await readFields(req, web.maxBodyBytes);
+    requireAdmin(req, fields);
     const cleared = ask.queue.splice(0);
     for (const item of cleared) Object.assign(item, { status: 'cancelled', reason: 'operator stop' });
     ask.done.unshift(...cleared);
@@ -979,10 +1172,66 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     return sendJson(res, 200, { stopped, cleared: cleared.length, ended: end ? live.length : 0 });
   }
 
-  /** The local port of a session's live 3D view, by its public session id (not the secret token). */
-  function viewerPort(id, kind = 'watch') {
-    for (const s of sessions.values()) if (s.id === id && !s.ended) return (kind === 'eyes' ? s.body?.eyesPort : s.body?.viewerPort) ?? null;
-    return null;
+  /** The live session whose 3D views listen under this view id (128 random bits; not the game id, not the token). */
+  const sessionByView = (viewId) => { for (const s of sessions.values()) if (s.viewId === viewId && !s.ended) return s; return null; };
+  const portOf = (s, kind) => (s ? (kind === 'eyes' ? s.body?.eyesPort : s.body?.viewerPort) ?? null : null);
+
+  /**
+   * A live-view request: the session and its view's local port, or why not ({status, message}). The view of a live
+   * game is always served (its 128-bit id was handed out, not guessed). An address that asked for
+   * VIEW_MISSES_PER_HOUR different ids that do not exist gets 429 for unknown ids until the hour rolls on (no guessing
+   * ids); the same unknown id again (a tab still reconnecting to a view from before the agent restarted) counts once,
+   * and a view of a game that ended answers 410 and is not counted.
+   */
+  function findView(req, viewId, kind) {
+    const s = sessionByView(viewId);
+    const port = portOf(s, kind);
+    if (port) return { s, port };
+    if (s) return { status: 404, message: 'no live view yet: the bot is still joining' };
+    if (endedViews.has(viewId)) return { status: 410, message: 'this game has ended, and its live view with it' };
+    const addr = clientKey(req);
+    const k = `${addr} ${viewId}`;
+    if (!missedViews.has(k)) {
+      const blocked = viewMisses.blocked(addr);
+      if (!blocked.ok) return { status: 429, message: `too many requests for live views that do not exist from your address; try again in ${duration(blocked.retryMs)}` };
+      viewMisses.take(addr);
+      missedViews.set(k, now());
+      while (missedViews.size > MISSED_KEPT) missedViews.delete(missedViews.keys().next().value);
+    }
+    return { status: 404, message: 'no live view here' };
+  }
+
+  /**
+   * The live-view overlay's events (server-sent): the block the bot is breaking, {x, y, z, ms, elapsed}, or null when
+   * it stops; one now, then each change, until the watcher leaves or the session ends. Counts as a live-view request.
+   */
+  function fxEvents(req, res, s) {
+    const why = viewRefusal(req, 'http');
+    if (why) { send(res, 429, why, {}); return; }
+    const release = holdView([`http@${clientKey(req)}`]);
+    // any origin may read it (the streamer's page comes from the viewer's own port): where a public game digs
+    res.writeHead(200, {
+      ...BASE_HEADERS, 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no',
+      'access-control-allow-origin': '*',
+    });
+    const sendDig = (d) => {
+      const msg = d && Number.isFinite(d.x) ? { x: d.x, y: d.y, z: d.z, ms: Number(d.ms) || 0, elapsed: Number(d.elapsed) || 0 } : null;
+      res.write(`data: ${JSON.stringify(msg)}\n\n`);
+    };
+    let off = null;
+    const ping = setInterval(() => res.write(': ping\n\n'), FX_PING_MS);
+    const end = () => res.end(); // the session ended: so does the stream
+    s.offs.push(end);
+    res.on('close', () => {
+      clearInterval(ping);
+      try { off?.(); } catch { /* gone */ }
+      off = null;
+      const i = s.offs.indexOf(end);
+      if (i >= 0) s.offs.splice(i, 1);
+      release();
+    });
+    try { sendDig(s.body?.digging?.() ?? null); } catch { sendDig(null); }
+    try { off = s.body?.on?.('dig', (d) => sendDig(d ? { ...d, elapsed: 0 } : null)) ?? null; } catch { off = null; }
   }
 
   /** Count one open live-view connection under each key; returns its release (safe to call twice). */
@@ -1011,7 +1260,9 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (why) { req.resume(); send(res, 429, why, {}); return; }
     const release = holdView([`http@${clientKey(req)}`]);
     res.on('close', release);
-    const up = http.request({ host: '127.0.0.1', port, method: req.method, path: req.url, headers: { ...req.headers, host: `127.0.0.1:${port}` } }, (r) => {
+    const headers = { ...req.headers, host: `127.0.0.1:${port}` };
+    delete headers[PROXY_HEADER]; // the proxy's secret stays here
+    const up = http.request({ host: '127.0.0.1', port, method: req.method, path: req.url, headers }, (r) => {
       res.writeHead(r.statusCode ?? 502, r.headers);
       r.pipe(res);
     });
@@ -1023,34 +1274,51 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
 
   /** WebSocket upgrades for the live view (socket.io under /watch/<id>/socket.io), within the live-view limits. */
   function proxyUpgrade(req, socket, head) {
-    const m = String(req.url).match(/^\/(watch|eyes)\/([A-Za-z0-9_-]+)\//);
-    const port = m && viewerPort(m[2], m[1]);
-    if (!port) { socket.destroy(); return; }
     socket.on('error', () => {});
-    const why = viewRefusal(req, 'ws', m[2]);
-    if (why) { socket.end(`HTTP/1.1 429 Too Many Requests\r\ncontent-type: text/plain\r\nconnection: close\r\ncontent-length: ${Buffer.byteLength(why)}\r\n\r\n${why}`); return; }
-    const release = holdView([`ws@${clientKey(req)}`, `ws#${m[2]}`]);
-    socket.gameId = m[2]; // the MCP reaper keeps a watched game alive (watching(id))
+    const refuse = (status, why) => socket.end(`HTTP/1.1 ${status} ${http.STATUS_CODES[status]}\r\ncontent-type: text/plain\r\nconnection: close\r\ncontent-length: ${Buffer.byteLength(why)}\r\n\r\n${why}`);
+    if (refusedPeer(req)) { refuse(403, 'connect through the site'); return; }
+    const m = String(req.url).match(/^\/(watch|eyes)\/([A-Za-z0-9_-]+)\//);
+    if (!m) { socket.destroy(); return; }
+    const found = findView(req, m[2], m[1]);
+    if (!found.port) { refuse(found.status, found.message); return; }
+    const { s: game, port } = found;
+    const why = viewRefusal(req, 'ws', game.id);
+    if (why) { refuse(429, why); return; }
+    const release = holdView([`ws@${clientKey(req)}`, `ws#${game.id}`]);
+    socket.gameId = game.id; // the MCP reaper keeps a watched game alive (watching(id))
     viewSockets.add(socket);
-    socket.setTimeout(VIEW_IDLE_MS, () => socket.destroy());
+    // why this live view closed, logged once (view_close): the watcher left, a limit dropped it, or the view went away
+    const opened = now();
+    let sent = 0;
+    let closedBy = null;
+    const because = (reason) => { closedBy ??= reason; };
+    socket.setTimeout(VIEW_IDLE_MS, () => { because('idle'); socket.destroy(); });
     const up = net.connect(port, '127.0.0.1', () => {
       const lines = [`${req.method} ${req.url} HTTP/${req.httpVersion}`];
-      for (let i = 0; i < req.rawHeaders.length; i += 2) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
+      for (let i = 0; i < req.rawHeaders.length; i += 2) {
+        if (String(req.rawHeaders[i]).toLowerCase() !== PROXY_HEADER) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
+      }
       up.write(`${lines.join('\r\n')}\r\n\r\n`);
       if (head?.length) up.write(head);
       socket.pipe(up);
       // to the watcher: never buffer more than VIEW_BUFFER_MAX for a reader that does not keep up
       up.on('data', (chunk) => {
-        if (socket.writableLength > VIEW_BUFFER_MAX) { socket.destroy(); up.destroy(); return; }
+        if (socket.writableLength > VIEW_BUFFER_MAX) { because('slow reader'); socket.destroy(); up.destroy(); return; }
+        sent += chunk.length;
         socket.write(chunk);
       });
-      up.on('end', () => socket.end());
+      up.on('end', () => { because('the view closed (the session ended)'); socket.end(); });
     });
-    up.on('error', () => socket.destroy());
-    up.on('close', () => { socket.destroy(); release(); });
-    socket.on('error', () => up.destroy());
-    socket.on('end', () => socket.destroy()); // a watcher that hangs up is gone (the upgraded socket allows half-open)
-    socket.on('close', () => { up.destroy(); release(); viewSockets.delete(socket); });
+    up.on('error', () => { because('the view is not there'); socket.destroy(); });
+    up.on('close', () => { because('the view closed (the session ended)'); socket.destroy(); release(); });
+    socket.on('error', () => { because('watcher connection error'); up.destroy(); });
+    socket.on('end', () => { because('the watcher left'); socket.destroy(); }); // a watcher that hangs up is gone (the upgraded socket allows half-open)
+    socket.on('close', () => {
+      up.destroy();
+      release();
+      viewSockets.delete(socket);
+      log.event('view_close', { session: game.id, view: m[1], why: closing ? 'the server stopped' : closedBy ?? 'the watcher left', s: Math.round((now() - opened) / 1000), mb: Math.round(sent / 1e5) / 10 });
+    });
   }
 
   let mcp = null; // built on first use: the hooks below are defined later in this closure
@@ -1060,8 +1328,10 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (p === '/mcp') {
       mcp ??= createMcp({
         newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log, now, clientKey, base,
-        leaseMs: web.leaseMs, initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs,
-        links: (s, b) => ({ eyes: `${b}/eyes/${s.id}/`, watch: `${b}/watch/${s.id}/` }),
+        leaseMs: web.leaseMs, initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs, skills: opts.skills,
+        links: (s, b) => ({ eyes: `${b}/eyes/${s.viewId}/`, watch: `${b}/watch/${s.viewId}/` }),
+        liveVideo: (s) => { try { return opts.liveVideo?.(s.id) ?? null; } catch { return null; } },
+        leaveQueue: (key) => { const i = waiting.findIndex((w) => w.key === key); if (i >= 0) waiting.splice(i, 1); },
         watching: (id) => { let n = 0; for (const k of viewSockets) if (k.gameId === id && !k.destroyed) n += 1; return n; },
       });
       return mcp(req, res);
@@ -1077,11 +1347,13 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (p === '/favicon.ico') return send(res, 204, '', {});
     if (p === '/openapi.json') { only('GET'); return sendJson(res, 200, openApiSpec(base(req), { leaseMs: web.leaseMs }), { 'access-control-allow-origin': '*' }); }
     if (p === '/log') {
+      // the decision log is the operator's (who played what, the say text): admin token only
       only('GET');
+      requireAdmin(req);
       const n = Math.min(200, Math.max(1, Number.parseInt(u.searchParams.get('n') ?? '50', 10) || 50));
       const secrets = [adminToken, ...sessions.keys()];
       const body = log.tail(n).map((row) => scrub(jsonText(row), secrets)).join('\n');
-      return send(res, 200, body ? `${body}\n` : '', { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store' });
+      return send(res, 200, body ? `${body}\n` : '', { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store', ...PRIVATE });
     }
     if (p === '/session') {
       only('POST');
@@ -1093,15 +1365,21 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       if (method === 'POST') return handleAsk(req, res);
       only('GET');
       const q = Number.parseInt(u.searchParams.get('queued') ?? '', 10);
-      return sendHtml(res, 200, askPage(Number.isInteger(q) ? q : null));
+      return sendHtml(res, 200, askPage(Number.isInteger(q) ? q : null, clientKey(req)));
     }
     if (p === '/admin/stop') { only('POST'); return adminStop(req, res); }
 
     const w = p.match(/^\/(watch|eyes)\/([A-Za-z0-9_-]+)(\/.*)?$/);
     if (w) {
-      const port = viewerPort(w[2], w[1]);
-      if (!port) throw new HttpError(404, 'no live view for this session (it ended, or the bot is still joining)');
+      const found = findView(req, w[2], w[1]);
+      if (!found.port) { req.resume(); throw new HttpError(found.status, found.message); }
+      const { s: game, port } = found;
       if (!w[3]) return redirect(res, `/${w[1]}/${w[2]}/`);
+      // the viewer's page with the crack overlay and eased turns (src/live-view-fx.js); everything else is the viewer's
+      const fx = method === 'GET' ? viewFx(cfg.mc?.version) : null;
+      if (fx && (w[3] === '/' || w[3] === '/index.html')) return send(res, 200, fx.page, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      if (fx && w[3] === '/muse-fx.js') return send(res, 200, fx.script, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
+      if (w[3] === '/muse-fx/events') { only('GET'); return fxEvents(req, res, game); }
       return proxyHttp(req, res, port);
     }
 
@@ -1183,6 +1461,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
 
   async function handle(req, res) {
     try {
+      if (refusedPeer(req)) { req.resume(); throw new HttpError(403, 'this port takes requests only through the site\'s proxy'); }
       await route(req, res);
     } catch (e) {
       const status = e instanceof HttpError ? e.status : 500;
@@ -1191,8 +1470,8 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       if (res.headersSent) { res.destroy(); return; }
       const headers = { ...(e.headers ?? {}), ...(status === 413 ? { connection: 'close' } : {}) };
       const p = String(req.url ?? '');
-      const asJson = p.startsWith('/api/') || p.startsWith('/admin/') || p.startsWith('/openapi') || /application\/json/.test(String(req.headers.accept ?? ''));
-      if (asJson) sendJson(res, status, { error: message }, headers);
+      const asJson = p.startsWith('/api/') || p.startsWith('/admin/') || p.startsWith('/log') || p.startsWith('/openapi') || /application\/json/.test(String(req.headers.accept ?? ''));
+      if (asJson) sendJson(res, status, { error: message, ...(e.extra ?? {}) }, headers);
       else sendHtml(res, status, errorPage(status, message, e.reason), headers);
     }
   }
@@ -1211,7 +1490,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       url = `http://${web.host.includes(':') ? `[${web.host}]` : web.host}:${port}`;
       sweeper = setInterval(sweep, Math.max(1_000, Math.min(5_000, Math.floor(web.leaseMs / 4))));
       sweeper.unref();
-      log.event('web_start', { url, publicUrl: web.publicUrl || null, maxSessions: web.maxSessions, leaseMs: web.leaseMs });
+      log.event('web_start', { url, publicUrl: web.publicUrl || null, maxSessions: web.maxSessions, leaseMs: web.leaseMs, trustedProxies: proxyList.length, proxySecret: proxySecret.length > 0 });
       return { url, publicUrl: web.publicUrl || url };
     },
 

@@ -47,6 +47,49 @@ export const FUEL = freeze({
   stick: 0.5,
 });
 
+/**
+ * The order fuels are chosen in (src/skills/smelt.js, the check in src/plan.js and BODY=mineai's smelt): cheapest
+ * first, coal before wood, planks before sticks before logs.
+ */
+export const FUEL_ORDER = freeze(['coal', 'charcoal', 'coal_block', ...PLANKS, 'stick', ...LOGS]);
+
+/**
+ * The fuel for `want` items: the first in `order` that covers all of them, else the one covering most; units is how
+ * many of it a furnace takes for what it covers (ceil(covers / items per unit)). Null when nothing burns.
+ * @param {(name: string) => number} have  how many of an item there are
+ */
+export function chooseFuel(have, input, want, order = FUEL_ORDER) {
+  let best = null;
+  for (const name of order) {
+    if (name === input) continue;
+    const covers = Math.floor((have(name) || 0) * FUEL[name]);
+    if (covers < 1) continue;
+    if (covers >= want) return { name, units: Math.ceil(want / FUEL[name]), covers: want };
+    if (!best || covers > best.covers) best = { name, units: Math.ceil(covers / FUEL[name]), covers };
+  }
+  return best;
+}
+
+/**
+ * One fuel after another for `want` items when no single one covers them (chooseFuel each time on what is left): what
+ * BODY=mineai's smelt sends, one smelt call per fuel, and what the check simulates for it. Covers less than want when
+ * the fuel runs out.
+ * @param {(name: string) => number} have
+ * @returns {Array<{name: string, units: number, covers: number}>}
+ */
+export function fuelPlan(have, input, want, order = FUEL_ORDER) {
+  const used = {};
+  const out = [];
+  for (let left = want; left > 0;) {
+    const f = chooseFuel((n) => (have(n) || 0) - (used[n] ?? 0), input, left, order);
+    if (!f) break;
+    used[f.name] = (used[f.name] ?? 0) + f.units;
+    out.push(f);
+    left -= f.covers;
+  }
+  return out;
+}
+
 /** Blocks place() may put down. */
 export const PLACEABLE_BLOCKS = freeze([
   'crafting_table', 'furnace', 'chest', 'torch', 'ladder', 'oak_door',

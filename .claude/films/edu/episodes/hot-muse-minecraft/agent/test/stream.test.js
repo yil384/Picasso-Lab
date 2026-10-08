@@ -348,6 +348,7 @@ test('manager: off unless enabled; one stream per game, at most max and one per 
   assert.equal(m.start('g3', { source: 'http://127.0.0.1:3/eyes/g3/' }), null, 'two URLs, two streams');
   assert.ok(log.rows.some((r) => r.kind === 'stream_skipped' && /output URL/.test(r.reason)));
   assert.deepEqual(made.map((s) => s.o.output), [FB, `${FB}2`]);
+  assert.deepEqual([m.slot('g1'), m.slot('g2'), m.slot('g3')], [0, 1, null], 'which output URL each game\'s stream holds');
   assert.equal(JSON.stringify(m.list()).includes(KEY), false, 'list() masks the keys');
 
   b1.emit('skill', { phase: 'start', tool: 'collect', args: { block: 'oak_log', n: 2 } });
@@ -407,11 +408,18 @@ test('service and client: the agent starts, captions and stops a stream over loo
     const put = await fetch(`${url}/streams/g1`, { method: 'PUT', body: JSON.stringify({ source: 'http://evil.example/eyes/g1/' }) });
     assert.equal(put.status, 400);
 
+    const view = 'Q7f3kA9xZ2mN0pL5wR8tYb';
+    assert.equal(validSource(`http://127.0.0.1:3201/eyes/${view}/`, view), true, 'a game\'s page under its view id');
+    assert.equal(validSource(`http://127.0.0.1:3201/eyes/${view}/`, 'g1'), false);
+    assert.equal(validSource('http://127.0.0.1:3201/eyes/../', '..'), false);
     const client = createRemoteStreamManager({ url });
     const body = fakeBody();
-    client.start('g1', { source: 'http://127.0.0.1:3201/eyes/g1/', body });
+    client.start('g1', { source: `http://127.0.0.1:3201/eyes/${view}/`, body });
     await until(() => made.length === 1 && made[0].state === 'live');
     assert.equal(made[0].o.output, FB, 'the output is the service\'s own');
+    assert.equal(made[0].o.source, `http://127.0.0.1:3201/eyes/${view}/`);
+    await until(() => client.slot('g1') === 0);
+    assert.equal(client.slot('g2'), null);
     body.bot = { entity: { position: { x: 5, y: 70, z: -2 }, yaw: 1.5, pitch: 0 } };
     body.emit('skill', { phase: 'start', tool: 'go_to', args: { x: 1, y: 2, z: 3 } });
     await until(() => made[0].captions.length === 1);
@@ -447,6 +455,12 @@ test('config: STREAM_* off by default, checked, the URLs hidden; enabling needs 
   assert.throws(() => loadConfig({ STREAM_SERVICE_URL: 'http://10.0.0.2:7861' }), /STREAM_SERVICE_URL must be an http URL on this machine/);
   assert.throws(() => loadConfig({ STREAM_FPS: '60' }), /STREAM_FPS/);
   assert.equal(loadConfig({ STREAM_ENABLED: '1', STREAM_SERVICE_URL: 'http://127.0.0.1:7861' }).stream.serviceUrl, 'http://127.0.0.1:7861');
+  // the live videos' public URLs (live_view embed), Facebook only
+  assert.deepEqual(loadConfig({}).stream.videoUrls, []);
+  assert.deepEqual(loadConfig({ STREAM_VIDEO_URL: 'https://www.facebook.com/picassolab/videos/1/, https://fb.watch/abc/' }).stream.videoUrls, ['https://www.facebook.com/picassolab/videos/1/', 'https://fb.watch/abc/']);
+  for (const bad of ['http://www.facebook.com/x', 'https://evil.example/facebook.com', 'https://facebook.com.evil.example/x']) {
+    assert.throws(() => loadConfig({ STREAM_VIDEO_URL: bad }), /STREAM_VIDEO_URL must be https URLs of Facebook live videos/, bad);
+  }
 });
 
 test('index hook: the stream starts from the first-person view once it listens, with the session id in the page path', async () => {
@@ -469,6 +483,19 @@ test('index hook: the stream starts from the first-person view once it listens, 
   assert.equal(seen[0], `http://127.0.0.1:${e}/eyes/g7/`);
   assert.equal(validSource(seen[0], 'g7'), true, 'what the hook sends is what the service accepts');
   body.emit('end');
+
+  // with the game's view id, both views listen under it and the stream's page is the view id's
+  const [w2, e2] = [await free(), await free()];
+  ports.pairs = [{ watch: w2, eyes: e2 }];
+  const prefixes = [];
+  const viewer2 = { mineflayer(bot, o) { prefixes.push(o.prefix); fakeViewer.mineflayer(bot, o); } };
+  const body2 = Object.assign(new EventEmitter(), { bot: {}, connected: true });
+  const paths = [];
+  startGuestViews(body2, 'g8', { log, ports, load: () => viewer2, viewId: 'Q7f3kA9xZ2mN0pL5wR8tYb', onEyes: (port, p) => paths.push(p) });
+  await until(() => paths.length === 1);
+  assert.deepEqual(prefixes, ['/watch/Q7f3kA9xZ2mN0pL5wR8tYb', '/eyes/Q7f3kA9xZ2mN0pL5wR8tYb']);
+  assert.deepEqual(paths, ['/eyes/Q7f3kA9xZ2mN0pL5wR8tYb/']);
+  body2.emit('end');
 });
 
 // ---------------------------------------------------------------------------------------------------------------

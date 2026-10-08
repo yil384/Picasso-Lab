@@ -1,6 +1,6 @@
 // src/log.js - the decision log: one JSONL row per model decision (tokens, TTFT, latency, tool, args, result,
 // inventory change, $) plus event rows (run start/end, milestones, stops). Secrets are scrubbed before anything is
-// written, kept in memory or handed to a subscriber, so the public /log can serve rows as they are.
+// written, kept in memory or handed to a subscriber, so the operator's /log can serve rows as they are.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -107,6 +107,8 @@ export function createLogger(opts = {}) {
         totalUsd: round(sum.usd, 6),
       };
       if (input.usageEstimated) row.usageEstimated = true;
+      // where the skill's time went (src/body.js createPhases), and its wall time
+      if (input.phases && typeof input.phases === 'object') { row.skillMs = Number.isFinite(input.skillMs) ? Math.round(input.skillMs) : null; row.phases = input.phases; }
       if (input.note) row.note = clip(String(input.note), 300);
       return write(row);
     },

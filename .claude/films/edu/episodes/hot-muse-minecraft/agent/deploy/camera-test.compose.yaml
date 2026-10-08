@@ -1,0 +1,75 @@
+# A separate test of the real-client camera on picasso, next to production and sharing nothing with it: its own Paper
+# 1.21.4 (world in ~/workspace/muse-camera-test/data), its own agent and camera, its own network (10.77.78.0/28) and
+# console volume, no published ports (drive the agent with `docker exec`). Videos go to ~/workspace/muse-camera-test/
+# streams. The account's tokens are read from ~/workspace/muse-minecraft/camera/auth (scripts/camera-login.mjs).
+#
+#   cd ~/workspace/muse-camera-test/app/deploy && docker compose -f camera-test.compose.yaml up -d --build
+#   CAMERA_AUTH=offline docker compose -f camera-test.compose.yaml up -d camera   # before the login: an unauthenticated
+#                                                     # client on this offline-mode test server only
+#   docker compose -f camera-test.compose.yaml down    # the world and the videos stay
+name: muse-camera-test
+services:
+  paper:
+    build: { context: .., dockerfile: deploy/Dockerfile.paper }
+    environment: { DIFFICULTY: easy, DAYLIGHT: locked, SEED: "71811045", MEMORY: 3G, MAX_PLAYERS: "8" }
+    volumes: [ "../../data:/data", "console:/console" ]
+    networks: { mc: { ipv4_address: 10.77.78.10 } }
+    cpus: 6
+    mem_limit: 5g
+  agent:
+    build: { context: .., dockerfile: deploy/Dockerfile.agent }
+    depends_on: [ paper ]
+    environment:
+      MC_HOST: 10.77.78.10
+      MC_CONSOLE: /console/console.in
+      # test bots are Tst_cam_<random>, listed on the whitelist the test Paper enforces (deploy/paper-entry.sh)
+      MC_USERNAME: Tst_cam
+      MC_WHITELIST: "true"
+      WEB_HOST: 127.0.0.1
+      WEB_LEASE_MS: "1800000"
+      SPREAD_RANGE: "200"
+      STREAM_ENABLED: "1"
+      STREAM_SERVICE_URL: http://127.0.0.1:7862
+    volumes: [ "../../logs:/logs", "console:/console" ]
+    networks: { mc: { ipv4_address: 10.77.78.11 } }
+    cpus: 4
+    mem_limit: 3g
+  camera:
+    build: { context: .., dockerfile: deploy/Dockerfile.camera }
+    depends_on: [ agent ]
+    network_mode: "service:agent"
+    user: "${CAMERA_UID:-1014}:${CAMERA_GID:-1014}"
+    init: true
+    # an ingest for a live test (STREAM_RTMP_URL=rtmps://.../<key>, file 600, made on picasso, never in the repo);
+    # without it every game is an MP4 in ../../streams
+    env_file: [ { path: camera.env, required: false } ]
+    # every CAMERA_* can be set for one run: CAMERA_GRAPHICS=fast CAMERA_RENDER_DISTANCE=6 docker compose ... up -d camera
+    environment:
+      STREAM_ENABLED: "1"
+      STREAM_OUT_DIR: /streams
+      STREAM_MAX: "1"
+      STREAM_BITRATE_K: "${STREAM_BITRATE_K:-3500}"
+      MC_HOST: 10.77.78.10
+      MC_CONSOLE: /console/console.in
+      CAMERA_AUTH: "${CAMERA_AUTH:-msa}"
+      CAMERA_GL: "${CAMERA_GL:-cpu}"
+      CAMERA_GL_THREADS: "${CAMERA_GL_THREADS:-8}"
+      CAMERA_JAVA_THREADS: "${CAMERA_JAVA_THREADS:-4}"
+      CAMERA_GRAPHICS: "${CAMERA_GRAPHICS:-fancy}"
+      CAMERA_RENDER_DISTANCE: "${CAMERA_RENDER_DISTANCE:-8}"
+      CAMERA_MAX_FPS: "${CAMERA_MAX_FPS:-30}"
+      CAMERA_SCALE: "${CAMERA_SCALE:-1}"
+      CAMERA_NICE: "${CAMERA_NICE:-5}"
+      CAMERA_IDLE_MS: "${CAMERA_IDLE_MS:-600000}"
+    volumes: [ "../../logs:/logs", "../../streams:/streams", "console:/console", "${HOME}/workspace/muse-minecraft/camera/auth:/auth" ]
+    tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
+    cpus: ${CAMERA_CPUS:-12}
+    mem_limit: 5g
+    pids_limit: 2048
+    shm_size: 512m
+    security_opt: [ "no-new-privileges:true" ]
+volumes:
+  console: {}
+networks:
+  mc:
+    ipam: { config: [ { subnet: 10.77.78.0/28 } ] }

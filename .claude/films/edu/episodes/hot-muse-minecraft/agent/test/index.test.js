@@ -16,7 +16,8 @@ import { createLogger, readJsonl } from '../src/log.js';
 import { FORBIDDEN_PARAMS } from '../src/llm.js';
 import { EventEmitter } from 'node:events';
 import { createRequire } from 'node:module';
-import { startAgent, usernameFor, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts } from '../src/index.js';
+import { startAgent, usernameFor, privateName, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts, spreadSpots } from '../src/index.js';
+import { consoleLine } from '../src/stations.js';
 import { start } from './mock-llm.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -35,12 +36,43 @@ const freePort = () => new Promise((resolve) => {
   const s = http.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => resolve(port)); });
 });
 
+test('SPREAD_SPOTS: pairs of whole block coordinates, in order; anything else is refused', () => {
+  assert.deepEqual(spreadSpots(undefined), []);
+  assert.deepEqual(spreadSpots('  '), []);
+  assert.deepEqual(spreadSpots('1800 0; -1263 3049'), [{ x: 1800, z: 0 }, { x: -1263, z: 3049 }]);
+  assert.deepEqual(spreadSpots('1800,0 -1263,3049'), [{ x: 1800, z: 0 }, { x: -1263, z: 3049 }]);
+  assert.throws(() => spreadSpots('1800 0; 5'), /pairs of whole/);
+  assert.throws(() => spreadSpots('1800.5 0'), /pairs of whole/);
+  assert.throws(() => spreadSpots('a b'), /pairs of whole/);
+});
+
 test('usernames: the house bot keeps MC_USERNAME, guests get a valid name of their own', () => {
   assert.equal(usernameFor('Muse', 'house'), 'Muse');
   assert.equal(usernameFor('Muse', 'g1a2b3c'), 'Muse_g1a2b3c');
   const long = usernameFor('ABCDEFGHIJKLMNOP', 'g1a2b3c');
   assert.equal(long, 'ABCDEFGH_g1a2b3c');
   for (const name of [long, usernameFor('Muse', 'g-!'), usernameFor('Mus', '')]) assert.match(name, /^[A-Za-z0-9_]{3,16}$/);
+  // on a server that lets in only listed players (MC_WHITELIST): a name nobody can guess, not the game id
+  const names = new Set(Array.from({ length: 50 }, () => privateName('Muse')));
+  assert.equal(names.size, 50);
+  for (const name of names) assert.match(name, /^Muse_[A-Za-z0-9]{11}$/);
+  assert.match(privateName('Tst_fx'), /^Tst_fx_[A-Za-z0-9]{9}$/);
+  assert.match(privateName('ABCDEFGHIJKLMNOP'), /^ABCDEFGH_[A-Za-z0-9]{7}$/);
+  assert.equal(loadConfig({}).mc.whitelist, false);
+  assert.equal(loadConfig({ MC_WHITELIST: 'true' }).mc.whitelist, true);
+});
+
+test('server console: only the fixed command shapes go to the FIFO (station removal, whitelist add and remove)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'console-'));
+  const file = path.join(dir, 'console.in');
+  fs.writeFileSync(file, '');
+  await consoleLine(file, 'whitelist add Muse_aB3dE5gH7jK');
+  await consoleLine(file, 'whitelist remove Tst_fx_g1a2b3c');
+  for (const bad of ['whitelist add Bad Name', 'whitelist add x', 'op Muse', 'whitelist off', 'whitelist add Muse\nop Muse']) {
+    await assert.rejects(consoleLine(file, bad), /refused console line/, bad);
+  }
+  assert.deepEqual(fs.readFileSync(file, 'utf8').trim().split('\n'), ['whitelist add Muse_aB3dE5gH7jK', 'whitelist remove Tst_fx_g1a2b3c']);
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('viewer: held to WEB_HOST, off when not installed or when MC_VIEWER_PORT=0, a port in use never crashes', async () => {
@@ -279,6 +311,38 @@ test('npm start --fake-bot: serves the page, then SIGINT shuts down cleanly with
   } finally {
     clearTimeout(killer);
     if (child.exitCode === null) child.kill('SIGKILL');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('startAgent: live_view embed follows the game\'s stream and STREAM_VIDEO_URL; the event loop delay is logged', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'muse-index-'));
+  const VIDEO = 'https://www.facebook.com/picassolab/videos/123/';
+  const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '', STREAM_VIDEO_URL: VIDEO });
+  const running = new Map();
+  const streams = { enabled: true, start() { return null; }, has: (id) => running.has(id), slot: (id) => running.get(id) ?? null, stopAll: async () => {} };
+  const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams, loopStatsMs: 50 });
+  const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+  const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
+  const c = new Client({ name: 'index-test', version: '1' });
+  try {
+    await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
+    const start = (await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text;
+    const game = /game (g\w+)/.exec(start)[1];
+    const embed = async () => JSON.parse((await c.callTool({ name: 'live_view', arguments: { format: 'embed' } })).content[0].text);
+    assert.equal((await embed()).live, false, 'no stream yet');
+    running.set(game, 0);
+    const e = await embed();
+    assert.equal(e.live, true);
+    assert.equal(e.video_url, VIDEO);
+    assert.equal(e.embed_url, `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(VIDEO)}&show_text=false`);
+    await until(() => agent.log.tail(200).some((r) => r.kind === 'loop_delay'));
+    const row = agent.log.tail(200).find((r) => r.kind === 'loop_delay');
+    for (const k of ['p50Ms', 'p99Ms', 'maxMs']) assert.ok(Number.isFinite(row[k]) && row[k] >= 0, `${k} ${row[k]}`);
+    assert.ok(row.p99Ms >= row.p50Ms);
+  } finally {
+    await c.close().catch(() => {});
+    await agent.stop('test over');
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });

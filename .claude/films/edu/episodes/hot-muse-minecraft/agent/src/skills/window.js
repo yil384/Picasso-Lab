@@ -13,6 +13,9 @@
 
 import { requireMc } from '../mc.js';
 
+/** One phase of the skill's time (the body's ctx.phase; see createPhases in src/body.js). */
+const timed = (ctx, name, fn) => (typeof ctx?.phase === 'function' ? ctx.phase(name, fn) : fn());
+
 /** How long the server gets to open a window, and to answer the clicks sent so far. */
 export const OPEN_MS = 5_000;
 export const SETTLE_MS = 4_000;
@@ -20,7 +23,9 @@ export const SETTLE_MS = 4_000;
 const BURST = 24;
 const BURST_GAP_MS = 60;
 /** After the expected answers are in: a short quiet spell in which nothing more for this window arrives. */
-const QUIET_MS = 100;
+const QUIET_MS = 50;
+/** A window the server confirmed this recently, with nothing changed since, needs no new sync (roadmap M2, S10). */
+export const FRESH_MS = 1_000;
 
 const trackers = new WeakMap();
 const items = new WeakMap();
@@ -33,10 +38,13 @@ function itemLib(bot) {
   return items.get(bot);
 }
 
-/** Per bot: how many full resyncs each window id has received, and when the server last touched it. */
+/**
+ * Per bot: how many full resyncs each window id has received, when the server last touched it, and when a settle last
+ * found it settled.
+ */
 function tracker(bot) {
   if (trackers.has(bot)) return trackers.get(bot);
-  const t = { full: new Map(), last: new Map() };
+  const t = { full: new Map(), last: new Map(), synced: new Map() };
   const touch = (id) => t.last.set(id, Date.now());
   bot._client.on('window_items', (p) => { t.full.set(p.windowId, (t.full.get(p.windowId) ?? 0) + 1); touch(p.windowId); });
   bot._client.on('set_slot', (p) => touch(p.windowId));
@@ -89,29 +97,47 @@ export function clicker(ctx, window) {
   return {
     window,
     /** Left (0) or right (1) click on a slot; mode 1 is a shift-click (move to the other part of the window). */
-    click: (slot, button = 0, mode = 0) => send(slot, button, mode),
+    click: (slot, button = 0, mode = 0) => timed(ctx, 'clicks', () => send(slot, button, mode)),
     /** Send a list of [slot, button, mode]. */
-    async clicks(list) {
-      for (const [slot, button = 0, mode = 0] of list) await send(slot, button, mode);
+    clicks(list) {
+      return timed(ctx, 'clicks', async () => {
+        for (const [slot, button = 0, mode = 0] of list) await send(slot, button, mode);
+      });
     },
     /**
      * Wait until the server has answered every click sent so far. With no click pending, ask for a resync (the end
      * of a drag that never started changes nothing). Throws when the server stays silent for SETTLE_MS.
      */
-    async settle() {
-      if (!sent) await send(-999, 2, 5);
-      sent = false;
-      sinceGap = 0;
-      const until = Date.now() + (ctx.timing?.windowMs ?? SETTLE_MS);
-      while ((t.full.get(id) ?? 0) < expect) {
-        if (Date.now() > until) throw new Error('the server did not answer the clicks in time');
-        if (window !== (bot.currentWindow ?? bot.inventory)) throw new Error('the window was closed');
-        await ctx.sleep(20);
-      }
-      while (Date.now() - (t.last.get(id) ?? 0) < QUIET_MS && Date.now() < until) await ctx.sleep(QUIET_MS / 2);
-      expect = Math.max(expect, t.full.get(id) ?? 0);
+    settle() {
+      return timed(ctx, 'clicks', async () => {
+        if (!sent) await send(-999, 2, 5);
+        sent = false;
+        sinceGap = 0;
+        const until = Date.now() + (ctx.timing?.windowMs ?? SETTLE_MS);
+        while ((t.full.get(id) ?? 0) < expect) {
+          if (Date.now() > until) throw new Error('the server did not answer the clicks in time');
+          if (window !== (bot.currentWindow ?? bot.inventory)) throw new Error('the window was closed');
+          await ctx.sleep(20);
+        }
+        while (Date.now() - (t.last.get(id) ?? 0) < QUIET_MS && Date.now() < until) await ctx.sleep(QUIET_MS / 2);
+        expect = Math.max(expect, t.full.get(id) ?? 0);
+        t.synced.set(id, Date.now());
+      });
     },
+    /** True when the client's picture of this window is one the server confirmed under FRESH_MS ago, untouched since. */
+    fresh: () => !sent && isFresh(t, id),
   };
+}
+
+const isFresh = (t, id) => {
+  const at = t.synced.get(id) ?? 0;
+  return Date.now() - at < FRESH_MS && (t.last.get(id) ?? 0) <= at;
+};
+
+/** True when the player inventory was synced with the server under FRESH_MS ago and nothing touched it since. */
+export function inventoryFresh(bot) {
+  if (!canClick(bot) || bot.currentWindow) return false;
+  return isFresh(tracker(bot), 0);
 }
 
 /** Close whatever window is open (crafting table, furnace) so clicks go to the player's own inventory. */
@@ -141,10 +167,13 @@ export async function openBlockWindow(ctx, block, typePrefix, what) {
   tracker(bot);
   closeCurrent(bot);
   const ms = ctx.timing?.openMs ?? OPEN_MS;
+  // face the block at once (util.js faceAt): activateBlock's own look then has nothing left to turn and does not wait
+  // for a turn at 3 rad/s before it uses the block
+  if (typeof bot.lookAt === 'function' && block?.position) await ctx.wait(bot.lookAt(block.position.offset(0.5, 0.5, 0.5), true));
   const opened = eventWithin(bot, 'windowOpen', ms, `the ${what} did not open (no answer from the server within ${ms / 1000} s)`);
   opened.catch(() => {});
   Promise.resolve().then(() => bot.activateBlock(block)).catch(() => {});
-  const [window] = await ctx.wait(opened);
+  const [window] = await timed(ctx, 'open', () => ctx.wait(opened));
   let open = true;
   const close = () => {
     if (!open) return;
@@ -168,7 +197,7 @@ export async function settleInventory(ctx) {
   const { bot } = ctx;
   if (!canClick(bot) || bot.currentWindow) return;
   try {
-    await clicker(ctx, bot.inventory).settle();
+    await timed(ctx, 'sync', () => clicker(ctx, bot.inventory).settle());
   } catch (err) {
     if (err?.name === 'SkillStop') throw err;
     /* best effort: the inventory is reported as the client sees it */
@@ -194,6 +223,7 @@ export async function syncInventory(bot, ms = 1_500) {
       await nap(20);
     }
     while (Date.now() - (t.last.get(0) ?? 0) < QUIET_MS && Date.now() < until) await nap(QUIET_MS / 2);
+    t.synced.set(0, Date.now());
     return true;
   } catch {
     return false;

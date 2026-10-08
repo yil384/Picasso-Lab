@@ -1,0 +1,50 @@
+# play-staging.picasso-lab.com on picasso: the staging stack every change runs on before production (ROADMAP M0 item
+# 9). The same services and settings as compose.yaml (production), but nothing is shared with it: project
+# muse-staging, code in ~/workspace/muse-staging/app, its own Paper 1.21.4 with its own world (seed 71811045) in
+# ~/workspace/muse-staging/data, logs in ~/workspace/muse-staging/logs, network 10.77.79.0/28, console volume, agent on
+# 172.24.0.1:7851, which Caddy (the FRAS project) proxies https://play-staging.picasso-lab.com to.
+# deploy/push.sh deploys here and runs scripts/staging-check.mjs before anything goes to production. By hand, always
+# with both -p and -f (push.sh leaves production's compose files out of the staging folder, so a bare `docker compose`
+# there finds no file at all):
+#   cd ~/workspace/muse-staging/app/deploy && docker compose -p muse-staging -f staging.compose.yaml up -d --build
+#   docker compose -p muse-staging -f staging.compose.yaml down        # the world and the logs stay
+# No streamer or camera (production runs neither today); camera-test.compose.yaml shows how to add one.
+# Keep the settings in step with compose.yaml (test/deploy.test.js compares them).
+# BODY=mineai on staging: its agent image is built with the Mine AI MCP runtime (build arg MINEAI=1, see
+# Dockerfile.agent), and their per-bot SQLite (status, inventory, every action) goes to ~/workspace/muse-staging/
+# mineai-data (mode 700: the bots' private names are in it; the agent deletes a game's data when it ends and keeps the
+# last MINEAI_KEEP_FAILED failed games). Which body plays is set in deploy/.env on picasso, never here (production
+# keeps compose.yaml's settings):
+#   BODY=mineai  MINEAI_DIR=/opt/mine-ai-mcp  MINEAI_DATA_DIR=/mineai-data
+# (README, "The Mine AI MCP body"); without them the image plays with our body as before. Production (compose.yaml)
+# builds, runs and mounts the same way since the switch's gate 1; its .env decides its body (docs/SWITCH.md).
+name: muse-staging
+services:
+  paper:
+    build: { context: .., dockerfile: deploy/Dockerfile.paper }
+    restart: unless-stopped
+    environment: { DIFFICULTY: easy, DAYLIGHT: locked, SEED: "71811045", MEMORY: 6G }
+    volumes: [ "../../data:/data", "console:/console" ]
+    networks: { mc: { ipv4_address: 10.77.79.10 } }
+  agent:
+    build: { context: .., dockerfile: deploy/Dockerfile.agent, args: { MINEAI: "1" } }
+    restart: unless-stopped
+    init: true # an init as PID 1 reaps what a Mine AI host leaves behind (production too)
+    depends_on: [ paper ]
+    env_file: [ .env ]
+    environment:
+      MC_HOST: 10.77.79.10
+      MC_CONSOLE: /console/console.in
+      MC_WHITELIST: "true"
+      WEB_PUBLIC_URL: https://play-staging.picasso-lab.com
+      WEB_TRUST_PROXY: "1"
+      WEB_MAX_SESSIONS: "8"
+      WEB_LEASE_MS: "1800000"
+    volumes: [ "../../logs:/logs", "console:/console", "../../mineai-data:/mineai-data" ]
+    ports: [ "172.24.0.1:7851:8787" ]
+    networks: { mc: { ipv4_address: 10.77.79.11 } }
+volumes:
+  console: {}
+networks:
+  mc:
+    ipam: { config: [ { subnet: 10.77.79.0/28 } ] }

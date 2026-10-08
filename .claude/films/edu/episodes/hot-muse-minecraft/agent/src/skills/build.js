@@ -10,6 +10,7 @@ import {
   done, fail, countOf, keyOf, vec, isSolid, isPassable, isReplaceable, occupies, eyeDistance, referenceFor, placeAt, digAt,
   REACH,
 } from './util.js';
+import { pendingFor, fetchSmelted } from './smelt.js';
 
 const MAX_SUPPORTS = 4;
 const SIDES = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, -1, 0]].map(([x, y, z]) => new Vec3(x, y, z));
@@ -70,11 +71,13 @@ function supportSpot(ctx, unsupported, footprint, move) {
   return null;
 }
 
-/** build {blueprint, material} */
+/** build {blueprint, material}; after a reflex interrupted it, on from the spot and direction it started at */
 export async function build(ctx, { blueprint, material }) {
   const { bot } = ctx;
   const around = blueprint === 'shelter';
-  const { cells, facing } = layout(blueprint, vec(bot.entity.position), bot.entity.yaw);
+  const anchor = ctx.resumed?.anchor ?? { feet: vec(bot.entity.position), yaw: bot.entity.yaw };
+  if (!around) ctx.progress?.({ anchor }); // the shelter is built around wherever the bot stands: never resumed
+  const { cells, facing } = layout(blueprint, anchor.feet, anchor.yaw);
   const footprint = new Set(cells.map((c) => keyOf(c.pos)));
   const solids = cells.filter((c) => c.kind === '#');
 
@@ -85,12 +88,13 @@ export async function build(ctx, { blueprint, material }) {
     if (!b || !b.diggable) return fail(`${blueprint} does not fit here: ${b?.name ?? 'an unloaded block'} at ${c.pos.x} ${c.pos.y} ${c.pos.z} cannot be removed`);
   }
   const toPlace = solids.filter((c) => !isSolid(bot.blockAt(c.pos)));
+  if (countOf(bot, material) < toPlace.length && pendingFor(ctx, new Set([material]))) await fetchSmelted(ctx, { only: new Set([material]), wait: true });
   const have = countOf(bot, material);
   if (have < toPlace.length) {
     return fail(`${blueprint} needs ${toPlace.length} ${material} here (${blueprintBlockCount(blueprint)} for the whole blueprint); you have ${have}`);
   }
 
-  await centerOnBlock(ctx);
+  if (!ctx.resumed) await centerOnBlock(ctx);
   for (const c of clear) {
     const r = await digAt(ctx, c.pos);
     if (!r.ok) return fail(`could not clear the space for ${blueprint}: ${r.result}`);
