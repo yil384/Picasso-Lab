@@ -2,10 +2,11 @@
 memory) plus a games service and a firebase-auth stub. Production Firebase and Supabase are aborted.
 
     from hdh import dealer, hsession
-    with dealer() as d:                         # HD_DEALER=real -> events/holdem-dealer (npm test must pass), else the fake
-        async with hsession('phone', d) as s:   # desk | hd | ifr | phone | portrait (is_mobile + has_touch on phones)
+    with dealer() as d:                         # the real dealer (events/holdem-dealer, test hooks on); HD_DEALER=fake
+        async with hsession('phone', d) as s:   # for the scripted stand-in (rare-state screenshots: shots.py)
             await s.goto()                      # lobby; s.errors collects console errors
             d.post('/__scene', {...})           # fake only: push a scripted table state
+The multi-player suite against the real dealer is e2e.py (live.py).
 
 The page reads window.__PICASSO_GAMES_ORIGIN (set here by an init script); production uses poker.picasso-lab.com."""
 import contextlib, json, os, subprocess, sys, tempfile, time, urllib.request
@@ -42,11 +43,11 @@ class Dealer:
 @contextlib.contextmanager
 def dealer(kind=None, data_dir=None):
     """data_dir (real dealer): reuse a data directory, e.g. to restart the service over its saved tables."""
-    kind = kind or os.environ.get('HD_DEALER', 'fake')
+    kind = kind or os.environ.get('HD_DEALER', 'real')
     if kind == 'real':
         d = Dealer('real', 8787)
         env = dict(os.environ, PORT='8787', DATA_DIR=data_dir or tempfile.mkdtemp(prefix='hd-data-'), ALLOWED_ORIGINS='https://yil384.github.io',
-                   BOT_THINK_SCALE='0.3', EMAIL_LINK='on')
+                   BOT_THINK_SCALE='0.2', EMAIL_LINK='on', HOLDEM_TEST_HOOKS='1')
         cmd, cwd = ['node', 'src/server.js'], DEALER_DIR
     else:
         d = Dealer('fake', 8790)

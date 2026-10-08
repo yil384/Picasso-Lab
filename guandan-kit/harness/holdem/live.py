@@ -36,10 +36,10 @@ class Service:
     data directory (the saved tables come back). The dealt-cards record is polled into self.truth all the time, so a
     crash loses nothing the checker needs."""
 
-    def __init__(self, data_dir=None, email_link=False, jwks_url=None, env=None, tag='live'):
+    def __init__(self, data_dir=None, email_link=False, jwks_url=None, env=None, tag='live', port=PORT):
         self.data = data_dir or tempfile.mkdtemp(prefix='hd-live-')
-        self.origin = f'http://127.0.0.1:{PORT}'
-        self.env = dict(os.environ, PORT=str(PORT), DATA_DIR=self.data, ALLOWED_ORIGINS='https://yil384.github.io',
+        self.origin = f'http://127.0.0.1:{port}'
+        self.env = dict(os.environ, PORT=str(port), DATA_DIR=self.data, ALLOWED_ORIGINS='https://yil384.github.io',
                         BOT_THINK_SCALE='0.2', HOLDEM_TEST_HOOKS='1', EMAIL_LINK='on' if email_link else 'off', **(env or {}))
         if jwks_url:
             self.env['FIREBASE_JWKS_URL'] = jwks_url

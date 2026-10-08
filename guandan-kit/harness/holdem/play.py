@@ -1,5 +1,5 @@
-"""Plays Hold'em hands through the real UI against a games service (HD_DEALER=real: events/holdem-dealer, else the fake).
-Usage: HD_DEALER=real python3 play.py [desk|hd|ifr|phone|portrait] [hands=6] [practice|room]
+"""Plays Hold'em hands through the real UI against the real dealer (events/holdem-dealer; HD_DEALER=fake: the stand-in).
+Usage: python3 play.py [desk|hd|ifr|phone|portrait] [hands=6] [practice|room]
 practice: 人机练习 (6-max, 5 AI, starts at once). room: 德州扑克 tile -> waiting room -> AI 补位 -> 开始游戏.
 Each decision uses the pills by real clicks / taps: check when free, else call (a raise through the panel now and
 then, a fold sometimes). Prints hands seen, decisions, console errors; screenshots to HD_SHOTS."""

@@ -1,6 +1,7 @@
 """Hold'em flows beyond one player: the service offline, invite links, a second player joining the waiting room,
-a guest's view, the host starting, the leave paths. Usage: python3 flows.py [desk|phone|portrait]  (HD_DEALER=real
-for events/holdem-dealer; the offline part needs no service). Prints PASS / FAIL; shots in HD_SHOTS."""
+a guest's view, the host starting, the leave paths. Usage: python3 flows.py [desk|phone|portrait]  (the real dealer,
+events/holdem-dealer; HD_DEALER=fake for the scripted stand-in; the offline part needs no service). Prints PASS / FAIL;
+shots in HD_SHOTS."""
 import asyncio, sys
 from playwright.async_api import async_playwright
 from hdh import dealer, HSession, LAUNCH_ARGS, Dealer

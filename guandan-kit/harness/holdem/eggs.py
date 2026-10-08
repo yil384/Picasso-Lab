@@ -1,6 +1,6 @@
 """Must-keep on the Hold'em screens: the "try typing picasso" hint and the picasso return film on the Hold'em lobby,
 room and table; the keyboard shortcuts never eat the c of picasso; BGM and the table sounds from the ☰ menu.
-Usage: python3 eggs.py [desk|hd|ifr]  (fake dealer by default; HD_DEALER=real plays real hands)"""
+Usage: python3 eggs.py [desk|hd|ifr]  (the real dealer plays real hands; HD_DEALER=fake for the scripted stand-in)"""
 import asyncio, sys
 from hdh import dealer, hsession
 
