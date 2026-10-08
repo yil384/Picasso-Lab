@@ -1,0 +1,267 @@
+[
+ {
+  "id": "n0",
+  "en": "Ask a model to finish \"My dog loves\" twice. You can get two different answers.",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "That is not a glitch. It is a dial.",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "Tonight, from Professor Yufei Ding's CSE 291P at UC San Diego: how a model picks its next word, and the two knobs that steer it.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "Last episode's clerk is back. Feed in \"My dog loves\", 3 tokens, and out come about 200,000 scores, one per dictionary entry.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "Each score is called a logit. So which drawer does he open?",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "First, a function called softmax turns the scores into odds that add up to 100 percent.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "Here are made-up odds for our dog. Walks, 45 percent. Treats, 30. Naps, 12. Sticks, 8. Baths, 4.",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "And homework: 1 percent.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "Picking a word from these odds is called decoding. The simplest way: take the top word, every time. That's greedy.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "On paper, greedy says walks, every time. Our two answers need something else.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "Her slide 28 runs greedy on a little tree of words, starting from \"The\".",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "A sentence's odds are its words' odds, multiplied. 0.5 times 0.4: the nice woman scores 0.2.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "But follow dog: next comes has, at 0.9. The best word can hide behind a weaker one.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "Beam search keeps the best two paths at every fork: two hikers, two lanterns.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "On her slide, it finds \"the dog has\": 0.4 times 0.9 is 0.36, beating 0.2.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "Better, but still no guarantee. And it has a habit.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "Every extra word multiplies in another number below one, so longer sentences score lower. Left alone, beam search drifts short.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "Greedy and beam both chase the likeliest words, and the text comes out bland, and loops. People don't write that way.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "So let chance in. Sampling rolls a weighted die: on our odds, walks comes up 45 times in 100, treats 30.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "That's our puzzle, solved. Left alone, the temperature setting, a dial for how random the draw is, sits at 1: every reply is a fresh draw.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "Walks one time, treats the next.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "And about once in 100 draws, the dog loves homework.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "Sample from everything, and now and then a silly word gets through.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "One fix is top-k: keep only the k likeliest words, then roll. Her slide's picture uses k equals 6.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "That was the word after \"The\": a flat step. Now the word after \"The car\": a sharp one.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "A fixed k is too small when many words are fine, and too big when only a few are.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "Top-p lets the group size itself. Line the words up, add their odds until you reach p, keep that group, and draw from it.",
+  "zh": ""
+ },
+ {
+  "id": "n27",
+  "en": "With p at 0.92, her slide keeps 9 words in the flat step, and only 3 in the sharp one.",
+  "zh": ""
+ },
+ {
+  "id": "n28",
+  "en": "Back to the dog, with p at 0.9. Walks, treats, naps, sticks: together, 95 percent. Baths and homework are out.",
+  "zh": ""
+ },
+ {
+  "id": "n29",
+  "en": "So which p should you try?",
+  "zh": ""
+ },
+ {
+  "id": "n30",
+  "en": "That's her starting point. The paper behind top-p used 0.95. The API's default is 1, which cuts nothing.",
+  "zh": ""
+ },
+ {
+  "id": "n31",
+  "en": "The second knob reshapes the odds before anything is cut: temperature.",
+  "zh": ""
+ },
+ {
+  "id": "n32",
+  "en": "Her slide 32 puts it in one line: divide every score by T, then softmax.",
+  "zh": ""
+ },
+ {
+  "id": "n33",
+  "en": "Below 1, the favourite pulls ahead. Above 1, the odds even out.",
+  "zh": ""
+ },
+ {
+  "id": "n34",
+  "en": "Here's the dial. It goes from 0 to 2, and starts at 1.",
+  "zh": ""
+ },
+ {
+  "id": "n35",
+  "en": "Turn it down to 0.2. Walks jumps to 88 percent.",
+  "zh": ""
+ },
+ {
+  "id": "n36",
+  "en": "Turn it toward 0, and you are back to greedy.",
+  "zh": ""
+ },
+ {
+  "id": "n37",
+  "en": "One honest limit. Even at temperature 0, one 2025 test got 80 different answers in 1,000 runs. A busy server batches many requests together, and the batch size changes the arithmetic.",
+  "zh": ""
+ },
+ {
+  "id": "n38",
+  "en": "Now turn it up, to 2.",
+  "zh": ""
+ },
+ {
+  "id": "n39",
+  "en": "Homework goes from 1 in 100 to about 1 in 20.",
+  "zh": ""
+ },
+ {
+  "id": "n40",
+  "en": "That's the high-temperature dog. Add top-p at 0.9, and the cut still stops before homework.",
+  "zh": ""
+ },
+ {
+  "id": "n41",
+  "en": "So where should the dial sit? Her slide 34 gives a rule of thumb.",
+  "zh": ""
+ },
+ {
+  "id": "n42",
+  "en": "Code: 0 to 0.2. Chat: about 0.7. Stories: 0.8 to 1.2.",
+  "zh": ""
+ },
+ {
+  "id": "n43",
+  "en": "Her slides pair the two knobs, and so did our dog. The API's own reference says: change temperature or top_p, generally not both.",
+  "zh": ""
+ },
+ {
+  "id": "n44",
+  "en": "Low for code: you want the same, careful answer. In a story, a dog that loves homework might be the point.",
+  "zh": ""
+ },
+ {
+  "id": "n45",
+  "en": "The API has other knobs too: max output tokens, two penalties, and a seed.",
+  "zh": ""
+ },
+ {
+  "id": "n46",
+  "en": "A seed asks for a repeatable draw: best effort, not a guarantee.",
+  "zh": ""
+ },
+ {
+  "id": "n47",
+  "en": "Sometimes you want different answers, on purpose.",
+  "zh": ""
+ },
+ {
+  "id": "n48",
+  "en": "Sample several reasoning paths, answers worked out step by step, and they don't always agree. Her toy example:",
+  "zh": ""
+ },
+ {
+  "id": "n49",
+  "en": "So count, and go with the answer most paths reach. That's self-consistency, from Wang and colleagues, 2022.",
+  "zh": ""
+ },
+ {
+  "id": "n50",
+  "en": "The catch: 5 paths cost about 5 answers' worth of tokens.",
+  "zh": ""
+ },
+ {
+  "id": "n51",
+  "en": "Back to our two answers. Not a glitch: the dial sat at 1, and the model rolled the die twice.",
+  "zh": ""
+ },
+ {
+  "id": "n52",
+  "en": "Turn it down for careful code, up for stories. And if the dog ever loves homework, now you know why.",
+  "zh": ""
+ }
+]

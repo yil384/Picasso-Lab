@@ -1,0 +1,93 @@
+[
+ {
+  "id": "C1",
+  "lecture": "L01",
+  "rec_start": 3209.93,
+  "rec_end": 3214.97,
+  "dur": 5.04,
+  "text": "the second sentence you don't want to say like we investigate again. You may want to say we study."
+ },
+ {
+  "id": "C2",
+  "lecture": "L01",
+  "rec_start": 3322.37,
+  "rec_end": 3327.55,
+  "dur": 5.18,
+  "text": "For example, this one we will choose nice, and then we will choose woman, like the nice woman.",
+  "text_was": "For example, this one we'll choose nice, and then we'll choose woman, like the nice woman."
+ },
+ {
+  "id": "C3",
+  "lecture": "L01",
+  "rec_start": 3331.99,
+  "rec_end": 3337.9,
+  "dur": 5.91,
+  "text": "And later on people find that, is this the best strategy? It's kind of greedy."
+ },
+ {
+  "id": "C4",
+  "lecture": "L01",
+  "rec_start": 3411.61,
+  "rec_end": 3419.43,
+  "dur": 7.82,
+  "text": "But later on, beam search has an issue. The issue is, usually beam search people find that they are preferring short sentence."
+ },
+ {
+  "id": "C5",
+  "lecture": "L01",
+  "rec_start": 3542.99,
+  "rec_end": 3549.45,
+  "dur": 6.46,
+  "text": "And we use that K to limit our search space. Can you guess what's the problem with it?",
+  "text_was": "And we use that K to limit our search space, okay? Can you guess what's the problem with it?"
+ },
+ {
+  "id": "C6",
+  "lecture": "L01",
+  "rec_start": 3580.73,
+  "rec_end": 3590.55,
+  "dur": 9.82,
+  "text": "if you use the top six, the overall accumulated probability of the top six tokens only adding up to 0.68."
+ },
+ {
+  "id": "C7",
+  "lecture": "L01",
+  "rec_start": 3597.03,
+  "rec_end": 3604.39,
+  "dur": 7.36,
+  "text": "But for this one, if you have top six, you already covered 99% of the overall probability."
+ },
+ {
+  "id": "C8",
+  "lecture": "L01",
+  "rec_start": 3705.59,
+  "rec_end": 3707.83,
+  "dur": 2.24,
+  "text": "It works, and it's very simple."
+ },
+ {
+  "id": "C9",
+  "lecture": "L01",
+  "rec_start": 3800.15,
+  "rec_end": 3809.01,
+  "dur": 8.86,
+  "text": "But after you divide it by the temperature, they are kind of similar. So that's why when you have high temperature, you will see like it's pretty flat."
+ },
+ {
+  "id": "C10",
+  "lecture": "L01",
+  "rec_start": 3981.27,
+  "rec_end": 3983.88,
+  "dur": 2.61,
+  "text": "You should always try 0.9 at the beginning."
+ },
+ {
+  "id": "C11",
+  "lecture": "L01",
+  "rec_start": 3907.61,
+  "rec_end": 3912.83,
+  "dur": 5.22,
+  "text": "For example, 1 plus 1, some passes will give you the result 2, some passes will give you the result 3.",
+  "text_was": "For example, one plus one. Some passes will give you the result two. Some passes will give you the result three."
+ }
+]
