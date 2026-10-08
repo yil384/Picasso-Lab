@@ -1,5 +1,6 @@
 """The service restarts in the middle of a hand (DESIGN §9): the page shows 重新连接中…, keeps the table, disables the
-pills, reconnects with backoff, and the hand goes on from the saved table. Needs the real dealer (events/holdem-dealer).
+pills, reconnects with backoff; the hand in progress was called off (its deck is never written to disk): the page says
+so, my chips are back and a new hand is dealt. Needs the real dealer (events/holdem-dealer).
 Usage: python3 restart.py [desk|phone|portrait]"""
 import asyncio, sys, tempfile
 from hdh import dealer, hsession
@@ -36,15 +37,24 @@ async def main(vp):
             s.d = d
             await s.pg.wait_for_function("!(document.querySelector('.hd-status')||{}).textContent", timeout=20000)
             await s.pg.wait_for_timeout(800)
+            toast = await s.pg.evaluate("[...document.querySelectorAll('.show')].map(e => e.textContent).join(' ')")
+            check('back: the page says the hand was called off and the chips went back', '已取消' in toast, toast)
+            # a new hand is dealt (the hand number moves on) and play goes on
+            ok = True
+            try:
+                await s.pg.wait_for_function("h => { const t = document.querySelector('.hd-mark span'); return t && t.textContent !== h && /手|Hand/.test(t.textContent); }", arg=hand, timeout=15000)
+            except Exception:
+                ok = False
             hand2 = await s.pg.evaluate("document.querySelector('.hd-mark span').textContent")
-            hole2 = await s.pg.evaluate("[...document.querySelectorAll('.hd-hole .card')].map(c => c.getAttribute('aria-label')).join(' ')")
-            check('back: the same hand resumes', hand2 == hand and hole2 == hole, f'{hand} {hole} -> {hand2} {hole2}')
-            turn = await s.pg.evaluate("!!document.querySelector('.hd-actions [data-act]') && !document.querySelector('.hd-stage').classList.contains('is-stale')")
-            check('back: my turn is live again (fresh timer)', turn)
+            check('back: a new hand is dealt', ok, f'{hand} -> {hand2}')
             await s.shot('back')
-            if turn:
+            try:
+                await s.pg.wait_for_selector('.hd-actions [data-act]', timeout=30000)
                 await s.press('[data-act=fold]')
                 await s.pg.wait_for_timeout(1500)
+                check('back: my turn comes and my actions go through', True)
+            except Exception as e:
+                check('back: my turn comes and my actions go through', False, str(e)[:80])
             errors = [e for e in s.errors if 'WebSocket' not in e and 'ERR_CONNECTION_REFUSED' not in e]
             check('no console errors besides the dropped socket', not errors, str(errors[:3]))
     print('FAILED' if FAILS else 'ALL PASS', FAILS)

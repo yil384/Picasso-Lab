@@ -9,8 +9,10 @@ Usage: python3 e2e.py [scenario ...]        (no argument: all of them, in this o
   nine      9 seats: 4 humans (hd, phone, portrait, desk) + 5 AI
   sidepots  3 humans all in with 800 / 1,400 / 2,000 on a rigged deck: main pot and side pot to different players
   timeout   a player who never acts: the clock, the time bank, 超时, then 暂离 after two timeouts, 回来 and 补盲
-  restart   the service restarts mid-hand, gracefully (SIGTERM) and with kill -9 right after an action
-  accounts  continue-as prompt (fresh browsers only, only on click), save with email through account-link.html with a
+  restart   the service restarts mid-hand, gracefully (SIGTERM) and with kill -9 right after an action: the hand in
+            progress is called off (its deck was never on disk), every chip goes back, every page says so and play
+            goes on with a new hand
+  accounts  use-the-name prompt (fresh browsers only, only on click, the name only), save with email through account-link.html with a
             locally signed ID token, a protected name reverted, a Guandan round reported once
 Prints PASS / FAIL lines and a JSON summary per scenario; screenshots in HD_SHOTS (default /tmp/holdem-shots)."""
 import asyncio, json, sys, time
@@ -473,6 +475,12 @@ async def restart(br):
                 p.paused = False
             sc.check(f'{kind}: stopped mid-hand with a human to act', bool(ok))
             hid = a.hand['id']
+            hno = a.hand['no']
+            def on_table(snap):
+                t = snap['table']
+                h = t.get('hand') or {}
+                return sum((x['stack'] + x['bet']) for x in t['seats'] if x) + sum(p_['amt'] for p_ in h.get('pots') or []) + (h.get('dead') or 0)
+            chips_before = on_table(a.snap)
             revs = [p.snap['rev'] for p in everyone]
             marks = [len(p.frames) for p in everyone]
             await asyncio.sleep(1.2)
@@ -490,15 +498,29 @@ async def restart(br):
                 st = next((json.loads(raw) for _, raw in p.frames[k:] if raw.startswith('{"t":"state"')), None)
                 first.append(st and st['rev'])
             sc.info[f'{kind}_revs'] = f'{revs} -> {first}'
-            same = [p.hand and p.hand['id'] for p in everyone]
             if kind == 'lost':
                 sc.check('lost: the pages were ahead of the restored table (their revs went back)', any(f is not None and f < r for f, r in zip(first, revs)), f'{revs} -> {first}')
-                hid = same[0]
-            sc.check(f'{kind}: every page is in the same hand ({hid})', all(x == hid for x in same), f'{hid} -> {same}')
+            # the hand in progress was called off: every page learns its number, the ones in it say so
+            voided = [p.snap['table'].get('voided') for p in everyone]
+            if kind == 'lost':
+                ok_void = len(set(voided)) == 1 and (voided[0] is None or voided[0] <= hno)
+            else:
+                ok_void = all(v == hno for v in voided)
+            sc.check(f'{kind}: the hand in progress (#{hno}) was called off on every page', ok_void, voided)
+            toasts = [await p.pg.evaluate("[...document.querySelectorAll('.show')].map(e => e.textContent).join(' ')") for p in players]
+            if kind != 'lost':
+                # (after a crash with lost writes the pages may have been in a later hand the service never saw)
+                sc.check(f'{kind}: the players in it are told (已取消, chips back)', all('已取消' in x for x in toasts), toasts)
+                # every chip on the table is still there (the bets went back to their seats)
+                chips_after = on_table(a.snap)
+                sc.check(f'{kind}: every chip on the table is back on the seats ({chips_before} -> {chips_after})', chips_after == chips_before, f'{chips_before} -> {chips_after}')
+            cur = max(p.hand['no'] if p.hand else 0 for p in everyone)
             stop = playing(players, 999, svc, cap=300)
             tasks = [asyncio.ensure_future(p.autoplay(station, stop)) for p in players]
-            fin = await until(lambda: all(hid in p.done for p in everyone), 90)
-            sc.check(f'{kind}: the hand finishes on every page', bool(fin), [hid in p.done for p in everyone])
+            fin = await until(lambda: all(any(h['no'] > (voided[0] or cur - 1) for h in p.done.values()) for p in everyone), 90)
+            sc.check(f'{kind}: play goes on: a new hand finishes on every page', bool(fin), [sorted(h['no'] for h in p.done.values())[-2:] for p in everyone])
+            if kind != 'lost':
+                sc.check(f'{kind}: the called-off hand never finishes anywhere', not any(hid in p.done for p in everyone))
             agree = await until(lambda: len({p.snap['rev'] for p in everyone}) == 1 and len({json.dumps(p.snap['table']['seats']) for p in everyone}) == 1, 15, .1)
             sc.check(f'{kind}: all pages agree on the table afterwards', bool(agree), [p.snap['rev'] for p in everyone])
             for t in tasks:
@@ -530,10 +552,10 @@ async def accounts(br):
             # 1. a returning Guandan player from this network: its name goes into the IP memory
             z = await Player(br, 'desk', 'Zhuo', svc).open(game='guandan')
             zpid = svc.me(await z.token())['pid']
-            # 2. a fresh browser: offered "继续以 Zhuo 的身份？", nothing changes until the click
+            # 2. a fresh browser: offered "继续使用昵称「Zhuo」？", nothing changes until the click
             f = await Player(br, 'portrait', 'Fresh', svc).open(client=None, name=None, game=None, wait=2500)
             prompt = await f.pg.evaluate("(()=>{const p=document.querySelector('.ga-suggest');return p&&p.textContent.replace(/\\s+/g,' ').trim()})()")
-            sc.check('fresh browser: asked 继续以 Zhuo 的身份？', bool(prompt) and '继续以 Zhuo 的身份' in prompt, prompt)
+            sc.check('fresh browser: asked 继续使用昵称「Zhuo」？', bool(prompt) and '继续使用昵称「Zhuo」' in prompt, prompt)
             await f.shot('suggest')
             ftok = await f.token()
             fme = svc.me(ftok)
@@ -542,7 +564,8 @@ async def accounts(br):
             await until(lambda: f.pg.evaluate("!document.querySelector('.ga-suggest')"), 5)
             ftok2 = await f.token()
             fme2 = svc.me(ftok2)
-            sc.check('after 继续: the Zhuo account on a new device token', ftok2 != ftok and fme2['pid'] == zpid and await f.pg.evaluate("localStorage.getItem('picasso.guandan.name')") == 'Zhuo', fme2['name'])
+            sc.check('after 继续: its own account (same token) under the name Zhuo, never the Zhuo account', ftok2 == ftok and fme2['pid'] == fme['pid'] and fme2['pid'] != zpid and fme2['name'] == 'Zhuo' and await f.pg.evaluate("localStorage.getItem('picasso.guandan.name')") == 'Zhuo', fme2)
+            sc.check('Zhuo\'s own account is untouched', svc.me(await z.token())['pid'] == zpid)
             g = await Player(br, 'phone', 'Fresh2', svc).open(client=None, name=None, game=None, wait=2500)
             sc.check('another fresh browser is asked too', await g.pg.evaluate("!!document.querySelector('.ga-suggest')"))
             await g.tap('.ga-suggest [data-new]')

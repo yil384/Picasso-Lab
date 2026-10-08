@@ -269,22 +269,23 @@ export function createTable({ ui, S, send, popups }) {
             let own = c ? [p.x + c[0], p.y + c[1], p.x + c[2], p.y + c[3]] : null;
             const clear = () => !(own && meets(p, own)) && !meets(p, heroClock);
             if (clear()) return;
-            // in the way of a clock: further in along the same line, else just below or above the clock, whichever
-            // still reads as this seat's
+            // in the way of a clock: the nearest spot that is clear of both clocks and still reads as this seat's
+            // (further in along the same line, or just past the clock it met: above, below or beside it)
             const [ox, oy] = [p.bx, p.by];
-            const tries = [];
-            for (let E = D + 4; E <= reach + 80; E += 4) tries.push(() => at(E));
-            for (const b of [own, heroClock].filter(Boolean)) {
-                tries.push(() => { p.bx = ox; p.by = b[3] + hh + pad; });
-                tries.push(() => { p.bx = ox; p.by = b[1] - hh - pad; });
-                tries.push(() => { p.bx = (ox < (b[0] + b[2]) / 2 ? b[0] - hw - pad : b[2] + hw + pad); p.by = oy; });
+            const spots = [];
+            for (let E = D + 4; E <= reach + 80; E += 4) spots.push([p.x + vx / d * E, p.y + vy / d * E]);
+            for (const b of [own, heroClock].filter(b => b && meets(p, b))) {
+                spots.push([ox, b[1] - hh - pad], [ox, b[3] + hh + pad], [b[0] - hw - pad, oy], [b[2] + hw + pad, oy]);
             }
-            for (const t of tries) {
-                t();
-                if (clear() && mine(p, k, 1.1)) return;
+            let best = null;
+            for (const [x, y] of spots) {
+                p.bx = x;
+                p.by = y;
+                const move = Math.hypot(x - ox, y - oy);
+                if (clear() && mine(p, k, 1.1) && (!best || move < best[2])) best = [x, y, move];
             }
-            p.bx = ox;
-            p.by = oy;
+            [p.bx, p.by] = best ? [best[0], best[1]] : [ox, oy];
+            if (best) return;
             // a crowded landscape side seat: its clock goes to the outer side (on the rail), its bet stays in front
             if (!portrait && (p.side === "left" || p.side === "right")) {
                 p.clockOut = true;
