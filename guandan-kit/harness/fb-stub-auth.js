@@ -1,6 +1,7 @@
 // In-memory Firebase Auth stub for the email-link flow (never touches production). Calls are recorded in
-// window.__authCalls; signInWithEmailLink resolves a user whose ID token is "test-id-token" (the fake
-// dealer accepts exactly that), and window.__authFail = true makes the next call reject.
+// window.__authCalls; signInWithEmailLink resolves a user whose ID token is window.__authIdToken (the live suite
+// sets a locally signed one for the real dealer) or else "test-id-token" (the fake dealer accepts exactly that),
+// and window.__authFail = true makes the next call reject.
 const calls = (window.__authCalls = window.__authCalls || []);
 const maybeFail = name => {
     if (!window.__authFail) return;
@@ -19,7 +20,7 @@ export function isSignInWithEmailLink(auth, link) {
 export async function signInWithEmailLink(auth, email, link) {
     calls.push({ fn: "signInWithEmailLink", email, link });
     maybeFail("signInWithEmailLink");
-    const user = { email, emailVerified: true, getIdToken: async () => "test-id-token" };
+    const user = { email, emailVerified: true, getIdToken: async () => window.__authIdToken || "test-id-token" };
     auth.currentUser = user;
     return { user };
 }
