@@ -72,10 +72,8 @@ export async function stairsTo(ctx, { y, heading = null }) {
     d = r.heading;
     steps += 1;
     if (steps % TORCH_EVERY === 0) await torchBehind(ctx, d);
-    if (steps % 4 === 0) {
-      const g = await guard(ctx);
-      if (g) notes.push(g);
-    }
+    const g = await guard(ctx);
+    if (g) notes.push(g);
   }
   const tail = notes.length ? `; on the way: ${notes.slice(-3).join('; ')}` : '';
   return { ok: true, heading: d, result: `cut ${steps} stair steps from y ${y0} to y ${y} (now at ${fmt(bot.entity.position)})${tail}` };

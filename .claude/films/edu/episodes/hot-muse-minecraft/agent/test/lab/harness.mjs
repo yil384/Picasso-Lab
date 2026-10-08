@@ -105,6 +105,19 @@ export async function openLab(username, opts = {}) {
   const deaths = [];
   bot.on('death', () => deaths.push({ at: Date.now(), pos: bot.entity?.position?.floored?.().toString() }));
   bot.on('death', () => { try { bot.respawn?.(); } catch { /* */ } });
+  // a short trace of every health loss (who was near) for the lab log; LAB_TRACE=1 prints it too
+  let hp = bot.health;
+  bot.on('health', () => {
+    if (bot.health < hp) {
+      const mob = Object.values(bot.entities).filter((e) => e !== bot.entity && e.position && e.type !== 'object' && e.name !== 'item')
+        .map((e) => ({ n: e.name, d: Math.round(e.position.distanceTo(bot.entity.position) * 10) / 10 })).sort((a, b) => a.d - b.d)[0];
+      const line = { hurt: Math.round((hp - bot.health) * 10) / 10, hp: Math.round(bot.health), food: bot.food, pos: bot.entity.position.floored().toString(), near: mob ? `${mob.n} ${mob.d}` : null };
+      trace.push(line);
+      if (process.env.LAB_TRACE) console.log('  hurt', JSON.stringify(line));
+    }
+    hp = bot.health;
+  });
+  const trace = [];
   fs.mkdirSync(LOG_DIR, { recursive: true });
   const logFile = path.join(LOG_DIR, opts.log ?? `lab-${username}.jsonl`);
   let current = null;
@@ -123,6 +136,7 @@ export async function openLab(username, opts = {}) {
       current = controller;
       const timer = setTimeout(() => controller.abort(`timed out after ${limit / 1000} s`), limit);
       const d0 = deaths.length;
+      const h0 = trace.length;
       const t0 = Date.now();
       let out;
       try {
@@ -134,7 +148,7 @@ export async function openLab(username, opts = {}) {
         current = null;
         try { bot.pathfinder.setGoal(null); bot.stopDigging(); bot.clearControlStates(); } catch { /* */ }
       }
-      const r = { skill: name, args, ok: Boolean(out?.ok), result: String(out?.result ?? ''), ms: Date.now() - t0, deaths: deaths.length - d0, pos: bot.entity?.position?.floored?.().toString(), dim: bot.game?.dimension };
+      const r = { skill: name, args, ok: Boolean(out?.ok), result: String(out?.result ?? ''), ms: Date.now() - t0, deaths: deaths.length - d0, pos: bot.entity?.position?.floored?.().toString(), dim: bot.game?.dimension, hurts: trace.slice(h0).slice(-12) };
       lab.log(r);
       console.log(`[${name}] ${r.ok ? 'OK' : 'FAIL'} ${Math.round(r.ms / 1000)}s deaths=${r.deaths}: ${r.result.slice(0, 400)}`);
       return r;
