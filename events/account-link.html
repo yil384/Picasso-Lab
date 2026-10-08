@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>保存账号 · Picasso Lab</title>
+<meta name="theme-color" content="#1b2750">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700;900&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/guandan-ui.css">
+<style>
+/* The email-link landing page of the games account (games-account.js "save with email"): the lobby's navy
+   room and a Tencent popup panel. It confirms the email, signs in with the link, hands the ID token to the
+   games service once, signs out and says so. It never holds an account token. */
+html, body { background: #223066; }
+body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    background:
+        radial-gradient(48% 42% at 8% 14%, rgba(150, 200, 255, .34), rgba(150, 200, 255, 0) 70%),
+        radial-gradient(60% 55% at 88% 0%, rgba(132, 146, 236, .5), rgba(132, 146, 236, 0) 70%),
+        linear-gradient(180deg, transparent 52%, rgba(10, 16, 50, .34) 100%),
+        linear-gradient(180deg, #4659aa 0%, #34478f 40%, #2b3c7c 72%, #223066 100%);
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+.al { width: min(480px, 100%); display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.al-brand { display: flex; align-items: center; gap: 10px; color: rgba(236, 242, 255, .85); font: 900 15px/1 var(--font-ui); letter-spacing: .08em; }
+.al-brand .card { --card-w: 30px; rotate: -8deg; }
+.al-panel {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #fdfeff 0%, var(--panel-2) 100%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7), 0 10px 28px rgba(0, 0, 30, .45);
+    color: var(--ink);
+    animation: al-in 220ms var(--ease-back) both;
+}
+@keyframes al-in { from { opacity: 0; scale: .94; } }
+.al-head {
+    display: grid;
+    place-items: center;
+    height: 56px;
+    background: linear-gradient(180deg, #8ea4ff 0%, #6c84ec 100%);
+    box-shadow: inset 0 -2px 0 rgba(40, 50, 160, .25);
+}
+.al-head h1 { margin: 0; color: #fff; font: 900 24px/1 var(--font-ui); letter-spacing: .04em; text-shadow: 0 2px 0 rgba(40, 50, 160, .35); }
+html[lang="en"] .al-head h1 { letter-spacing: 0; }
+.al-body { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 22px 26px 26px; text-align: center; }
+.al-text { margin: 0; color: var(--ink); font: 700 18px/1.6 var(--font-ui); text-wrap: balance; }
+.al-sub { margin: 0; color: var(--ink-3); font: 500 15px/1.55 var(--font-ui); text-wrap: balance; }
+.al-input {
+    width: 100%;
+    height: 50px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: inset 0 0 0 2px #b8c8ea, inset 0 2px 4px rgba(20, 40, 100, .1);
+    color: var(--ink);
+    font: 700 18px/1 var(--font-ui);
+    outline: none;
+}
+.al-input:focus { box-shadow: inset 0 0 0 2px var(--util); }
+.al-err { min-height: 22px; margin: -4px 0 0; color: #c8304e; font: 700 15px/1.45 var(--font-ui); }
+.al-body .btn { --btn-h: 50px; --btn-fs: 20px; --btn-px: 28px; --btn-minw: 200px; text-decoration: none; }
+html[lang="en"] .al-body .btn { --btn-ls: 0em; }
+/* a big check or cross in a gold / grey medal for the end states */
+.al-mark {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 36% 30%, #fff5bf 0%, #ffcf45 48%, #e39516 100%);
+    box-shadow: inset 0 -4px 0 rgba(150, 70, 0, .35);
+}
+.al-mark svg { width: 40px; height: 40px; fill: #fff; filter: drop-shadow(0 2px 0 rgba(150, 70, 0, .45)); }
+.al-mark.is-fail { background: radial-gradient(circle at 36% 30%, #f4f6fa 0%, #c0c6d2 50%, #8b94a6 100%); box-shadow: inset 0 -4px 0 rgba(60, 66, 80, .3); }
+.al-mark.is-fail svg { filter: drop-shadow(0 2px 0 rgba(60, 66, 80, .4)); }
+.al-ring { width: 40px; height: 40px; border: 4px solid rgba(108, 132, 236, .25); border-top-color: var(--util); border-radius: 50%; animation: al-turn 900ms linear infinite; }
+@keyframes al-turn { to { rotate: 1turn; } }
+.al-note { color: rgba(220, 232, 255, .62); font: 500 13px/1.5 var(--font-ui); text-align: center; text-wrap: balance; }
+</style>
+</head>
+<body>
+<main class="al">
+    <div class="al-brand"><div class="card back" aria-hidden="true"><span class="gd-back-emblem">P</span></div><span>PICASSO LAB</span></div>
+    <section class="al-panel" aria-live="polite">
+        <div class="al-head"><h1 id="al-title"></h1></div>
+        <div class="al-body" id="al-body"></div>
+    </section>
+    <p class="al-note" id="al-note"></p>
+</main>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getAuth, isSignInWithEmailLink, signInWithEmailLink, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
+    authDomain: "yichen-5e23e.firebaseapp.com",
+    projectId: "yichen-5e23e",
+    appId: "1:495540025061:web:733590e8781d90e866060c"
+};
+// The games service; tests point the page at a local one. Never taken from the URL.
+const GAMES_ORIGIN = window.__PICASSO_GAMES_ORIGIN || "https://poker.picasso-lab.com";
+const GAME_URL = "https://yil384.github.io/Picasso-Lab/events/guandan.html";
+const LINK_EMAIL_KEY = "picasso.games.linkEmail";
+const query = new URLSearchParams(location.search);
+const lid = query.get("lid") || "";
+const en = query.get("lang") === "en";
+const L = (enText, zhText) => (en ? enText : zhText);
+const body = document.getElementById("al-body");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const CHECK = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 16.6 4.6 12l-2 2 6.6 6.6L21.4 8.4l-2-2Z"/></svg>`;
+const CROSS = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.6 3.4 12 9.8l6.4-6.4 2.2 2.2-6.4 6.4 6.4 6.4-2.2 2.2-6.4-6.4-6.4 6.4-2.2-2.2 6.4-6.4-6.4-6.4Z"/></svg>`;
+const back = `<a class="btn primary" href="${GAME_URL}" target="_top">${L("Back to the game", "回到游戏")}</a>`;
+
+document.documentElement.lang = en ? "en" : "zh-CN";
+document.title = `${L("Save your account", "保存账号")} · Picasso Lab`;
+document.getElementById("al-title").textContent = L("Save with email", "用邮箱保存");
+document.getElementById("al-note").textContent = L("All chips are play money: they cannot be bought, sold or transferred.", "所有筹码都是虚拟的，不能购买、出售或转让。");
+
+const auth = getAuth(initializeApp(firebaseConfig, "account-link"));
+
+function readEmail() {
+    try { return localStorage.getItem(LINK_EMAIL_KEY) || ""; } catch (_) { return ""; }
+}
+
+function showForm(error = "") {
+    body.innerHTML = `<p class="al-text">${L("Confirm the email address the sign-in link was sent to.", "请确认收到登录链接的邮箱地址")}</p>
+        <input class="al-input" id="al-email" type="email" inputmode="email" autocomplete="email" spellcheck="false" value="${esc(readEmail())}" placeholder="${L("Email address", "邮箱地址")}" aria-label="${L("Email address", "邮箱地址")}">
+        <p class="al-err" role="alert">${esc(error)}</p>
+        <button class="btn primary" id="al-go" type="button">${L("Confirm", "确认")}</button>`;
+    const input = document.getElementById("al-email");
+    const go = () => {
+        const email = input.value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showForm(L("Check the email address", "邮箱格式不对"));
+        complete(email);
+    };
+    document.getElementById("al-go").addEventListener("click", go);
+    input.addEventListener("keydown", event => { if (event.key === "Enter") go(); });
+    if (!input.value) input.focus();
+}
+
+function showBusy() {
+    body.innerHTML = `<span class="al-ring" aria-hidden="true"></span><p class="al-text">${L("Saving your account…", "正在保存账号…")}</p>`;
+}
+
+function showDone(name) {
+    body.innerHTML = `<span class="al-mark">${CHECK}</span>
+        <p class="al-text">${L("Done. You can go back to the game.", "已完成，可以回到游戏")}</p>
+        ${name ? `<p class="al-sub">${L(`Your account ${esc(name)} is saved with this email. The game picks it up within a few seconds.`, `账号 ${esc(name)} 已绑定这个邮箱，游戏里几秒内就会更新。`)}</p>` : ""}
+        ${back}`;
+}
+
+function showFailed(text) {
+    body.innerHTML = `<span class="al-mark is-fail">${CROSS}</span><p class="al-text">${esc(text)}</p>
+        <p class="al-sub">${L("Open the account popup in the game to send a new link.", "可以在游戏的账号页重新发送登录链接。")}</p>${back}`;
+}
+
+async function complete(email) {
+    showBusy();
+    let idToken;
+    try {
+        const { user } = await signInWithEmailLink(auth, email, location.href);
+        idToken = await user.getIdToken();
+    } catch (err) {
+        const code = String(err?.code || "");
+        if (code === "auth/invalid-email") return showForm(L("This is not the address the link was sent to", "这不是收到链接的邮箱地址"));
+        return showFailed(code === "auth/invalid-action-code" || code === "auth/expired-action-code"
+            ? L("This link has expired or was already used.", "这个链接已失效或已经用过了。")
+            : L("Sign-in failed. Please try again.", "登录失败，请稍后再试。"));
+    }
+    let res;
+    let data = {};
+    try {
+        res = await fetch(`${GAMES_ORIGIN}/v1/email/complete`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ lid, idToken }),
+            credentials: "omit"
+        });
+        data = await res.json().catch(() => ({}));
+    } catch (_) {
+        res = null;
+    }
+    await signOut(auth).catch(() => {});
+    if (res?.ok) {
+        try { localStorage.removeItem(LINK_EMAIL_KEY); } catch (_) {}
+        return showDone(data.name || "");
+    }
+    showFailed(!res ? L("The game service is unavailable. Please try again later.", "游戏服务暂不可用，请稍后再试。")
+        : data.error === "email_mismatch" ? L("This email does not match the one you entered in the game.", "这个邮箱和游戏里填写的不一致。")
+            : data.error === "expired" ? L("This link has expired.", "这个链接已过期。")
+                : L("The email could not be verified.", "邮箱验证没有通过。"));
+}
+
+if (!lid || !isSignInWithEmailLink(auth, location.href)) showFailed(L("This sign-in link is not valid.", "这个登录链接无效。"));
+else showForm();
+</script>
+</body>
+</html>
