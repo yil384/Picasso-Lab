@@ -332,6 +332,14 @@ test('camera on staging: production\'s camera settings with staging\'s Paper; th
   for (const s of [stg, prod]) for (const k of Object.keys(s.camera.env)) assert.ok(!/^FB_|STREAM_RTMP_URL/.test(k), `${k} belongs in camera.env, never the compose file`);
   const { calls } = push([]);
   const joined = calls.join('\n');
-  assert.match(joined, /if \[ -f deploy\/camera\.env \]; then\n {4}chmod 600 deploy\/camera\.env; mkdir -p \.\.\/fb && chmod 700 \.\.\/fb\n {4}O=\$\(docker ps --format "\{\{\.Names\}\}" \| grep -i camera \| grep -v "\^muse-staging-camera" \|\| true\)\n {4}if \[ -n "\$O" \]; then echo "note: another camera runs[^"]*"; else export COMPOSE_PROFILES=camera; fi/);
+  for (const part of [
+    'if [ -f deploy/camera.env ]; then\n    chmod 600 deploy/camera.env; mkdir -p ../fb && chmod 700 ../fb\n',
+    'if [ -n "$O" ]; then echo "note: another camera runs ($O); staging starts without its camera (stop that one first)"; else export COMPOSE_PROFILES=camera; fi',
+  ]) assert.ok(joined.includes(part), part);
+  // only camera containers count (another stack's agent or Paper does not), and staging's own camera never does
+  const filter = /O=\$\(docker ps --format "\{\{\.Names\}\}" \| (.*) \|\| true\)/.exec(joined)[1];
+  const names = 'muse-camera-test-agent-1\nmuse-camera-test-paper-1\nmuse-staging-camera-1\nmuse-minecraft-agent-1\n';
+  assert.equal(spawnSync('/bin/sh', ['-c', filter], { input: names, encoding: 'utf8' }).stdout, '');
+  assert.equal(spawnSync('/bin/sh', ['-c', filter], { input: `${names}muse-camera-test-camera-1\n`, encoding: 'utf8' }).stdout, 'muse-camera-test-camera-1 ');
   assert.ok(joined.indexOf('export COMPOSE_PROFILES=camera') < joined.indexOf('docker compose -p muse-staging -f staging.compose.yaml up -d --build'));
 });

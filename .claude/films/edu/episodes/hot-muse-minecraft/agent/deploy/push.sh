@@ -57,7 +57,7 @@ staging() {
   # one camera account allows one client, and a second would kick the first
   if [ -f deploy/camera.env ]; then
     chmod 600 deploy/camera.env; mkdir -p ../fb && chmod 700 ../fb
-    O=$(docker ps --format "{{.Names}}" | grep -i camera | grep -v "^muse-staging-camera" || true)
+    O=$(docker ps --format "{{.Names}}" | grep -E -- "-camera-[0-9]+$" | grep -v "^muse-staging-camera-" | tr "\n" " " || true)
     if [ -n "$O" ]; then echo "note: another camera runs ($O); staging starts without its camera (stop that one first)"; else export COMPOSE_PROFILES=camera; fi
   fi
   cd deploy && docker compose -p muse-staging -f staging.compose.yaml up -d --build 2>&1 | tail -4 && docker compose -p muse-staging -f staging.compose.yaml ps --format "staging {{.Service}}: {{.Status}}"
