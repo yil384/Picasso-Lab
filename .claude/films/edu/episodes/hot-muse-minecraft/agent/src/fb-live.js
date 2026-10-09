@@ -71,16 +71,18 @@ export function videoUrlOf(info, pageId) {
   const candidates = [];
   if (p.startsWith('/')) candidates.push(`https://www.facebook.com${p}`);
   else if (p) candidates.push(p);
-  if (info?.video?.id && /^\d+$/.test(String(info.video.id))) candidates.push(`https://www.facebook.com/${pageId}/videos/${info.video.id}/`);
+  if (info?.video?.id && /^\d+$/.test(String(info.video.id)) && /^\d+$/.test(String(pageId ?? ''))) candidates.push(`https://www.facebook.com/${pageId}/videos/${info.video.id}/`);
   const m = String(info?.embed_html ?? '').match(/[?&]href=([^&"'\s]+)/);
   if (m) { try { candidates.push(decodeURIComponent(m[1])); } catch { /* not encoded */ } }
   return candidates.find(isFacebookVideoUrl) ?? null;
 }
 
 /**
- * The Graph API for one Page.
+ * The Graph API for one owner of live videos: a Page (its id and the Page token) or the person the token belongs to
+ * ('me' and a long-lived user token: FB_TARGET=me).
  * @param {object} o
- * @param {string} o.pageId
+ * @param {string} o.pageId              the Page's id, or 'me'
+ * @param {{value: string}|null} [o.privacy]  the live video's privacy (a person's videos; the embed plays only EVERYONE)
  * @param {string} [o.tokenFile]        the Page token's file (readTokenFile), read again when it changes
  * @param {() => string} [o.token]      (tests) the token
  * @param {string} [o.version]  @param {string} [o.base]  @param {typeof fetch} [o.fetchFn]
@@ -173,19 +175,30 @@ export function createGraph(o) {
     }
   }
 
+  let ownerId = /^\d+$/.test(String(c.pageId)) ? String(c.pageId) : null;
   return {
     pageId: c.pageId,
+    /** The owner's numeric id (for 'me', read once from the Graph API). */
+    async ownerId() {
+      ownerId ??= String((await call('GET', 'me', { fields: 'id' }, { what: 'read the profile' }))?.id ?? '') || null;
+      return ownerId;
+    },
     scrub,
     /** Keep this text (a stream key) out of every message from now on. */
     hide(s) { if (s) secrets.add(String(s)); },
-    page: () => call('GET', c.pageId, { fields: 'id,name' }, { what: 'read the Page' }),
-    /** POST /{page}/live_videos status=LIVE_NOW: {id, secure_stream_url, ...}. Never retried (it is not idempotent). */
-    createLive: ({ title, description }) => call('POST', `${c.pageId}/live_videos`, { status: 'LIVE_NOW', title, description }, { retry: false, what: 'create the live video' }),
+    page: () => call('GET', c.pageId, { fields: 'id,name' }, { what: c.pageId === 'me' ? 'read the profile' : 'read the Page' }),
+    /**
+     * POST /{page or me}/live_videos status=LIVE_NOW (with the privacy for a person's video): {id, secure_stream_url,
+     * ...}. Never retried (it is not idempotent).
+     */
+    createLive: ({ title, description }) => call('POST', `${c.pageId}/live_videos`, {
+      status: 'LIVE_NOW', title, description, ...(c.privacy ? { privacy: JSON.stringify(c.privacy) } : {}),
+    }, { retry: false, what: 'create the live video' }),
     getLive: (id, fields) => call('GET', id, { fields }, { what: 'read the live video' }),
     endLive: (id) => call('POST', id, { end_live_video: 'true' }, { what: 'end the live video' }),
     updateLive: (id, fields) => call('POST', id, fields, { what: 'rename the live video', retry: false }),
-    listLive: () => call('GET', `${c.pageId}/live_videos`, { fields: 'id,status,description,creation_time', limit: 25 }, { what: 'list the Page\'s live videos' }),
-    /** DELETE a video of the Page (scripts/fb-probe.mjs removes its test video). */
+    listLive: () => call('GET', `${c.pageId}/live_videos`, { fields: 'id,status,description,creation_time,video', limit: 25 }, { what: 'list the live videos' }),
+    /** DELETE a video (the live video's recording, or the live video object). */
     deleteVideo: (id) => call('DELETE', id, {}, { what: 'delete the video' }),
     stats: () => ({ calls, errors, lastHour: sent.length, blockedForS: Math.max(0, Math.ceil((blockedUntil - now()) / 1000)) }),
   };
@@ -220,12 +233,19 @@ export const titleFor = (base, game) => `${base} (game ${game})`.slice(0, 250);
  * @param {number} [o.gameTtlMs]      a game the agent has not reported for this long leaves the channel (0: never)
  * @param {object} [o.streamOptions]  passed to every stream (fps, bitrate, ...)
  * @param {boolean} [o.allowPlainRtmp] (tests) accept an rtmp:// ingest
+ * @param {string} [o.privacy]       the privacy asked for (a profile's videos): read back after each create, and a video
+ *   Facebook stored with another one (it caps a post at the audience the owner allowed the app) is reported as a warning
+ * @param {boolean} [o.deleteAfter]   after a live video is ended, delete it (FB_DELETE_AFTER; the profile target keeps
+ *   the owner's timeline clean), and try again later when that fails
  */
 export function createLiveChannel(o) {
   const graph = o.graph;
   const now = o.now ?? Date.now;
   const title = o.title ?? 'Picasso Lab demo: an AI plays Minecraft';
   const pollMs = o.pollMs ?? 3_000; // while the stream is starting
+  // Facebook reports LIVE as soon as a LIVE_NOW video exists, before any stream: "live" here also needs our stream
+  // accepted by the ingest (NetStream.Publish.Start) for this long, so the player has something to play
+  const settleMs = o.settleMs ?? 3_000;
   const livePollMs = o.livePollMs ?? 30_000; // while it is live: did Facebook end it?
   const retryMs = o.retryMs ?? [5_000, 15_000, 30_000, 60_000, 120_000];
   const event = (kind, data = {}) => { try { o.log?.event(kind, data); } catch { /* best effort */ } };
@@ -239,6 +259,8 @@ export function createLiveChannel(o) {
   let lastError = null;
   let closing = false;
   const pendingEnds = new Set(); // live videos whose end call failed: tried again later
+  const pendingDeletes = new Map(); // live video id -> {live, video, tries}: deletes that failed, tried again later
+  const deleteAfter = Boolean(o.deleteAfter);
   let swept = null;
   let running = null;
   let dirty = false;
@@ -248,14 +270,50 @@ export function createLiveChannel(o) {
     if (!o.stateFile) return;
     try {
       const ids = [...new Set([...(b?.id ? [b.id] : []), ...pendingEnds])];
+      const del = [...pendingDeletes.values()].map(({ live, video }) => ({ live, video: video ?? null }));
       fs.mkdirSync(path.dirname(o.stateFile), { recursive: true });
-      fs.writeFileSync(`${o.stateFile}.tmp`, `${JSON.stringify({ open: ids, at: new Date(now()).toISOString() })}\n`, { mode: 0o600 });
+      fs.writeFileSync(`${o.stateFile}.tmp`, `${JSON.stringify({ open: ids, delete: del, at: new Date(now()).toISOString() })}\n`, { mode: 0o600 });
       fs.renameSync(`${o.stateFile}.tmp`, o.stateFile);
     } catch (err) { event('fb_error', { what: 'write the state file', message: clip(err?.message ?? err, 200) }); }
   };
+  const isId = (x) => /^\d{1,30}$/.test(String(x ?? ''));
   const loadState = () => {
-    try { return (JSON.parse(fs.readFileSync(o.stateFile, 'utf8')).open ?? []).filter((x) => /^\d{1,30}$/.test(String(x))).map(String); } catch { return []; }
+    try {
+      const j = JSON.parse(fs.readFileSync(o.stateFile, 'utf8'));
+      return {
+        open: (j.open ?? []).filter(isId).map(String),
+        del: (j.delete ?? []).filter((e) => isId(e?.live)).map((e) => ({ live: String(e.live), video: isId(e.video) ? String(e.video) : null })),
+      };
+    } catch { return { open: [], del: [] }; }
   };
+
+  /**
+   * Delete an ended live video of ours (FB_DELETE_AFTER): the live video object, which takes its recording with it
+   * (measured 2026-10-08 on a profile; deleting the recording's own id is refused there: "publish_actions ...
+   * deprecated"), else the recording's id.
+   * An id Facebook no longer knows counts as deleted; any other failure is kept and tried again (every 30 s and at
+   * the next start), giving up after 20 tries.
+   */
+  async function removeVideo(entry, why) {
+    const e = { live: String(entry.live), video: entry.video ? String(entry.video) : null, tries: (pendingDeletes.get(String(entry.live))?.tries ?? 0) + 1 };
+    let deleted = null;
+    let keep = false;
+    for (const id of [e.live, e.video].filter(isId)) {
+      try { await graph.deleteVideo(id); deleted = id; break; } catch (err) {
+        const unknown = err.code === 100 && (Number(err.subcode) === 33 || /does not exist|cannot be loaded/i.test(err.message));
+        if (!unknown) keep = true; // anything else (busy, still processing, a rate limit): try again later
+      }
+    }
+    if (!deleted && keep && e.tries < 20) {
+      pendingDeletes.set(e.live, e);
+      saveState();
+      return false;
+    }
+    pendingDeletes.delete(e.live);
+    event(deleted ? 'fb_live_deleted' : 'fb_delete_gave_up', { broadcast: e.live, video: e.video, deletedId: deleted, why: clip(why, 120), tries: e.tries });
+    saveState();
+    return Boolean(deleted);
+  }
 
   /** End a live video; on failure it is kept and tried again later (every minute, and at the next start). */
   async function endVideo(id, why) {
@@ -274,20 +332,30 @@ export function createLiveChannel(o) {
 
   /** At start, and after a failed create: end what a crash or an unclear answer left open. */
   async function sweep() {
-    for (const id of loadState()) if (id !== b?.id) await endVideo(id, 'left open by an earlier run');
+    const st = loadState();
+    for (const id of st.open) {
+      if (id === b?.id) continue;
+      await endVideo(id, 'left open by an earlier run');
+      if (deleteAfter) await removeVideo({ live: id }, 'left by an earlier run');
+    }
+    for (const e of st.del) if (e.live !== b?.id) await removeVideo(e, 'its delete failed in an earlier run');
     try {
       const list = await graph.listLive();
       for (const v of list?.data ?? []) {
-        if (v?.id && v.id !== b?.id && OPEN.has(String(v.status)) && String(v.description ?? '').includes(MARKER)) {
+        // ours only: the marker sentence in the description (a live video the owner made by hand is never touched)
+        if (!v?.id || String(v.id) === b?.id || !String(v.description ?? '').includes(MARKER)) continue;
+        if (OPEN.has(String(v.status))) {
           event('fb_orphan', { broadcast: v.id, status: v.status });
           await endVideo(String(v.id), 'an open live video of ours that no game uses');
         }
+        if (deleteAfter) await removeVideo({ live: String(v.id), video: v.video?.id ?? null }, 'a live video of ours left after its game');
       }
     } catch { /* logged by the Graph client; tried again before the next create */ }
   }
 
   const retryTimer = setInterval(() => {
     for (const id of [...pendingEnds]) if (id !== b?.id) endVideo(id, 'trying again').catch(() => {});
+    for (const e of [...pendingDeletes.values()]) if (e.live !== b?.id) removeVideo(e, 'trying again').catch(() => {});
     if (o.gameTtlMs > 0) {
       for (const g of [...games.values()]) if (now() - g.seenAt > o.gameTtlMs) api.stop(g.id, 'the agent stopped reporting the game');
     }
@@ -343,7 +411,7 @@ export function createLiveChannel(o) {
 
   async function begin() {
     const game = games.get(focus);
-    const me = { id: null, game: focus, state: 'starting', createdAt: now(), liveAt: 0, publishing: false, stream: null, timer: null, status: null, videoUrl: null, embedUrl: null };
+    const me = { id: null, videoId: null, game: focus, state: 'starting', createdAt: now(), liveAt: 0, publishing: false, stream: null, timer: null, status: null, videoUrl: null, embedUrl: null };
     b = me;
     try {
       const r = await graph.createLive({ title: titleFor(title, game.id), description: DESCRIPTION });
@@ -356,8 +424,18 @@ export function createLiveChannel(o) {
       if (!ingest || !(/^rtmps:\/\//i.test(ingest) || (o.allowPlainRtmp && /^rtmp:\/\//i.test(ingest)))) throw new Error('the live video has no rtmps ingest URL');
       const info = await graph.getLive(me.id, 'status,permalink_url,embed_html,video');
       me.status = info?.status ?? null;
-      me.videoUrl = videoUrlOf(info, graph.pageId);
+      me.videoId = isId(info?.video?.id) ? String(info.video.id) : null;
+      me.videoUrl = videoUrlOf(info, await graph.ownerId().catch(() => null));
       me.embedUrl = me.videoUrl ? facebookEmbedUrl(me.videoUrl) : null;
+      if (o.privacy && me.videoId) {
+        // measured 2026-10-08: asked for EVERYONE, Facebook stored "Only me", and the player shows "Video Unavailable"
+        const p = await graph.getLive(me.videoId, 'privacy').catch(() => null);
+        const got = p?.privacy?.value ?? null;
+        if (got && got !== o.privacy) {
+          me.warning = `Facebook stored this live video as "${clip(p.privacy.description || got, 40)}" (${got}), not ${o.privacy}: the player shows "Video unavailable" to anyone but its owner. Facebook caps a video at the audience the owner allowed the app (Facebook settings, Apps and websites).`;
+          event('fb_privacy', { broadcast: me.id, asked: o.privacy, got });
+        }
+      }
       event('fb_live_created', { broadcast: me.id, game: game.id, video: me.videoUrl, status: me.status });
       if (b !== me) return;
       if (closing || !games.size) { await finish(closing ? 'the service stopped' : 'no game is left'); return; }
@@ -366,7 +444,7 @@ export function createLiveChannel(o) {
       me.state = 'connecting';
       const stream = o.createStream({ ...(o.streamOptions ?? {}), output: ingest, player: games.get(now0).player, event: (k, d) => event(k, { session: now0, broadcast: me.id, ...d }) });
       me.stream = stream;
-      stream.on?.('stream_publishing', () => { me.publishing = true; poll(me, Math.min(500, pollMs)); });
+      stream.on?.('stream_publishing', () => { me.publishing = true; me.publishingAt = now(); poll(me, Math.min(settleMs + 100, pollMs)); });
       stream.finished.then((res) => { if (b === me && me.state !== 'ending') streamLost(me, res?.reason ?? 'the stream ended'); });
       Promise.resolve().then(() => stream.start()).catch((err) => { if (b === me && me.state !== 'ending') streamLost(me, `could not start: ${clip(err?.message ?? err)}`); });
       poll(me, pollMs);
@@ -376,7 +454,10 @@ export function createLiveChannel(o) {
       lastError = graph.scrub(why.text);
       event('fb_live_failed', { broadcast: me.id, game: game?.id ?? null, reason: lastError, permanent: why.permanent });
       if (b === me) b = null;
-      if (me.id) await endVideo(me.id, 'its start failed');
+      if (me.id) {
+        await endVideo(me.id, 'its start failed');
+        if (deleteAfter) await removeVideo({ live: me.id, video: me.videoId }, 'its start failed');
+      }
       swept = sweep(); // an unclear create may have left a live video behind
       rest(why.permanent ? o.permanentRetryMs ?? 600_000 : null);
     }
@@ -412,11 +493,15 @@ export function createLiveChannel(o) {
       try {
         const info = await graph.getLive(me.id, me.videoUrl ? 'status' : 'status,permalink_url,embed_html,video');
         if (b !== me || me.state === 'ending') return;
-        if (!me.videoUrl) { me.videoUrl = videoUrlOf(info, graph.pageId); me.embedUrl = me.videoUrl ? facebookEmbedUrl(me.videoUrl) : null; }
+        if (!me.videoUrl) {
+          me.videoId ??= isId(info?.video?.id) ? String(info.video.id) : null;
+          me.videoUrl = videoUrlOf(info, await graph.ownerId().catch(() => null));
+          me.embedUrl = me.videoUrl ? facebookEmbedUrl(me.videoUrl) : null;
+        }
         if (info?.status !== me.status) event('fb_status', { broadcast: me.id, status: info?.status ?? null, publishing: me.publishing });
         me.status = info?.status ?? null;
         if (ENDED.has(String(me.status))) { streamLost(me, `Facebook ended the live video (${me.status})`); return; }
-        if (me.status === 'LIVE' && me.publishing && me.state !== 'live') {
+        if (me.status === 'LIVE' && me.publishing && now() - me.publishingAt >= settleMs && me.state !== 'live') {
           me.state = 'live';
           me.liveAt = now();
           event('fb_live', { broadcast: me.id, game: me.game, afterMs: me.liveAt - me.createdAt, video: me.videoUrl });
@@ -435,7 +520,10 @@ export function createLiveChannel(o) {
     me.state = 'ending';
     clearTimeout(me.timer);
     if (me.stream) await Promise.resolve(me.stream.stop(why)).catch(() => {});
-    if (me.id) await endVideo(me.id, why);
+    if (me.id) {
+      await endVideo(me.id, why);
+      if (deleteAfter) await removeVideo({ live: me.id, video: me.videoId }, why);
+    }
     event('fb_live_stop', { broadcast: me.id, why: clip(why, 160), seconds: Math.round((now() - me.createdAt) / 1000), wasLive: Boolean(me.liveAt) });
     if (b === me) b = null;
     saveState();
@@ -493,6 +581,7 @@ export function createLiveChannel(o) {
         videoUrl: b?.videoUrl ?? null,
         embedUrl: b?.embedUrl ?? null,
         liveSince: b?.liveAt ? new Date(b.liveAt).toISOString() : null,
+        warning: b?.warning ?? null,
         games: games.size,
         error: lastError,
         retryInS: resting ? Math.ceil((restingUntil - now()) / 1000) : null,

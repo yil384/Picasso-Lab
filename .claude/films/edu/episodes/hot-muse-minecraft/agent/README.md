@@ -657,6 +657,26 @@ returns a static page with that player. The owner's personal profile cannot be d
   `fb_live_failed`, `fb_stream_lost`, `fb_live_stop`, `fb_live_ended`, `fb_orphan`, `fb_error` (the Graph call, its
   HTTP status and code, scrubbed).
 
+**Where it goes live (`FB_TARGET`).** `page` (the default, and the long-term setup) posts to the Page with the Page
+token, which never expires, and keeps each video. `me` posts to the token owner's own profile with a long-lived user
+token: `POST /me/live_videos` with `privacy={"value":"EVERYONE"}` (`FB_PRIVACY`; the video plugin plays only public
+videos), and with `FB_DELETE_AFTER` (on by default for `me`) every live video is deleted once it is ended, so the
+owner's timeline stays clean. The delete is of the live video object, which takes its recording with it; deleting the
+recording's own id is refused on a profile ("publish_actions ... deprecated"). A delete that fails is kept in
+`FB_STATE_FILE` and tried again every 30 s and at the next start; the start sweep also ends and deletes our own
+leftovers on the profile (the ids in the state file, and our live videos with the marker sentence), never another
+video. The profile is the stopgap while the Page is too new to go live (about 2026-12-07); then set `FB_TARGET=page`
+with the Page's id and token. A long-lived user token lasts about 60 days: renew it before then with
+`node scripts/fb-token.mjs --app-id <app id> --dir <folder> --user` (a fresh short-lived user token from the Graph API
+Explorer with `publish_video`; it writes `<folder>/user-token`, 600, and prints the profile's name and id and the
+expiry), then copy the file to picasso as below; the camera reads it again when the file changes.
+
+Measured on the profile from the Mac (2026-10-08, `scripts/fb-probe.mjs --target me --privacy SELF`): the live video is
+created in 2.9 s and reports `LIVE` at once, before any stream; our publisher's `NetStream.Publish.Start` came 2.6 s
+after the create (Facebook's ingest accepts the publisher); the plugin URL answered 200; ended, then deleted with its
+recording (both ids then "does not exist"). Because `LIVE` comes before the stream, the channel calls a video live only
+after our stream has been accepted for `settleMs` (3 s) as well.
+
 The Page token, once (the owner: a Meta app with the Page, a short-lived user token from the Graph API Explorer with
 `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `publish_video`):
 
@@ -696,16 +716,28 @@ not logged in while the app is in development mode, and whether the plugin needs
 loads (the reply waits for `LIVE` to be safe).
 
 On staging (2026-10-08, `deploy/push.sh`, the staging checks passed each time): the camera runs under its profile
-(`muse-staging-camera-1`; the camera-test stack's camera, asleep since 16:03, was stopped first: one account). With
-`FB_LIVE=on` the Page token was read from the mounted file, the start sweep listed the Page's live videos, each game
-went on the channel and the create was refused (200/1363120) and marked to be tried again in 10 minutes; `live_view`
-through the public `/mcp` answered at once with that reason and "Not live yet" on the page; the channel went off with
-the game, and the Page has no open live video. The camera client signed in and joined in 22.6 s. Staging was then left
-with `FB_LIVE=off` and `STREAM_OUT_DIR=/logs/streams`: a game is filmed to `~/workspace/muse-staging/logs/streams`
-(1280x720 H.264 at 30 fps with AAC; live 3.5 s after the game's stream started), and `live_view` says live video is
-off. To turn it on when a Page can go live: `FB_LIVE=on` (and the Page's id and token file if it is another Page) in
-staging's `deploy/camera.env`, then `COMPOSE_PROFILES=camera docker compose -p muse-staging -f staging.compose.yaml up
--d camera` there. A fresh worktree needs `server/paper.jar` and `server/plugins` (not in git) before `push.sh`.
+(`muse-staging-camera-1`; the camera-test stack's camera, asleep since 16:03, was stopped first: one account). With the
+Page (`FB_TARGET=page`) every create was refused (200/1363120) and said so in `live_view` at once. Staging now runs
+`FB_LIVE=on`, `FB_TARGET=me`, `FB_TOKEN_FILE=/fb/user-token` (the owner's long-lived user token, 600, in
+`~/workspace/muse-staging/fb/`). Measured through the public `/mcp` (two games, plus the staging check's own game):
+
+| | game 1 | game 2 |
+| --- | --- | --- |
+| `live_view` called to its answer "live" (the camera already in the world) | 7.1 s | 6.0 s |
+| live video created to "live" (our stream accepted 3 s or more) | 10.8 s | about 8 s |
+| game ended to the live video ended, then deleted | 1 s, 5 s | about 1 s, 4.3 s |
+
+With the camera starting cold (the staging check's game, the client joining the world in 19.6 s) the live video was
+"live" 19.8 s after it was created. Facebook's own thumbnail of the live video shows the real client's picture. The
+profile's other videos were never touched (it had none of its own during the test; the sweep matches only ours).
+Open: Facebook stored each live video as "Only me" (`privacy.value` `SELF`) although we asked for `EVERYONE`, so the
+video plugin answers a viewer who is not the owner with "Video Unavailable. This video may no longer exist, or you
+don't have permission to view it." (checked logged out, in three URL forms; Facebook's public sample video plays in
+the same check). Facebook caps a post at the audience the owner allowed the app, and an app in development mode may be
+capped too (UNVERIFIED which): the owner sets the app's audience to Public (Facebook, Settings, Apps and websites) and,
+if that is not enough, switches the app to Live mode. `live_view` reports it ("Warning: Facebook stored this live
+video as \"Only me\" ...") and the page says "Live, but Facebook shows this video to its owner only." The owner, logged
+in to Facebook in the same browser, may still see it in the muse.ai panel (UNVERIFIED). A fresh worktree needs `server/paper.jar` and `server/plugins` (not in git) before `push.sh`.
 
 ## Deploy on picasso
 
@@ -791,7 +823,8 @@ staging's `deploy/camera.env`, then `COMPOSE_PROFILES=camera docker compose -p m
 | `STREAM_RTMP_URL` | (none) | `rtmps://...` ingest URLs with their stream keys, comma-separated, one per stream that may run at once; never printed or logged |
 | `STREAM_VIDEO_URL` | (none) | the public URLs of the Facebook live videos those ingests feed (same order; one URL serves all): MCP `live_view` returns Facebook's player for it while a game's stream runs (without `FB_LIVE`) |
 | `FB_LIVE` | `off` | `on`: every guest game goes live on the Facebook Page by itself, one camera, one live channel (section "Live on a Facebook Page"); read by the process that runs the camera |
-| `FB_PAGE_ID`, `FB_TOKEN_FILE` | (none) | the Page's numeric id; the file (600) holding the Page token alone (`scripts/fb-token.mjs` writes it); the token is never an environment variable and never logged |
+| `FB_PAGE_ID`, `FB_TOKEN_FILE` | (none) | the Page's numeric id; the file (600) holding the Page token alone (or, with `FB_TARGET=me`, the long-lived user token; `scripts/fb-token.mjs` writes either); the token is never an environment variable and never logged |
+| `FB_TARGET`, `FB_PRIVACY`, `FB_DELETE_AFTER` | `page`, `EVERYONE`, `true` for `me` (`false` for `page`) | where the live videos go: the Page (long-term) or `me`, the token owner's profile; a profile video's privacy (the embed plays only `EVERYONE`); delete each live video after it is ended |
 | `FB_GRAPH_VERSION`, `FB_GRAPH_URL`, `FB_STATE_FILE`, `FB_TITLE` | `v23.0`, `https://graph.facebook.com`, `<LOG_DIR>/fb-live-state.json`, `Picasso Lab demo: an AI plays Minecraft` | the Graph API (another URL only on this machine, for tests); where the ids of open live videos are kept; the live video's title before " (game g...)" |
 | `STREAM_OUT_DIR` | (none) | without an RTMP URL: every stream is an MP4 file here (local tests) |
 | `STREAM_SERVICE_URL` | (none) | the stream container's API (`http://127.0.0.1:7861`); the agent then starts and stops streams there instead of in its own process |

@@ -10,6 +10,8 @@
 //   node scripts/fb-token.mjs --app-id <id> --dir ~/.config/picasso/fb-page [--page <id or name>]
 //        (then type or pipe two lines: the App Secret, the short-lived user token)
 //   node scripts/fb-token.mjs --app-id <id> --dir <folder> --app-secret-file <file> --user-token-file <file>
+//   node scripts/fb-token.mjs --app-id <id> --dir <folder> --user     (FB_TARGET=me: the long-lived user token itself,
+//        written to <dir>/user-token; it lasts about 60 days, so run this again before it runs out)
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -82,6 +84,7 @@ export async function main(argv = process.argv.slice(2), { print = console.log, 
     ({ values: v } = parseArgs({ args: argv, options: {
       'app-id': { type: 'string' }, dir: { type: 'string' }, page: { type: 'string' }, name: { type: 'string' },
       'app-secret-file': { type: 'string' }, 'user-token-file': { type: 'string' }, version: { type: 'string' }, 'graph-url': { type: 'string' },
+      user: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
     } }));
   } catch (err) { printErr(err.message); return 2; }
@@ -94,7 +97,7 @@ export async function main(argv = process.argv.slice(2), { print = console.log, 
     if (!(u.protocol === 'https:' || (u.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(u.hostname)))) throw new Error('x');
   } catch { printErr('--graph-url must be https (http only on this machine, for tests)'); return 2; }
   const version = v.version ?? 'v23.0';
-  const name = v.name ?? 'page-token';
+  const name = v.name ?? (v.user ? 'user-token' : 'page-token');
   if (!/^[A-Za-z0-9_.-]{1,60}$/.test(name)) { printErr('--name must be a plain file name'); return 2; }
 
   let secret = v['app-secret-file'] ? readSecretFile(v['app-secret-file'], ['FB_APP_SECRET', 'APP_SECRET']) : '';
@@ -117,6 +120,23 @@ export async function main(argv = process.argv.slice(2), { print = console.log, 
     const long = (await graph(ex, {}, secrets, 'exchanging the user token')).access_token;
     if (!long) throw new Error('exchanging the user token: no token came back');
     secrets.push(long);
+    if (v.user) {
+      // FB_TARGET=me: the long-lived user token is what the camera uses; it runs out in about 60 days
+      const meUrl = g('me');
+      meUrl.searchParams.set('fields', 'id,name');
+      const who = await graph(meUrl, { headers: { authorization: `Bearer ${long}` } }, secrets, 'reading the profile');
+      const dbgU = g('debug_token');
+      dbgU.searchParams.set('input_token', long);
+      const infoU = (await graph(dbgU, { headers: { authorization: `Bearer ${v['app-id']}|${secret}` } }, secrets, 'checking the user token').catch(() => null))?.data ?? null;
+      const fileU = writeToken(path.resolve(v.dir), name, long);
+      print(`Profile: ${who.name} (${who.id})`);
+      print(`token file: ${fileU} (600)`);
+      if (infoU) {
+        print(`expires: ${infoU.expires_at ? new Date(infoU.expires_at * 1000).toISOString() : 'never'}`);
+        if (!(infoU.scopes ?? []).includes('publish_video')) print('missing permissions: publish_video (going live needs it)');
+      }
+      return 0;
+    }
     // 2. the Page's token, from the long-lived user token: it does not expire
     const acc = g('me/accounts');
     acc.searchParams.set('fields', 'id,name,access_token,tasks');
