@@ -242,6 +242,20 @@ test('care loop: a shelter at night, journaled once; a step of the player\'s sto
   assert.match(busy.care.last().text, /could not close a shelter|stopped before/);
 });
 
+test('care loop: a shelter a fight keeps taking over is tried again after 15 s and told once', async () => {
+  const rig = careRig({ situation: situation({ clock: { timeOfDay: 14000 } }), inventory: { cobblestone: 20 }, results: {
+    build_structure: { status: 'failed', error: '[HOSTILE_CONTACT] fight response for zombie#4 at 1,2,3 (3 blocks).', structure: { cells: 16, placed: 0, wrong: 13, left: [{ reason: 'not_reached', count: 13 }] } },
+  } });
+  await rig.care.tick();
+  await rig.care.tick();
+  assert.equal(rig.calls.length, 1, 'not again at once');
+  rig.state.clock += 16_000;
+  await rig.care.tick();
+  assert.equal(rig.calls.length, 2, 'again after 15 s');
+  assert.equal(rig.care.since(0).filter((e) => e.kind === 'shelter').length, 1, 'the same failure told once');
+  assert.equal(rig.events.filter((e) => e.repeat).length, 1, 'and logged');
+});
+
 test('care loop: nothing while a step runs or just ended, or while one of their reflexes has the body', async () => {
   const rig = careRig({ situation: situation({ clock: { timeOfDay: 14000 } }), inventory: { cobblestone: 20 } });
   rig.state.idle = false;

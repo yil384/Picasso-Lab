@@ -9,7 +9,8 @@
 //   bed      a white bed in daylight, then night: it sleeps (the night passes when no other player is awake) or, when
 //            another player is awake, it lies down and then shelters: either reported within 90 s
 //   zombie, skeleton, creeper   night with the care's night off (policy night: off, so the reflexes are tested), a stone
-//            sword, the mob summoned 4 blocks away: the bot alive 60 s later and the fight or flight reported
+//            sword, the mob summoned 4 blocks away: the bot alive 60 s later (engaged: how many saw a fight, a flight or a
+//            hide reported)
 //   armor    day; 27 iron ingots and a crafting table: chestplate, leggings and boots worn within 90 s (6 ingots kept, and
 //            the body waits until the player has left it alone for 30 s)
 //   tool     day; a stone pickaxe with 5 uses left, 3 cobblestone, 2 sticks, a crafting table; the step collect stone 12:
@@ -104,7 +105,9 @@ const LABS = {
     time: 'night', limitS: 60, holdS: 60, kinds: ['fight', 'flee', 'hide'], steps: [{ skill: 'policy', args: { night: 'off' } }],
     setup: (bot) => [`clear ${bot}`, `give ${bot} stone_sword 1`, `effect give ${bot} minecraft:instant_health 1 5 true`],
     after: async (bot) => { con(`execute at ${bot} run summon ${mob} ~4 ~ ~`); },
-    pass: (g) => g.v.health > 0 && g.own.some((e) => ['fight', 'flee', 'hide'].includes(e.kind)),
+    // alive at the end (the ROADMAP's bar: no death); whether the mob engaged at all is counted apart (engaged)
+    pass: (g) => g.v.health > 0,
+    engaged: (g) => g.own.some((e) => ['fight', 'flee', 'hide'].includes(e.kind)),
   }])),
   armor: {
     time: 'day', limitS: 90, kinds: ['armor'],
@@ -222,7 +225,7 @@ for (const lab of labs) {
   const list = trials.filter((t) => t.lab === lab);
   const times = list.filter((t) => t.ok && t.outcomeS !== null).map((t) => t.outcomeS);
   const deaths = list.reduce((a, t) => a + (LABS[lab].expectDeath ? Math.max(0, t.deaths.length - 1) : t.deaths.length), 0);
-  summary[lab] = { n: list.length, pass: list.filter((t) => t.ok).length, rate: list.length ? Math.round((100 * list.filter((t) => t.ok).length) / list.length) : null, deaths, p50S: pct(times, 50), p90S: pct(times, 90), gate: list.length && list.filter((t) => t.ok).length / list.length >= 0.8 && deaths === 0 ? 'pass' : 'fail' };
+  summary[lab] = { ...(LABS[lab].engaged ? { engaged: list.filter((t) => LABS[lab].engaged(t)).length } : {}), n: list.length, pass: list.filter((t) => t.ok).length, rate: list.length ? Math.round((100 * list.filter((t) => t.ok).length) / list.length) : null, deaths, p50S: pct(times, 50), p90S: pct(times, 90), gate: list.length && list.filter((t) => t.ok).length / list.length >= 0.8 && deaths === 0 ? 'pass' : 'fail' };
   console.log(`LAB ${lab}: ${summary[lab].pass}/${summary[lab].n} (${summary[lab].rate}%), deaths ${deaths}, p50 ${summary[lab].p50S} s, p90 ${summary[lab].p90S} s: ${summary[lab].gate}`);
 }
 fs.mkdirSync(values.out, { recursive: true });

@@ -353,7 +353,7 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
     const { total } = shelterBlocks(inventory);
     const lastFail = memory.shelterFailed;
     const changed = lastFail && (!feet || lastFail.feet.x !== feet.x || lastFail.feet.z !== feet.z || Math.abs(lastFail.feet.y - feet.y) > 1 || total > lastFail.blocks);
-    if (!fresh && (((!cooling('shelter', 45_000) || changed) && (memory.shelterFails?.[memory.night] ?? 0) < 3) || sheltered)) {
+    if (!fresh && !cooling('shelterTransient', 15_000) && (((!cooling('shelter', 45_000) || changed) && (memory.shelterFails?.[memory.night] ?? 0) < 3) || sheltered)) {
       return { kind: 'shelter', why: `night (time ${time})`, blocks: total, check: sheltered };
     }
   }
@@ -493,6 +493,13 @@ export function createCare(deps) {
   let eventsAt = 0;
 
   const add = (entry) => {
+    // the same thing said again within 2 minutes (a shelter a fight keeps taking over, say) is logged, not told again
+    const same = (x) => `${x.kind}|${x.ok}|${String(x.text).replace(/\(time \d+\)/g, '').replace(/\d+ s ago/g, '')}`;
+    const prev = [...journal].reverse().find((x) => x.kind === entry.kind);
+    if (prev && same(prev) === same(entry) && now() - Date.parse(prev.at) < 120_000) {
+      deps.event('care', { kind: entry.kind, source: entry.reflex ? 'reflex' : 'care', ok: entry.ok, repeat: true, text: String(entry.text).slice(0, 300) });
+      return prev;
+    }
     const e = { seq: ++seq, at: new Date(now()).toISOString(), source: entry.reflex ? 'reflex' : 'care', ...entry };
     delete e.reflex;
     journal.push(e);
@@ -720,6 +727,8 @@ export function createCare(deps) {
           : `could not close a shelter at ${xyz(feet)} (${v.why ?? errOf(r) ?? 'stopped'})`);
         // a fight that took the body over, or chunks not loaded yet (just arrived): tried again once idle, no failure
         const transient = fight() || /not loaded/.test(v.why ?? '');
+        // tried again once idle, but not at once: a mob the fight reflex keeps answering would take every try over
+        if (!v.closed && transient) memory.cool.shelterTransient = now();
         if (!v.closed && !d.check && !transient) {
           memory.cool.shelter = now();
           memory.shelterFailed = { feet: { ...feet }, blocks: shelterBlocks(inv()).total };
