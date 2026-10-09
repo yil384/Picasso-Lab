@@ -205,6 +205,13 @@ recommendation for the user [C7].
 
 ### M1. Live view inside the muse.ai panel (days 5–10)
 
+**Status 2026-10-08: the Facebook route is built (README, "Live on a Facebook Page").** The owner measured that the
+artifact panel blocks fetch and WebSocket (`connect-src 'none'`) but plays Facebook's video plugin, so shapes (b) and
+(c) below are out and the panel shows a Facebook live video instead: each guest game goes live on a Page by itself
+(`FB_LIVE=on`), one camera follows the last `live_view` request, and `live_view` returns a static page with the player
+plus a plain link. The real Page ("Muse plays Minecraft", created 2026-10-08) is refused live videos for now (Graph
+code 200/1363120: a profile or Page must be 60 days old). The channels, the 2D view and the WebGL bake-off below wait.
+
 **Users get:** when they ask for it, the right-hand panel shows their bot live and keeps showing it across games.
 Muse never sends anyone to a new tab.
 

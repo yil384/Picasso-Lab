@@ -27,6 +27,7 @@ import { RESULT_CODES, CRAFT_BATCH_MAX, skillSet } from './contracts.js';
 import { createQueue, isFinal, statusOf, stepName, stepNumber, QUEUE_MAX, REPEAT_MS } from './mcp-queue.js';
 import { createPlanner, describeMissing } from './plan.js';
 import { registryFor } from './mc.js';
+import { liveViewHtml } from './live-page.js';
 
 const CALL_MS = 45_000; // every reply within 45 s: MCP clients commonly give up after 60 s (a long skill keeps going)
 /** Of a call's time, what building the reply may take (the state text scans the blocks around: ~850 ms on Paper). */
@@ -715,18 +716,44 @@ export function createMcp(hooks) {
     });
 
     server.registerTool('live_view', {
-      description: 'Read-only; changes nothing in the game. Returns JSON data about watching this game live. format "link" (the default): first_person_url and behind_url, two read-only 3D views of the bot in a web page. format "embed": while a live video of this game is being broadcast, live is true and embed_url is the Facebook video player URL for it (video_url the video itself); otherwise live is false and both are null.',
-      inputSchema: { format: z.enum(['link', 'embed']).optional().describe('"link" (default): the 3D views; "embed": the live video player') },
+      description: 'Read-only for the game. format "html" (default): a web page under 1 KB that shows this game\'s live video (Facebook\'s video player and a status line, no script; it can be shown as a web artifact), and a plain link. The server has one camera: it films the game whose live_view call came last. While the video starts, the call waits up to about 40 s. "link": JSON with two 3D views of the bot (first_person_url, behind_url). "embed": JSON with the player URL.',
+      inputSchema: { format: z.enum(['html', 'link', 'embed']).optional().describe('"html" (default), "link" or "embed"') },
       annotations: { readOnlyHint: true },
-    }, async ({ format = 'link' }) => {
+    }, async ({ format = 'html' }, extra) => {
       let s;
       try { s = need(entry); } catch (e) { return fail(e.message); }
-      if (format === 'embed') {
-        const v = hooks.liveVideo?.(s) ?? null;
-        return text(JSON.stringify({ format, game: s.id, live: Boolean(v), player: v ? 'facebook' : null, embed_url: v?.embedUrl ?? null, video_url: v?.videoUrl ?? null }));
-      }
       const l = hooks.links(s, entry.base);
-      return text(JSON.stringify({ format: 'link', game: s.id, first_person_url: l.eyes, behind_url: l.watch }));
+      if (format === 'link') return text(JSON.stringify({ format: 'link', game: s.id, first_person_url: l.eyes, behind_url: l.watch }));
+      // the Facebook live channel: the camera is pointed at this game and the call waits for Facebook to show it
+      const budget = Math.max(0, waitMs - 3_000);
+      const v = (await hooks.liveView?.(s, { waitMs: budget, signal: signalOf(extra) })) ?? (() => {
+        const old = hooks.liveVideo?.(s) ?? null; // STREAM_VIDEO_URL while the game's stream runs
+        return old ? { fb: false, state: 'live', camera: s.id, videoUrl: old.videoUrl, embedUrl: old.embedUrl } : { fb: false, state: 'off' };
+      })();
+      const camera = v.camera ?? null;
+      const live = v.state === 'live' && (camera === null || camera === s.id);
+      const embedUrl = v.embedUrl ?? null;
+      const videoUrl = v.videoUrl ?? null;
+      if (format === 'embed') {
+        return text(JSON.stringify({ format, game: s.id, live, state: v.state, camera_game: camera, player: embedUrl ? 'facebook' : null, embed_url: embedUrl, video_url: videoUrl }));
+      }
+      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb });
+      const lines = [];
+      const since = v.liveSince ? ` since ${String(v.liveSince).slice(11, 19)} UTC` : '';
+      if (live) lines.push(`Live view of game ${s.id}: live on Facebook${since}.`);
+      else if (v.state === 'live') lines.push(`Live view: the camera is on game ${camera} now, not on ${s.id}: that game asked for the live view after this one. A new live_view call points the camera back at ${s.id}.`);
+      else if (['starting', 'connecting', 'retrying', 'ending'].includes(v.state)) {
+        const why = v.error ? ` The last try failed (${String(v.error).slice(0, 160)}); it tries again by itself${v.retryInS ? ` in ${v.retryInS} s` : ''}.` : '';
+        lines.push(`Live view of game ${s.id}: the live video is starting but was not live within ${Math.round(budget / 1000)} s.${why} Call live_view again in about 20 s for a page that shows it live.`);
+      } else if (v.fb) lines.push(`Live view of game ${s.id}: no live video yet; the camera picks the game up once its bot is in the world. Call live_view again in about 20 s.`);
+      else lines.push(`Live view of game ${s.id}: live video is off on this server.`);
+      lines.push(videoUrl ? `Video (plain link): ${videoUrl}` : `3D view in a web page (plain link): ${l.eyes}`);
+      if (v.fb) lines.push('One camera serves every game on this server: it films the game whose live_view call came last, so if another game calls live_view, this video shows that game until live_view is called again here. When no game is left the live video ends; the next game gets a new one.');
+      lines.push('', 'HTML page (Facebook\'s video player and a status line; no script):', html);
+      return {
+        content: [{ type: 'text', text: lines.join('\n') }],
+        structuredContent: { format: 'html', game: s.id, state: v.state, live, camera_game: camera, video_url: videoUrl, embed_url: embedUrl, html },
+      };
     });
 
     server.registerTool('end_game', { description: 'End the game and free the bot.', inputSchema: {} }, async () => {

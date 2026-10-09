@@ -256,6 +256,7 @@ export function startGuestViews(body, sessionId, { log, ports, load = loadViewer
  * @param {object} [opts.streams]        a stream manager (tests; default: from STREAM_*, null when off)
  * @param {number} [opts.loopStatsMs]    how often the event loop's delay is logged (default 60 s; 0: never)
  * @param {object} [opts.hosts]          the Mine AI host manager for BODY=mineai (tests; default src/mineai/host.js)
+ * @param {number} [opts.mcpCallMs]      how long one MCP call may wait (tests; default 45 s)
  */
 export async function startAgent(opts = {}) {
   const config = opts.config ?? loadConfig();
@@ -339,6 +340,32 @@ export async function startAgent(opts = {}) {
     const slot = streams.slot?.(sessionId);
     const videoUrl = videoUrls.length === 1 ? videoUrls[0] : Number.isInteger(slot) ? videoUrls[slot] : null;
     return videoUrl ? { videoUrl, embedUrl: facebookEmbedUrl(videoUrl) } : null;
+  };
+  // live_view: the live video of a game. With the Facebook live channel (FB_LIVE=on in the camera service, or in this
+  // process) the camera is pointed at the game and the call waits, up to waitMs, until Facebook shows it live; it stops
+  // waiting early when another game has taken the camera since. Otherwise STREAM_VIDEO_URL while the game's stream runs.
+  // Returns {fb, state, game, camera, videoUrl, embedUrl, liveSince, error, retryInS}.
+  const pause = (ms) => new Promise((r) => { setTimeout(r, ms).unref?.(); });
+  const liveView = async (gameId, { waitMs = 0, signal = null } = {}) => {
+    if (typeof streams?.focus === 'function') {
+      const t0 = Date.now();
+      let st = await Promise.resolve(streams.focus(gameId)).catch(() => null);
+      if (st?.fb) {
+        let elsewhere = 0; // since when the camera has been live on another game
+        while (Date.now() + 1_000 < t0 + waitMs && !signal?.aborted) {
+          if (st.state === 'live' && st.game === gameId) break;
+          if (st.state === 'live' && st.game !== gameId) { elsewhere ||= Date.now(); if (Date.now() - elsewhere > 5_000) break; } else elsewhere = 0;
+          if (st.state === 'retrying' && (st.retryInS ?? 0) * 1_000 > t0 + waitMs - Date.now()) break;
+          await pause(1_000);
+          st = (await Promise.resolve(streams.live?.()).catch(() => null)) ?? st;
+        }
+        return { ...st, camera: st.game ?? null, game: gameId };
+      }
+    }
+    const v = liveVideo(gameId);
+    return v
+      ? { fb: false, state: 'live', game: gameId, camera: gameId, videoUrl: v.videoUrl, embedUrl: v.embedUrl }
+      : { fb: false, state: 'off', game: gameId, camera: null, videoUrl: null, embedUrl: null };
   };
   function newBody(sessionId, { viewId = null } = {}) {
     const username = nameOf(sessionId);
@@ -454,7 +481,7 @@ export async function startAgent(opts = {}) {
   } : undefined;
 
   const web = createWeb({
-    config, log, meter, makeBrain, askNotice, liveVideo,
+    config, log, meter, makeBrain, askNotice, liveVideo, liveView, mcpCallMs: opts.mcpCallMs,
     ...(mineai ? { skills: MINEAI_SKILLS, startTimeoutMs: config.mineai.startMs + 30_000 } : {}),
     makeBody: (sessionId, o) => (sessionId === 'house' ? houseBody() : newBody(sessionId, o)),
   });
@@ -474,7 +501,9 @@ export async function startAgent(opts = {}) {
     ? `Ask queue: open, ${llm.model} · ${llm.effort} · ${llm.tier} at ${llm.baseURL}; caps ${config.caps.steps} steps and $${config.caps.usdPerRun} per run, $${config.caps.usdPerHour} per hour`
     : `Ask queue: closed (${askOff})`);
   print(config.web.adminToken ? 'kill switch: POST /admin/stop with "Authorization: Bearer $WEB_ADMIN_TOKEN"' : 'kill switch: set WEB_ADMIN_TOKEN to enable POST /admin/stop');
-  if (streams && config.stream.enabled) {
+  if (streams?.channel && !config.stream.serviceUrl) {
+    print(`live video: on, every guest game on one Facebook live channel (Page ${config.fb.pageId}, one camera)`);
+  } else if (streams && config.stream.enabled) {
     print(config.stream.serviceUrl
       ? `live video: on, every guest game through the stream service at ${config.stream.serviceUrl}`
       : `live video: on, up to ${config.stream.max} guest game(s) at once to ${config.stream.outputs.length ? `${config.stream.outputs.length} RTMP URL(s)` : config.stream.outDir}`);

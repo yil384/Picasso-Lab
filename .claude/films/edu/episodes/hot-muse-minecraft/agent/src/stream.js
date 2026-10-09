@@ -17,6 +17,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { pageScript, patchedBundle, patchedWorkerBase64, PAGE_DEFAULTS } from './stream-page.js';
+import { createRtmpPublisher } from './rtmp.js';
 
 export const STREAM_DEFAULTS = Object.freeze({
   width: 1280, // the video (Facebook Live: H.264 + AAC, up to 1280x720 at 30 fps, keyframe every 2 s, CBR)
@@ -71,6 +72,10 @@ export function scrubOutputs(text, outputs = []) {
 }
 
 export const isNetworkOutput = (output) => /^(rtmps?|srt|udp|tcp):\/\//i.test(String(output));
+/** An RTMP(S) ingest: ffmpeg writes FLV to its fd 3 and src/rtmp.js publishes it, so the key is on no command line. */
+export const isRtmpOutput = (output) => /^rtmps?:\/\//i.test(String(output));
+/** What a stream's ffmpeg writes to: the FLV pipe (fd 3) for an RTMP(S) ingest, else the output itself. */
+export const encoderTarget = (output) => (isRtmpOutput(output) ? 'pipe:3' : String(output));
 
 /** A text for drawtext's textfile: fixed characters only (the caption is never viewer text, and this keeps it so). */
 export const cleanCaption = (text) => String(text ?? '').replace(/[^A-Za-z0-9 ,.()'-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
@@ -96,7 +101,9 @@ const filterPath = (p) => `'${String(p).replace(/\\/g, '/').replace(/'/g, "'\\''
  * ffmpeg arguments: JPEG frames on stdin at a constant rate (or, with o.x11 = {display, width, height}, an X display
  * grabbed at that rate: src/camera.js), silent stereo AAC paced in real time, scaled to width x height (with the
  * caption from captionFile, when there is a font), H.264 CBR with a closed GOP of keyframeSec; FLV for a network
- * output, MP4 (faststart) for a file. o.progress: key=value progress on stdout every 5 s.
+ * output, MP4 (faststart) for a file. An RTMP(S) URL is never among the arguments: ffmpeg writes the FLV to its fd 3
+ * (spawnEncoder publishes it), because every user on picasso can read every process's command line. o.progress:
+ * key=value progress on stdout every 5 s.
  */
 export function ffmpegArgs(o) {
   const fps = o.fps ?? STREAM_DEFAULTS.fps;
@@ -116,9 +123,11 @@ export function ffmpegArgs(o) {
     ? `,drawtext=fontfile=${filterPath(o.font)}:text='%{localtime\\:%T}':fontsize=${big}:fontcolor=white`
       + `:box=1:boxcolor=0x000000@0.7:boxborderw=${Math.round(big / 4)}:x=w-tw-${Math.round(height / 24)}:y=${Math.round(height / 24)}`
     : '';
-  const video = o.x11
-    ? ['-thread_queue_size', '64', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', String(fps), '-video_size', `${o.x11.width ?? width}x${o.x11.height ?? height}`, '-i', String(o.x11.display)]
-    : ['-thread_queue_size', '64', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', 'pipe:0'];
+  const video = o.testSource // tests only: a moving test pattern instead of a picture source
+    ? ['-re', '-f', 'lavfi', '-i', `testsrc2=size=${o.testSource}:rate=${fps}`]
+    : o.x11
+      ? ['-thread_queue_size', '64', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', String(fps), '-video_size', `${o.x11.width ?? width}x${o.x11.height ?? height}`, '-i', String(o.x11.display)]
+      : ['-thread_queue_size', '64', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', 'pipe:0'];
   return [
     '-hide_banner', '-nostdin', '-loglevel', 'warning', '-nostats', ...(o.progress ? ['-progress', 'pipe:1', '-stats_period', '5'] : []),
     ...video,
@@ -132,12 +141,40 @@ export function ffmpegArgs(o) {
     '-c:a', 'aac', '-b:a', `${o.audioK ?? STREAM_DEFAULTS.audioK}k`, '-ar', '48000', '-ac', '2',
     '-shortest',
     ...(net ? ['-flvflags', 'no_duration_filesize', '-f', 'flv'] : ['-movflags', '+faststart', '-f', 'mp4', '-y']),
-    String(o.output),
+    encoderTarget(o.output),
   ];
 }
 
+/** Environment variables that hold secrets (stream keys, the page token's path): never handed to a child process. */
+const SECRET_ENV = /^(STREAM_RTMP_URL|FB_TOKEN_FILE|FB_.*TOKEN.*|MODEL_API_KEY|WEB_ADMIN_TOKEN|WEB_PROXY_SECRET)$/;
+/** This process's environment without its secrets, plus extra: what a child (ffmpeg, the game client) gets. */
+export const childEnv = (extra = {}) => ({ ...Object.fromEntries(Object.entries(process.env).filter(([k]) => !SECRET_ENV.test(k))), ...extra });
+
 /** ffmpeg's environment: with the test clock on, its time zone (drawtext's localtime reads TZ). */
-export const encoderEnv = (o, extra = {}) => ({ ...process.env, ...extra, ...(o.clock ? { TZ: o.clockTz || 'America/Los_Angeles' } : {}) });
+export const encoderEnv = (o, extra = {}) => childEnv({ ...extra, ...(o.clock ? { TZ: o.clockTz || 'America/Los_Angeles' } : {}) });
+
+/**
+ * ffmpeg for one stream. To an RTMP(S) ingest it writes FLV to its fd 3 and src/rtmp.js sends that to the URL, so the
+ * stream key is on no command line and in no child's environment. A publisher that fails (refused, stalled, cut)
+ * kills ffmpeg, so the caller's exit handler restarts both with its backoff; `failure()` gives the publisher's reason.
+ * @param {{ffmpeg: string, args: string[], output: string, nice?: number, stdio: Array, env?: object,
+ *   event?: (kind: string, data: object) => void, createPublisher?: typeof createRtmpPublisher, timeoutMs?: number}} o
+ */
+export function spawnEncoder(o) {
+  const rtmp = isRtmpOutput(o.output);
+  const child = spawnNiced(o.ffmpeg, o.args, o.nice ?? 0, { stdio: rtmp ? [...o.stdio.slice(0, 3), 'pipe'] : o.stdio, env: o.env ?? childEnv() });
+  if (!rtmp) return { child, publisher: null, failure: () => null };
+  let why = null;
+  const publisher = (o.createPublisher ?? createRtmpPublisher)({ url: o.output, event: o.event, timeoutMs: o.timeoutMs, ca: o.ca });
+  publisher.on('error', (err) => {
+    why = `the ingest: ${clip(err?.message ?? err, 200)}`;
+    if (alive(child)) child.kill('SIGKILL');
+  });
+  publisher.on('publishing', () => { try { o.event?.('stream_publishing', { output: maskOutput(o.output) }); } catch { /* best effort */ } });
+  publisher.input(child.stdio[3]);
+  child.on('error', () => publisher.close());
+  return { child, publisher, failure: () => why };
+}
 
 /** Chromium flags: headless, WebGL on SwiftShader (no GPU), software compositing, DevTools over a pipe, no extras. */
 export function chromiumArgs(o = {}) {
@@ -416,7 +453,10 @@ export function createStream(o) {
   // ----- ffmpeg
 
   function startEncoder() {
-    const child = spawnNiced(ffmpeg, ffmpegArgs({ ...opt, font, captionFile }), opt.encoderNice, { stdio: ['pipe', 'ignore', 'pipe'], env: encoderEnv(opt) });
+    const { child, failure } = spawnEncoder({
+      ffmpeg, args: ffmpegArgs({ ...opt, font, captionFile }), output: opt.output, nice: opt.encoderNice, stdio: ['pipe', 'ignore', 'pipe'],
+      env: encoderEnv(opt), event: (k, d) => event(k, d), createPublisher: opt.createPublisher,
+    });
     const me = { child, startedAt: Date.now(), err: '' };
     enc = me;
     child.stdin.on('error', () => {});
@@ -425,7 +465,7 @@ export function createStream(o) {
     child.on('exit', (code, signal) => {
       if (enc === me) enc = null;
       if (!running()) return;
-      const detail = clip(scrubOutputs(me.err, [opt.output]).split('\n').filter(Boolean).slice(-3).join(' | '));
+      const detail = clip(scrubOutputs(failure() ?? me.err, [opt.output]).split('\n').filter(Boolean).slice(-3).join(' | '));
       event('stream_ffmpeg_exit', { code, signal, detail });
       if (tooMany('ffmpeg')) { fail(`ffmpeg failed ${opt.maxRestarts + 1} times in ${Math.round(opt.restartWindowMs / 60_000)} min: ${detail}`); return; }
       const wait = Math.min(30_000, 1_000 * 2 ** (restarts.ffmpeg.length - 1));
@@ -883,8 +923,11 @@ export const viewOf = (source) => {
 
 /**
  * The control API around a manager: PUT /streams/<id> {source, view?, pose?, player?} starts (and answers with the
- * output slot it holds), DELETE /streams/<id> stops, POST /streams/<id>/caption {text}, GET /streams lists,
- * GET /streams/<id> gives the numbers.
+ * output slot it holds, and channel: true for the Facebook live channel), DELETE /streams/<id> stops,
+ * POST /streams/<id>/caption {text}, GET /streams lists, GET /streams/<id> gives the numbers. With the live channel
+ * (FB_LIVE=on) also POST /streams/<id>/focus {source?, view?, player?} (the camera films this game from now on; a game
+ * the channel does not have yet is put on it first) and GET /live (the channel's state, the video and embed URLs).
+ * Nothing here ever answers with an ingest URL or a token.
  */
 export function createStreamService({ manager, log } = {}) {
   const json = (res, status, body) => {
@@ -901,9 +944,25 @@ export function createStreamService({ manager, log } = {}) {
   });
   return http.createServer(async (req, res) => {
     try {
-      const m = String(req.url).match(/^\/streams(?:\/([^/?]+))?(\/caption)?\/?(?:\?.*)?$/);
+      if (/^\/live\/?(?:\?.*)?$/.test(String(req.url))) {
+        if (req.method !== 'GET') return json(res, 405, { error: 'use GET' });
+        return json(res, 200, typeof manager.live === 'function' ? manager.live() : { fb: false });
+      }
+      const m = String(req.url).match(/^\/streams(?:\/([^/?]+))?(\/caption|\/focus)?\/?(?:\?.*)?$/);
       if (!m) return json(res, 404, { error: 'not found' });
-      const [, id, caption] = m;
+      const [, id, sub] = m;
+      const caption = sub === '/caption';
+      if (sub === '/focus') {
+        if (!ID_RE.test(String(id))) return json(res, 400, { error: 'bad id' });
+        if (req.method !== 'POST') return json(res, 405, { error: 'use POST' });
+        if (typeof manager.focus !== 'function') return json(res, 404, { error: 'no live channel (FB_LIVE is off)' });
+        const body = (await readJson(req)) ?? {};
+        if (!manager.has(id) && body.player !== undefined) {
+          if (!validSource(body.source, body.view ?? id) || !/^[A-Za-z0-9_]{3,16}$/.test(String(body.player))) return json(res, 400, { error: 'source must be http://127.0.0.1:<port>/eyes/<view>/ and player a Minecraft name' });
+          manager.start(id, { source: body.source, player: body.player });
+        }
+        return json(res, 200, await manager.focus(id));
+      }
       if (id !== undefined && !ID_RE.test(id)) return json(res, 400, { error: 'bad id' });
       if (!id) return req.method === 'GET' ? json(res, 200, { enabled: manager.enabled, streams: manager.list() }) : json(res, 405, { error: 'use GET' });
       if (caption) {
@@ -917,7 +976,7 @@ export function createStreamService({ manager, log } = {}) {
         if (!body || !validSource(body.source, body.view ?? id)) return json(res, 400, { error: 'source must be http://127.0.0.1:<port>/eyes/<view>/' });
         if (body.player !== undefined && !/^[A-Za-z0-9_]{3,16}$/.test(String(body.player))) return json(res, 400, { error: 'player must be a Minecraft name' });
         const s = manager.start(id, { source: body.source, pose: cleanPose(body.pose), player: body.player });
-        return json(res, s ? 200 : 409, s ? { started: true, slot: manager.slot?.(id) ?? null } : { started: false, error: 'not started (off, or every slot in use)' });
+        return json(res, s ? 200 : 409, s ? { started: true, slot: manager.slot?.(id) ?? null, channel: Boolean(manager.channel) } : { started: false, error: 'not started (off, or every slot in use)' });
       }
       if (req.method === 'DELETE') {
         // ffmpeg may take seconds to close the file or the ingest: answer now, the slot frees up once it has
@@ -935,12 +994,17 @@ export function createStreamService({ manager, log } = {}) {
 
 /**
  * The agent's side of the service: the manager interface, each call one request to `url` (a loopback URL). Calls never
- * throw; a service that is down is logged and the game goes on without a stream.
+ * throw; a service that is down is logged and the game goes on without a stream. With the live channel (the service
+ * answers channel: true) every live game is reported again each refreshMs: a restarted service gets its games back
+ * (and goes live again), and one whose agent died lets them expire. focus(id) and live() return the channel's state,
+ * or null when the service has no channel or does not answer.
  */
-export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) {
+export function createRemoteStreamManager({ url, log, timeoutMs = 5_000, refreshMs = 60_000 } = {}) {
   const base = String(url).replace(/\/+$/, '');
   const live = new Map(); // id -> offs
   const slots = new Map(); // id -> the output slot the service gave its stream
+  const asks = new Map(); // id -> the PUT body (source, view, player), for focus and the refresh
+  const channel = new Set(); // ids the service keeps on its live channel
   const event = (kind, data) => { try { log?.event(kind, data); } catch { /* best effort */ } };
   const call = (method, p, body) => fetch(`${base}${p}`, {
     method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs),
@@ -952,9 +1016,12 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) 
       const offs = [];
       live.set(id, offs);
       const view = viewOf(source);
-      call('PUT', `/streams/${encodeURIComponent(id)}`, { source, ...(view && view !== id ? { view } : {}), pose: poseOf(body), ...(player ? { player } : {}) }).then((r) => {
+      const ask = { source, ...(view && view !== id ? { view } : {}), ...(player ? { player } : {}) };
+      asks.set(id, ask);
+      call('PUT', `/streams/${encodeURIComponent(id)}`, { ...ask, pose: poseOf(body) }).then((r) => {
         if (r.status !== 200) { event('stream_skipped', { session: id, reason: clip(r.body?.error ?? `HTTP ${r.status}`) }); api.forget(id); return; }
         if (live.has(id) && Number.isInteger(r.body?.slot)) slots.set(id, r.body.slot);
+        if (live.has(id) && r.body?.channel) channel.add(id);
       }, (err) => { event('stream_error', { session: id, message: `stream service: ${clip(err?.message ?? err)}` }); api.forget(id); });
       if (typeof body?.on === 'function') {
         try {
@@ -968,6 +1035,18 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) 
       for (const off of live.get(id) ?? []) { try { off?.(); } catch { /* ignore */ } }
       live.delete(id);
       slots.delete(id);
+      asks.delete(id);
+      channel.delete(id);
+    },
+    /** live_view asked for this game: the channel's camera films it from now on. The channel's state, or null. */
+    async focus(id) {
+      const r = await call('POST', `/streams/${encodeURIComponent(id)}/focus`, asks.get(id) ?? {}).catch(() => null);
+      return r?.status === 200 && r.body?.fb ? r.body : null;
+    },
+    /** The channel's state (GET /live), or null. */
+    async live() {
+      const r = await call('GET', '/live').catch(() => null);
+      return r?.status === 200 && r.body?.fb ? r.body : null;
     },
     async stop(id) {
       if (!live.has(id)) return;
@@ -982,7 +1061,14 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) 
     get size() { return live.size; },
     list: () => [...live.keys()].map((id) => ({ id })),
     stats: (id) => call('GET', `/streams/${encodeURIComponent(id)}`).then((r) => r.body, () => null),
-    async stopAll() { await Promise.allSettled([...live.keys()].map((id) => api.stop(id))); },
+    async stopAll() { clearInterval(refresher); await Promise.allSettled([...live.keys()].map((id) => api.stop(id))); },
   };
+  const refresher = refreshMs > 0 ? setInterval(() => {
+    for (const id of channel) {
+      const ask = asks.get(id);
+      if (ask && live.has(id)) call('PUT', `/streams/${encodeURIComponent(id)}`, ask).catch(() => {});
+    }
+  }, refreshMs) : null;
+  refresher?.unref?.();
   return api;
 }

@@ -253,7 +253,8 @@ test('ffmpeg: H.264 CBR with a 2 s keyframe interval, silent 48 kHz stereo AAC, 
   assert.equal(after('-ac'), '2');
   assert.equal(after('-f'), 'image2pipe');
   assert.equal(a[a.length - 2], 'flv');
-  assert.equal(a[a.length - 1], FB);
+  assert.equal(a[a.length - 1], 'pipe:3', 'FLV to fd 3, which src/rtmp.js publishes');
+  assert.equal(a.some((x) => x.includes(KEY) || x.includes('rtmp')), false, 'the stream key and the ingest URL are never arguments');
   assert.match(after('-vf'), /^scale=1280:720:flags=bicubic,format=yuv420p$/);
   const f = ffmpegArgs({ output: '/tmp/x.mp4', fps: 24, font: '/fonts/a b.ttf', captionFile: "/tmp/it's:here.txt", scaleFlags: 'neighbor' });
   assert.equal(f[f.indexOf('-g') + 1], '48');
