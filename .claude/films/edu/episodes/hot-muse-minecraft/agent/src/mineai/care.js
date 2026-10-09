@@ -45,8 +45,9 @@ export const isNight = (t) => Number.isFinite(t) && t >= NIGHT_FROM && t < NIGHT
 export const IDLE_BEFORE_MS = 3_000;
 /** A death's items despawn after 5 minutes; a recovery starts only well within that. */
 export const RECOVER_WITHIN_MS = 4 * 60_000 + 30_000;
-/** ...and only from where it can walk there in that time (it respawns at its bed or the world spawn). */
-export const RECOVER_RANGE = 300;
+/** ...and only from where it can walk there in that time (it respawns at its bed or the world spawn; new bots land up
+ * to 400 blocks from it): about two and a half minutes of walking. */
+export const RECOVER_RANGE = 600;
 /** Blocks a shelter is built of, best first (cobblestone first: endermen cannot take it), and how many one needs. */
 export const SHELTER_BLOCKS = Object.freeze([
   'cobblestone', 'cobbled_deepslate', 'stone', 'deepslate', 'andesite', 'diorite', 'granite', 'tuff', 'blackstone',

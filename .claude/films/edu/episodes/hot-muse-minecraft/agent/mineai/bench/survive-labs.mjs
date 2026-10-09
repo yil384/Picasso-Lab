@@ -13,8 +13,8 @@
 //   armor    day; 24 iron ingots and a crafting table: chestplate, leggings and boots worn within 90 s (3 ingots kept)
 //   tool     day; a stone pickaxe with 5 uses left, 3 cobblestone, 2 sticks, a crafting table; the step collect stone 12:
 //            it works, with a spare crafted on its own (while it waited for the step, or first thing in it)
-//   death    day; 16 cobblestone, 5 bread, 3 iron ingots, then killed: the items back (at least 20 of the 24) within 5
-//            minutes, reported
+//   death    day, within 150 blocks of the world spawn (where it respawns); 16 cobblestone, 5 bread, 3 iron ingots, then
+//            killed: the items back (at least 20 of the 24) within 5 minutes, reported
 // A death the lab did not cause (the server log's death lines for the trial's bot) fails the trial. Reports n, passes,
 // the rate, deaths and the p50 and p90 time to the outcome per lab; --out writes every trial.
 //
@@ -115,7 +115,7 @@ const LABS = {
     pass: (g) => g.stepOk === true && (/spare|new stone_pickaxe/.test(g.stepText ?? '') || g.own.some((e) => e.kind === 'tools' && e.source === 'care' && e.ok)),
   },
   death: {
-    time: 'day', limitS: 300, expectDeath: true, kinds: ['recover'],
+    time: 'day', limitS: 300, expectDeath: true, kinds: ['recover'], nearSpawn: true, // it respawns at the world spawn
     setup: (bot) => [`clear ${bot}`, `give ${bot} cobblestone 16`, `give ${bot} bread 5`, `give ${bot} iron_ingot 3`],
     after: async (bot) => { await sleep(1_500); con(`kill ${bot}`); },
     done: (g) => g.own.some((e) => e.kind === 'recover'),
@@ -152,7 +152,8 @@ async function trial(lab, k) {
     g.bot = await botOf(g.game);
     if (!g.bot) throw new Error('no bot name in the agent log');
     const from = logSize();
-    if (spots.length) { const [x, z] = spots[spotNo++ % spots.length]; con(`spreadplayers ${x} ${z} 0 1 false ${g.bot}`); await sleep(3_000); }
+    if (L.nearSpawn) { con(`spreadplayers 0 0 20 150 false ${g.bot}`); await sleep(3_000); }
+    else if (spots.length) { const [x, z] = spots[spotNo++ % spots.length]; con(`spreadplayers ${x} ${z} 0 1 false ${g.bot}`); await sleep(3_000); }
     for (const st of L.steps?.filter((x) => x.skill === 'policy') ?? []) await call('play', st);
     for (const line of L.setup(g.bot)) con(line);
     await sleep(1_000);

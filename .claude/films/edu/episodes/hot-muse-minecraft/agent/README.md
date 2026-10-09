@@ -68,7 +68,8 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `deploy/slim-modules.mjs` | run in the agent image after `npm ci`: keeps the game data of one Minecraft version only |
 | `src/mineai/host.js` | `BODY=mineai`: one Mine AI MCP host per guest game (their runtime from `MINEAI_DIR`), on a loopback port of a private range with a token and the player name in its environment only, watched by heartbeat, restarted once after a crash, stopped with its game (its whole process group), its bot data deleted after the game unless the game failed (section "The Mine AI MCP body") |
 | `src/mineai/body.js` | a Body (`src/contracts.js`) driving that host as an MCP client: our skills onto their actions, their status as our state, stop and time limits through their cancel |
-| `src/mineai/skills.js` | the mapping (our 10 skills and `craft_batch` onto their tools, their results and codes back) and the extra skills MCP offers with this body (`equip`, `hunt`, `sleep`, `bucket`, `chest`, `explore`, `policy`, `pick_up`, `drop`) |
+| `src/mineai/skills.js` | the mapping (our 10 skills and `craft_batch` onto their tools, their results and codes back) and the extra skills MCP offers with this body (`equip`, `hunt`, `sleep`, `bucket`, `chest`, `explore`, `policy`, `armor`, `pick_up`, `drop`) |
+| `src/mineai/care.js` | what the body does by itself between the player's calls (ROADMAP M4): a death's items, armor worn and crafted, food eaten and hunted, a spare tool before one breaks, a shelter or a bed at night; their reflexes' events in our words; the journal every MCP reply reports from (section "The bot looks after itself") |
 | `src/mineai/preload.mjs` | loaded into their host's processes: ends the host when the agent closes its stdin (game end) or goes away, serves `/eyes` and `/watch` from inside the bot's process |
 | `mineai/` | `UPSTREAM.json` (their repository, the pinned commit and our patches in order), `patches/` (ours: crafting on Paper and its tests, the watchdog window, the host token, the player name off the command line, the runtime's exit), `fetch-and-patch.sh` (the build), `LICENSE-mine-ai-mcp` (their MIT notice), `bench/` (crafting and window flows on their tools; `gateway-iron.mjs`: the iron route through our `/mcp` with resources), `README.md` (the pins, the Paper fix and its numbers); their code is never in this repo |
 | `scripts/mineai-fetch.mjs` | the same fetch in Node (also updates a folder in place); `--check` says whether a folder is exactly the pin plus our patches |
@@ -814,6 +815,8 @@ in to Facebook in the same browser, may still see it in the muse.ai panel (UNVER
 | `MINEAI_START_MS`, `MINEAI_HEARTBEAT_MS`, `MINEAI_HEARTBEAT_MISSES` | `90000`, `5000`, `3` | time to be ready; our `/health` heartbeat and how many may go unanswered before a restart |
 | `MINEAI_UNRESPONSIVE_MS` | `5000` | their own event-loop watchdog (patch 0003), up to 120000 for a loaded machine |
 | `MINEAI_DATA_DIR`, `MINEAI_VIEWS` | (none: temporary), `true` | their per-bot SQLite (made mode 700); the live views from inside the host |
+| `MINEAI_CARE` | `true` | the body looks after itself between the player's calls (src/mineai/care.js); `false`: only the runtime's reflexes (measurements) |
+| `PAPER_DIFFICULTY`, `PAPER_DAYLIGHT` | `easy`, `locked` | read by the compose files from the stack's `deploy/.env` and handed to Paper: the difficulty, and `locked` (the clock stopped at morning) or `cycle` (real days and nights); both set again at every Paper start |
 | `MINEAI_KEEP_FAILED`, `MINEAI_DATA_DAYS` | `10`, `3` | a game's bot data and incidents are deleted when it ends, except the last N games that crashed or failed to join; at agent start, game folders older than this many days go |
 | `STEP_CAP`, `COST_CAP_RUN`, `COST_CAP_HOUR` | `300`, `1.00`, `3.00` | per run, per run in US$, rolling hour in US$ |
 | `ERROR_CAP`, `LOOP_REPEAT` | `8`, `3` | errors in a row (8 leaves room to explore for ore); same call failing (or changing nothing) before a hint |
@@ -1083,7 +1086,8 @@ What a guest's skill becomes (`src/mineai/skills.js`):
 | `bucket {action, liquid?, pos?}` | `use_bucket` | extra; the world is shared: lava is never poured (filling is fine), nothing within 32 blocks of where the bot joined (the world spawn) or 4 of another player |
 | `chest {action, pos, items?}` | `use_container` | extra; inspect, deposit, withdraw; never a chest another game's bot put down (the bodies record the chests they place) |
 | `explore {heading, chunks?, biome?}` | `explore_frontier` | extra |
-| `policy {retreat_health?, raw_food?, fight?}` | `set_survival_policy` | extra; for the rest of the game, with the revision read from their status; none of them: back to the defaults |
+| `policy {retreat_health?, raw_food?, fight?, night?, armor?, food?, tools?}` | `set_survival_policy` | extra; for the rest of the game, with the revision read from their status; `night`, `armor`, `food` and `tools` are the care's (src/mineai/care.js) and stay in the gateway; none of them: back to the defaults |
+| `armor {}` | `craft_item` per piece, then `equip` | extra; the best armor the carried iron, leather, gold or diamonds pay for, then worn with any better piece or shield carried |
 | `pick_up {item?, death_items?}` | `pick_up_items` | extra |
 | `drop {item, n}` | `drop_item` | extra |
 
@@ -1664,7 +1668,7 @@ first, as their result gate wants). In order, what it does when nothing else nee
 
 | What | When | How |
 | --- | --- | --- |
-| a death's items | it died within the last 4.5 minutes (their items despawn after 5) and respawned within 300 blocks | `pick_up_items {recover_death_items}`; the only care action a step waits for (the step's time starts after it) |
+| a death's items | it died within the last 4.5 minutes (their items despawn after 5) and respawned within 600 blocks (new bots land up to 400 from the world spawn, where they respawn) | `pick_up_items {recover_death_items}`; the only care action a step waits for (the step's time starts after it) |
 | armor | it carries a better piece than it wears, or a shield and an empty off-hand | `equip`, each piece to its slot |
 | food | food 14 or less (or hurt and below 18, which healing needs) and something safe to eat | `eat_food`, raw meat too (their hunger reflex keeps raw meat for emergencies) |
 | | no food at all, food 14 or less in daylight (6 or less at night) | hunts the nearest cow, pig, sheep or rabbit within 32 blocks for 3 meat (`collect_mob_drop`), cooks it when it carries a furnace and fuel, eats |
