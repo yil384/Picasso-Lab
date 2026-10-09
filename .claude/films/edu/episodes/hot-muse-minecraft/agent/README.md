@@ -1763,6 +1763,33 @@ docker run -d --name m4-labs --network host --user $(id -u):$(id -g) -v $PWD/acc
   --labs hunger,shelter,bed,zombie,skeleton,creeper,armor,tool,death --n 20 --parallel 8 --spots "15000 0; 14712 2926; ..." --out rv/runs
 ```
 
+#### Round 2 (2026-10-09): skeletons, fights at the shelter, a fresh bot at dusk
+
+The first round's deaths were mostly skeletons (4 of 6) and zombies that kept taking a shelter build over. Changes:
+- **A shield before the first night**, from the bot's own resources, the cheapest way that works (care kind `shield`,
+  in daylight before time 10000, once the player has left it alone 20 s): iron ingots it carries beyond 3 (kept for a
+  pickaxe), raw iron beyond 3 smelted, else one iron ore mined with its stone pickaxe, the bot walking back out of the
+  tunnel to smelt (a temporary furnace needs a free cell), and planks from its wood; then into the off-hand, where the
+  runtime's fight reflex raises it against arrows.
+- **Shelters through fights:** the wall cells between the bot and the nearest hostile mob within 6 blocks go up first
+  (a build of their own), and a build a fight took over is sent again at once, up to 4 times, then 5 s on.
+- **A fresh bot at dusk:** dirt, else grass (it drops dirt); logs count as shelter blocks last; a bot in water swims to
+  the shore before it shelters.
+
+Prepared labs on staging (`survive-labs.mjs`, 20 trials each, 8 at once, lab spots 15,000 blocks out, built before
+the shore and walk-back fixes; a trial is one fresh game):
+
+| Lab | Set-up | Pass | Rate | Deaths | Time to the outcome p50 / p90 |
+| --- | --- | --- | --- | --- | --- |
+| `skelnight` | the kit a day of care gives (stone sword, shield, 16 cobblestone, bread), night, two skeletons 6-7 blocks away; alive 120 s later | 20 of 20 | 100% | 0 | 38 / 66 s (shelter or fight) |
+| `zombieshelter` | 16 cobblestone, night, two zombies summoned 2 blocks away; a closed shelter within 60 s and alive at 90 s | 14 of 20 | 70% | 1 (a spider while it hid) | 12 / 53 s |
+| `freshnight` | nothing at all, dusk (time 11000); alive and sheltered 200 s later | 16 of 20 | 80% | 1 (a zombie after it swam) | 24 / 34 s |
+
+Of the 10 failures: 2 at a lab spot over water (no wall holds there: the shore fix since), 1 harness error each in two
+labs (a start that did not join in time), the others shelters that closed after 60 s or not at all while it fought.
+
+ROUND2_GATE
+
 ## What is mocked
 
 - The model: `test/mock-llm.js` speaks Chat Completions and the Responses API (streamed and not), replays scripted tool
