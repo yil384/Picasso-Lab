@@ -23,7 +23,7 @@ import { createStreamService, createRemoteStreamManager, createStreamManager, fi
 import { createCameraStream } from '../src/camera.js';
 import { loadConfig, facebookEmbedUrl } from '../src/config.js';
 import { startAgent } from '../src/index.js';
-import { fakeGraph, PAGE_ID, PAGE_TOKEN } from './fake-graph.js';
+import { fakeGraph, PAGE_ID, PAGE_TOKEN, USER_ID } from './fake-graph.js';
 import { processTexts, rtmpSink, freePort } from './rtmp-sink.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -74,7 +74,7 @@ async function channelOn(t, { publish = true, gameTtlMs = 0, stateFile, graphOpt
   const dir = tmp();
   const ch = createLiveChannel({
     graph, createStream: streams.create, log, stateFile: stateFile ?? path.join(dir, 'fb-live-state.json'), gameTtlMs,
-    pollMs: 25, livePollMs: 60, retryMs: [60, 120], sweepMs: 40, ...more,
+    pollMs: 25, livePollMs: 60, retryMs: [60, 120], sweepMs: 40, settleMs: 20, ...more,
   });
   t.after(async () => { await ch.stopAll('test over'); await fake.close(); fs.rmSync(dir, { recursive: true, force: true }); });
   return { fake, rows, graph, streams, ch, dir };
@@ -289,6 +289,43 @@ test('channel: a refusal only a person can fix (the Page not eligible to go live
   assert.equal(explain({ code: 2, message: 'busy', transient: true }).permanent, false);
 });
 
+test('profile target (FB_TARGET=me): /me/live_videos in public, each live video ended then deleted with its recording, a failed delete tried again, crash leftovers of ours deleted, nothing else on the profile touched', async (t) => {
+  const { fake, rows, ch, dir } = await channelOn(t, { deleteAfter: true, graphOpts: { pageId: 'me', privacy: { value: 'EVERYONE' }, sleep: async () => {} } });
+  // on the profile before we start: the owner's own live video and an old video, and one of ours a crash left ended
+  const own = fake.add({ owner: USER_ID, description: 'the owner streaming by hand' });
+  const old = fake.add({ owner: USER_ID, description: 'an old video', status: 'VOD' });
+  const ours = fake.add({ owner: USER_ID, description: DESCRIPTION, status: 'VOD' });
+  ch.start('g1', { player: 'Muse_aaaa' });
+  await until(() => ch.live().state === 'live');
+  assert.equal(fake.videos.has(ours), false, 'the leftover of ours was deleted at start');
+  const id = [...fake.videos.values()].find((v) => v.title?.includes('game g1')).id;
+  const v = fake.videos.get(id);
+  const create = fake.calls.find((c) => c.method === 'POST' && c.path === '/v23.0/me/live_videos');
+  assert.equal(create.body.privacy, '{"value":"EVERYONE"}', 'public: the embed plays only public videos');
+  assert.equal(ch.live().videoUrl, `https://www.facebook.com/${USER_ID}/videos/${v.videoId}/`);
+  await ch.stop('g1');
+  await until(() => ch.live().state === 'off' && fake.deleted.includes(id));
+  assert.equal(fake.videos.has(id), false);
+  const after = fake.calls.filter((c) => c.path === `/v23.0/${id}` && c.method !== 'GET').map((c) => `${c.method} ${c.body.end_live_video ?? ''}`.trim());
+  assert.deepEqual(after.slice(-2), ['POST true', 'DELETE'], 'ended, then deleted (the live video object: its recording goes with it)');
+  assert.equal(fake.calls.some((c) => c.method === 'DELETE' && c.path === `/v23.0/${v.videoId}`), false, 'the recording\'s own id is never needed');
+  assert.ok(rows.some((r) => r.k === 'fb_live_deleted' && r.broadcast === id && r.deletedId === id));
+  // a delete that fails (Facebook busy) is kept in the state file and done later
+  ch.start('g2', { player: 'Muse_bbbb' });
+  await until(() => ch.live().state === 'live');
+  const id2 = [...fake.videos.values()].find((x) => x.title?.includes('game g2')).id;
+  fake.fault((c) => c.method === 'DELETE' && c.path === `/v23.0/${id2}`, 503, { message: 'Service temporarily unavailable', code: 2, is_transient: true }, 4);
+  await ch.stop('g2');
+  await until(() => JSON.parse(fs.readFileSync(path.join(dir, 'fb-live-state.json'), 'utf8')).delete.some((e) => e.live === id2));
+  await until(() => fake.deleted.includes(id2));
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'fb-live-state.json'), 'utf8')), { ...JSON.parse(fs.readFileSync(path.join(dir, 'fb-live-state.json'), 'utf8')), open: [], delete: [] });
+  // the owner's own videos: never ended, never deleted
+  assert.equal(fake.videos.get(own).status, 'LIVE');
+  assert.ok(fake.videos.has(old));
+  assert.equal(fake.calls.some((c) => c.method !== 'GET' && (c.path.endsWith(`/${own}`) || c.path.endsWith(`/${old}`))), false);
+  noSecrets(fake, rows);
+});
+
 test('channel: at start, live videos a crash left open are ended (the state file, and open ones of the Page with the marker); others are left alone', async (t) => {
   const fake = await fakeGraph();
   const rows = [];
@@ -494,6 +531,12 @@ test('config: FB_LIVE off by default; on, it needs the Page id, the token file a
   assert.match(problems({ FB_GRAPH_VERSION: '23' })[0], /v23\.0/);
   assert.match(problems({ FB_LIVE: 'maybe' })[0], /FB_LIVE must be true or false/);
   assert.equal(JSON.stringify(on).includes('token'), true, 'the path is not a secret; the token never enters the config');
+  assert.deepEqual([on.fb.target, on.fb.deleteAfter, on.fb.privacy], ['page', false, 'EVERYONE'], 'the Page by default, videos kept');
+  const me = loadConfig({ FB_LIVE: 'on', FB_TARGET: 'me', FB_TOKEN_FILE: '/fb/user-token', STREAM_SERVICE_URL: 'http://127.0.0.1:7862' });
+  assert.deepEqual([me.fb.target, me.fb.deleteAfter, me.fb.privacy, me.fb.pageId], ['me', true, 'EVERYONE', ''], 'the profile: no Page id, each video deleted after its game');
+  assert.equal(loadConfig({ FB_TARGET: 'me', FB_DELETE_AFTER: 'false' }).fb.deleteAfter, false);
+  assert.match(problems({ FB_TARGET: 'profile' })[0], /FB_TARGET must be one of page, me/);
+  assert.match(problems({ FB_LIVE: 'on', FB_TARGET: 'me', STREAM_SERVICE_URL: 'http://127.0.0.1:7862' }).join('\n'), /long-lived user token/);
 });
 
 /** A camera rig that is always in the world (no Minecraft, no X server). */
@@ -521,7 +564,7 @@ test('end to end: a game on the channel -> the fake Graph API -> the camera stre
   const graph = createGraph({ pageId: PAGE_ID, token: () => PAGE_TOKEN, base: fake.url, minGapMs: 0, log });
   const rig = readyRig();
   const ch = createLiveChannel({
-    graph, log, stateFile: path.join(dir, 'state.json'), pollMs: 100, allowPlainRtmp: true,
+    graph, log, stateFile: path.join(dir, 'state.json'), pollMs: 100, settleMs: 1_000, allowPlainRtmp: true,
     createStream: (o) => createCameraStream({ ...o, rig, ffmpeg, font: null, settleMs: 10, testSource: '320x180', width: 640, height: 360, fps: 15, bitrateK: 600 }),
   });
   try {

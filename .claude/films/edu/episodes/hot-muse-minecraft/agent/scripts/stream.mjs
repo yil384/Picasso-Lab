@@ -133,7 +133,7 @@ async function serve(values, { print, printErr, env }) {
   if (!manager.enabled) printErr('note: STREAM_ENABLED is off or there is no output (STREAM_RTMP_URL / STREAM_OUT_DIR): every start is refused');
   const server = createStreamService({ manager, log });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
-  print(`stream service on http://127.0.0.1:${port}/streams (${config.fb.live ? `Facebook live channel on Page ${config.fb.pageId}, one camera` : manager.enabled ? `up to ${config.stream.max} stream(s)${client ? ' from the real-client camera' : ''}` : 'off'})`);
+  print(`stream service on http://127.0.0.1:${port}/streams (${config.fb.live ? `Facebook live channel on ${config.fb.target === 'me' ? `the token owner's profile (${config.fb.privacy}${config.fb.deleteAfter ? ', each video deleted after its game' : ''})` : `Page ${config.fb.pageId}`}, one camera` : manager.enabled ? `up to ${config.stream.max} stream(s)${client ? ' from the real-client camera' : ''}` : 'off'})`);
   const signal = await new Promise((resolve) => { process.once('SIGINT', () => resolve('SIGINT')); process.once('SIGTERM', () => resolve('SIGTERM')); });
   print(`${signal}: stopping every stream`);
   server.close();
