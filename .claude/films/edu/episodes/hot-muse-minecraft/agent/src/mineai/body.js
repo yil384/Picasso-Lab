@@ -6,7 +6,10 @@
 // time, and a typed code. The state is theirs (view_status, plus their /health on every heartbeat) rendered in our
 // state text; state(), snapshot() and inventory() read the latest copy at once. Everything above the body (the MCP
 // queue, idempotent calls, 45 s replies, typed codes, the dry-run check, /play and the API) is unchanged.
-// The runtime's own reflexes (combat, fire, breath, footing, hunger) act on their own, as their survival policy says.
+// The runtime's own reflexes (combat, fire, breath, footing, hunger) act on their own, as their survival policy says;
+// between the player's steps the body also looks after itself (src/mineai/care.js: a death's items, armor, food, spare
+// tools, the night), and a step that would wear its tool out gets a spare first, or a new one when the tool breaks in
+// the middle of it. What the body did by itself is kept in a journal the MCP replies and the state carry.
 
 import crypto from 'node:crypto';
 import net from 'node:net';
@@ -16,7 +19,8 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { inventoryDelta } from '../contracts.js';
 import { renderState, describeCall, describeDelta } from '../state.js';
 import { NOTABLE_BLOCKS } from '../state.js';
-import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, toTheirs, fromTheirs, ownChange } from './skills.js';
+import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, toTheirs, fromTheirs, ownChange, splitError } from './skills.js';
+import { createCare, armorPlan, wearPlan, toolClassFor, toolOf, pickaxeTierFor, sparePlan, replacementFor, describeCare, ARMOR_SLOTS, armorOf } from './care.js';
 
 /** Every call of ours says why in one sentence (their rationale is required and goes into their own log only). */
 const RATIONALE = 'Requested by the player through the game gateway.';
@@ -102,7 +106,7 @@ function listening(port, ms) {
  *   timeouts?: Record<string, number>}} opts
  * @returns {import('../contracts.js').Body & {refresh: () => Promise<void>, temporaryStations: true, kind: 'mineai'}}
  */
-export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS }) {
+export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOn = true, careTickMs }) {
   const emitter = new EventEmitter();
   emitter.setMaxListeners(50);
   let host = null;
@@ -127,6 +131,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   // stood): a build of the same blueprint and material near it continues it (src/mineai/skills.js continuesLast)
   let lastBuild = null;
   let current = null; // the action running now: {actionId, stop}
+  let stacks = []; // their status stacks (carried, worn, the off-hand; with durability)
+  let idleSince = Date.now(); // when the last step of the player's ended (the care waits a moment after it)
+  let care = null;
   let ended = null;
   let seq = 0;
   const event = (kind, data = {}) => { try { log.event(kind, { game: gameId, ...data }); } catch { /* best effort */ } };
@@ -162,6 +169,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     /** Scan the notable blocks around again now (after a teleport); resolves when done. */
     rescan: async () => { await scanning; await scanBlocks(true); },
     digging: () => null,
+    /** What the body did by itself (src/mineai/care.js), after journal entry seq: [{seq, at, source, kind, ok, text}]. */
+    onItsOwn: (after = 0) => (care ? care.since(after) : []),
+    /** The care's knobs (policy skill). */
+    carePolicy: () => (care ? care.policy : null),
   };
 
   // what src/mcp.js reads from a bot for its short state and its check (health, food, position, day, version)
@@ -220,14 +231,15 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     status = s;
     statusAt = Date.now();
     if (data.survivalPolicy?.revision) policyRevision = data.survivalPolicy.revision;
-    const stacks = s.inventory?.stacks ?? [];
+    const list = s.inventory?.stacks ?? [];
+    stacks = list;
     latest = {
       position: s.position ? { x: s.position.x, y: s.position.y, z: s.position.z } : latest.position,
       health: s.vitals?.health ?? latest.health,
       food: s.vitals?.food ?? latest.food,
-      inventory: inventoryOfStacks(stacks),
-      equipment: equipmentOfStacks(stacks),
-      held: stacks.find((x) => x.held)?.name ?? null,
+      inventory: inventoryOfStacks(list),
+      equipment: equipmentOfStacks(list),
+      held: list.find((x) => x.held)?.name ?? null,
     };
     const death = s.lastDeath ? JSON.stringify(s.lastDeath) : null;
     if (death && death !== lastDeath) {
@@ -287,7 +299,13 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       busy: body.busy,
       doing,
       lastResult,
+      ...(care ? { care: careNote() } : {}),
     };
+  }
+  /** What the body does by itself now, and the last thing it did, for the state. */
+  function careNote() {
+    const last = care.last();
+    return { now: care.now(), last: last ? { text: last.text, ok: last.ok, agoS: Math.max(0, Math.round((Date.now() - Date.parse(last.at)) / 1000)) } : null };
   }
 
   /** What toTheirs needs to know now. */
@@ -375,8 +393,54 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     return { error: data.error ?? `unexpected reply (${String(data.state)})` };
   }
 
+  /**
+   * The armor skill: the best pieces what is carried pays for (every material, nothing kept back), crafted, then
+   * worn with whatever better piece is carried; {calls, note} or {refused}.
+   */
+  function armorCalls() {
+    const pieces = care ? armorPlan(latest.inventory, stacks, { reserve: 0, materials: ['diamond', 'iron', 'golden', 'leather'] }).filter((p) => care.canCraft(p.item)) : [];
+    const crafts = pieces.length ? care.craftCalls(pieces.map((p) => ({ item: p.item, n: 1 }))) ?? [] : [];
+    const wear = new Map(wearPlan(stacks).map((w) => [w.to, w]));
+    for (const p of pieces) wear.set(ARMOR_SLOTS[armorOf(p.item).piece], { item: p.item, to: ARMOR_SLOTS[armorOf(p.item).piece] });
+    if (!crafts.length && !wear.size) {
+      return { refused: { ok: false, result: 'nothing to craft or put on: armor takes 24 iron ingots (or leather) for a full set: helmet 5, chestplate 8, leggings 7, boots 4; carrying an armor piece or a shield, armor puts it on', code: 'NEED_ITEMS', delta: {} } };
+    }
+    const calls = [...crafts, { tool: 'equip', args: { items: [...wear.values()].map((w) => ({ item_name: w.item, destination: w.to })) } }];
+    return { calls, note: pieces.length ? `crafts ${pieces.map((p) => p.item).join(', ')}` : null };
+  }
+
+  /** A spare pickaxe before a collect its pickaxe would not last through: {calls, text} or null. */
+  function spareFirst(a) {
+    if (!care || !a?.block_name || toolClassFor(a.block_name) !== 'pickaxe') return null;
+    const n = Number(a.count) || 1;
+    const spare = sparePlan(stacks, 'pickaxe', care.canCraft, { need: n + 4, minTier: pickaxeTierFor(a.block_name) });
+    if (!spare) return null;
+    const calls = care.craftCalls([{ item: spare.item, n: 1 }]);
+    if (!calls) return null;
+    const text = `crafted a spare ${spare.item} (your ${spare.low.name} had ${spare.low.left} use${spare.low.left === 1 ? '' : 's'} left, too few for ${n} ${a.block_name})`;
+    event('care', { kind: 'tools', source: 'step', ok: true, text });
+    return { calls, text };
+  }
+
+  /** The pickaxe broke in the middle of a collect: {calls (a new one, then the rest), before, text} or null. */
+  async function replaceTool(call, output) {
+    if (!care) return null;
+    await refresh();
+    const block = call.args.block_name;
+    const lost = /^(\w+) was lost/.exec(splitError(output?.result?.error).text)?.[1] ?? null;
+    const item = replacementFor('pickaxe', care.canCraft, { upTo: toolOf(lost)?.tier ?? 'diamond', minTier: pickaxeTierFor(block) });
+    if (!item) return null;
+    const craft = care.craftCalls([{ item, n: 1 }]);
+    if (!craft) return null;
+    const got = Number(output?.result?.collected?.gained) || 0;
+    const left = Math.max(0, (Number(call.args.count) || 0) - got);
+    const text = `crafted a new ${item}${left ? ` and went on with the other ${left}` : ''}`;
+    event('care', { kind: 'tools', source: 'step', ok: true, text });
+    return { calls: [...craft, ...(left ? [{ tool: 'collect_block', args: { block_name: block, count: left } }] : [])], before: `your ${lost ?? 'pickaxe'} broke after ${got} of ${call.args.count} ${block}`, text };
+  }
+
   async function run(tool, args) {
-    const t0 = Date.now();
+    let t0 = Date.now();
     if (ended) return { ok: false, result: 'not connected to the game', delta: {}, ms: 0, code: 'NOT_STARTED' };
     if (!body.connected) return { ok: false, result: 'not in the game yet', delta: {}, ms: 0, code: 'NOT_STARTED' };
     if (host?.restarting) return { ok: false, result: 'the body is being started again after it stopped; send the step again in a few seconds', delta: {}, ms: 0, code: 'NOT_STARTED' };
@@ -388,6 +452,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const ctl = { skill: tool, actionId: null, stopped: null, cancel: null, attack: null, killed: 0 };
     current = ctl;
     emit('skill', { phase: 'start', tool, args: v.args });
+    // the body may be looking after itself (src/mineai/care.js): that stops for the step at once, except a recovery of
+    // the items a death dropped (they despawn), which finishes first; the step's time starts after it
+    const yielded = await care?.yield().catch(() => null);
+    if (yielded === 'recover') t0 = Date.now();
     let r;
     // the inventory change is counted from here: carried and worn (an equip moves an item, it does not lose it); a
     // status read that fails keeps the copy from before, never an empty one
@@ -408,15 +476,25 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       deathBefore = lastDeath;
       const plan = toTheirs(tool, v.args, context());
       built = plan.build ?? null;
+      // the body's own care knobs (policy skill): kept here, never sent to the runtime
+      const careText = plan.care ? `; on its own between your calls: ${describeCare(care?.setPolicy(plan.care === 'reset' ? null : plan.care))}` : '';
+      if (plan.local === 'armor') { const a = armorCalls(); if (a.refused) plan.refused = a.refused; else { plan.calls = a.calls; plan.note = a.note; } }
       if (plan.local === 'state') r = { ok: true, result: renderState(snapshot()), code: null };
       else if (plan.refused) r = plan.refused;
+      else if (!plan.calls?.length && plan.care) r = { ok: true, result: careText.replace(/^; /, ''), code: null };
       else {
         const deadline = t0 + (timeouts[tool] ?? 60_000);
         ctl.attack = plan.attack ?? null;
         const parts = [];
         let rescued = false;
         own = {};
-        for (const call of plan.calls) {
+        const calls = [...plan.calls];
+        // a collect that would wear its pickaxe out gets a spare first (crafted from what is carried)
+        const spare = tool === 'collect' ? spareFirst(calls[0]?.args) : null;
+        if (spare) { calls.unshift(...spare.calls); parts.push({ ok: true, result: `on its own first: ${spare.text}`, code: null, care: true }); }
+        let replaced = 0;
+        for (let i = 0; i < calls.length; i++) {
+          const call = calls[i];
           if (ctl.stopped) break;
           ctl.actionId = null;
           const out = await act(call, deadline, ctl);
@@ -431,6 +509,16 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           const o = ownChange(call.tool, out.output, call);
           if (o === null) own = null;
           else if (own) for (const [k, n] of Object.entries(o)) own[k] = (own[k] ?? 0) + n;
+          // the pickaxe broke in the middle of a collect: a new one from what is carried, then the rest of the collect
+          if (!res.ok && res.theirs === 'TOOL_TIER_LOST' && call.tool === 'collect_block' && replaced < 2 && !ctl.stopped && deadline - Date.now() > 10_000) {
+            const again = await replaceTool(call, out.output);
+            if (again) {
+              replaced += 1;
+              parts.push({ ok: true, result: `${again.before}; on its own: ${again.text}`, code: null });
+              calls.splice(i + 1, 0, ...again.calls);
+              continue;
+            }
+          }
           // an attack is a hunt for one drop, ended once the mob died: a fight won without that drop still counts
           const kills = Math.max(ctl.killed, Number(out.output?.result?.hunt?.targetDeathsObserved) || 0);
           if (!res.ok && plan.attack && kills > 0) {
@@ -445,7 +533,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         const failed = parts.find((x) => !x.ok);
         const text = parts.map((x) => x.result).join('; ') || (ctl.stopped ? `stopped: ${ctl.stopped}` : 'nothing ran');
         const stopped = ctl.stopped && !rescued;
-        r = { ok: !failed && !stopped, result: `${text}${plan.note ? ` (${plan.note})` : ''}`, code: failed?.code ?? (stopped ? 'STOPPED' : null) };
+        r = { ok: !failed && !stopped, result: `${text}${plan.note ? ` (${plan.note})` : ''}${careText}`, code: failed?.code ?? (stopped ? 'STOPPED' : null) };
       }
     } catch (err) {
       own = null;
@@ -461,8 +549,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // a complete structure is done with; an incomplete one is continued by the next build of it nearby; one whose step
     // stopped the runtime is not (the reply says to build somewhere else)
     if (built) lastBuild = r.ok || r.code === 'BODY_RESTARTED' ? null : built;
+    if (yielded === 'recover') r = { ...r, result: `${r.result} (before it the body finished going back for the items it dropped when it died)` };
     const ms = Date.now() - t0;
     body.busy = false;
+    idleSince = Date.now();
     doing = null;
     current = null;
     lastResult = `${describeCall(tool, v.args)} -> ${r.ok ? 'ok' : 'failed'}: ${r.result}${Object.keys(delta).length ? ` (inventory: ${describeDelta(delta)})` : ''}`.slice(0, 600);
@@ -495,6 +585,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   async function close() {
     if (closed) return closed;
     closed = (async () => {
+      await care?.stop().catch(() => {});
       await stop('the game ended').catch(() => {});
       await dropClient();
       await host?.close('the game ended');
@@ -531,6 +622,18 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     event('bot_ready', { username, body: 'mineai', pos: latest.position ? floorPos(latest.position) : null });
     emit('ready', {});
     scanBlocks();
+    // the body looks after itself between the player's steps (src/mineai/care.js)
+    if (careOn) {
+      care = createCare({
+        situation: () => status, latest: () => latest, stacks: () => stacks, refresh, act, rpc,
+        plan: (skill, a) => toTheirs(skill, a, context()),
+        idle: () => body.connected && !ended && !closed && !body.busy && !host?.restarting,
+        idleSince: () => idleSince,
+        furnaceNear: () => body.stationNear('furnace'), tableNear: () => body.stationNear('crafting_table'),
+        event, tickMs: careTickMs,
+      });
+      care.start();
+    }
     if (host.viewPorts) {
       // the live views listen inside their bot's process once it has spawned (src/mineai/preload.mjs)
       const { watch, eyes } = host.viewPorts;

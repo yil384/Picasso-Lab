@@ -206,6 +206,7 @@ const REPLY_OUT = z.object({
   queue: z.object({ running: z.string().nullable(), waiting: z.number() }),
   changed: z.record(z.string(), z.number()).describe('inventory change of every finished step in this reply'),
   state: z.record(z.string(), z.any()).nullable().describe('health, food, pos, inventory, timeLeftS'),
+  onItsOwn: z.array(z.object({ seq: z.number(), agoS: z.number(), source: z.enum(['care', 'reflex']), kind: z.string(), ok: z.boolean(), text: z.string() }).loose()).optional().describe('what the body did by itself since your last reply (care: its own plans between your calls; reflex: fights, meals, deaths)'),
 }).loose();
 
 /**
@@ -231,6 +232,8 @@ export function createMcp(hooks) {
   // the skills this server offers, by name, in the server instructions and in both play tools (one source: skills),
   // so a client never relies on notes about another server (Muse's own notes listed only some, and it had to guess hunt)
   const SKILL_NAMES_TEXT = skills.names.join(', ');
+  // a body that looks after itself between calls (BODY=mineai, src/mineai/care.js) says so in the instructions
+  const CARE_TEXT = skills.names.includes('armor') ? ' Between your calls the body looks after itself: it shelters at night (or sleeps when it carries a bed), eats and hunts when hungry, wears and crafts armor, crafts a spare before a tool breaks, and goes back for its items after a death; its reflexes fight or flee from mobs. Every reply says what it did on its own (structuredContent.onItsOwn); the policy skill changes it.' : '';
   const now = hooks.now ?? Date.now; // the web's clock (leases, idle, repeats); call deadlines run on the real one
   const callMs = hooks.callMs ?? CALL_MS;
   /** How long a call waits for its steps: callMs less the time its reply takes to build, so the reply leaves within callMs. */
@@ -340,7 +343,10 @@ export function createMcp(hooks) {
         food: bot.food ?? null,
         pos: { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) },
         day: bot.time?.isDay ?? null,
+        ...(Number.isFinite(bot.time?.timeOfDay) ? { time: bot.time.timeOfDay } : {}),
       });
+      const care = safely(() => s.body.snapshot?.()?.care, null);
+      if (care?.now) out.onItsOwnNow = care.now;
     }
     const inventory = safely(() => s.body.inventory?.());
     if (inventory) out.inventory = inventory;
@@ -370,6 +376,19 @@ export function createMcp(hooks) {
     }).join('\n');
   }
 
+  /** One thing the body did by itself, as a reply line: "- 41 s ago, night: closed itself in at ... (ok)". */
+  const ownAgo = (e) => Math.max(0, Math.round((now() - Date.parse(e.at)) / 1000));
+  const ownLine = (e) => `- ${ownAgo(e)} s ago, ${e.source === 'reflex' ? 'reflex' : 'on its own'}, ${e.kind}: ${e.text}${e.ok === false ? ' (did not work)' : ''}`;
+  const ownOut = (e) => ({ seq: e.seq, agoS: ownAgo(e), source: e.source, kind: e.kind, ok: e.ok !== false, text: e.text });
+  /** The body's own actions a reply carries count as told once its HTTP response was written out in full. */
+  function deliverOwnWhenSent(s, seq, extra) {
+    const mark = () => { s.ownDelivered = Math.max(s.ownDelivered ?? 0, seq); };
+    const call = http.getStore();
+    if (signalOf(extra)?.aborted) return;
+    if (!call?.res) { mark(); return; }
+    call.res.once('finish', () => { if (!call.cut.signal.aborted && !extra?.signal?.aborted) mark(); });
+  }
+
   /** Mark the final steps a reply carries as delivered once its HTTP response was written out in full. */
   function deliverWhenSent(q, shown, extra) {
     const call = http.getStore();
@@ -395,6 +414,9 @@ export function createMcp(hooks) {
     const earlier = q ? q.finished(steps) : [];
     const shown = [...earlier, ...steps.filter(isFinal)];
     if (q) deliverWhenSent(q, shown, extra);
+    // what the body did by itself since the last reply that reached the client (BODY=mineai: src/mineai/care.js)
+    const own = s && typeof s.body?.onItsOwn === 'function' ? safely(() => s.body.onItsOwn(s.ownDelivered ?? 0), []) ?? [] : [];
+    if (own.length) deliverOwnWhenSent(s, own.at(-1).seq, extra);
     const changed = {};
     for (const st of shown) for (const [k, v] of Object.entries(st.result?.delta ?? {})) changed[k] = (changed[k] ?? 0) + v;
     for (const k of Object.keys(changed)) if (!changed[k]) delete changed[k];
@@ -403,6 +425,7 @@ export function createMcp(hooks) {
     const main = `${lead.trimEnd()}${lead.trim() && lines ? '\n' : ''}${lines}${tail}`.trim();
     const blocks = [
       earlier.length ? `Finished since your last call:\n${earlierText(earlier)}` : '',
+      own.length ? `On its own since your last reply (the body, not a step of yours):\n${own.map(ownLine).join('\n')}` : '',
       main,
       s ? stateBlock(s) : '',
     ];
@@ -415,6 +438,7 @@ export function createMcp(hooks) {
       queue: { running: q?.running ? describe(q.running) : null, waiting: q?.waiting.length ?? 0 },
       changed,
       state: shortState(s),
+      ...(own.length ? { onItsOwn: own.map(ownOut) } : {}),
       ...more,
     };
     return { content: [{ type: 'text', text: body }], structuredContent: structured, ...(isError ? { isError: true } : {}) };
@@ -588,7 +612,7 @@ export function createMcp(hooks) {
 
   function build(entry) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
-      instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot. The skills this server offers (${skills.names.length}): ${SKILL_NAMES_TEXT}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.`,
+      instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot. The skills this server offers (${skills.names.length}): ${SKILL_NAMES_TEXT}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.${CARE_TEXT}`,
     });
     const sid8 = () => String(entry.transport.sessionId ?? '').slice(0, 8);
     // a call the SDK's own input check refuses (an unknown skill, too many steps, args that are not an object...) gets

@@ -215,5 +215,8 @@ export function renderState(s) {
   lines.push(`goal: ${s.goal ?? 'none'}`);
   if (s.busy) lines.push(`doing now: ${s.doing ?? 'a skill'}`);
   lines.push(`last result: ${s.lastResult ?? 'none yet'}`);
+  // a body that looks after itself between calls (BODY=mineai, src/mineai/care.js)
+  if (s.care?.now) lines.push(`on its own now: ${s.care.now}`);
+  if (s.care?.last) lines.push(`last done on its own (${s.care.last.agoS} s ago): ${s.care.last.text}`);
   return lines.join('\n');
 }
