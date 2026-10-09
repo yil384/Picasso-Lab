@@ -15,7 +15,7 @@
 //   tool     day; a stone pickaxe with 5 uses left, 3 cobblestone, 2 sticks, a crafting table; the step collect stone 12:
 //            it works, with a spare crafted on its own (while it waited for the step, or first thing in it)
 //   death    day, within 150 blocks of the world spawn (where it respawns); 16 cobblestone, 5 bread, 3 iron ingots, then
-//            killed: the items back (at least 20 of the 24) within 5 minutes, reported
+//            killed: the items back (at least 18 of the 24: a death scatters them, some fly off) within 5 minutes, reported
 // A death the lab did not cause (the server log's death lines for the trial's bot) fails the trial. Reports n, passes,
 // the rate, deaths and the p50 and p90 time to the outcome per lab; --out writes every trial.
 //
@@ -121,7 +121,7 @@ const LABS = {
     setup: (bot) => [`clear ${bot}`, `give ${bot} cobblestone 16`, `give ${bot} bread 5`, `give ${bot} iron_ingot 3`],
     after: async (bot) => { await sleep(1_500); con(`kill ${bot}`); },
     done: (g) => g.own.some((e) => e.kind === 'recover'),
-    pass: (g) => { const inv = inventoryOf(g.text); return (inv.cobblestone ?? 0) + (inv.bread ?? 0) + (inv.iron_ingot ?? 0) >= 20 && g.own.some((e) => e.kind === 'recover' && e.ok); },
+    pass: (g) => { const inv = inventoryOf(g.text); return (inv.cobblestone ?? 0) + (inv.bread ?? 0) + (inv.iron_ingot ?? 0) >= 18 && g.own.some((e) => e.kind === 'recover' && e.ok); },
   },
 };
 
