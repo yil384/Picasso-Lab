@@ -716,16 +716,28 @@ not logged in while the app is in development mode, and whether the plugin needs
 loads (the reply waits for `LIVE` to be safe).
 
 On staging (2026-10-08, `deploy/push.sh`, the staging checks passed each time): the camera runs under its profile
-(`muse-staging-camera-1`; the camera-test stack's camera, asleep since 16:03, was stopped first: one account). With
-`FB_LIVE=on` the Page token was read from the mounted file, the start sweep listed the Page's live videos, each game
-went on the channel and the create was refused (200/1363120) and marked to be tried again in 10 minutes; `live_view`
-through the public `/mcp` answered at once with that reason and "Not live yet" on the page; the channel went off with
-the game, and the Page has no open live video. The camera client signed in and joined in 22.6 s. Staging was then left
-with `FB_LIVE=off` and `STREAM_OUT_DIR=/logs/streams`: a game is filmed to `~/workspace/muse-staging/logs/streams`
-(1280x720 H.264 at 30 fps with AAC; live 3.5 s after the game's stream started), and `live_view` says live video is
-off. To turn it on when a Page can go live: `FB_LIVE=on` (and the Page's id and token file if it is another Page) in
-staging's `deploy/camera.env`, then `COMPOSE_PROFILES=camera docker compose -p muse-staging -f staging.compose.yaml up
--d camera` there. A fresh worktree needs `server/paper.jar` and `server/plugins` (not in git) before `push.sh`.
+(`muse-staging-camera-1`; the camera-test stack's camera, asleep since 16:03, was stopped first: one account). With the
+Page (`FB_TARGET=page`) every create was refused (200/1363120) and said so in `live_view` at once. Staging now runs
+`FB_LIVE=on`, `FB_TARGET=me`, `FB_TOKEN_FILE=/fb/user-token` (the owner's long-lived user token, 600, in
+`~/workspace/muse-staging/fb/`). Measured through the public `/mcp` (two games, plus the staging check's own game):
+
+| | game 1 | game 2 |
+| --- | --- | --- |
+| `live_view` called to its answer "live" (the camera already in the world) | 7.1 s | 6.0 s |
+| live video created to "live" (our stream accepted 3 s or more) | 10.8 s | about 8 s |
+| game ended to the live video ended, then deleted | 1 s, 5 s | about 1 s, 4.3 s |
+
+With the camera starting cold (the staging check's game, the client joining the world in 19.6 s) the live video was
+"live" 19.8 s after it was created. Facebook's own thumbnail of the live video shows the real client's picture. The
+profile's other videos were never touched (it had none of its own during the test; the sweep matches only ours).
+Open: Facebook stored each live video as "Only me" (`privacy.value` `SELF`) although we asked for `EVERYONE`, so the
+video plugin answers a viewer who is not the owner with "Video Unavailable. This video may no longer exist, or you
+don't have permission to view it." (checked logged out, in three URL forms; Facebook's public sample video plays in
+the same check). Facebook caps a post at the audience the owner allowed the app, and an app in development mode may be
+capped too (UNVERIFIED which): the owner sets the app's audience to Public (Facebook, Settings, Apps and websites) and,
+if that is not enough, switches the app to Live mode. `live_view` reports it ("Warning: Facebook stored this live
+video as \"Only me\" ...") and the page says "Live, but Facebook shows this video to its owner only." The owner, logged
+in to Facebook in the same browser, may still see it in the muse.ai panel (UNVERIFIED). A fresh worktree needs `server/paper.jar` and `server/plugins` (not in git) before `push.sh`.
 
 ## Deploy on picasso
 

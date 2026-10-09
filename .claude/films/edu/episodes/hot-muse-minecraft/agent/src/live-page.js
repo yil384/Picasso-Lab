@@ -22,6 +22,7 @@ export function statusLine(v) {
   const g = gameId(v.game);
   const cam = gameId(v.camera);
   if (v.state === 'live' && cam && g && cam !== g) return `Live: the camera is on game ${cam} now (it films the game that asked for the live view last).`;
+  if (v.state === 'live' && v.ownerOnly) return `Live${g ? `: game ${g}` : ''}, but Facebook shows this video to its owner only.`;
   if (v.state === 'live') return `Live${g ? `: game ${g}` : ''}. One camera films the game that asked for the live view last.`;
   if (v.state === 'retrying') return 'Not live yet: the live video could not start; it is tried again by itself.';
   if (['connecting', 'starting'].includes(v.state)) return `Joining: the live video${g ? ` of game ${g}` : ''} starts in a few seconds.`;

@@ -738,7 +738,7 @@ export function createMcp(hooks) {
       if (format === 'embed') {
         return text(JSON.stringify({ format, game: s.id, live, state: v.state, camera_game: camera, player: embedUrl ? 'facebook' : null, embed_url: embedUrl, video_url: videoUrl }));
       }
-      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb });
+      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb, ownerOnly: Boolean(v.warning) });
       const lines = [];
       const since = v.liveSince ? ` since ${String(v.liveSince).slice(11, 19)} UTC` : '';
       if (live) lines.push(`Live view of game ${s.id}: live on Facebook${since}.`);
@@ -752,11 +752,12 @@ export function createMcp(hooks) {
       } else if (v.fb) lines.push(`Live view of game ${s.id}: no live video yet; the camera picks the game up once its bot is in the world. Call live_view again in about 20 s.`);
       else lines.push(`Live view of game ${s.id}: live video is off on this server.`);
       lines.push(videoUrl ? `Video (plain link): ${videoUrl}` : `3D view in a web page (plain link): ${l.eyes}`);
+      if (v.warning) lines.push(`Warning: ${v.warning}`);
       if (v.fb) lines.push('One camera serves every game on this server: it films the game whose live_view call came last, so if another game calls live_view, this video shows that game until live_view is called again here. When no game is left the live video ends; the next game gets a new one.');
       lines.push('', 'HTML page (Facebook\'s video player and a status line; no script):', html);
       return {
         content: [{ type: 'text', text: lines.join('\n') }],
-        structuredContent: { format: 'html', game: s.id, state: v.state, live, camera_game: camera, video_url: videoUrl, embed_url: embedUrl, html },
+        structuredContent: { format: 'html', game: s.id, state: v.state, live, camera_game: camera, video_url: videoUrl, embed_url: embedUrl, ...(v.warning ? { warning: v.warning } : {}), html },
       };
     });
 
