@@ -96,6 +96,12 @@ test('care: what to do first, and nothing while nothing is needed', () => {
   assert.equal(decide(night, { ...base, inventory: { dirt: 2 }, memory: failed }), null);
   assert.equal(decide(night, { ...base, inventory: { cobblestone: 16 }, memory: failed }).kind, 'shelter', 'more blocks now');
   assert.equal(decide(night, { ...base, inventory: { cobblestone: 16 }, memory: { ...failed, shelterFails: { 0: 3 } } }), null, 'three this night');
+  // dusk: blocks for the shelter while it is light, cobblestone with a pickaxe, else dirt; not with a bed
+  const dusk = situation({ clock: { timeOfDay: 11_500 } });
+  assert.deepEqual((({ kind, block, n }) => ({ kind, block, n }))(decide(dusk, { ...base, inventory: { dirt: 3 } })), { kind: 'gather', block: 'dirt', n: 12 });
+  assert.equal(decide(dusk, { ...base, inventory: {}, stacks: [stack('wooden_pickaxe', 1, 'hotbar', { remaining: 50, maximum: 59 })] }).block, 'stone');
+  assert.equal(decide(dusk, { ...base, inventory: { cobblestone: 20 } }), null, 'enough already');
+  assert.equal(decide(dusk, { ...base, inventory: { white_bed: 1 } }), null, 'a bed instead');
   // the nether has no night
   assert.equal(decide({ ...night, dimension: 'the_nether' }, { ...base, inventory: { cobblestone: 20 } }), null);
   // a spare before a tool breaks

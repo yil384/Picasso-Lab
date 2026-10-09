@@ -9,8 +9,9 @@
 //   - food: eats when hungry (raw meat too), and with no food left hunts an animal near by, cooks the meat when it
 //     carries a furnace and fuel, and eats;
 //   - tools: a pickaxe, axe, shovel or sword about to break gets a spare crafted from what it carries;
-//   - night: sleeps when it carries a bed and the night can pass, else shelters in a closed box of carried blocks (or
-//     dug into the ground), with a pocket for a crafting table or furnace, until the player's next call.
+//   - night: in the last minute of daylight collects blocks for a shelter when it has too few; at night sleeps when it
+//     carries a bed and the night can pass, else shelters in a closed box of carried blocks (or dug into the ground),
+//     with a pocket for a crafting table or furnace, until the player's next call.
 // It acts only while no step of the player's runs, and yields at once to the next one (a death recovery finishes
 // first: the items despawn). Everything it does, and every reflex of the runtime's that acted while no step ran, goes
 // into a journal that the next MCP reply and the state carry ("On its own since your last call"), so the player always
@@ -37,6 +38,8 @@ export function describeCare(p = CARE_DEFAULTS) {
   return `${night}; ${armor}; ${food}; ${tools}; after a death it goes back for its items`;
 }
 
+/** The last minute or so of daylight: the body gets blocks for its shelter while it can still see what it digs. */
+export const DUSK_FROM = 10_800;
 /** Night for the body: from a little before beds are accepted (12542) until a little before they stop (23458). */
 export const NIGHT_FROM = 12_300;
 export const NIGHT_TO = 23_300;
@@ -314,7 +317,7 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
 
   // a death: its items lie at the death spot for 5 minutes
   const death = s.lastDeath;
-  if (death?.observedAt && death.observedAt !== memory.recovered) {
+  if (death?.observedAt && death.observedAt !== memory.recovered && !cooling('recover', 10_000)) {
     const age = now - Date.parse(death.observedAt);
     if (age >= 0 && age < RECOVER_WITHIN_MS && String(death.dimension ?? 'overworld').replace(/^minecraft:/, '') === String(s.dimension ?? 'overworld').replace(/^minecraft:/, '')) {
       const far = s.position && death.position ? Math.round(Math.hypot(s.position.x - death.position.x, s.position.z - death.position.z)) : 0;
@@ -337,6 +340,17 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
     const cook = furnace;
     const prey = preyNear(s, { cook });
     if (prey) return { kind: 'hunt', why: `food ${food}/20 and no food carried`, mob: prey.name, drop: PREY[prey.name], n: 3, cook, distance: Math.round(prey.nearest.distance) };
+  }
+  // dusk: blocks for the night's shelter while there is light (with none, a bot on rock and with no pickaxe could not
+  // dig in either: staging, 2026-10-09), cobblestone with a pickaxe, else dirt
+  const dusk = overworld && Number.isFinite(time) && time >= DUSK_FROM && time < NIGHT_FROM;
+  if (dusk && policy.night !== 'off' && !cooling('gather', 60_000)) {
+    const have = shelterBlocks(inventory).total;
+    const bed = Object.keys(inventory).some((n) => BEDS.test(n) && inventory[n] > 0);
+    if (have < SHELTER_SIZE && !bed && !hostilesWithin(s, 12).length) {
+      const pickaxe = toolsCarried(stacks).some((t) => t.cls === 'pickaxe');
+      return { kind: 'gather', why: `night falls in about ${Math.max(0, Math.round((NIGHT_FROM - time) / 20))} s and it carries ${have} blocks for a shelter`, block: pickaxe ? 'stone' : 'dirt', n: SHELTER_SIZE - have + 2 };
+    }
   }
   // night, before any crafting (that is done inside the shelter): sleep in a bed it carries (the night passes when
   // every player sleeps), else shelter
@@ -468,6 +482,7 @@ const LIMITS = { recover: 150_000, wear: 20_000, eat: 15_000, hunt: 120_000, coo
 const DOING = {
   recover: 'going back for the items it dropped when it died', wear: 'putting on armor', eat: 'eating', hunt: 'hunting for food',
   tools: 'crafting a spare tool', armor: 'crafting armor', sleep: 'sleeping', shelter: 'sheltering for the night',
+  gather: 'collecting blocks for a shelter before night falls',
 };
 
 /**
@@ -564,6 +579,8 @@ export function createCare(deps) {
     const ms = () => now() - t0;
     switch (d.kind) {
       case 'recover': {
+        // two tries at most (a walk that found no way through tries once more), within the items' 5 minutes
+        memory.recoverTries = memory.recoverTries?.key === d.key ? { key: d.key, n: memory.recoverTries.n + 1 } : { key: d.key, n: 1 };
         memory.recovered = d.key;
         if (d.far) return add({ kind: 'recover', ok: false, ms: 0, text: `${d.why}: it respawned ${d.far} blocks away, too far to get back to its items before they despawn` });
         const before = { ...inv() };
@@ -572,6 +589,7 @@ export function createCare(deps) {
         const got = Object.entries(inv()).map(([k, v]) => [k, v - (before[k] ?? 0)]).filter(([, v]) => v > 0);
         const n = got.reduce((a, [, v]) => a + v, 0);
         const ok = okOf(r) || n > 0;
+        if (!ok && !ctl.stopped && memory.recoverTries.n < 2) { memory.recovered = null; memory.cool.recover = now(); }
         return add({ kind: 'recover', ok, ms: ms(), text: ok ? `${d.why}: went back and picked up ${n ? `${plural(n, 'item')} (${got.map(([k, v]) => `${v} ${k}`).join(', ')})` : 'nothing (nothing was left there)'} in ${Math.round(ms() / 1000)} s` : `${d.why}: could not get its items back (${errOf(r) ?? 'stopped'})` });
       }
       case 'wear': {
@@ -652,6 +670,15 @@ export function createCare(deps) {
           parts.push(okOf(back) || (inv()[bedName] ?? 0) > 0 ? 'picked the bed up again' : `left the bed there (${errOf(back) ?? 'stopped'})`);
         }
         return add({ kind: 'sleep', ok: Boolean(okOf(r) && out?.morning), ms: ms(), text: parts.join('; ') });
+      }
+      case 'gather': {
+        memory.cool.gather = now();
+        const before = shelterBlocks(inv()).total;
+        const r = await run([{ tool: 'collect_block', args: { block_name: d.block, count: d.n } }], LIMITS.gather, ctl);
+        await deps.refresh();
+        const got = shelterBlocks(inv()).total - before;
+        const what = d.block === 'stone' ? 'cobblestone' : 'dirt';
+        return add({ kind: 'gather', ok: got > 0, ms: ms(), text: got > 0 ? `${d.why}: collected ${got} ${what} for it` : `${d.why}: could not collect ${what} (${errOf(r) ?? 'stopped'})` });
       }
       case 'shelter': {
         // no cooling down after a shelter that worked: a step of the player's that took the bot out of it is followed
