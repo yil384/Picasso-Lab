@@ -694,10 +694,16 @@ export function createCare(deps) {
         const parts = [];
         const fail = (why) => add({ kind: 'shield', ok: false, ms: ms(), text: `${d.why}: ${[...parts, why].join('; ')}` });
         if (d.path === 'mine') {
+          const from = deps.situation()?.position;
           const r = await run([{ tool: 'collect_block', args: { block_name: 'iron_ore', count: 1 } }], LIMITS.mine, ctl);
           await deps.refresh();
           if (!okOf(r) && !(inv().raw_iron > 0)) return fail(`could not mine iron ore (${errOf(r) ?? 'stopped'})`);
           parts.push('mined 1 iron ore');
+          // back where it was: in a tunnel to the ore no cell is free for a furnace or a table (staging, the Mac: no_cell)
+          if (from && !ctl.stopped) {
+            await run([{ tool: 'navigate', args: { x: Math.floor(from.x), y: Math.floor(from.y), z: Math.floor(from.z) } }], LIMITS.dig, ctl);
+            await deps.refresh();
+          }
         }
         if (d.path !== 'ingot') {
           let smelt = deps.plan('smelt', { item: 'raw_iron', n: 1 });
