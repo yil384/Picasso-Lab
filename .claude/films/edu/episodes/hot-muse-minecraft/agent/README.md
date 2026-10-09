@@ -695,6 +695,18 @@ stream arrives, how long Facebook takes to show it `LIVE`, whether the plugin pl
 not logged in while the app is in development mode, and whether the plugin needs the video to be live before it
 loads (the reply waits for `LIVE` to be safe).
 
+On staging (2026-10-08, `deploy/push.sh`, the staging checks passed each time): the camera runs under its profile
+(`muse-staging-camera-1`; the camera-test stack's camera, asleep since 16:03, was stopped first: one account). With
+`FB_LIVE=on` the Page token was read from the mounted file, the start sweep listed the Page's live videos, each game
+went on the channel and the create was refused (200/1363120) and marked to be tried again in 10 minutes; `live_view`
+through the public `/mcp` answered at once with that reason and "Not live yet" on the page; the channel went off with
+the game, and the Page has no open live video. The camera client signed in and joined in 22.6 s. Staging was then left
+with `FB_LIVE=off` and `STREAM_OUT_DIR=/logs/streams`: a game is filmed to `~/workspace/muse-staging/logs/streams`
+(1280x720 H.264 at 30 fps with AAC; live 3.5 s after the game's stream started), and `live_view` says live video is
+off. To turn it on when a Page can go live: `FB_LIVE=on` (and the Page's id and token file if it is another Page) in
+staging's `deploy/camera.env`, then `COMPOSE_PROFILES=camera docker compose -p muse-staging -f staging.compose.yaml up
+-d camera` there. A fresh worktree needs `server/paper.jar` and `server/plugins` (not in git) before `push.sh`.
+
 ## Deploy on picasso
 
 `deploy/push.sh` copies the code and runs `docker compose up -d --build` in `~/workspace/muse-minecraft/app/deploy`
