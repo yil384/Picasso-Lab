@@ -12,8 +12,8 @@ Not affiliated with or endorsed by Meta or Mojang.
 **Status 2026-10-08: production (https://play.picasso-lab.com) plays with the Mine AI MCP body (`BODY=mineai`, the
 runtime at 2fe1306 with our 11 patches, builds on rough ground included); staging too.** Both stacks have the proxy secret and the Paper whitelist.
 Section "The switch" below; rollback `docs/SWITCH.md`, section 5. **Staging since 2026-10-09: Normal with real days
-and nights, and the body looks after itself between calls (ROADMAP M4; section "The bot looks after itself"); its gate
-is not met yet, so production keeps easy and locked daylight and the build before it.**
+and nights, and the body looks after itself between calls (ROADMAP M4; section "The bot looks after itself"); its gate passed
+in round 2 (15 of 16 natural games, 1 death).**
 
 ## Architecture
 
@@ -1788,7 +1788,23 @@ the shore and walk-back fixes; a trial is one fresh game):
 Of the 10 failures: 2 at a lab spot over water (no wall holds there: the shore fix since), 1 harness error each in two
 labs (a start that did not join in time), the others shelters that closed after 60 s or not at all while it fought.
 
-ROUND2_GATE
+The natural gate on staging (2026-10-09, the round-2 build with the shore and walk-back fixes, deployed in daylight
+by `deploy/push.sh`; Normal, daylight cycling, no console commands, fresh spots 16,500-18,000 blocks out, 8 games at
+once, the slow scripted player of `survive.mjs`, each game its whole 30-minute lease):
+
+| | 8 games from the morning (time ~400) | 8 games from mid-night (time ~17,800) | all 16 |
+| --- | --- | --- | --- |
+| passes (the lease ended it, no death) | **8 of 8** | **7 of 8** | **15 of 16 (94%)** |
+| deaths | 0 | 1 (slain by a zombie) | **1** |
+| shields made by the care | 8 | 9 (one bot twice, after its death) | 17 |
+| shelters, dusk gatherings, fights (replies) | 28, 3, 3 | 36, 1, 2 | 64, 4, 5 |
+| sheltered after dusk p50 / p90 | 1 / 4 s | 113 / 406 s (a step of the player's at dusk) | 3 / 393 s |
+| a care action, p50 / p90 | 0.9 / 41.2 s | 6.6 / 43.8 s | 2.1 / 43.7 s |
+| steps ok; step time p50 / p90 | 118 of 121; 13.5 / 35.0 s | 105 of 116; 14.7 / 27.7 s | 223 of 237; 13.7 / 33.5 s |
+| health at its lowest, median (min) | 20 (7) | 20 (12) | |
+| told in a reply / done before the game's last reply | 42 / 42 | 49 / 49 | 91 / 91 |
+
+**Against the gate (at most 1 death in 16): passed** (round 1: 1 in 8 and 3 in 8; the care off: 2 in 8).
 
 ## What is mocked
 
