@@ -7,7 +7,7 @@
 // Their 37 tools, their 1.36 MB tools/list and their required rationales never reach a guest: only these skills do.
 
 import { skillSet, TOOL_TIMEOUTS_MS, SMELT_PER_CALL, CRAFT_BATCH_MAX, SCHEMAS, NOT_HUNGRY_TEXT } from '../contracts.js';
-import { BLUEPRINTS, SMELT, MAX_DROPS, fuelPlan } from '../game.js';
+import { BLUEPRINTS, BLUEPRINT_NAMES, SMELT, MAX_DROPS, fuelPlan } from '../game.js';
 import { facingOf } from '../state.js';
 import { registryFor, requireMc } from '../mc.js';
 
@@ -25,6 +25,13 @@ export const HUNT_MOBS = Object.freeze([
   'blaze', 'magma_cube', 'ghast', 'wither_skeleton', 'phantom', 'silverfish', 'zombified_piglin', 'hoglin',
 ]);
 const EQUIP_TO = ['hand', 'off-hand', 'head', 'torso', 'legs', 'feet'];
+/**
+ * How near (blocks, flat, to its nearest cell; and 6 up or down) a build of the same blueprint and material continues
+ * the structure the last build left incomplete instead of starting a new one. The Muse re-test on staging (2026-10-08,
+ * game g42b738) sent build hut_3x3 three times in a row on the same spot: each started a new hut facing the way the bot
+ * then looked, and left three overlapping partial huts.
+ */
+export const CONTINUE_RADIUS = 12;
 /** No bucket is poured this close (blocks, flat) to where the bot joined (the world spawn, give or take its 10). */
 export const SPAWN_GUARD = 32;
 /** ...or this close to another player. */
@@ -81,6 +88,7 @@ export const MINEAI_DESCRIPTIONS = Object.freeze({
   collect: 'Mine n blocks of one type and pick up the drops: the body searches every loaded chunk around you (not only the nearest 32 blocks), walks there and uses the best tool you carry. stone drops cobblestone (collect cobblestone mines stone for it); iron_ore drops raw_iron and needs a stone pickaxe or better. The reply says what the step mined and picked up, and apart from that what changed on the way (blocks dug through, scaffolding placed).',
   craft: 'Craft n of an item from your inventory (rounded up to whole recipe batches; planks and sticks it lacks are made from what you carry). When the recipe needs a crafting table, the one you carry is put down for the craft and picked up again; carrying none, a table within reach is used, else one is made from 4 planks and left standing.',
   craft_batch: `Craft several items in order in ONE skill, one after another, each as craft: later items use what the earlier ones made, and a crafting table you carry (or one made earlier in the list) is put down for each item that needs it and picked up again. Up to ${CRAFT_BATCH_MAX} items; stops at the first item that cannot be made and says what is missing.`,
+  build: `Build a blueprint from blocks in your inventory in front of you, facing your way (shelter: around you). Blueprints: ${BLUEPRINT_NAMES.map((b) => `${b} = ${BLUEPRINTS[b].description}`).join('; ')}. Build again with the same blueprint and material within ${CONTINUE_RADIUS} blocks of one your last build left incomplete to continue that one, at its place and facing; else a new one. It digs cells clear, puts dirt under walls over a drop or water, keeps stone it cannot dig out and leaves water.`,
   smelt: `Smelt n items in one furnace and wait until all are done (about 10 s an item). item is the INPUT (raw_iron -> iron_ingot, oak_log -> charcoal, cobblestone -> stone). A furnace you carry is put down for it and picked up again; else a furnace within 24 blocks is used. Fuel from your inventory (coal, charcoal, planks, sticks, logs), one kind after another when one is not enough. At most ${SMELT_PER_CALL} a call; call again for the rest.`,
 });
 
@@ -131,6 +139,18 @@ const ATTACK_DROP = {
   sheep: 'mutton', chicken: 'chicken', rabbit: 'rabbit',
 };
 const HOSTILE_KINDS = new Set(['zombie', 'husk', 'drowned', 'skeleton', 'stray', 'spider', 'cave_spider', 'creeper', 'slime', 'witch']);
+
+/**
+ * Does a build call continue the structure the last build left incomplete? Same blueprint and material, and near it:
+ * a shelter (built around the bot) only from where it was built (its inner cell, give or take a block); anything
+ * else within CONTINUE_RADIUS blocks of its nearest cell.
+ * @param {{blueprint: string, material: string, cells: Array<{x,y,z}>, feet: {x,y,z}}|null} last
+ */
+export function continuesLast(last, args, feet) {
+  if (!last || last.blueprint !== args.blueprint || last.material !== args.material || !feet) return false;
+  if (args.blueprint === 'shelter') return Math.max(Math.abs(feet.x - last.feet.x), Math.abs(feet.z - last.feet.z)) <= 1 && Math.abs(feet.y - last.feet.y) <= 1;
+  return last.cells.some((c) => Math.hypot(c.x - feet.x, c.z - feet.z) <= CONTINUE_RADIUS && Math.abs(c.y - feet.y) <= 6);
+}
 
 /** Blueprint cells for build_structure: '#' the material, '.' dug clear; anchored as our build skill anchors them. */
 export function blueprintCells(blueprint, material, feet, headingDegrees) {
@@ -224,8 +244,14 @@ export function toTheirs(skill, args, ctx) {
     case 'build': {
       if (!ctx.position) return refuse('the body does not know where it stands yet; try again in a moment');
       const feet = { x: Math.floor(ctx.position.x), y: Math.floor(ctx.position.y), z: Math.floor(ctx.position.z) };
+      // the structure the last build left incomplete, when this call is the same build near it: the same cells again
+      // (the runtime audits them and works only the ones still wrong), never a new one facing the bot's new heading
+      const last = ctx.lastBuild ?? null;
+      if (continuesLast(last, args, feet)) {
+        return { calls: [{ tool: 'build_structure', args: { blocks: last.cells, remove_wrong_blocks: true } }], note: `continued the ${args.blueprint} begun facing ${last.facing} at ${at(last.feet)}`, build: last };
+      }
       const { cells, facing } = blueprintCells(args.blueprint, args.material, feet, ctx.heading);
-      return { calls: [{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: true } }], note: `built facing ${facing}` };
+      return { calls: [{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: true } }], note: `built facing ${facing}`, build: { blueprint: args.blueprint, material: args.material, cells, facing, feet } };
     }
     case 'attack': {
       let target = args.target;
@@ -287,6 +313,83 @@ export function toTheirs(skill, args, ctx) {
 // eslint-disable-next-line no-control-regex
 const clean = (v, max = 400) => String(v ?? '').replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 const xyz = (p) => (p && Number.isFinite(p.x) ? `${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}` : '');
+
+/**
+ * Text cut to max characters for a reply, never mid-word or with a bracket left open: cut at the last clause or word
+ * boundary, "..." to show it was cut, and any bracket the kept part opened closed again. The Muse re-test's third
+ * build reply was cut 400 characters in, in the middle of "search" ("-178,64,58: sea"), and its parenthesis never
+ * closed, so "sea" read as water.
+ */
+export function cut(text, max = 400) {
+  const t = clean(text, 100_000);
+  if (t.length <= max) return t;
+  let head = t.slice(0, max - 8);
+  const boundary = Math.max(head.lastIndexOf('; '), head.lastIndexOf(', '), head.lastIndexOf(' '));
+  if (boundary > max * 0.6) head = head.slice(0, boundary);
+  head = head.replace(/[\s;,:(\[]+$/, '');
+  const closers = [];
+  for (const ch of head) {
+    if (ch === '(' || ch === '[') closers.push(ch === '(' ? ')' : ']');
+    else if ((ch === ')' || ch === ']') && closers.at(-1) === ch) closers.pop();
+  }
+  return `${head} ...${closers.reverse().join('')}`;
+}
+
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const cellsAt = (named) => named.map((c) => `${c.x},${c.y},${c.z}`).join('; ');
+
+/**
+ * Why the cells of a build still wrong were left, in plain words from their audit's groups (reason, count, named
+ * cells with the block in the way or what refused them): "could not reach 2 cells (-178,61,55; -178,62,53): 3 places
+ * to stand tried: path search gave up after 5 s".
+ */
+function describeLeft(st) {
+  const parts = [];
+  for (const g of st.left ?? []) {
+    const named = g.named ?? [];
+    const more = g.count > named.length ? `, and ${g.count - named.length} more` : '';
+    const where = named.length ? ` (${cellsAt(named)}${more})` : '';
+    const details = [...new Set(named.map((c) => c.detail).filter(Boolean))];
+    const why = details.length ? `: ${cut(details[0], 120)}${details.length > 1 ? ' (and other reasons)' : ''}` : '';
+    switch (g.reason) {
+      case 'unreachable': parts.push(`could not reach ${plural(g.count, 'cell')}${where}${why}`); break;
+      case 'refused': parts.push(`${plural(g.count, 'cell')} refused${where}${why}`); break;
+      case 'holds_another_block': parts.push(`${plural(g.count, 'cell')} ${g.count === 1 ? 'holds' : 'hold'} another block (${named.map((c) => `${c.holds ?? 'a block'} at ${c.x},${c.y},${c.z}`).join('; ')}${more})`); break;
+      case 'nothing_to_place_against': parts.push(`${plural(g.count, 'cell')} ${g.count === 1 ? 'has' : 'have'} nothing solid to place against${where}`); break;
+      case 'block_not_carried': parts.push(`${plural(g.count, 'cell')} need${g.count === 1 ? 's' : ''} a block you do not carry${where}`); break;
+      case 'would_seal_bot_in': parts.push(`${plural(g.count, 'cell')} would seal you in where you stand${where}`); break;
+      case 'bot_stands_in_it': parts.push(`${plural(g.count, 'cell')} ${g.count === 1 ? 'is' : 'are'} where you stand${where}`); break;
+      case 'not_loaded': parts.push(`${plural(g.count, 'cell')} ${g.count === 1 ? 'is' : 'are'} not loaded${where}`); break;
+      default: parts.push(`${plural(g.count, 'cell')} ${g.count === 1 ? 'was' : 'were'} still to do when the build stopped${where}`);
+    }
+  }
+  const missing = (st.missing ?? []).map((m) => `${m.count} ${m.block}`).join(', ');
+  if (missing) parts.push(`short of ${missing}`);
+  return parts.join('; ');
+}
+
+/**
+ * Why a build stopped before every cell was done, in a few words: a tool that wore out ("[TOOL_TIER_LOST]
+ * wooden_pickaxe was lost at ...; no pickaxe remains."), or their stop reason. Staging's first build with a wooden
+ * pickaxe stopped so, and the reply named 22 cells holding stone without saying why they were not dug.
+ */
+function buildStop(code, text) {
+  const lost = /^(\w+) was lost at [^;]*; (.*?)\.?$/.exec(text);
+  if (code === 'TOOL_TIER_LOST' && lost) return `your ${lost[1]} wore out (${lost[2]}); carry a better tool and build again to continue it`;
+  return cut(text.replace(/^The build stopped: /, '').replace(/\.$/, ''), 160);
+}
+
+/** What a build did besides the blueprint's own blocks: solid ground kept, water left, blocks put under walls. */
+function buildNotes(st) {
+  const notes = [];
+  const kept = st.kept ?? [];
+  const keptN = kept.reduce((n, k) => n + k.count, 0);
+  if (keptN) notes.push(`${plural(keptN, 'cell')} kept the ${kept.map((k) => k.block).join(' and ')} already there (solid, and it could not be dug out)`);
+  if (st.water) notes.push(`${plural(st.water, 'cell')} to clear ${st.water === 1 ? 'is' : 'are'} water (water cannot be dug)`);
+  const supports = (st.supports ?? []).map((sp) => `${sp.count} ${sp.block}`);
+  if (supports.length) notes.push(`put ${supports.join(' and ')} under walls that had nothing to place against`);
+  return notes;
+}
 
 /** Their error codes -> our typed codes (the first match wins; anything else is FAILED). */
 const CODE_RULES = [
@@ -356,7 +459,8 @@ function describe(tool, r, call) {
     const st = r.structure;
     const material = materialOf(call?.args) ?? 'blocks';
     const dug = Number(st.dug) || 0;
-    return `placed ${Number(st.placed) || 0} ${material}${dug ? ` and dug ${dug} cell${dug === 1 ? '' : 's'} clear` : ''} (${Number(st.correct) || 0} of ${Number(st.cells) || 0} cells as the blueprint)`;
+    const notes = buildNotes(st);
+    return `placed ${Number(st.placed) || 0} ${material}${dug ? ` and dug ${dug} cell${dug === 1 ? '' : 's'} clear` : ''} (${Number(st.correct) || 0} of ${Number(st.cells) || 0} cells as the blueprint${notes.length ? `; ${notes.join('; ')}` : ''})`;
   }
   if (r?.craft) {
     const made = (r.craft.items ?? []).map((i) => `${i.gained} ${i.item}`).join(', ');
@@ -417,7 +521,11 @@ export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
     const w = r.workstation;
     return { ok: true, result: `${said ?? 'done'}; the ${w.block} put down at ${xyz(w.position)} could not be picked up again (it stays there, or lies there as an item)${extra}`, code: null, theirs };
   }
-  const why = clean(text || (status === 'partial' ? 'only part of it was done' : 'it did not work'));
+  // a build says which cells it could not do and why, from its audit, never its whole error text cut short
+  const st = tool === 'build_structure' && r.structure && r.structure.wrong > 0 ? r.structure : null;
+  const why = st
+    ? cut(`${Number(st.cells) - Number(st.wrong)} of ${st.cells} cells done; ${describeLeft(st) || 'some cells are still wrong'}${theirs && theirs !== 'BUILD_INCOMPLETE' ? `; the build stopped: ${buildStop(theirs, text)}` : ''}`, 600)
+    : cut(text || (status === 'partial' ? 'only part of it was done' : 'it did not work'));
   // a failure their code does not type, but whose words say something is not carried, is NEED_ITEMS
   let code = codeFor(theirs) ?? 'FAILED';
   if (code === 'FAILED' && /\b(does not carry|not carried|no \w+ carried|short of \d+)\b/i.test(why)) code = 'NEED_ITEMS';
@@ -500,6 +608,8 @@ export function ownChange(tool, output, call = {}) {
       const material = materialOf(call?.args);
       if (!material) return null;
       addTo(own, material, -Number(r.structure.placed));
+      // blocks put under walls that had nothing to place against (patch 0011): used by the step too
+      for (const sp of r.structure.supports ?? []) addTo(own, sp.block, -Number(sp.count));
       return nonZero(own);
     }
     default:

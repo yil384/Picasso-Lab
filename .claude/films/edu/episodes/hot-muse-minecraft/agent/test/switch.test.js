@@ -275,5 +275,5 @@ test('docs/SWITCH.md: the agent only through recreate.sh, Caddy only through cad
   assert.doesNotMatch(commands, /data\/[^\s]*\.bak|> *data\//, 'nothing written into Paper\'s root-owned data folder');
   assert.doesNotMatch(doc, /<T>/, 'no backup named by a placeholder the reader has to guess');
   assert.match(commands, /caddy-proxy-line\.py add staging[\s\S]*caddy-proxy-line\.py remove staging[\s\S]*caddy-proxy-line\.py add production[\s\S]*caddy-proxy-line\.py remove production/);
-  assert.equal((commands.match(/recreate\.sh (production|staging)/g) ?? []).length, 7, '3a, its undo, 3b, its undo, the switch, the undo of step 2, the rollback');
+  assert.equal((commands.match(/recreate\.sh (production|staging)/g) ?? []).length, 8, '3a, its undo, 3b, its undo, the switch, the undo of step 2, the rollback, the undo of the 0011 update (section 7)');
 });

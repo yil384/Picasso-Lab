@@ -1,0 +1,1095 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0011: build_structure on rough ground gives up on no cell the bot can reach. The Muse re-test on staging (2026-10-08,
+game g42b738) left 1-3 cells of three hut_3x3 and a shelter "refused" in a gravel pocket its iron route had dug:
+"search timed out after 2000 ms compute; no path or usable partial route found", the closest node within reach of the
+cell. Causes, each reproduced on Paper at that spot (same seed): a route out of the hut put dirt scaffolding into a
+wall cell it had just dug, which then had no face the bot could see; a search for any workable cell that failed gave up
+on whichever cell was nearest the bot, not the one it was for; a roof cell of stone buried by its neighbours could not
+be dug from anywhere. On a slope a hut whose walls stood over a drop placed none of its 23 blocks ("nothing solid to
+place against"), and standing in a pond a hut's door and inside cells held water, which a dig settled at once without
+removing, so the loop never yielded and the supervisor's watchdog ended the runtime (RUNTIME_UNRESPONSIVE). Now: a route
+never puts scaffolding into a cell of the structure; a cell the composite route cannot reach is tried from up to 3
+places to stand within reach of it (open now, nearest the bot first, a dig only where a face of it can be seen), each
+route with a 5 s search (sliced, as every search, between turns of the event loop), 12 such routes a run at most, and
+only that cell is given up on ("unreachable", with what was tried); a cell with nothing to place against gets a column
+of up to 4 blocks under it from the ground (a carried scaffold block that is not a material of the structure, else
+spare material); a wall or roof cell of solid ground that cannot be dug out keeps its block ("kept", counted done); a
+cell asked to be air that holds water is left as water (counted done); a cell dug 3 times that fills again is given
+up on; every cell worked yields to the event loop first; a placement into a cell the bot's own body reaches into (it
+floats half a block up in water, under a shelter's roof) lets go of jump and waits up to 1.5 s for the body to settle. The audit gains kept, water and supports, and "1 was
+refused", not "1 were refused". With tests (build-process, build-structure, movement-policy).
+
+diff --git a/src/actions/build-structure/build-structure.test.ts b/src/actions/build-structure/build-structure.test.ts
+index 8e6b276..a7811ca 100644
+--- a/src/actions/build-structure/build-structure.test.ts
++++ b/src/actions/build-structure/build-structure.test.ts
+@@ -112,10 +112,10 @@ test("the audit says why each wrong cell was left, naming the block in the way a
+   assert.deepEqual(result.structure.missing, [{ block: "cobblestone", count: 2 }]);
+   assert.match(
+     result.error,
+-    /BUILD_INCOMPLETE\] 2 cells still wrong: 1 hold another block \(oak_leaves at 2,64,0\); 1 need a block the bot does not carry \(4,64,0\); short of 2 cobblestone\./,
++    /BUILD_INCOMPLETE\] 2 cells still wrong: 1 holds another block \(oak_leaves at 2,64,0\); 1 needs a block the bot does not carry \(4,64,0\); short of 2 cobblestone\./,
+   );
+   const markdown = formatBuildStructureResult(result);
+-  assert.match(markdown, /- Left wrong: 1 hold another block \(oak_leaves at 2,64,0\)/);
++  assert.match(markdown, /- Left wrong: 1 holds another block \(oak_leaves at 2,64,0\)/);
+   assert.match(markdown, /- Missing: 2 cobblestone/);
+ });
+ 
+diff --git a/src/actions/build-structure/build-structure.ts b/src/actions/build-structure/build-structure.ts
+index 337229d..d37267d 100644
+--- a/src/actions/build-structure/build-structure.ts
++++ b/src/actions/build-structure/build-structure.ts
+@@ -16,6 +16,7 @@ import { observeMineflayerBlock } from "../../navigation/mineflayer/world.js";
+ import { DIG_REACH } from "../../navigation/movements/excavation.js";
+ import {
+   build,
++  isDone,
+   type BuildCell,
+   type BuildCellState,
+   type BuildRequest,
+@@ -53,9 +54,11 @@ function productionPhysics(
+ ): BuildStructurePhysics {
+   return {
+     // What the structure is made of must not be spent building scaffold to reach it.
+-    movements: (protectedCells) =>
++    movements: (protectedCells, structureCells) =>
+       createMovements(bot, {
+         protectedCells,
++        // 0011: no scaffolding into any cell of the structure
++        noScaffoldCells: structureCells,
+         protectedScaffoldNames: [...new Set(request.cells.map((cell) => cell.blockName))].filter(
+           (name) => name !== "air",
+         ),
+@@ -97,7 +100,14 @@ function leftReason(state: BuildCellState): LeftReason | null {
+       return "not_loaded";
+     case "refused":
+       return "refused";
++    case "unreachable":
++      return "unreachable";
++    case "kept":
++    case "water":
++      // 0011: done; reported apart
++      return null;
+     case "placeable":
++    case "needs_support":
+       // Still workable when the run ended, which the stop reason explains.
+       return "not_reached";
+   }
+@@ -106,7 +116,7 @@ function leftReason(state: BuildCellState): LeftReason | null {
+ function shortfall(bot: Bot, result: BuildResult): StructureAudit["missing"] {
+   const needed = new Map<string, number>();
+   for (const { cell, state } of result.cells) {
+-    if (state.kind === "correct" || cell.blockName === "air") continue;
++    if (isDone(state) || cell.blockName === "air") continue;
+     needed.set(cell.blockName, (needed.get(cell.blockName) ?? 0) + 1);
+   }
+   const carried = new Map<string, number>();
+@@ -128,19 +138,29 @@ function audit(bot: Bot, result: BuildResult): StructureAudit {
+       group.named.push({
+         ...cell.position,
+         ...("holds" in state && { holds: state.holds }),
+-        ...(state.kind === "refused" && { detail: state.reason }),
++        ...((state.kind === "refused" || state.kind === "unreachable") && { detail: state.reason }),
+       });
+     }
+     left.set(reason, group);
+   }
+-  const wrong = result.cells.length - result.cells.filter(({ state }) => state.kind === "correct").length;
++  const wrong = result.cells.filter(({ state }) => !isDone(state)).length;
++  // 0011: cells done without the block asked for: solid ground kept, water in a cell asked to be clear
++  const kept = new Map<string, number>();
++  let water = 0;
++  for (const { state } of result.cells) {
++    if (state.kind === "kept") kept.set(state.holds, (kept.get(state.holds) ?? 0) + 1);
++    if (state.kind === "water") water += 1;
++  }
+   return {
+     dimension: bot.game.dimension,
+     cells: result.cells.length,
+-    correct: result.cells.length - wrong,
++    correct: result.cells.filter(({ state }) => state.kind === "correct").length,
+     placed: result.placed,
+     dug: result.dug,
+     wrong,
++    kept: [...kept].map(([block, count]) => ({ block, count })).sort((left, right) => right.count - left.count),
++    water,
++    supports: [...result.supports].map(([block, count]) => ({ block, count })),
+     left: [...left.values()].sort((a, b) => b.count - a.count),
+     missing: shortfall(bot, result),
+     passes: result.passes,
+@@ -148,15 +168,17 @@ function audit(bot: Bot, result: BuildResult): StructureAudit {
+   };
+ }
+ 
+-const REASON_WORDS: Record<LeftReason, string> = {
+-  holds_another_block: "hold another block",
+-  nothing_to_place_against: "have nothing solid to place against",
+-  block_not_carried: "need a block the bot does not carry",
+-  would_seal_bot_in: "would seal the bot in from where it stands",
+-  bot_stands_in_it: "are where the bot stands",
+-  not_loaded: "are not loaded",
+-  refused: "were refused",
+-  not_reached: "were still to do when the build stopped",
++// 0011: one cell or several ("1 was refused", not "1 were refused")
++const REASON_WORDS: Record<LeftReason, readonly [string, string]> = {
++  holds_another_block: ["holds another block", "hold another block"],
++  nothing_to_place_against: ["has nothing solid to place against", "have nothing solid to place against"],
++  block_not_carried: ["needs a block the bot does not carry", "need a block the bot does not carry"],
++  would_seal_bot_in: ["would seal the bot in from where it stands", "would seal the bot in from where it stands"],
++  bot_stands_in_it: ["is where the bot stands", "are where the bot stands"],
++  not_loaded: ["is not loaded", "are not loaded"],
++  refused: ["was refused", "were refused"],
++  unreachable: ["could not be reached", "could not be reached"],
++  not_reached: ["was still to do when the build stopped", "were still to do when the build stopped"],
+ };
+ 
+ function describeLeft(group: StructureAudit["left"][number]): string {
+@@ -169,7 +191,7 @@ function describeLeft(group: StructureAudit["left"][number]): string {
+     })
+     .join("; ");
+   const more = group.count > group.named.length ? `, and ${group.count - group.named.length} more` : "";
+-  return `${group.count} ${REASON_WORDS[group.reason]} (${named}${more})`;
++  return `${group.count} ${REASON_WORDS[group.reason][group.count === 1 ? 0 : 1]} (${named}${more})`;
+ }
+ 
+ // ── Action execution ──────────────────────────────────────────────────────────────────────
+@@ -240,6 +262,9 @@ export function formatBuildStructureResult(result: BuildStructureResult): string
+       ? `Every cell of the structure holds its block (${structure.cells} cells).`
+       : `The structure is not complete: ${structure.wrong} of ${structure.cells} cells still wrong.`,
+     `- Placed ${structure.placed}, dug ${structure.dug}, correct now ${structure.correct}, in \`${structure.dimension}\``,
++    ...structure.kept.map((entry) => `- Kept ${entry.count} cell${entry.count === 1 ? "" : "s"} of ${entry.block} already there (solid; could not be dug out)`),
++    ...structure.supports.map((entry) => `- Put ${entry.count} ${entry.block} under cells that had nothing to place against (outside the structure)`),
++    ...(structure.water ? [`- ${structure.water} cell${structure.water === 1 ? "" : "s"} asked to be clear hold${structure.water === 1 ? "s" : ""} water`] : []),
+     ...structure.left.map((group) => `- Left wrong: ${describeLeft(group)}`),
+     `- Missing: ${structure.missing.map((entry) => `${entry.count} ${entry.block}`).join(", ") || "nothing"}`,
+     `- Passes: ${structure.passes}`,
+diff --git a/src/actions/build-structure/contract.ts b/src/actions/build-structure/contract.ts
+index b96704a..37d012c 100644
+--- a/src/actions/build-structure/contract.ts
++++ b/src/actions/build-structure/contract.ts
+@@ -5,7 +5,7 @@ import { registryNameSchema } from "../registry-name.js";
+ 
+ export const BUILD_STRUCTURE = "build_structure" as const;
+ export const BUILD_STRUCTURE_DESCRIPTION =
+-  "Build a structure given as cells, each an absolute x, y, z and a carried block name, or air for a cell to dig clear, or as a nether portal frame using 10 obsidian and 4 cobblestone corner supports at an interior corner with its interior kept clear. Places every cell it can reach from where the bot stands, walks within reach of the rest lowest first, never builds itself in, and reports what was placed, dug, and short, and why each cell still wrong was left: holding another block, nothing to place against, its block not carried, would seal the bot in, or refused. Required tool-tier loss stops with partial progress by default; on_tool_loss=continue keeps the same build running. Sending the same structure again resumes or audits it.";
++  "Build a structure given as cells, each an absolute x, y, z and a carried block name, or air for a cell to dig clear, or as a nether portal frame using 10 obsidian and 4 cobblestone corner supports at an interior corner with its interior kept clear. Places every cell it can reach from where the bot stands, walks within reach of the rest lowest first (a cell no route reaches is tried from other places to stand near it), never builds itself in, and reports what was placed, dug, and short, and why each cell still wrong was left: holding another block, nothing to place against, its block not carried, would seal the bot in, could not be reached, or refused. A cell with nothing to place against gets a column of blocks under it from the ground (at most 4, outside the structure; a carried scaffold block such as dirt, else spare material). A cell of solid ground that cannot be dug out keeps its block, and a cell to dig clear that holds water is left as water; both count as done and are reported. Required tool-tier loss stops with partial progress by default; on_tool_loss=continue keeps the same build running. Sending the same structure again resumes or audits it.";
+ 
+ /** How many cells one build may describe; a portal preset is twenty and a small shelter under a hundred. */
+ export const MAX_STRUCTURE_CELLS = 256;
+@@ -115,6 +115,7 @@ export const LEFT_REASONS = [
+   "bot_stands_in_it",
+   "not_loaded",
+   "refused",
++  "unreachable",
+   "not_reached",
+ ] as const;
+ export type LeftReason = (typeof LEFT_REASONS)[number];
+@@ -145,6 +146,16 @@ export const structureAuditSchema = z.strictObject({
+   dug: z.number().int().nonnegative(),
+   /** Cells still holding something other than the requested block. */
+   wrong: z.number().int().nonnegative(),
++  /**
++   * Patched for Muse plays Minecraft (picasso-lab), 0011: cells asked for a
++   * block that keep the solid block they held, which could not be dug out;
++   * done, by the block kept.
++   */
++  kept: z.array(z.strictObject({ block: z.string(), count: z.number().int().positive() })),
++  /** 0011: cells asked to be air that hold water; done (water cannot be dug). */
++  water: z.number().int().nonnegative(),
++  /** 0011: blocks put under cells with nothing to place against (a wall over a drop or over water), outside the structure. */
++  supports: z.array(z.strictObject({ block: z.string(), count: z.number().int().positive() })),
+   /** The wrong cells grouped by why they were left, with up to a few of each named. */
+   left: z.array(
+     z.strictObject({
+diff --git a/src/navigation/mineflayer/movement-policy.test.ts b/src/navigation/mineflayer/movement-policy.test.ts
+index 96c635d..4b981ac 100644
+--- a/src/navigation/mineflayer/movement-policy.test.ts
++++ b/src/navigation/mineflayer/movement-policy.test.ts
+@@ -2,6 +2,7 @@ import { HORIZONTAL_TICKS_PER_BLOCK } from "../goals/index.js";
+ import { createMovements } from "../runtime.js";
+ import { BREAK_OPENS_INTO_LIQUID } from "../movements/policy.js";
+ import { MemoryWorld } from "../world/memory-world.js";
++import { packKey } from "../world/world.js";
+ import { type LoadedBlock, loadedObservation } from "../world/world.js";
+ import { TERRAIN_BREAK_PENALTY } from "./movement-policy.js";
+ import { blockClass, observeMineflayerBlock } from "./world.js";
+@@ -251,3 +252,19 @@ test("scaffold admission follows other mobs moving into and out of a placement c
+   mob.position.x = 1.1;
+   assert.equal(policy.decidePlace(target.x, target.y, target.z, world).kind, "prohibited");
+ });
++
++/**
++ * Patched for Muse plays Minecraft (picasso-lab), 0011. A route out of a hut
++ * being built put dirt into a wall cell it had just dug; the cell then had no
++ * face the bot could see, and the build gave up on it.
++ */
++test("a route never puts scaffolding into a cell of the structure being built", () => {
++  const bot = botFixture();
++  const structure = new Set([packKey(1, 64, 0)]);
++  const policy = createMovements(bot, { noScaffoldCells: structure });
++  const refused = policy.decidePlace(1, 64, 0, world);
++  assert.equal(refused.kind, "prohibited");
++  if (refused.kind === "prohibited") assert.equal(refused.reason, "a cell of the structure being built");
++  assert.equal(policy.decidePlace(2, 64, 0, world).kind, "allowed");
++  assert.equal(createMovements(bot).decidePlace(1, 64, 0, world).kind, "allowed");
++});
+diff --git a/src/navigation/mineflayer/movement-policy.ts b/src/navigation/mineflayer/movement-policy.ts
+index cf5aec3..cd9d858 100644
+--- a/src/navigation/mineflayer/movement-policy.ts
++++ b/src/navigation/mineflayer/movement-policy.ts
+@@ -91,6 +91,13 @@ export interface MineflayerMovementPolicyOptions {
+   readonly breakPenalty?: number;
+   /** Cells a route may never dig, as packed keys: the blocks of a structure being built. */
+   readonly protectedCells?: ReadonlySet<number>;
++  /**
++   * Patched for Muse plays Minecraft (picasso-lab), 0011: cells a route may
++   * never put scaffolding into, as packed keys: every cell of a structure being
++   * built. A route out of a hut once left dirt in a wall cell it had just dug,
++   * which then had no face the bot could see.
++   */
++  readonly noScaffoldCells?: ReadonlySet<number>;
+ }
+ 
+ /** Whether the cell holds water or lava, and whether as a source; null when it holds neither or is not loaded. */
+@@ -448,6 +455,7 @@ export function createMineflayerMovementPolicy(
+       return verdict;
+     },
+     decidePlace: (x, y, z) => {
++      if (options.noScaffoldCells?.has(packKey(x, y, z))) return { kind: "prohibited", reason: "a cell of the structure being built" };
+       // The route moves our own body before placing; other bodies are live obstacles.
+       const reason = occupiedCell(bot, { x, y, z }, bot.entity.id);
+       return reason ? { kind: "prohibited", reason } : ALLOWED_STEP;
+diff --git a/src/navigation/processes/building/build-process.test.ts b/src/navigation/processes/building/build-process.test.ts
+index e6943ae..f8eb738 100644
+--- a/src/navigation/processes/building/build-process.test.ts
++++ b/src/navigation/processes/building/build-process.test.ts
+@@ -4,7 +4,16 @@ import test from "node:test";
+ import { Vec3 } from "vec3";
+ import { packKey } from "../../index.js";
+ import { structureWorld } from "../../../test-support/structure-world.js";
+-import { build, enclosesBot, type BuildCell, type BuildRequest, type BuildResult } from "./build-process.js";
++import {
++  build,
++  enclosesBot,
++  plainRouteFailure,
++  DIGS_PER_CELL,
++  STANDS_PER_CELL,
++  type BuildCell,
++  type BuildRequest,
++  type BuildResult,
++} from "./build-process.js";
+ import { observation } from "../../../test-support/navigation.js";
+ 
+ const goalTestWorld = new GoalTestWorld();
+@@ -194,9 +203,10 @@ test("a cell that cannot be placed is reported by its own state, and the run sto
+     [2, 64, 0],
+     [3, 64, 0],
+   ];
++  // 0011: five above the floor, beyond a support column's reach (SUPPORT_DEPTH 4)
+   const lintel: [number, number, number][] = [
+-    [2, 67, 0],
+-    [3, 67, 0],
++    [2, 69, 0],
++    [3, 69, 0],
+   ];
+   for (const row of [
+     {
+@@ -318,27 +328,202 @@ test("a cell asked to be air is dug clear without being asked to remove wrong bl
+   assert.equal(bot.blockAt(new Vec3(2, 64, 0))!.name, "air");
+ });
+ 
+-test("a route that cannot reach a cell refuses that cell and carries on with the rest", async () => {
++/** 0011: what a route goal names first, as the fake route reads it. */
++function goalCell(request: Parameters<BuildRequest["route"]>[0]): [number, number, number] | null {
++  const goal = request.goal.resolve(observation());
++  if (goal.kind !== "active") return null;
++  const match = /(-?\d+),(-?\d+),(-?\d+)/.exec(goal.revision);
++  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
++}
++
++test("a cell no route reaches is tried from places to stand, then given up on alone, and the rest is built", async () => {
+   const { bot, physics, placements } = structureWorld();
+-  let stopped = false;
++  const asked: string[] = [];
+   const result = await build(bot, {
+     ...physics,
++    // every route toward the first cell (x 10, and the places to stand around it) finds no path
+     route: async (options) => {
+-      if (!stopped) {
+-        stopped = true;
+-        return { status: "stopped", reason: "no path; closest node was 5,64,0", elapsedMs: 0 };
+-      }
++      const at = goalCell(options);
++      asked.push(at?.join(",") ?? "?");
++      if (at && at[0] <= 16) return { status: "stopped", reason: "no path found after 12 ms compute; visited 3 nodes", elapsedMs: 0 };
+       return physics.route(options);
+     },
+     cells: cells([
+       [10, 64, 0],
+-      [12, 64, 0],
++      [30, 64, 0],
+     ]),
+     removeWrongBlocks: false,
+   });
+   assert.equal(result.status, "stopped");
+   assert.equal(result.reason, null);
+-  assert.equal(placements.length, 1, "the other cell was still built");
+-  assert.ok(kinds(result).includes("refused"));
+-  assert.ok(kinds(result).includes("correct"));
++  assert.deepEqual(placements, ["30,64,0"], "the other cell was still built");
++  assert.deepEqual(result.cells[0]!.state, {
++    kind: "unreachable",
++    reason: `${STANDS_PER_CELL} places to stand tried: no path found`,
++  });
++  assert.equal(asked.filter((cell) => cell !== "10,64,0" && cell !== "30,64,0").length, STANDS_PER_CELL, "one route to each place to stand tried");
++});
++
++test("a cell the composite route cannot reach is built from a place to stand within reach of it", async () => {
++  const { bot, physics, placements } = structureWorld();
++  const stoodAt: string[] = [];
++  const result = await build(bot, {
++    ...physics,
++    // the composite goal (any of the cells) finds nothing; a route to one place to stand does
++    route: async (options) => {
++      const goal = options.goal.resolve(observation());
++      if (goal.kind === "active" && goal.revision.startsWith("any(")) {
++        await options.onCalculationFailure?.({
++          failure: {
++            kind: "search_limit",
++            limit: { kind: "search_time", limit: 2000, observed: 2000, closest: { position: { x: 8, y: 64, z: 0 }, heuristic: 1, cost: 1 } },
++            search: { visited: 25_000, generated: 41_000, computeMs: 2000 },
++          },
++          observation: observation(),
++        } as never);
++        return { status: "completed", elapsedMs: 0 };
++      }
++      // a route to a place to stand ends on it
++      const at = goalCell(options)!;
++      stoodAt.push(at.join(","));
++      bot.entity.position = new Vec3(at[0] + 0.5, at[1], at[2] + 0.5);
++      await options.onArrival?.({ signal: undefined } as never);
++      return { status: "completed", elapsedMs: 0 };
++    },
++    cells: cells([[10, 64, 0]]),
++    removeWrongBlocks: false,
++  });
++  assert.equal(result.status, "complete", result.reason ?? "");
++  assert.deepEqual(placements, ["10,64,0"]);
++  assert.deepEqual(stoodAt, ["6,64,0"], "the place to stand nearest the bot, within reach of the cell");
++});
++
++test("routes never put scaffolding into a cell of the structure (0011)", async () => {
++  const { bot, physics } = structureWorld();
++  const seen: ReadonlySet<number>[] = [];
++  const structure = [...cells([[2, 64, 0]]), ...cells([[3, 64, 0]], "air")];
++  await build(bot, {
++    ...physics,
++    movements: (protectedCells, structureCells) => {
++      seen.push(structureCells);
++      return physics.movements(protectedCells, structureCells);
++    },
++    cells: structure,
++    removeWrongBlocks: false,
++  });
++  assert.equal(seen.length, 1);
++  assert.deepEqual([...seen[0]!].sort(), [packKey(2, 64, 0), packKey(3, 64, 0)].sort(), "every cell, the clear ones too");
++});
++
++test("a wall over a drop gets a column of blocks under it from the ground, outside the structure (0011)", async () => {
++  const { bot, physics, placements } = structureWorld({ carried: { cobblestone: 2, dirt: 8 } });
++  // two cells three above the floor (y 63): nothing beside or below them
++  const result = await build(bot, { ...physics, cells: cells([[2, 67, 0], [3, 67, 0]]), removeWrongBlocks: false });
++  assert.equal(result.status, "complete", result.reason ?? "");
++  assert.equal(result.placed, 2);
++  assert.deepEqual([...result.supports], [["dirt", 3]], "one column, of the scaffold block; the second cell rests on the first");
++  assert.deepEqual(placements, ["2,64,0", "2,65,0", "2,66,0", "2,67,0", "3,67,0"]);
++  assert.equal(bot.blockAt(new Vec3(2, 64, 0))!.name, "dirt");
++});
++
++test("a support column takes spare material only when no scaffold block is carried, never what the cells need (0011)", async () => {
++  for (const row of [
++    { carried: { cobblestone: 2 }, kinds: ["unsupported", "unsupported"], supports: [] },
++    { carried: { cobblestone: 5 }, kinds: ["correct", "correct"], supports: [["cobblestone", 3]] },
++  ]) {
++    const { bot, physics } = structureWorld({ carried: row.carried });
++    const result = await build(bot, { ...physics, cells: cells([[2, 67, 0], [3, 67, 0]]), removeWrongBlocks: false });
++    assert.deepEqual(kinds(result), row.kinds, JSON.stringify(row.carried));
++    assert.deepEqual([...result.supports], row.supports, JSON.stringify(row.carried));
++  }
++});
++
++test("water in a cell asked to be clear counts as done, and a wall cell in water is placed (0011)", async () => {
++  const { bot, put, physics } = structureWorld();
++  put(new Vec3(2, 64, 0), "water");
++  put(new Vec3(3, 64, 0), "water");
++  // the fake world reads water as solid; the real one does not: only the classification matters here
++  const result = await build(bot, {
++    ...physics,
++    cells: [...cells([[2, 64, 0]], "air"), ...cells([[3, 64, 0]])],
++    removeWrongBlocks: true,
++  });
++  assert.equal(result.status, "complete", result.reason ?? "");
++  assert.deepEqual(kinds(result), ["water", "correct"]);
++  assert.equal(result.dug, 0, "water is never dug");
++});
++
++test("a wall cell of solid ground no place to stand can see is kept, and counts as done (0011)", async () => {
++  const { bot, put, physics, routes } = structureWorld();
++  put(new Vec3(2, 64, 0), "stone");
++  const result = await build(bot, {
++    ...physics,
++    canSeeDig: () => false,
++    cells: cells([[2, 64, 0]]),
++    removeWrongBlocks: true,
++  });
++  assert.equal(result.status, "complete", result.reason ?? "");
++  assert.deepEqual(result.cells[0]!.state, { kind: "kept", holds: "stone" });
++  assert.ok(routes.length <= 1, "no place to stand could see it: nothing to walk to");
++});
++
++test("a cell that fills again each time it is dug is given up on, and a dig that settles at once never holds the event loop (0011)", async () => {
++  const { bot, put, physics } = structureWorld();
++  put(new Vec3(2, 64, 0), "gravel");
++  put(new Vec3(2, 65, 0), "sand");
++  let digs = 0;
++  let timerRan = false;
++  setImmediate(() => {
++    timerRan = true;
++  });
++  const result = await build(bot, {
++    ...physics,
++    // the dig settles at once and the block is back (as water was, or gravel falling into the cell)
++    breakInPlace: () => {
++      digs += 1;
++      return Promise.resolve({ status: "broken" });
++    },
++    cells: [...cells([[2, 64, 0]], "air"), ...cells([[2, 65, 0]])],
++    removeWrongBlocks: true,
++  });
++  assert.equal(result.status, "stopped");
++  assert.deepEqual(result.cells[0]!.state, {
++    kind: "refused",
++    reason: `it filled again each of the ${DIGS_PER_CELL - 1} times it was dug (falling gravel or sand, or a liquid)`,
++  });
++  assert.deepEqual(result.cells[1]!.state, { kind: "kept", holds: "sand" }, "a wall cell that refills with sand is solid: kept");
++  assert.equal(digs, 2 * (DIGS_PER_CELL - 1));
++  assert.ok(timerRan, "the event loop ran between the digs");
++});
++
++test("plainRouteFailure says a route's failure in a few words", () => {
++  assert.equal(
++    plainRouteFailure("search timed out after 2000 ms compute (limit 2000 ms); no path or usable partial route found; visited 25704 nodes"),
++    "path search gave up after 2 s",
++  );
++  assert.equal(plainRouteFailure("no path found after 31 ms compute; visited 12 nodes, generated 40"), "no path found");
++});
++
++test("a cell the bot's floating body reaches into waits for the body to settle, or is refused saying so (0011)", async () => {
++  for (const row of [
++    { name: "it sinks to the floor once its jump is let go", settles: true, kinds: ["correct"] },
++    { name: "it stays afloat", settles: false, kinds: ["refused"] },
++  ]) {
++    const { bot, put, physics, placements } = structureWorld();
++    // standing in water the bot floats half a block up: its head reaches into the cell above its head cell
++    Object.assign(bot.entity, { position: new Vec3(0.5, 64.5, 0.5), width: 0.6 });
++    const controls: string[] = [];
++    Object.assign(bot, {
++      setControlState: (control: string, on: boolean) => {
++        controls.push(`${control}:${on}`);
++        if (row.settles) setTimeout(() => { bot.entity.position = new Vec3(0.5, 64, 0.5); }, 100);
++      },
++    });
++    put(new Vec3(1, 66, 0), "stone");
++    const result = await build(bot, { ...physics, cells: cells([[0, 66, 0]]), removeWrongBlocks: false });
++    assert.deepEqual(kinds(result), row.kinds, row.name);
++    assert.deepEqual(controls, ["jump:false"], row.name);
++    assert.equal(placements.length, row.settles ? 1 : 0, row.name);
++    if (!row.settles) assert.equal((result.cells[0]!.state as { reason: string }).reason, "your body is in the cell: you float in the water under it");
++  }
+ });
+diff --git a/src/navigation/processes/building/build-process.ts b/src/navigation/processes/building/build-process.ts
+index 5d7d2a1..e2e357d 100644
+--- a/src/navigation/processes/building/build-process.ts
++++ b/src/navigation/processes/building/build-process.ts
+@@ -26,10 +26,20 @@
+  * it would seal the bot in, or the server or the pathfinder refused it. The
+  * first ten live calls of the action above this all failed, and the model
+  * retried blind, because the audit only counted.
++ *
++ * Patched for Muse plays Minecraft (picasso-lab), 0011: a build on rough
++ * ground gives up on no cell the bot can reach. Routes never put scaffolding
++ * into a cell of the structure; a cell the composite route cannot reach is
++ * tried from places to stand within reach of it, each with a longer search,
++ * before it is given up on, and only that cell is; a wall or roof cell of solid
++ * ground that cannot be dug out from anywhere keeps its block; a cell asked to
++ * be clear that holds water is clear of blocks. The Muse re-test of 8 October
++ * left 1-3 cells of four builds in a gravel pocket "refused" after 2-second
++ * searches whose closest node was within reach of them.
+  */
+ import type { Bot } from "mineflayer";
+ import { Vec3 } from "vec3";
+-import { asVec3 } from "../../../utils/index.js";
++import { asVec3, cellIntersectsBody } from "../../../utils/index.js";
+ import {
+   findPlacementSupport,
+   isAir,
+@@ -41,8 +51,10 @@ import {
+ import {
+   anyGoal,
+   describeCalculationFailure,
++  exactBlockGoal,
+   nearGoal,
+   packKey,
++  STANDARD_SCAFFOLD_ITEMS,
+   type BlockPosition,
+   type BreakBlockInPlace,
+   type Goal,
+@@ -87,6 +99,42 @@ const IDLE_PASSES = 2;
+  */
+ const STEP_OUT_PASSES = 3;
+ 
++/**
++ * Patched for Muse plays Minecraft (picasso-lab), 0011: what a route to a
++ * place to stand may spend searching before it gives up, in compute time. The
++ * search runs in slices between turns of the event loop, so a longer budget
++ * holds nothing up; it stays well inside the navigator's 20-second planning
++ * stall. The inline default (2 s) gave up in a gravel pocket with the goal one
++ * dig away.
++ */
++export const BUILD_SEARCH_LIMITS = Object.freeze({ primaryTimeoutMs: 500, failureTimeoutMs: 5_000 });
++
++/** 0011: places to stand tried for one cell before it is given up on. */
++export const STANDS_PER_CELL = 3;
++
++/** 0011: routes to places to stand in one run, every cell together: what bounds the time spent on cells out of reach. */
++export const STAND_ROUTES_PER_RUN = 12;
++
++/**
++ * 0011: how deep a column of blocks may go under a cell with nothing to place
++ * against (a wall over a drop, over water). A hut over a slope of 2-4 blocks
++ * placed none of its 23 blocks.
++ */
++export const SUPPORT_DEPTH = 4;
++
++/**
++ * 0011: digs of one cell in a run before it is given up on: gravel or sand
++ * that falls into it again, a liquid that flows back.
++ */
++export const DIGS_PER_CELL = 4;
++
++/**
++ * 0011: how long a placement into a cell the bot's own body reaches into
++ * waits for the body to settle out of it: standing in water the bot floats
++ * half a block up, into a shelter's roof cell.
++ */
++const SETTLE_MS = 1_500;
++
+ /** Lets timers and I/O run between passes (0010): no pass of the loop can starve the event loop. */
+ const yieldToEventLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
+ 
+@@ -124,22 +172,54 @@ export type BuildCellState =
+   | { readonly kind: "unloaded" }
+   /** Nothing solid on any side to place against. */
+   | { readonly kind: "unsupported" }
++  /**
++   * 0011: nothing to place against yet, but a block put into the cell
++   * `below` (air or water over solid ground, not a cell of the structure)
++   * starts a column that gives it support; `item` is what goes there.
++   */
++  | {
++      readonly kind: "needs_support";
++      readonly below: BlockPosition;
++      readonly support: WorldBlock;
++      readonly face: Vec3;
++      readonly item: string;
++    }
+   | { readonly kind: "not_carried" }
+   /** Filling it would leave the bot's feet with no way out. */
+   | { readonly kind: "would_enclose" }
+   /** The bot's own feet or head. */
+   | { readonly kind: "occupied" }
+   /** A placement, dig, or route to it failed; it is not tried again this run. */
+-  | { readonly kind: "refused"; readonly reason: string };
++  | { readonly kind: "refused"; readonly reason: string }
++  /**
++   * 0011: no place to stand within reach of it was found, or none could be
++   * walked to; the reason says which, in a few words.
++   */
++  | { readonly kind: "unreachable"; readonly reason: string }
++  /**
++   * 0011: a cell asked for a block holds another solid block that could not be
++   * dug out (no place to stand can see it, or the dig was refused); the cell is
++   * solid, so the structure keeps it. It counts as done, and is reported.
++   */
++  | { readonly kind: "kept"; readonly holds: string }
++  /** 0011: a cell asked to be air holds water: clear of blocks, so it counts as done, and is reported. */
++  | { readonly kind: "water" };
++
++/** 0011: states that count as done: the block asked for, or as good as it. */
++export function isDone(state: BuildCellState): boolean {
++  return state.kind === "correct" || state.kind === "kept" || state.kind === "water";
++}
+ 
+ export interface BuildRequest {
+   readonly cells: readonly BuildCell[];
+   readonly removeWrongBlocks: boolean;
+   /**
+    * The route policy, given the live set of packed cells the route must never
+-   * dig: the structure's correct cells, kept current by the process.
++   * dig: the structure's correct cells, kept current by the process; and
++   * (0011) every cell of the structure, which a route never puts scaffolding
++   * into.
+    */
+-  readonly movements: (protectedCells: ReadonlySet<number>) => MovementPolicy;
++  readonly movements: (protectedCells: ReadonlySet<number>, structureCells: ReadonlySet<number>) => MovementPolicy;
+   readonly route: Navigate;
+   readonly breakInPlace: BreakBlockInPlace;
+   /** Whether the target has a reachable visible face from these feet. */
+@@ -157,6 +237,8 @@ export interface BuildResult {
+   readonly reason: string | null;
+   readonly placed: number;
+   readonly dug: number;
++  /** 0011: blocks put under cells with nothing to place against, outside the structure, by block. */
++  readonly supports: ReadonlyMap<string, number>;
+   readonly passes: number;
+   readonly cells: readonly { readonly cell: BuildCell; readonly state: BuildCellState }[];
+ }
+@@ -222,6 +304,43 @@ function carriedCounts(bot: Bot): Map<string, number> {
+   return counts;
+ }
+ 
++/** 0011: a cell the bot can stand in now: feet and head open (water at the feet only), a solid block under it. */
++function standable(bot: Bot, at: Vec3): boolean {
++  const feet = bot.blockAt(at);
++  const head = bot.blockAt(at.offset(0, 1, 0));
++  const floor = bot.blockAt(at.offset(0, -1, 0));
++  if (!feet || !head || !floor) return false;
++  const open = (block: WorldBlock) => block.boundingBox === "empty" && block.name !== "lava" && !block.name.endsWith("fire");
++  return open(feet) && open(head) && head.name !== "water" && floor.boundingBox === "block";
++}
++
++/**
++ * 0011: wait until the bot's body is out of a cell, its jump released so a
++ * body floating in water sinks to the floor; false when it is still in the
++ * cell after SETTLE_MS.
++ */
++async function settleOutOf(bot: Bot, cell: BlockPosition, signal?: AbortSignal): Promise<boolean> {
++  const inCell = () => cellIntersectsBody(cell, { position: bot.entity.position, width: bot.entity.width ?? 0.6, height: bot.entity.height ?? 1.8 });
++  if (!inCell()) return true;
++  bot.setControlState?.("jump", false);
++  for (const until = Date.now() + SETTLE_MS; Date.now() < until; ) {
++    await new Promise<void>((resolve) => setTimeout(resolve, 50));
++    signal?.throwIfAborted();
++    if (!inCell()) return true;
++  }
++  return false;
++}
++
++/** 0011: a route's long failure text in a few words: "path search gave up after 2 s", "no path found". */
++export function plainRouteFailure(reason: string): string {
++  const timedOut = /search timed out after (\d+) ms compute/.exec(reason);
++  if (timedOut) return `path search gave up after ${Math.max(1, Math.round(Number(timedOut[1]) / 1000))} s`;
++  if (/no path found/.test(reason)) return "no path found";
++  if (/search radius limit/.test(reason)) return "no path within the search radius";
++  const first = reason.split(/[;.]/)[0]!.trim();
++  return first.length > 80 ? `${first.slice(0, 77)}...` : first;
++}
++
+ /**
+  * Everything one build remembers between looks at the world: the state of
+  * every cell, the cells refused this run, and the tally. It is shared by the
+@@ -231,6 +350,18 @@ function carriedCounts(bot: Bot): Map<string, number> {
+ class BuildTargeting {
+   readonly #states = new Map<number, BuildCellState>();
+   readonly #refused = new Map<number, string>();
++  /** 0011: cells given up on after places to stand were tried, or kept as the solid block they hold. */
++  readonly #settled = new Map<number, Extract<BuildCellState, { kind: "unreachable" } | { kind: "kept" }>>();
++  /** 0011: places to stand a route could not reach this run. */
++  readonly #badStands = new Set<number>();
++  /** 0011: every cell of the structure, as packed keys: no scaffolding goes into them. */
++  readonly structureCells: ReadonlySet<number>;
++  readonly #solidCells: ReadonlySet<number>;
++  standRoutes = 0;
++  readonly supports = new Map<string, number>();
++  readonly #digs = new Map<number, number>();
++  /** 0011: the structure's materials, which a support column never uses while a cell still needs them. */
++  readonly #materials: ReadonlySet<string>;
+   /** The correct cells as packed keys, handed to the movement policy and kept current. */
+   readonly protectedCells = new Set<number>();
+   readonly #bounds: { readonly min: Vec3; readonly max: Vec3 };
+@@ -244,34 +375,120 @@ class BuildTargeting {
+     private readonly request: BuildRequest,
+   ) {
+     this.#bounds = boundsOf(request.cells);
++    this.structureCells = new Set(request.cells.map((cell) => keyOf(cell.position)));
++    this.#solidCells = new Set(request.cells.filter((cell) => cell.blockName !== "air").map((cell) => keyOf(cell.position)));
++    this.#materials = new Set(request.cells.map((cell) => cell.blockName).filter((name) => name !== "air"));
++  }
++
++  /** 0011: one more dig of this cell; false once it has been dug DIGS_PER_CELL times this run. */
++  countDig(cell: BuildCell): boolean {
++    const key = keyOf(cell.position);
++    const digs = (this.#digs.get(key) ?? 0) + 1;
++    this.#digs.set(key, digs);
++    return digs < DIGS_PER_CELL;
++  }
++
++  /** 0011: where working a cell puts or breaks a block: the cell, or the bottom of its support column. */
++  workPosition(cell: BuildCell): BlockPosition {
++    const state = this.stateOf(cell);
++    return state.kind === "needs_support" ? state.below : cell.position;
++  }
++
++  /**
++   * 0011: the item for a support column: a carried scaffold block that is not
++   * one of the structure's materials, else a material the bot carries more
++   * of than the structure's cells still need.
++   */
++  #supportItem(carried: ReadonlyMap<string, number>): string | null {
++    for (const name of STANDARD_SCAFFOLD_ITEMS) if (!this.#materials.has(name) && (carried.get(name) ?? 0) > 0) return name;
++    for (const name of this.#materials) {
++      const needed = this.request.cells.filter((cell) => cell.blockName === name && this.bot.blockAt(asVec3(cell.position))?.name !== name).length;
++      if ((carried.get(name) ?? 0) > needed) return name;
++    }
++    return null;
++  }
++
++  /**
++   * 0011: the bottom of a column under `position` down to solid ground, at most
++   * SUPPORT_DEPTH deep, through air, water or plants and never through a cell
++   * of the structure or the bot's own.
++   */
++  #supportBelow(position: Vec3, feet: Vec3, head: Vec3, carried: ReadonlyMap<string, number>): BuildCellState | null {
++    for (let depth = 1; depth <= SUPPORT_DEPTH; depth += 1) {
++      const at = position.offset(0, -depth, 0);
++      if (this.structureCells.has(keyOf(at)) || at.equals(feet) || at.equals(head)) return null;
++      if (!isReplaceableForPlacement(this.bot.blockAt(at))) return null;
++      const under = this.bot.blockAt(at.offset(0, -1, 0));
++      if (isSolid(under)) {
++        const item = this.#supportItem(carried);
++        return item ? { kind: "needs_support", below: { x: at.x, y: at.y, z: at.z }, support: under!, face: new Vec3(0, 1, 0), item } : null;
++      }
++    }
++    return null;
+   }
+ 
+   /** Work done or given up on, whose standing still across passes means the run is idle. */
+   get progress(): number {
+-    return this.placed + this.dug + this.#refused.size;
++    let supports = 0;
++    for (const count of this.supports.values()) supports += count;
++    return this.placed + this.dug + supports + this.#refused.size + this.#settled.size;
+   }
+ 
+   refuse(cell: BuildCell, reason: string): void {
++    // 0011: a wall or roof cell of solid ground whose dig was refused stays as it is
++    if (this.keep(cell)) return;
+     this.#refused.set(keyOf(cell.position), reason);
+     this.#refreshedAtMs = Number.NEGATIVE_INFINITY;
+   }
+ 
+-  /** Baritone's `blacklistClosestOnFailure`: the target nearest the failure is given up on, not the build. */
+-  refuseClosest(position: BlockPosition, reason: string): boolean {
+-    const origin = asVec3(position);
+-    let closest: BuildCell | null = null;
+-    for (const target of this.targets()) {
+-      if (
+-        closest === null ||
+-        asVec3(target.position).distanceSquared(origin) < asVec3(closest.position).distanceSquared(origin)
+-      )
+-        closest = target;
+-    }
+-    if (closest === null) return false;
+-    this.refuse(closest, reason);
++  /** 0011: keep the solid block a cell asked for another block holds; false when it holds nothing solid. */
++  keep(cell: BuildCell): boolean {
++    if (cell.blockName === "air") return false;
++    const block = this.bot.blockAt(asVec3(cell.position));
++    if (!isSolid(block) || block!.name === cell.blockName) return false;
++    this.#settled.set(keyOf(cell.position), { kind: "kept", holds: block!.name });
++    this.#refreshedAtMs = Number.NEGATIVE_INFINITY;
+     return true;
+   }
+ 
++  /** 0011: give up on a cell no place to stand reached: kept when it holds solid ground, else unreachable. */
++  giveUp(cell: BuildCell, reason: string): void {
++    if (this.keep(cell)) return;
++    this.#settled.set(keyOf(cell.position), { kind: "unreachable", reason });
++    this.#refreshedAtMs = Number.NEGATIVE_INFINITY;
++  }
++
++  badStand(at: Vec3): void {
++    this.#badStands.add(keyOf(at));
++  }
++
++  /**
++   * 0011: places to stand within reach of a cell, nearest the bot first:
++   * open now, never a cell of the structure that will hold a block, and for a
++   * dig one from which a face of the block can be seen.
++   */
++  standsFor(cell: BuildCell): Vec3[] {
++    const bot = this.bot;
++    const target = asVec3(this.workPosition(cell));
++    const feet = feetOf(bot);
++    const dig = this.stateOf(cell).kind === "diggable";
++    const { min, max } = this.#bounds;
++    const found: { at: Vec3; cost: number }[] = [];
++    for (let dx = -BUILD_REACH; dx <= BUILD_REACH; dx += 1)
++      for (let dy = -BUILD_REACH; dy <= BUILD_REACH; dy += 1)
++        for (let dz = -BUILD_REACH; dz <= BUILD_REACH; dz += 1) {
++          if (dx === 0 && dz === 0 && dy >= -1 && dy <= 1) continue;
++          const at = target.offset(dx, dy, dz);
++          if (at.distanceTo(target) > BUILD_REACH || at.equals(feet) || this.#badStands.has(keyOf(at))) continue;
++          if (this.#solidCells.has(keyOf(at)) || this.#solidCells.has(keyOf(at.offset(0, 1, 0)))) continue;
++          if (!standable(bot, at)) continue;
++          if (dig && !this.request.canSeeDig(cell.position, { x: at.x + 0.5, y: at.y, z: at.z + 0.5 })) continue;
++          const inside = at.x >= min.x && at.x <= max.x && at.z >= min.z && at.z <= max.z && at.y >= min.y && at.y <= max.y;
++          found.push({ at, cost: at.distanceTo(feet) + (inside ? 3 : 0) });
++        }
++    return found.sort((left, right) => left.cost - right.cost).map((entry) => entry.at);
++  }
++
+   refresh(): void {
+     this.#refreshedAtMs = Number.NEGATIVE_INFINITY;
+     this.states();
+@@ -318,6 +535,10 @@ class BuildTargeting {
+     const block = this.bot.blockAt(position);
+     if (block === null) return { kind: "unloaded" };
+     if (block.name === cell.blockName || (cell.blockName === "air" && isAir(block))) return { kind: "correct" };
++    // 0011: water cannot be dug; a cell asked to be clear that holds it is clear of blocks
++    if (cell.blockName === "air" && block.name === "water") return { kind: "water" };
++    const settled = this.#settled.get(keyOf(cell.position));
++    if (settled !== undefined && (settled.kind !== "kept" || settled.holds === block.name)) return settled;
+     const refused = this.#refused.get(keyOf(cell.position));
+     if (refused !== undefined) return { kind: "refused", reason: refused };
+     // A cell asked to be air can only be dug clear, so asking is allowing.
+@@ -329,7 +550,12 @@ class BuildTargeting {
+     }
+     if (position.equals(feet) || position.equals(head)) return { kind: "occupied" };
+     const placement = findPlacementSupport(this.bot, position);
+-    if (!placement) return { kind: "unsupported" };
++    if (!placement) {
++      // 0011: a column from the ground up gives it something to place against
++      const column = this.#supportBelow(position, feet, head, carried);
++      if (column && (carried.get(cell.blockName) ?? 0) === 0) return { kind: "not_carried" };
++      return column ?? { kind: "unsupported" };
++    }
+     if ((carried.get(cell.blockName) ?? 0) === 0) return { kind: "not_carried" };
+     const after = new Set(this.protectedCells);
+     after.add(keyOf(cell.position));
+@@ -346,7 +572,7 @@ class BuildTargeting {
+   }
+ 
+   wrong(): readonly BuildCell[] {
+-    return this.request.cells.filter((cell) => this.stateOf(cell).kind !== "correct");
++    return this.request.cells.filter((cell) => !isDone(this.stateOf(cell)));
+   }
+ 
+   /**
+@@ -359,7 +585,7 @@ class BuildTargeting {
+     return this.request.cells
+       .filter((cell) => {
+         const kind = this.stateOf(cell).kind;
+-        return kind === "placeable" || kind === "diggable" || kind === "unloaded";
++        return kind === "placeable" || kind === "diggable" || kind === "unloaded" || kind === "needs_support";
+       })
+       .sort(
+         (left, right) =>
+@@ -387,7 +613,7 @@ class BuildTargeting {
+   }
+ 
+   private workGoal(target: BuildCell): Goal {
+-    const approach = nearGoal(target.position, BUILD_REACH);
++    const approach = nearGoal(this.workPosition(target), BUILD_REACH);
+     return {
+       resolve: (observation) => {
+         const spatial = approach.resolve(observation);
+@@ -435,6 +661,7 @@ class BuildTargeting {
+       reason,
+       placed: this.placed,
+       dug: this.dug,
++      supports: new Map(this.supports),
+       passes: this.passes,
+       cells: this.request.cells.map((cell) => ({ cell, state: this.stateOf(cell) })),
+     };
+@@ -458,18 +685,47 @@ async function workInReach(
+   // or enclosing is not what the last look said.
+   targeting.refresh();
+   for (;;) {
++    // 0011: every cell worked yields to the event loop first (0010's rule,
++    // inside a pass too): a dig or placement that settles at once, as one of
++    // water in a pond did, can no longer hold the loop
++    await yieldToEventLoop();
+     signal?.throwIfAborted();
+     if (request.stopSignal?.aborted) return worked;
+     const target = targeting
+       .targets()
+-      .find((cell) => withinReach(bot, cell.position) && targeting.canWorkFrom(cell, bot.entity.position));
++      .find((cell) => withinReach(bot, targeting.workPosition(cell)) && targeting.canWorkFrom(cell, bot.entity.position));
+     if (!target) return worked;
+     const state = targeting.stateOf(target);
+     if (state.kind === "diggable") {
+-      const dug = await request.breakInPlace({ movements, position: target.position, signal });
+-      if (dug.status === "broken") targeting.dug += 1;
+-      else targeting.refuse(target, dug.reason);
++      if (!targeting.countDig(target)) {
++        targeting.refuse(target, `it filled again each of the ${DIGS_PER_CELL - 1} times it was dug (falling gravel or sand, or a liquid)`);
++      } else {
++        const dug = await request.breakInPlace({ movements, position: target.position, signal });
++        if (dug.status === "broken") targeting.dug += 1;
++        else targeting.refuse(target, dug.reason);
++      }
++    } else if (state.kind === "needs_support") {
++      const item = bot.inventory.items().find((candidate) => candidate.name === state.item);
++      const placed = item
++        ? await request.place({
++            item,
++            support: state.support,
++            face: state.face,
++            expectedCells: [state.below],
++            matches: (block) => block.name === state.item,
++            signal,
++          })
++        : ({ kind: "failed", error: `no ${state.item} carried` } as const);
++      if (placed.kind === "placed") targeting.supports.set(state.item, (targeting.supports.get(state.item) ?? 0) + 1);
++      else targeting.refuse(target, `the block under it: ${placed.error}`);
+     } else if (state.kind === "placeable") {
++      // 0011: the bot's own body reaches into the cell (floating in water under a shelter's roof): let it settle first
++      if (!(await settleOutOf(bot, target.position, signal))) {
++        targeting.refuse(target, "your body is in the cell: you float in the water under it");
++        worked = true;
++        targeting.refresh();
++        continue;
++      }
+       const item = bot.inventory.items().find((candidate) => candidate.name === target.blockName)!;
+       const placed = await request.place({
+         item,
+@@ -492,7 +748,7 @@ async function workInReach(
+ 
+ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResult> {
+   const targeting = new BuildTargeting(bot, request);
+-  const movements = request.movements(targeting.protectedCells);
++  const movements = request.movements(targeting.protectedCells, targeting.structureCells);
+   let idlePasses = 0;
+   let stepOuts = 0;
+ 
+@@ -532,15 +788,18 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
+     if (targeting.targets().length === 0) return targeting.result("stopped", null);
+ 
+     const routed = targeting.identity();
+-    const route = await runRoute(bot, request, targeting, movements);
+-    if (route.status === "stopped") {
+-      targeting.refresh();
++    const failures: string[] = [];
++    const route = await runRoute(bot, request, targeting, movements, failures);
++    targeting.refresh();
++    if (request.stopSignal?.aborted) return targeting.result("stopped", String(request.stopSignal.reason));
++    if (route.status === "stopped") failures.push(route.reason);
++    // 0011: the composite route reached nothing workable. A goal the search
++    // could not reach is not a reason to abandon the build, nor a guess at
++    // which cell it was: the first cell is tried from places to stand within
++    // reach of it, and only that cell is given up on when none is reached.
++    if (targeting.progress === progressBefore && targeting.identity() === routed) {
++      await reachFromStands(bot, request, targeting, movements, failures.at(-1) ?? null);
+       if (request.stopSignal?.aborted) return targeting.result("stopped", String(request.stopSignal.reason));
+-      // A goal the search could not reach is not a reason to abandon the build,
+-      // only that cell — unless the targets already changed underneath it.
+-      if (targeting.identity() === routed && !targeting.refuseClosest(feetOf(bot), route.reason)) {
+-        return targeting.result("stopped", route.reason);
+-      }
+     }
+ 
+     idlePasses = targeting.progress === progressBefore ? idlePasses + 1 : 0;
+@@ -550,12 +809,72 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
+   }
+ }
+ 
++/**
++ * 0011: the first workable cell from places to stand within reach of it,
++ * nearest the bot first, each route with the longer build search; whatever
++ * is in reach on arrival is worked. When none is reached, that cell alone is
++ * given up on, kept when it holds solid ground, with what was tried. Once the
++ * run's routes to places to stand are spent, every cell the composite route
++ * cannot reach is given up on at once, so a build never outlives its caller.
++ */
++async function reachFromStands(
++  bot: Bot,
++  request: BuildRequest,
++  targeting: BuildTargeting,
++  movements: MovementPolicy,
++  failure: string | null,
++): Promise<boolean> {
++  const target = targeting.targets()[0];
++  if (!target) return false;
++  if (targeting.standRoutes >= STAND_ROUTES_PER_RUN) {
++    const why = failure ? plainRouteFailure(failure) : "no route reached it";
++    for (const cell of targeting.targets()) targeting.giveUp(cell, why);
++    return false;
++  }
++  const dig = targeting.stateOf(target).kind === "diggable";
++  const stands = targeting.standsFor(target);
++  let why = failure ? plainRouteFailure(failure) : null;
++  let tried = 0;
++  for (const stand of stands) {
++    if (tried >= STANDS_PER_CELL || targeting.standRoutes >= STAND_ROUTES_PER_RUN) break;
++    tried += 1;
++    targeting.standRoutes += 1;
++    let worked = false;
++    const route = await request.route({
++      movements,
++      goal: exactBlockGoal({ x: stand.x, y: stand.y, z: stand.z }),
++      searchLimits: BUILD_SEARCH_LIMITS,
++      onArrival: async ({ signal }) => {
++        worked = (await workInReach(bot, request, targeting, movements, signal)) || worked;
++        return { kind: "completed" };
++      },
++      signal: request.signal,
++      stopSignal: request.stopSignal,
++    });
++    if (request.stopSignal?.aborted) return worked;
++    if (route.status === "stopped") {
++      targeting.badStand(stand);
++      why = plainRouteFailure(route.reason);
++    }
++    // Arrived, or stopped somewhere nearer: whatever is in reach now is worked.
++    worked = (await workInReach(bot, request, targeting, movements, request.signal)) || worked;
++    if (worked) return true;
++  }
++  const what = dig ? "no place to stand within reach can see it" : "no place to stand within reach";
++  targeting.giveUp(
++    target,
++    stands.length === 0 ? what : `${tried} place${tried === 1 ? "" : "s"} to stand tried: ${why ?? "none reached"}`,
++  );
++  return false;
++}
++
+ /** One leg: walk under a goal that keeps re-evaluating, working every arrival, until nothing workable remains. */
+ async function runRoute(
+   bot: Bot,
+   request: BuildRequest,
+   targeting: BuildTargeting,
+   movements: MovementPolicy,
++  failures: string[],
+ ): Promise<NavigationResult> {
+   return request.route({
+     movements,
+@@ -569,10 +888,12 @@ async function runRoute(
+       const more = targeting.targets().length > 0 && !targeting.standingInStructure();
+       return more ? { kind: "continue" } : { kind: "completed" };
+     },
+-    onCalculationFailure: async ({ failure, observation }) => {
+-      targeting.refuseClosest(observation.position, describeCalculationFailure(failure));
+-      targeting.refresh();
+-      return targeting.targets().length > 0 ? { kind: "continue" } : { kind: "completed" };
++    // 0011: a search that found no way to any workable cell ends this route;
++    // the loop then tries the first cell from places to stand, rather than
++    // refusing whichever cell was nearest the bot.
++    onCalculationFailure: async ({ failure }) => {
++      failures.push(describeCalculationFailure(failure));
++      return { kind: "completed" };
+     },
+     signal: request.signal,
+     stopSignal: request.stopSignal,

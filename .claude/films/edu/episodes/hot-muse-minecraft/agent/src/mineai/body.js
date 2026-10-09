@@ -123,6 +123,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   let goal = null;
   let doing = null;
   let lastResult = null;
+  // the structure this game's last build left incomplete (its blueprint, material, cells, facing and where the bot
+  // stood): a build of the same blueprint and material near it continues it (src/mineai/skills.js continuesLast)
+  let lastBuild = null;
   let current = null; // the action running now: {actionId, stop}
   let ended = null;
   let seq = 0;
@@ -301,6 +304,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     players: (status?.nearby?.players ?? []).map((p) => ({ position: p?.position ?? null })), // never their names
     gameId,
     containerOwner: (pos) => containers.get(keyOf(pos)) ?? null,
+    lastBuild,
   });
 
   /**
@@ -392,6 +396,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // from what else changed meanwhile (then the reply shows only the whole change)
     let own = null;
     let deathBefore = lastDeath;
+    let built = null; // a build's structure (toTheirs), remembered below while it is incomplete
     const crashesBefore = crashes;
     // the runtime stopped during this step: the host starts it again once per game, and a second stop ends the game
     // (src/mineai/host.js). The step may be what stopped it (2026-10-08, before patch 0010: a build around the bot in a pocket in stone
@@ -402,6 +407,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       before = allItems(latest.inventory, latest.equipment);
       deathBefore = lastDeath;
       const plan = toTheirs(tool, v.args, context());
+      built = plan.build ?? null;
       if (plan.local === 'state') r = { ok: true, result: renderState(snapshot()), code: null };
       else if (plan.refused) r = plan.refused;
       else {
@@ -452,6 +458,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       const at = status?.lastDeath?.position;
       r = { ok: false, result: `you died${at ? ` at ${floorPos(at).x} ${floorPos(at).y} ${floorPos(at).z}` : ''}; your items dropped there (pick_up with death_items: true within 5 minutes). ${r.result}`, code: 'DIED' };
     }
+    // a complete structure is done with; an incomplete one is continued by the next build of it nearby; one whose step
+    // stopped the runtime is not (the reply says to build somewhere else)
+    if (built) lastBuild = r.ok || r.code === 'BODY_RESTARTED' ? null : built;
     const ms = Date.now() - t0;
     body.busy = false;
     doing = null;

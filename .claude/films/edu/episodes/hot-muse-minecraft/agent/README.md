@@ -10,7 +10,7 @@ operate from the accessibility tree. Plan and sources: `../../../research/muse-m
 Not affiliated with or endorsed by Meta or Mojang.
 
 **Status 2026-10-08: production (https://play.picasso-lab.com) plays with the Mine AI MCP body (`BODY=mineai`, the
-runtime at 2fe1306 with our 10 patches); staging too.** Both stacks have the proxy secret and the Paper whitelist.
+runtime at 2fe1306 with our 11 patches, builds on rough ground included); staging too.** Both stacks have the proxy secret and the Paper whitelist.
 Section "The switch" below; rollback `docs/SWITCH.md`, section 5.
 
 ## Architecture
@@ -864,9 +864,9 @@ Their code stays out of this repo: `mineai/UPSTREAM.json` pins the commit and li
 them, and `mineai/fetch-and-patch.sh` puts the two together in a folder of its own at build time (`mineai/README.md`):
 
 ```sh
-BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime-10b   # clone 2fe1306, the 10 patches, bun install, fork check, typecheck, the patches' tests
-node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime-10b --check
-BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime-10b MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
+BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime-11   # clone 2fe1306, the 11 patches, bun install, fork check, typecheck, the patches' tests
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime-11 --check
+BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime-11 MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
 ```
 
 The agent runs that same check when it starts with `BODY=mineai`: a folder that is not exactly the pin plus every patch
@@ -887,7 +887,10 @@ after the chunks around the bot have loaded and a 2 s pause; `0009` never puts a
 table or furnace) into a cell a mob is in, and tries the next cell when one moves in first (the soak's bat); `0010`
 keeps a build from stopping the runtime's event loop (steps out of the structure that change nothing end the build
 after 3, every pass yields) and builds a shelter around the bot (the bot's own cells asked to be air, or the world
-already walling it in) instead of refusing the block that closes it.
+already walling it in) instead of refusing the block that closes it; `0011` builds on rough ground: no scaffolding into
+the structure, a cell no route reaches tried from places to stand near it before it alone is given up on, a column of
+blocks under a wall over a drop or water, solid ground it cannot dig out kept and water left as water (section
+"Builds on rough ground").
 
 How a host runs (`src/mineai/host.js`): one per guest game, their `src/server/host.ts` under Node with tsx (their own
 dev dependency; Node 24.15 or newer) or Bun (`MINEAI_RUNTIME=bun`, `MINEAI_EXEC`), with `--listen-host 127.0.0.1` on
@@ -1436,6 +1439,70 @@ node mineai/bench/muse-replay.mjs https://play-staging.picasso-lab.com --out rep
 # on picasso, as for the soak (section "Gates before the switch"), with accept-musefix for accept-gate2:
 $R node rv/mineai/bench/gateway-iron.mjs http://172.24.0.1:7851 --agent-pid $P --agent-log /staging-logs/$L \
   --server-log /paper-logs/latest.log --label musefix-seq5 --n 5 --out rv/runs --base Tst_gate   # --parallel --n 6
+```
+
+### Builds on rough ground (2026-10-08, patch 0011)
+
+The Muse re-test on staging (`g42b738`) left every build short: three `hut_3x3` and a `shelter` in a gravel pocket its
+iron route had dug near -178 62 56, 1-3 cells each "refused" with "search timed out after 2000 ms compute (limit 2000
+ms); no path or usable partial route found"; each retry started a new hut facing the way the bot then looked; and the
+third reply was cut 400 characters in ("-178,64,58: sea (placed ...", its parenthesis never closed), which read as a
+cell of sea water. `mineai/bench/build-spots.mjs` plays our blueprints at that very spot on this Mac's Paper (same seed
+as staging, the tunnels of the Muse game carved from staging's region file) and at a cave mouth, a slope and a pond
+edge, every try from the same saved terrain, every cell checked on the server. It reproduced F1 and F3 cell for cell.
+
+| Cause (found with the runtime's own build loop traced at the spot) | Change |
+| --- | --- |
+| a route out of the hut put dirt scaffolding into a wall cell it had just dug; the cell's only open face was then on the far side | patch 0011: no scaffolding into any cell of the structure (the movement policy's `noScaffoldCells`) |
+| a search for any workable cell that failed (2 s) gave up on whichever cell was nearest the bot, not the one it was for | 0011: that cell is tried from up to 3 places to stand within reach of it (open now, nearest the bot first, for a dig only where a face can be seen), each with a 5 s search (sliced between turns of the event loop like every search), 12 such routes a run; only then is it given up on, alone, as "unreachable" with what was tried |
+| a roof or wall cell of stone buried by its neighbours could not be dug from anywhere | 0011: a cell asked for a block that holds solid ground it cannot dig out keeps that block (`kept`, counted done, reported) |
+| on a slope a hut whose walls stood over a 2-4 block drop placed none of its 23 blocks ("nothing solid to place against") | 0011: a column of up to 4 blocks under such a cell from the ground (dirt or another carried scaffold block that is not the structure's material, else spare material; `supports` in the audit) |
+| standing in a pond, the hut's door and inside cells held water; a dig of water settled at once without removing it and the loop never yielded: their watchdog ended the runtime (`RUNTIME_UNRESPONSIVE`, the bench's 5 s window, production's default); a shelter there: the bot floats half a block up, into the roof cell, and the placement was refused | 0011: a cell to clear that holds water is left as water (`water`, counted done); a cell that fills again after 3 digs is given up on; every cell worked yields to the event loop first; a placement into a cell the bot's own body reaches into lets go of jump and waits up to 1.5 s for the body to settle |
+| each retry built a new hut facing the bot's new heading; nothing in the description said so | the gateway remembers the structure a build of this game left incomplete: `build` again with the same blueprint and material within 12 blocks of it (a shelter: where it was built) sends the same cells and says "continued the hut_3x3 begun facing south at ..."; the skill's description says so |
+| the reply was their error text cut at 400 characters | a build's reply is made from its audit: "24 of 27 cells done; could not reach 2 cells (-176,64,58; -177,64,58): 3 places to stand tried: path search gave up after 5 s"; "1 cell kept the stone already there", "2 cells to clear are water", "put 2 dirt under walls"; any long reply is cut at a clause with "..." and every bracket it opened closed (`cut` in `src/mineai/skills.js`); "1 was refused", not "1 were refused" |
+
+Measured (`mineai/bench/build-spots.mjs`, this Mac's Paper; the table per spot is in `mineai/README.md`, "Patch 0011
+on Paper"): the 16 spot and blueprint pairs, the runtime with 10 patches **12 of 32 complete, 4 runtime stops** (every
+build standing in the pond), the runtime with 11 patches **48 of 48 complete** (33 with every cell exactly the block
+asked for, the rest with a cell of stone kept or a cell to clear left as water), **0 runtime stops**; the runtime's
+event loop during the builds: longest delay 17.8 ms. F1's two cells: the wall cell placed, the roof corner of stone
+kept; F3's two roof cells of stone kept (each buried in stone and in the hut's own blocks: no place within reach can
+see a face of it).
+Their suite with 0011: 1,595 pass, 0 fail; `npm test`: 278 tests, 276 pass, 0 fail, 2 skipped.
+
+Staging (`deploy/push.sh`, its check PASS: wooden pickaxe in 17.6 s; runtime `2fe1306 with 11 patches`), through the
+public `/mcp` with `mineai/bench/build-staging.mjs` (a wooden pickaxe, 43 cobblestone, a stone pickaxe, then the
+builds; `SPREAD_SPOTS` in staging's `deploy/.env` for the run only, removed after):
+
+| Game | Spot | hut_3x3 | shelter |
+| --- | --- | --- | --- |
+| `g83e35a` | the re-test's gravel pocket (-176 61 52, the tunnels and partial huts of g42b738 still there) | ok in 40.3 s: placed 15, dug 19 clear, 21 exact and 6 kept the stone already there | ok in 7.7 s: 11 exact, 1 stone kept |
+| `g46e86c` | a grass slope with dark oaks (-180 70 -27) | ok in 4.4 s: 27 of 27 | ok in 0.1 s (beside the hut: 2 placed) |
+| `g25bf43` | a pond's bank (-90 63 -13) | ok in 1.4 s: 27 of 27, "put 1 dirt and 3 cobblestone under walls that had nothing to place against" | ok in 1.5 s |
+
+13 of 13 reply checks (`RESULT PASS`). An earlier run (the first deploy of this branch) found two things fixed since:
+the first build in the gravel pocket stopped when the wooden pickaxe wore out and its reply named 22 cells "holding
+stone" without saying why (now: "the build stopped: your wooden_pickaxe wore out (no pickaxe remains); carry a better
+tool and build again to continue it"); and `build hut_3x3` again from there **continued the same hut** ("continued the
+hut_3x3 begun facing east at -176 61 52") and completed it. A hut built standing in the sea after a walk ran out of air
+(2195 62 2012) completed with 2 cells left as water and 4 blocks put under its walls. The strict iron route through the
+public `/mcp` after the runs: **PASS in 155.7 s, 14 MCP calls, 0 failed steps** (`g39ca3d`). Staging's logs over the
+12 games since this branch was first deployed there: 0 heartbeat misses, host restarts or downs, no death.
+
+Production then got it with `deploy/push.sh --prod` (`docs/SWITCH.md`, section 7), idle (`Bots in use: 0 of 8`), the
+running image tagged `muse-minecraft-agent:pre-0011` first: staging again (its check PASS, wooden pickaxe in 23.0 s),
+then production: `production body: mineai`; its runtime `2fe1306 with 11 patches`; a production game PASS (wooden
+pickaxe in 33.1 s, 3 MCP calls, `g5d270e`); one build game through the public `/mcp`
+(`build-staging.mjs --production --games 1`, `g160515`): `RESULT PASS`, 5 of 5 checks, the hut ok ("placed 18
+cobblestone and dug 17 cells clear (22 of 27 cells as the blueprint; 5 cells kept the stone already there ...)") and
+the shelter ok; 0 heartbeat misses, host restarts or downs, both hosts closed with their data deleted. Undo (picasso):
+`docker tag muse-minecraft-agent:pre-0011 muse-minecraft-agent:latest && sh
+~/workspace/muse-minecraft/app/deploy/recreate.sh production`. Our dangling images of the three deploys were removed
+one at a time with `docker rmi`; the camera test project's five stay.
+
+```sh
+BUN=... node mineai/bench/build-spots.mjs ~/picasso-work/mineai-runtime-11 --server <Paper folder with console.in> --tries 3
+node mineai/bench/build-staging.mjs https://play-staging.picasso-lab.com --games 3 "--go=-176,61,52;-180,70,-27;-90,63,-13"
 ```
 
 ## What is mocked
