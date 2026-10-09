@@ -386,9 +386,12 @@ for a week (`docker rmi muse-minecraft-agent:pre-0011`).
 
 ## 8. The bot looks after itself, with real nights on Normal (ROADMAP M4)
 
-**Not done: the M4 gate is not met (README, "The bot looks after itself": at most 1 death in 16 natural games is the
-bar; staging had 1 in 8 and 3 in 8). Production keeps easy and locked daylight and the build before M4.** The steps
-below are for when it is.
+**Done 2026-10-09 (18:49-18:55 UTC), production idle throughout: the round-2 gate passed on staging (15 of 16 natural
+games, 1 death), then the `pre-m4` tags, `deploy/push.sh --prod` (its staging check PASS), the two `.env` lines and
+`recreate.sh production all`. Checks: `doDaylightCycle is now set to: true` and `difficulty has been set to Normal`;
+the runtime `2fe1306 with 11 patches`; a production game PASS (wooden pickaxe in 18.2 s); one natural game through the
+public `/mcp` (the strict iron route) PASS in 167.2 s, 14 MCP calls, 0 failed steps; 0 heartbeat misses, host restarts
+or downs.** The undo below stays ready.
 
 The care (README, "The bot looks after itself") changes only the gateway (no runtime patch: the runtime stays `2fe1306
 with 11 patches`), and the world settings change through two lines in `deploy/.env`, which `deploy/compose.yaml` hands
