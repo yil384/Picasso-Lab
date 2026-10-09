@@ -1,6 +1,9 @@
 <!-- docs/SWITCH.md - the runbook for switching production (play.picasso-lab.com) to the Mine AI MCP body (BODY=mineai): pre-checks, the deploy with the production config, the proxy secret and the Paper whitelist (ROADMAP M0 items 6 and 7), the switch, the smoke checks, the one-line rollback, with the expected output of each command. -->
 # Switching production to the Mine AI MCP body
 
+**Done 2026-10-08 (23:51-23:58 UTC): production plays with `BODY=mineai`; every step's checks passed (README, "The
+switch").** The undo of each step below stays valid; the rollback is section 5.
+
 The go/no-go report (`../../../../research/muse-reuse-validation.md`) asks for three gates before production plays
 with `BODY=mineai`. Gate 1 (the production config) and gate 3 (the two runtime patches, 0007 and 0008) are in this
 commit; gate 2 is the soak on staging and one Muse run: the scripted soak passed on 2026-10-08 (the agent's README,

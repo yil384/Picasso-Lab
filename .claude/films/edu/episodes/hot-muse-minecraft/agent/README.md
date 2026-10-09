@@ -9,6 +9,10 @@ operate from the accessibility tree. Plan and sources: `../../../research/muse-m
 
 Not affiliated with or endorsed by Meta or Mojang.
 
+**Status 2026-10-08: production (https://play.picasso-lab.com) plays with the Mine AI MCP body (`BODY=mineai`, the
+runtime at 2fe1306 with our 10 patches); staging too.** Both stacks have the proxy secret and the Paper whitelist.
+Section "The switch" below; rollback `docs/SWITCH.md`, section 5.
+
 ## Architecture
 
 ```
@@ -323,7 +327,7 @@ its own name and shares nothing with it: compose project `muse-staging` (`deploy
 `~/workspace/muse-staging/app`, its own Paper 1.21.4 and world (seed 71811045) in `~/workspace/muse-staging/data`,
 logs in `~/workspace/muse-staging/logs`, network 10.77.79.0/28, the agent on 172.24.0.1:7851, served at
 https://play-staging.picasso-lab.com (its own block in the FRAS Caddyfile, next to `play.`, with `X-Robots-Tag:
-noindex`). It runs no streamer or camera (production runs neither today). Its `deploy/.env` holds its own admin token;
+noindex`). It runs no streamer or camera (production runs neither on 2026-10-08). Its `deploy/.env` holds its own admin token;
 push.sh writes one the first time and never copies or overwrites it.
 
 ```sh
@@ -594,7 +598,9 @@ server is offline-mode; that is the operator's call, not a default).
   }
   ```
   The agent compares it in constant time, never logs it, and strips it before a request goes on to the live views.
-  Staging the same way (its own secret, port 7851). Set `WEB_MCP_GAMES_PER_ADDRESS` there once probe T8 has measured how many Muse users share an address.
+  Staging the same way (its own secret, port 7851). Both stacks have had it since 2026-10-08: the secrets in
+  `caddy-config/priv/` (mode 600), the Caddy line `header_up X-Muse-Proxy {file./etc/caddy/priv/<secret file>}` added
+  by `deploy/caddy-proxy-line.py`, so the secret itself is never in the Caddyfile (`docs/SWITCH.md`, step 3). Set `WEB_MCP_GAMES_PER_ADDRESS` there once probe T8 has measured how many Muse users share an address.
 
 ## Configuration
 
@@ -816,8 +822,8 @@ craft (12).
 MIT, "Copyright (c) 2026 AI Bengineering") instead of in this process, after the reuse spike
 (`../../../research/muse-reuse-spike.md`). Everything a guest talks to stays ours: `/mcp` (the queue, `request_id`,
 45 s replies, typed codes, the dry-run check), `/play`, `/api`, quotas, leases, the kill switch, the live views and the
-stream. The house bot of the Ask queue stays on our body. Production runs `ours` until the switch is flipped
-(`docs/SWITCH.md`).
+stream. The house bot of the Ask queue stays on our body. Production runs `mineai` since 2026-10-08 (switched with
+`docs/SWITCH.md`; section "The switch" below).
 
 Their code stays out of this repo: `mineai/UPSTREAM.json` pins the commit and lists our patches, `mineai/patches/` holds
 them, and `mineai/fetch-and-patch.sh` puts the two together in a folder of its own at build time (`mineai/README.md`):
@@ -1368,6 +1374,27 @@ misses, host restarts or downs, the host closed in 172 ms with the data deleted.
 six: `build hut_3x3` three times and `build shelter` on rough ground (1-3 cells refused each, their path search for a
 place to stand timed out at 2,000 ms, as in the soak's lease game) and `eat` twice at 20/20 (`NOT_HUNGRY`). Neither is
 part of the gate (`docs/MUSE-TEST.md`): **gate 2 passed with the `muse-fix` build**, the last condition of the switch.
+
+### The switch (2026-10-08)
+
+Production switched to `BODY=mineai` on 2026-10-08 between 23:51 and 23:58 UTC with `docs/SWITCH.md`, sections 1-4,
+every step with production idle (`Bots in use: 0 of 8`) and its checks passed:
+
+| Step | Checks |
+| --- | --- |
+| 1. pre-checks, backups | gate 2 passed (`g42b738`, above); `npm test` 271 pass, 0 fail (273, 2 skipped); `deploy/push.sh` (staging, commit `68c72fa`) PASS; staging's runtime `2fe1306 with 10 patches`; `/ssd2` 151 GB free; no `stream.env` or `camera.env`. Backups in `~/workspace/muse-minecraft/backups` (`.env`, `server.properties`, `app-pre-switch.tgz` 138 MB, mode 600) and the `pre-switch` tags of both images |
+| 2. deploy (`deploy/push.sh --prod`) | `production body: ours`; a production game PASS (wooden pickaxe in 20.9 s, 3 MCP calls); `white-list`, `enforce-whitelist`, `hide-online-players` all `true`; 2 whitelist add/remove lines; the image's runtime `2fe1306 with 10 patches`; init `true`; `mineai-data` mode 700; `body: Mine AI MCP` 0 times |
+| 3a. proxy secret, staging | `caddy-proxy-line.py add staging` (the one line, `Valid configuration`, reloaded); the agent recreated; 200, forged header 200, past Caddy 403, 0 warnings; `deploy/push.sh --check` PASS |
+| 3b. proxy secret, production | the same for `play.picasso-lab.com`: 200, 200, 403, 0; a production game PASS |
+| 4. the switch | `body: Mine AI MCP from /opt/mine-ai-mcp, one host per guest game on 127.0.0.1:27100+ (at most 8)`; a production game PASS (wooden pickaxe in 17.7 s, 3 MCP calls); the host ready in 1.8 s, closed in 169 ms (`the game ended`, 0 restarts, data deleted); 0 heartbeat misses, restarts, downs; no private name on a command line during the game; the page 200 |
+
+After it, through the public `https://play.picasso-lab.com/mcp`: the strict iron route (`test/e2e/mcp-iron.mjs`,
+game `g00a4c0`) **PASS in 152.4 s, 14 MCP calls, 0 failed steps**; the first-person view (`/eyes`) 200 and its
+socket.io WebSocket held for 15 s (9,117 events); the other sites behind the same Caddy as before (lab, flashevolve,
+tritongym 200, poker's `/v1/health` 200, play-staging 200); the agent's log over the first three games: 0 heartbeat
+misses, host restarts or downs, every host closed with its data deleted, no death. Our five dangling images (staging's
+earlier builds) were removed one at a time with `docker rmi`; five dangling images of the camera test project stay
+(not this stack's). Rollback, one line from the Mac: `docs/SWITCH.md`, section 5.
 
 ```sh
 node mineai/bench/muse-replay.mjs https://play-staging.picasso-lab.com --out replay.json      # on the Mac
