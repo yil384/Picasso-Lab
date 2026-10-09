@@ -527,6 +527,19 @@ profile `camera`, `deploy/Dockerfile.camera`).
   that restarted mid-game is put back at once. ffmpeg grabs the display (x11grab, no cursor) and encodes it like the
   viewer streams: 1280x720 H.264 High, CBR, keyframe every 2 s, no B-frames, silent 48 kHz AAC, the caption, FLV to
   RTMPS or MP4 to a file. At the end the camera stops riding and floats 250 blocks up looking at the sky.
+- The view (`CAMERA_VIEW`, 2026-10-09): `third` (the default) films over the bot's right shoulder, about 4 blocks
+  behind and 1 above, looking where it looks, so the bot's body, its held tool and its arm swing are in the picture
+  (a spectator in the bot's head draws none of them); `first` is the old view from its head. It is the Paper
+  datapack's work (`deploy/paper-datapack/muse_cam`, installed into the world by `deploy/paper-entry.sh` at every
+  start), every tick: the camera rides an invisible display entity (`item_display`, tag `muse_cam_eye`) teleported
+  to the spot behind the bot, and the client interpolates each teleport over `teleport_duration` (6 ticks), so the
+  follow is a smooth, damped one and the bot's sudden turns become short swings; the farthest of three spots with open
+  air on the way wins, so a wall pulls the camera in instead of hiding the bot. When a block that is not leaves sits
+  right above the bot's head for a second (its night shelter, a tunnel) the eye moves outside to look at it (behind and
+  above, else straight above, else close behind its head underground), in either view; a second without the roof and
+  the view goes back. The camera player has night vision all the time (given again whenever it is gone: a respawn, a
+  dimension change), so a night or a cave is never black. The camera service only tags through the console:
+  `muse_cam` on the camera, `muse_cam_third` for the view, `muse_cam_target` on the bot.
 - Between games: the client stays in the world (a game goes live 3.5 s after it starts). After `CAMERA_IDLE_MS`
   (10 min) without a game it quits and Xvfb stays (0 % CPU, 46 MB); the next game starts it again (live after 15 s).
 - Supervision: a client that exits, is disconnected ("Client disconnected with reason", "Couldn't connect to server")
@@ -851,6 +864,7 @@ in to Facebook in the same browser, may still see it in the muse.ai panel (UNVER
 | `CAMERA_AUTH`, `CAMERA_AUTH_DIR`, `CAMERA_NAME` | `msa`, (none), (none) | the camera account: `msa` (the login in the auth folder) or `offline` (tests on our own server only, as `CAMERA_NAME`, default MuseCam) |
 | `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
 | `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `5`, `30`, `fast`, `0.75` | the client's video settings (the tuned ones); it draws at 1280x720 times the scale and ffmpeg scales up |
+| `CAMERA_VIEW` | `third` | `third`: over the bot's shoulder (its arm, tool and swing in view), outside its shelter while it is enclosed; `first`: in its head (outside too while enclosed). The Paper datapack does it (section "Real-client camera") |
 | `CAMERA_MODS`, `CAMERA_CHUNK_THREADS`, `CAMERA_JVM_ARGS` | `sodium`, `0`, (none) | client mods from the image (`deploy/camera/mods.json`; `off` = vanilla); Sodium's chunk builder threads (0: its own choice); extra JVM flags (a collector given here replaces G1) |
 | `STREAM_CLOCK`, `STREAM_CLOCK_TZ` | `false`, `America/Los_Angeles` | test only: the wall clock burned into the video |
 | `CAMERA_IDLE_MS`, `CAMERA_NICE`, `CAMERA_HEAP_MB` | `600000`, `5`, `2048` | quit the client after this long without a game (0: never); its niceness; its heap |

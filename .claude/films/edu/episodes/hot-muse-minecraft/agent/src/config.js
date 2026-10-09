@@ -324,6 +324,8 @@ export function loadConfig(env = process.env) {
       idleMs: r.int('CAMERA_IDLE_MS', 600_000, 0, 86_400_000),
       // client mods from the image (deploy/camera/mods.json), comma-separated; 'off' runs the vanilla client
       mods: r.str('CAMERA_MODS', 'sodium'),
+      // over the bot's shoulder (third, the default: its body, held tool and swing in view) or in its head (first)
+      view: r.oneOf('CAMERA_VIEW', 'third', ['third', 'first']),
       chunkThreads: r.int('CAMERA_CHUNK_THREADS', 0, 0, 32),
       jvmArgs: r.str('CAMERA_JVM_ARGS', '').split(/\s+/).filter(Boolean),
       console: r.str('MC_CONSOLE', ''),

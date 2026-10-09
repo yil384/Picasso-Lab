@@ -1,0 +1,5 @@
+# over the right shoulder, looking where the bot looks (pitched 20 degrees down): the farthest spot with open air on the
+# way wins (each line overwrites the one before), so walls pull the camera in instead of hiding the bot
+execute as @a[tag=muse_cam_target,limit=1] at @s anchored eyes positioned ^ ^ ^ rotated ~ 20 run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ^-0.4 ^0.2 ^-1.3 ~ ~
+execute as @a[tag=muse_cam_target,limit=1] at @s anchored eyes positioned ^ ^ ^ rotated ~ 20 if block ^-0.4 ^0.3 ^-1.6 #muse_cam:open if block ^-0.6 ^0.5 ^-2.5 #muse_cam:open run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ^-0.6 ^0.5 ^-2.5 ~ ~
+execute as @a[tag=muse_cam_target,limit=1] at @s anchored eyes positioned ^ ^ ^ rotated ~ 20 if block ^-0.4 ^0.3 ^-1.6 #muse_cam:open if block ^-0.6 ^0.5 ^-2.5 #muse_cam:open if block ^-0.7 ^0.7 ^-3.3 #muse_cam:open if block ^-0.8 ^0.9 ^-4 #muse_cam:open run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ^-0.8 ^0.9 ^-4 ~ ~
