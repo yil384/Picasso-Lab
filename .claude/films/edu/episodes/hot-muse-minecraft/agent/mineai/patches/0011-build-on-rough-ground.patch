@@ -17,7 +17,8 @@ only that cell is given up on ("unreachable", with what was tried); a cell with 
 of up to 4 blocks under it from the ground (a carried scaffold block that is not a material of the structure, else
 spare material); a wall or roof cell of solid ground that cannot be dug out keeps its block ("kept", counted done); a
 cell asked to be air that holds water is left as water (counted done); a cell dug 3 times that fills again is given
-up on; every cell worked yields to the event loop first. The audit gains kept, water and supports, and "1 was
+up on; every cell worked yields to the event loop first; a placement into a cell the bot's own body reaches into (it
+floats half a block up in water, under a shelter's roof) lets go of jump and waits up to 1.5 s for the body to settle. The audit gains kept, water and supports, and "1 was
 refused", not "1 were refused". With tests (build-process, build-structure, movement-policy).
 
 diff --git a/src/actions/build-structure/build-structure.test.ts b/src/actions/build-structure/build-structure.test.ts
@@ -262,7 +263,7 @@ index cf5aec3..cd9d858 100644
        const reason = occupiedCell(bot, { x, y, z }, bot.entity.id);
        return reason ? { kind: "prohibited", reason } : ALLOWED_STEP;
 diff --git a/src/navigation/processes/building/build-process.test.ts b/src/navigation/processes/building/build-process.test.ts
-index e6943ae..eea6a90 100644
+index e6943ae..f8eb738 100644
 --- a/src/navigation/processes/building/build-process.test.ts
 +++ b/src/navigation/processes/building/build-process.test.ts
 @@ -4,7 +4,16 @@ import test from "node:test";
@@ -296,7 +297,7 @@ index e6943ae..eea6a90 100644
    ];
    for (const row of [
      {
-@@ -318,27 +328,178 @@ test("a cell asked to be air is dug clear without being asked to remove wrong bl
+@@ -318,27 +328,202 @@ test("a cell asked to be air is dug clear without being asked to remove wrong bl
    assert.equal(bot.blockAt(new Vec3(2, 64, 0))!.name, "air");
  });
  
@@ -484,12 +485,36 @@ index e6943ae..eea6a90 100644
 +    "path search gave up after 2 s",
 +  );
 +  assert.equal(plainRouteFailure("no path found after 31 ms compute; visited 12 nodes, generated 40"), "no path found");
++});
++
++test("a cell the bot's floating body reaches into waits for the body to settle, or is refused saying so (0011)", async () => {
++  for (const row of [
++    { name: "it sinks to the floor once its jump is let go", settles: true, kinds: ["correct"] },
++    { name: "it stays afloat", settles: false, kinds: ["refused"] },
++  ]) {
++    const { bot, put, physics, placements } = structureWorld();
++    // standing in water the bot floats half a block up: its head reaches into the cell above its head cell
++    Object.assign(bot.entity, { position: new Vec3(0.5, 64.5, 0.5), width: 0.6 });
++    const controls: string[] = [];
++    Object.assign(bot, {
++      setControlState: (control: string, on: boolean) => {
++        controls.push(`${control}:${on}`);
++        if (row.settles) setTimeout(() => { bot.entity.position = new Vec3(0.5, 64, 0.5); }, 100);
++      },
++    });
++    put(new Vec3(1, 66, 0), "stone");
++    const result = await build(bot, { ...physics, cells: cells([[0, 66, 0]]), removeWrongBlocks: false });
++    assert.deepEqual(kinds(result), row.kinds, row.name);
++    assert.deepEqual(controls, ["jump:false"], row.name);
++    assert.equal(placements.length, row.settles ? 1 : 0, row.name);
++    if (!row.settles) assert.equal((result.cells[0]!.state as { reason: string }).reason, "your body is in the cell: you float in the water under it");
++  }
  });
 diff --git a/src/navigation/processes/building/build-process.ts b/src/navigation/processes/building/build-process.ts
-index 5d7d2a1..9c4f381 100644
+index 5d7d2a1..e2e357d 100644
 --- a/src/navigation/processes/building/build-process.ts
 +++ b/src/navigation/processes/building/build-process.ts
-@@ -26,6 +26,16 @@
+@@ -26,10 +26,20 @@
   * it would seal the bot in, or the server or the pathfinder refused it. The
   * first ten live calls of the action above this all failed, and the model
   * retried blind, because the audit only counted.
@@ -506,6 +531,11 @@ index 5d7d2a1..9c4f381 100644
   */
  import type { Bot } from "mineflayer";
  import { Vec3 } from "vec3";
+-import { asVec3 } from "../../../utils/index.js";
++import { asVec3, cellIntersectsBody } from "../../../utils/index.js";
+ import {
+   findPlacementSupport,
+   isAir,
 @@ -41,8 +51,10 @@ import {
  import {
    anyGoal,
@@ -517,7 +547,7 @@ index 5d7d2a1..9c4f381 100644
    type BlockPosition,
    type BreakBlockInPlace,
    type Goal,
-@@ -87,6 +99,35 @@ const IDLE_PASSES = 2;
+@@ -87,6 +99,42 @@ const IDLE_PASSES = 2;
   */
  const STEP_OUT_PASSES = 3;
  
@@ -550,10 +580,17 @@ index 5d7d2a1..9c4f381 100644
 + */
 +export const DIGS_PER_CELL = 4;
 +
++/**
++ * 0011: how long a placement into a cell the bot's own body reaches into
++ * waits for the body to settle out of it: standing in water the bot floats
++ * half a block up, into a shelter's roof cell.
++ */
++const SETTLE_MS = 1_500;
++
  /** Lets timers and I/O run between passes (0010): no pass of the loop can starve the event loop. */
  const yieldToEventLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
  
-@@ -124,22 +165,54 @@ export type BuildCellState =
+@@ -124,22 +172,54 @@ export type BuildCellState =
    | { readonly kind: "unloaded" }
    /** Nothing solid on any side to place against. */
    | { readonly kind: "unsupported" }
@@ -611,7 +648,7 @@ index 5d7d2a1..9c4f381 100644
    readonly route: Navigate;
    readonly breakInPlace: BreakBlockInPlace;
    /** Whether the target has a reachable visible face from these feet. */
-@@ -157,6 +230,8 @@ export interface BuildResult {
+@@ -157,6 +237,8 @@ export interface BuildResult {
    readonly reason: string | null;
    readonly placed: number;
    readonly dug: number;
@@ -620,7 +657,7 @@ index 5d7d2a1..9c4f381 100644
    readonly passes: number;
    readonly cells: readonly { readonly cell: BuildCell; readonly state: BuildCellState }[];
  }
-@@ -222,6 +297,26 @@ function carriedCounts(bot: Bot): Map<string, number> {
+@@ -222,6 +304,43 @@ function carriedCounts(bot: Bot): Map<string, number> {
    return counts;
  }
  
@@ -632,6 +669,23 @@ index 5d7d2a1..9c4f381 100644
 +  if (!feet || !head || !floor) return false;
 +  const open = (block: WorldBlock) => block.boundingBox === "empty" && block.name !== "lava" && !block.name.endsWith("fire");
 +  return open(feet) && open(head) && head.name !== "water" && floor.boundingBox === "block";
++}
++
++/**
++ * 0011: wait until the bot's body is out of a cell, its jump released so a
++ * body floating in water sinks to the floor; false when it is still in the
++ * cell after SETTLE_MS.
++ */
++async function settleOutOf(bot: Bot, cell: BlockPosition, signal?: AbortSignal): Promise<boolean> {
++  const inCell = () => cellIntersectsBody(cell, { position: bot.entity.position, width: bot.entity.width ?? 0.6, height: bot.entity.height ?? 1.8 });
++  if (!inCell()) return true;
++  bot.setControlState?.("jump", false);
++  for (const until = Date.now() + SETTLE_MS; Date.now() < until; ) {
++    await new Promise<void>((resolve) => setTimeout(resolve, 50));
++    signal?.throwIfAborted();
++    if (!inCell()) return true;
++  }
++  return false;
 +}
 +
 +/** 0011: a route's long failure text in a few words: "path search gave up after 2 s", "no path found". */
@@ -647,7 +701,7 @@ index 5d7d2a1..9c4f381 100644
  /**
   * Everything one build remembers between looks at the world: the state of
   * every cell, the cells refused this run, and the tally. It is shared by the
-@@ -231,6 +326,18 @@ function carriedCounts(bot: Bot): Map<string, number> {
+@@ -231,6 +350,18 @@ function carriedCounts(bot: Bot): Map<string, number> {
  class BuildTargeting {
    readonly #states = new Map<number, BuildCellState>();
    readonly #refused = new Map<number, string>();
@@ -666,7 +720,7 @@ index 5d7d2a1..9c4f381 100644
    /** The correct cells as packed keys, handed to the movement policy and kept current. */
    readonly protectedCells = new Set<number>();
    readonly #bounds: { readonly min: Vec3; readonly max: Vec3 };
-@@ -244,34 +351,120 @@ class BuildTargeting {
+@@ -244,34 +375,120 @@ class BuildTargeting {
      private readonly request: BuildRequest,
    ) {
      this.#bounds = boundsOf(request.cells);
@@ -801,7 +855,7 @@ index 5d7d2a1..9c4f381 100644
    refresh(): void {
      this.#refreshedAtMs = Number.NEGATIVE_INFINITY;
      this.states();
-@@ -318,6 +511,10 @@ class BuildTargeting {
+@@ -318,6 +535,10 @@ class BuildTargeting {
      const block = this.bot.blockAt(position);
      if (block === null) return { kind: "unloaded" };
      if (block.name === cell.blockName || (cell.blockName === "air" && isAir(block))) return { kind: "correct" };
@@ -812,7 +866,7 @@ index 5d7d2a1..9c4f381 100644
      const refused = this.#refused.get(keyOf(cell.position));
      if (refused !== undefined) return { kind: "refused", reason: refused };
      // A cell asked to be air can only be dug clear, so asking is allowing.
-@@ -329,7 +526,12 @@ class BuildTargeting {
+@@ -329,7 +550,12 @@ class BuildTargeting {
      }
      if (position.equals(feet) || position.equals(head)) return { kind: "occupied" };
      const placement = findPlacementSupport(this.bot, position);
@@ -826,7 +880,7 @@ index 5d7d2a1..9c4f381 100644
      if ((carried.get(cell.blockName) ?? 0) === 0) return { kind: "not_carried" };
      const after = new Set(this.protectedCells);
      after.add(keyOf(cell.position));
-@@ -346,7 +548,7 @@ class BuildTargeting {
+@@ -346,7 +572,7 @@ class BuildTargeting {
    }
  
    wrong(): readonly BuildCell[] {
@@ -835,7 +889,7 @@ index 5d7d2a1..9c4f381 100644
    }
  
    /**
-@@ -359,7 +561,7 @@ class BuildTargeting {
+@@ -359,7 +585,7 @@ class BuildTargeting {
      return this.request.cells
        .filter((cell) => {
          const kind = this.stateOf(cell).kind;
@@ -844,7 +898,7 @@ index 5d7d2a1..9c4f381 100644
        })
        .sort(
          (left, right) =>
-@@ -387,7 +589,7 @@ class BuildTargeting {
+@@ -387,7 +613,7 @@ class BuildTargeting {
    }
  
    private workGoal(target: BuildCell): Goal {
@@ -853,7 +907,7 @@ index 5d7d2a1..9c4f381 100644
      return {
        resolve: (observation) => {
          const spatial = approach.resolve(observation);
-@@ -435,6 +637,7 @@ class BuildTargeting {
+@@ -435,6 +661,7 @@ class BuildTargeting {
        reason,
        placed: this.placed,
        dug: this.dug,
@@ -861,7 +915,7 @@ index 5d7d2a1..9c4f381 100644
        passes: this.passes,
        cells: this.request.cells.map((cell) => ({ cell, state: this.stateOf(cell) })),
      };
-@@ -458,17 +661,39 @@ async function workInReach(
+@@ -458,18 +685,47 @@ async function workInReach(
    // or enclosing is not what the last look said.
    targeting.refresh();
    for (;;) {
@@ -903,9 +957,17 @@ index 5d7d2a1..9c4f381 100644
 +      if (placed.kind === "placed") targeting.supports.set(state.item, (targeting.supports.get(state.item) ?? 0) + 1);
 +      else targeting.refuse(target, `the block under it: ${placed.error}`);
      } else if (state.kind === "placeable") {
++      // 0011: the bot's own body reaches into the cell (floating in water under a shelter's roof): let it settle first
++      if (!(await settleOutOf(bot, target.position, signal))) {
++        targeting.refuse(target, "your body is in the cell: you float in the water under it");
++        worked = true;
++        targeting.refresh();
++        continue;
++      }
        const item = bot.inventory.items().find((candidate) => candidate.name === target.blockName)!;
        const placed = await request.place({
-@@ -492,7 +717,7 @@ async function workInReach(
+         item,
+@@ -492,7 +748,7 @@ async function workInReach(
  
  export async function build(bot: Bot, request: BuildRequest): Promise<BuildResult> {
    const targeting = new BuildTargeting(bot, request);
@@ -914,7 +976,7 @@ index 5d7d2a1..9c4f381 100644
    let idlePasses = 0;
    let stepOuts = 0;
  
-@@ -532,15 +757,18 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
+@@ -532,15 +788,18 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
      if (targeting.targets().length === 0) return targeting.result("stopped", null);
  
      const routed = targeting.identity();
@@ -941,7 +1003,7 @@ index 5d7d2a1..9c4f381 100644
      }
  
      idlePasses = targeting.progress === progressBefore ? idlePasses + 1 : 0;
-@@ -550,12 +778,72 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
+@@ -550,12 +809,72 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
    }
  }
  
@@ -1014,7 +1076,7 @@ index 5d7d2a1..9c4f381 100644
  ): Promise<NavigationResult> {
    return request.route({
      movements,
-@@ -569,10 +857,12 @@ async function runRoute(
+@@ -569,10 +888,12 @@ async function runRoute(
        const more = targeting.targets().length > 0 && !targeting.standingInStructure();
        return more ? { kind: "continue" } : { kind: "completed" };
      },
