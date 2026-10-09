@@ -751,6 +751,13 @@ export function createCare(deps) {
         const here = () => { const q = deps.situation()?.position; return q ? { x: Math.floor(q.x), y: Math.floor(q.y), z: Math.floor(q.z) } : null; };
         let feet = here();
         if (!feet) return null;
+        // in water no wall holds and nothing can be dug: to the shore first (their navigate takes a column on water to
+        // the nearest dry ground; staging lab spot 0 15000)
+        if (deps.situation()?.position?.inWater && !d.check) {
+          const w = await run([{ tool: 'navigate', args: { x: feet.x, z: feet.z } }], LIMITS.dig, ctl);
+          await deps.refresh();
+          if (okOf(w)) { parts.push('swam to the shore'); feet = here() ?? feet; }
+        }
         const fightIn = (r) => /\b(fight|evade|hide|deflect) response for\b/.test(errOf(r) ?? '');
         // the wall cells between the bot and the nearest hostile mob within 6 blocks (feet and head height)
         const facingMob = (list) => {
