@@ -348,9 +348,12 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
     if (!fresh && bed && !sheltered && memory.slept !== memory.night && !cooling('sleep', 120_000) && !hostilesWithin(s, 10).length) {
       return { kind: 'sleep', why: `night (time ${time}) and it carries a ${bed}`, bed };
     }
-    // three shelters that would not close this night: it stops trying until the next (its reflexes still fight)
-    if (!fresh && ((!cooling('shelter', 45_000) && (memory.shelterFails?.[memory.night] ?? 0) < 3) || sheltered)) {
-      const { total } = shelterBlocks(inventory);
+    // a shelter that would not close is tried again after 45 s, or at once where the bot now stands elsewhere or carries
+    // more blocks; three that would not close this night: it stops trying until the next (its reflexes still fight)
+    const { total } = shelterBlocks(inventory);
+    const lastFail = memory.shelterFailed;
+    const changed = lastFail && (!feet || lastFail.feet.x !== feet.x || lastFail.feet.z !== feet.z || Math.abs(lastFail.feet.y - feet.y) > 1 || total > lastFail.blocks);
+    if (!fresh && (((!cooling('shelter', 45_000) || changed) && (memory.shelterFails?.[memory.night] ?? 0) < 3) || sheltered)) {
       return { kind: 'shelter', why: `night (time ${time})`, blocks: total, check: sheltered };
     }
   }
@@ -693,6 +696,7 @@ export function createCare(deps) {
           : `could not close a shelter at ${xyz(feet)} (${v.why ?? errOf(r) ?? 'stopped'})`);
         if (!v.closed && !d.check) {
           memory.cool.shelter = now();
+          memory.shelterFailed = { feet: { ...feet }, blocks: shelterBlocks(inv()).total };
           memory.shelterFails = { [memory.night]: (memory.shelterFails?.[memory.night] ?? 0) + 1 };
         }
         return add({ kind: 'shelter', ok: v.closed, ms: ms(), text: `${d.why}: ${parts.join('; ')}` });

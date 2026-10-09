@@ -91,6 +91,11 @@ test('care: what to do first, and nothing while nothing is needed', () => {
   assert.equal(decide(night, { ...base, inventory: {}, memory }), null, 'sheltered here this night, checked lately');
   assert.equal(decide(night, { ...base, inventory: {}, memory: { ...memory, shelter: { ...memory.shelter, checked: NOW - 120_000 } } }).check, true, 'checked again after 90 s');
   assert.equal(decide(night, { ...base, policy: { ...CARE_DEFAULTS, night: 'off' }, inventory: {} }), null, 'night: off');
+  // a shelter that would not close: not again for 45 s, unless the bot moved or got more blocks
+  const failed = { cool: { shelter: NOW - 5_000 }, night: 0, shelterFailed: { feet: { x: 10, y: 64, z: -4 }, blocks: 2 }, shelterFails: { 0: 1 } };
+  assert.equal(decide(night, { ...base, inventory: { dirt: 2 }, memory: failed }), null);
+  assert.equal(decide(night, { ...base, inventory: { cobblestone: 16 }, memory: failed }).kind, 'shelter', 'more blocks now');
+  assert.equal(decide(night, { ...base, inventory: { cobblestone: 16 }, memory: { ...failed, shelterFails: { 0: 3 } } }), null, 'three this night');
   // the nether has no night
   assert.equal(decide({ ...night, dimension: 'the_nether' }, { ...base, inventory: { cobblestone: 20 } }), null);
   // a spare before a tool breaks
