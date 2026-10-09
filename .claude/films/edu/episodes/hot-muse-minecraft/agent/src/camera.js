@@ -927,9 +927,12 @@ export function createCameraManager({ config, log, createRig, graph = null, game
   if (config.fb?.live) {
     const pool = createCameraPool({ count: 1, camera: cameraOptions(config), log, createRig });
     const channel = createLiveChannel({
-      graph: graph ?? createGraph({ pageId: config.fb.pageId, tokenFile: config.fb.tokenFile, version: config.fb.graphVersion, base: config.fb.graphUrl, log }),
+      graph: graph ?? createGraph({
+        pageId: config.fb.target === 'me' ? 'me' : config.fb.pageId, privacy: config.fb.target === 'me' ? { value: config.fb.privacy } : null,
+        tokenFile: config.fb.tokenFile, version: config.fb.graphVersion, base: config.fb.graphUrl, log,
+      }),
       createStream: (opts) => pool.create(opts), streamOptions: managerConfig(config.stream).options, log,
-      title: config.fb.title, stateFile: config.fb.stateFile, gameTtlMs,
+      title: config.fb.title, stateFile: config.fb.stateFile, gameTtlMs, deleteAfter: config.fb.deleteAfter,
     });
     pool.start();
     const stopAll = channel.stopAll;

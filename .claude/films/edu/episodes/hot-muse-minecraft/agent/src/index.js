@@ -502,7 +502,7 @@ export async function startAgent(opts = {}) {
     : `Ask queue: closed (${askOff})`);
   print(config.web.adminToken ? 'kill switch: POST /admin/stop with "Authorization: Bearer $WEB_ADMIN_TOKEN"' : 'kill switch: set WEB_ADMIN_TOKEN to enable POST /admin/stop');
   if (streams?.channel && !config.stream.serviceUrl) {
-    print(`live video: on, every guest game on one Facebook live channel (Page ${config.fb.pageId}, one camera)`);
+    print(`live video: on, every guest game on one Facebook live channel (${config.fb.target === 'me' ? 'the token owner\'s profile' : `Page ${config.fb.pageId}`}, one camera)`);
   } else if (streams && config.stream.enabled) {
     print(config.stream.serviceUrl
       ? `live video: on, every guest game through the stream service at ${config.stream.serviceUrl}`

@@ -72,6 +72,13 @@ test('fb-token: secrets on standard input, the never-expiring Page token written
     assert.equal(bad.err.includes(SHORT) || bad.err.includes('ffffffffffffffffffffffffffffffff'), false);
     assert.equal(fs.existsSync(path.join(dir, 'none')), false);
     assert.match((await run(['--app-id', APP_ID, '--dir', dir], 'not-hex\nx\n')).err, /App Secret should be 32 hexadecimal/);
+    // --user (FB_TARGET=me): the long-lived user token itself, written 600; the profile's name and id printed
+    const u = await run(['--app-id', APP_ID, '--dir', dir, '--graph-url', fake.url, '--user'], `${APP_SECRET}\n${SHORT}\n`);
+    assert.equal(u.code, 0, u.err);
+    assert.equal(u.out, `Profile: Test Person (122115481300000001)\ntoken file: ${path.join(dir, 'user-token')} (600)\nexpires: never\n`);
+    assert.equal(fs.readFileSync(path.join(dir, 'user-token'), 'utf8'), `${LONG}\n`);
+    assert.equal(fs.statSync(path.join(dir, 'user-token')).mode & 0o777, 0o600);
+    assert.equal(`${u.out}${u.err}`.includes(LONG), false);
     assert.match((await run(['--app-id', APP_ID, '--dir', dir, '--graph-url', 'http://graph.example.com'])).err, /must be https/);
   } finally {
     await fake.close();

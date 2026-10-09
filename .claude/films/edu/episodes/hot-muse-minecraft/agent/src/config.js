@@ -338,8 +338,14 @@ export function loadConfig(env = process.env) {
   // Live video on a Facebook Page (src/fb-live.js): read by the process that runs the camera (the camera container, or
   // the agent itself without STREAM_SERVICE_URL). Each guest game goes live by itself; the Page token is a file (600),
   // never an environment variable, and never logged.
+  const fbTarget = r.oneOf('FB_TARGET', 'page', ['page', 'me']);
   const fb = {
     live: r.bool('FB_LIVE', false),
+    // 'page': the Page's live videos with the Page token (the long-term setup); 'me': the token owner's own profile with
+    // a long-lived user token (about 60 days), public so the embed plays, each video deleted after its game
+    target: fbTarget,
+    privacy: r.oneOf('FB_PRIVACY', 'EVERYONE', ['EVERYONE', 'ALL_FRIENDS', 'SELF']),
+    deleteAfter: r.bool('FB_DELETE_AFTER', fbTarget === 'me'),
     pageId: r.str('FB_PAGE_ID', ''),
     tokenFile: r.str('FB_TOKEN_FILE', '') ? path.resolve(r.str('FB_TOKEN_FILE', '')) : '',
     graphVersion: r.str('FB_GRAPH_VERSION', 'v23.0'),
@@ -355,8 +361,8 @@ export function loadConfig(env = process.env) {
   } catch { problems.push(`FB_GRAPH_URL is not a URL (got "${fb.graphUrl}")`); }
   if (fb.title.length > 200 || /[\r\n]/.test(fb.title)) problems.push('FB_TITLE must be one line of at most 200 characters');
   if (fb.live) {
-    if (!fb.pageId) problems.push('FB_LIVE=on needs FB_PAGE_ID (scripts/fb-token.mjs prints it)');
-    if (!fb.tokenFile) problems.push('FB_LIVE=on needs FB_TOKEN_FILE, the file (600) with the Page token that scripts/fb-token.mjs writes');
+    if (!fb.pageId && fb.target === 'page') problems.push('FB_LIVE=on needs FB_PAGE_ID (scripts/fb-token.mjs prints it), or FB_TARGET=me');
+    if (!fb.tokenFile) problems.push(`FB_LIVE=on needs FB_TOKEN_FILE, the file (600) with the ${fb.target === 'me' ? 'long-lived user' : 'Page'} token that scripts/fb-token.mjs writes`);
     if (!stream.serviceUrl && stream.source !== 'client') problems.push('FB_LIVE=on needs the real-client camera (STREAM_SOURCE=client) or the camera service (STREAM_SERVICE_URL)');
   }
   if (stream.enabled && !stream.serviceUrl && !outputs.length && !stream.outDir && !fb.live) {
