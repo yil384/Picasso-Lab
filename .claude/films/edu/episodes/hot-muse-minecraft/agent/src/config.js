@@ -56,9 +56,12 @@ export function parseAddressRange(text) {
   return prefix <= (family === 4 ? 32 : 128) ? [ip, prefix] : null;
 }
 
-/** The Facebook video plugin URL that plays a live video (its public URL) inside another page's frame. */
+/**
+ * The Facebook video plugin URL that plays a live video (its public URL) inside another page's frame: the form the
+ * owner saw play inside muse.ai's artifact panel on 2026-10-08.
+ */
 export function facebookEmbedUrl(videoUrl) {
-  return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(videoUrl)}&show_text=false`;
+  return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(videoUrl)}&show_text=false&width=1280`;
 }
 
 /** True for an https URL on facebook.com (or fb.watch): the only live-video player the muse.ai panel frames. */
@@ -331,12 +334,37 @@ export function loadConfig(env = process.env) {
     if (stream.camera.auth === 'msa' && !stream.camera.authDir) problems.push('STREAM_SOURCE=client needs CAMERA_AUTH_DIR, the folder with the camera account\'s login (scripts/camera-login.mjs)');
   }
   if (stream.serviceUrl && !(/^http:/.test(stream.serviceUrl) && isLocalUrl(stream.serviceUrl))) problems.push('STREAM_SERVICE_URL must be an http URL on this machine (loopback)');
-  if (stream.enabled && !stream.serviceUrl && !outputs.length && !stream.outDir) {
-    problems.push('STREAM_ENABLED needs STREAM_RTMP_URL (or STREAM_OUT_DIR to write files, or STREAM_SERVICE_URL for the stream container)');
+
+  // Live video on a Facebook Page (src/fb-live.js): read by the process that runs the camera (the camera container, or
+  // the agent itself without STREAM_SERVICE_URL). Each guest game goes live by itself; the Page token is a file (600),
+  // never an environment variable, and never logged.
+  const fb = {
+    live: r.bool('FB_LIVE', false),
+    pageId: r.str('FB_PAGE_ID', ''),
+    tokenFile: r.str('FB_TOKEN_FILE', '') ? path.resolve(r.str('FB_TOKEN_FILE', '')) : '',
+    graphVersion: r.str('FB_GRAPH_VERSION', 'v23.0'),
+    graphUrl: r.str('FB_GRAPH_URL', 'https://graph.facebook.com').replace(/\/+$/, ''),
+    stateFile: path.resolve(r.str('FB_STATE_FILE', path.join(log.dir, 'fb-live-state.json'))),
+    title: r.str('FB_TITLE', 'Picasso Lab demo: an AI plays Minecraft'),
+  };
+  if (fb.pageId && !/^\d{5,25}$/.test(fb.pageId)) problems.push(`FB_PAGE_ID must be the Page's numeric id (got "${fb.pageId}")`);
+  if (!/^v\d{1,2}\.\d$/.test(fb.graphVersion)) problems.push(`FB_GRAPH_VERSION must look like v23.0 (got "${fb.graphVersion}")`);
+  try {
+    const u = new URL(fb.graphUrl);
+    if (!(u.protocol === 'https:' || (u.protocol === 'http:' && isLoopbackHost(u.hostname)))) problems.push('FB_GRAPH_URL must be https (http only on this machine, for tests)');
+  } catch { problems.push(`FB_GRAPH_URL is not a URL (got "${fb.graphUrl}")`); }
+  if (fb.title.length > 200 || /[\r\n]/.test(fb.title)) problems.push('FB_TITLE must be one line of at most 200 characters');
+  if (fb.live) {
+    if (!fb.pageId) problems.push('FB_LIVE=on needs FB_PAGE_ID (scripts/fb-token.mjs prints it)');
+    if (!fb.tokenFile) problems.push('FB_LIVE=on needs FB_TOKEN_FILE, the file (600) with the Page token that scripts/fb-token.mjs writes');
+    if (!stream.serviceUrl && stream.source !== 'client') problems.push('FB_LIVE=on needs the real-client camera (STREAM_SOURCE=client) or the camera service (STREAM_SERVICE_URL)');
+  }
+  if (stream.enabled && !stream.serviceUrl && !outputs.length && !stream.outDir && !fb.live) {
+    problems.push('STREAM_ENABLED needs STREAM_RTMP_URL (or STREAM_OUT_DIR to write files, FB_LIVE=on, or STREAM_SERVICE_URL for the stream container)');
   }
 
   if (problems.length) throw new ConfigError(problems);
-  return deepFreeze({ root: ROOT, model, mc, web, body, mineai, caps, memory, log, stream });
+  return deepFreeze({ root: ROOT, model, mc, web, body, mineai, caps, memory, log, stream, fb });
 }
 
 /** The process-wide config, read from process.env at first import. */

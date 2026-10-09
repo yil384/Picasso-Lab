@@ -53,7 +53,7 @@ test('staging compose: production settings, its own project, port, hostname, net
   assert.match(read('deploy/compose.yaml'), /^name: muse-minecraft$/m);
   assert.match(read('deploy/staging.compose.yaml'), /^name: muse-staging$/m);
   // every service production always runs (not the stream / camera profiles) runs on staging too
-  assert.deepEqual(Object.keys(stg).sort(), Object.keys(prod).filter((k) => !prod[k].profiles).sort());
+  assert.deepEqual(Object.keys(stg).filter((k) => !stg[k].profiles).sort(), Object.keys(prod).filter((k) => !prod[k].profiles).sort());
 
   assert.deepEqual(stg.paper.env, prod.paper.env, 'Paper: the same difficulty, daylight, seed and memory');
   assert.equal(stg.paper.env.SEED, '71811045');
@@ -313,4 +313,33 @@ test('staging-check: strict; a failed step fails the check and the game still en
   assert.equal(await runCheck({ base: 'https://play.picasso-lab.com/', production: true, minutes: 0, print: (l) => asked.push(l) }), 2);
   assert.doesNotMatch(asked.join('\n'), /is production/);
   assert.match(asked.join('\n'), /refused: minutes must be more than 0/);
+});
+
+test('camera on staging: production\'s camera settings with staging\'s Paper; the one account\'s auth; the Page token folder read-only; push.sh starts it only with camera.env and no other camera', { skip: !ZSH && 'no zsh' }, () => {
+  const prod = services('deploy/compose.yaml');
+  const stg = services('deploy/staging.compose.yaml');
+  assert.ok(stg.camera.profiles && prod.camera.profiles, 'off unless asked for');
+  const { MC_HOST: ph, ...prodCam } = prod.camera.env;
+  const { MC_HOST: sh, ...stgCam } = stg.camera.env;
+  assert.deepEqual(stgCam, prodCam);
+  assert.equal(sh, stg.agent.env.MC_HOST, 'staging\'s own Paper');
+  assert.equal(ph, prod.agent.env.MC_HOST);
+  for (const k of ['network_mode: "service:agent"', 'user: "${CAMERA_UID:-1014}:${CAMERA_GID:-1014}"', 'env_file: [ { path: camera.env, required: false } ]', 'cpus: 6', 'mem_limit: 3g', 'security_opt: [ "no-new-privileges:true" ]']) {
+    assert.ok(stg.camera.text.includes(k) && prod.camera.text.includes(k), k);
+  }
+  assert.match(stg.camera.text, /volumes: \[ "\.\.\/\.\.\/logs:\/logs", "console:\/console", "\$\{HOME\}\/workspace\/muse-minecraft\/camera\/auth:\/auth", "\.\.\/\.\.\/fb:\/fb:ro" \]/);
+  assert.match(prod.camera.text, /"\.\.\/\.\.\/fb:\/fb:ro"/);
+  for (const s of [stg, prod]) for (const k of Object.keys(s.camera.env)) assert.ok(!/^FB_|STREAM_RTMP_URL/.test(k), `${k} belongs in camera.env, never the compose file`);
+  const { calls } = push([]);
+  const joined = calls.join('\n');
+  for (const part of [
+    'if [ -f deploy/camera.env ]; then\n    chmod 600 deploy/camera.env; mkdir -p ../fb && chmod 700 ../fb\n',
+    'if [ -n "$O" ]; then echo "note: another camera runs ($O); staging starts without its camera (stop that one first)"; else export COMPOSE_PROFILES=camera; fi',
+  ]) assert.ok(joined.includes(part), part);
+  // only camera containers count (another stack's agent or Paper does not), and staging's own camera never does
+  const filter = /O=\$\(docker ps --format "\{\{\.Names\}\}" \| (.*) \|\| true\)/.exec(joined)[1];
+  const names = 'muse-camera-test-agent-1\nmuse-camera-test-paper-1\nmuse-staging-camera-1\nmuse-minecraft-agent-1\n';
+  assert.equal(spawnSync('/bin/sh', ['-c', filter], { input: names, encoding: 'utf8' }).stdout, '');
+  assert.equal(spawnSync('/bin/sh', ['-c', filter], { input: `${names}muse-camera-test-camera-1\n`, encoding: 'utf8' }).stdout, 'muse-camera-test-camera-1 ');
+  assert.ok(joined.indexOf('export COMPOSE_PROFILES=camera') < joined.indexOf('docker compose -p muse-staging -f staging.compose.yaml up -d --build'));
 });

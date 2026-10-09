@@ -83,7 +83,9 @@ services:
   #   STREAM_ENABLED=1
   #   STREAM_SERVICE_URL=http://127.0.0.1:7862
   # One camera = one client at about 4-4.5 CPU threads and 1.3-1.5 GB while it films (README); STREAM_MAX cameras need as many
-  # accounts (a second client under the same name would kick the first).
+  # accounts (a second client under the same name would kick the first). FB_LIVE=on in camera.env (with FB_PAGE_ID and
+  # FB_TOKEN_FILE=/fb/page-token) puts every guest game live on the Facebook Page instead of STREAM_RTMP_URL; the token
+  # file is ~/workspace/muse-minecraft/fb/page-token (600), mounted read-only (README, "Live on a Facebook Page").
   camera:
     build: { context: .., dockerfile: deploy/Dockerfile.camera }
     profiles: [ camera ]
@@ -103,7 +105,7 @@ services:
       CAMERA_GL: cpu
       # the tuned picture (README "Real-client camera"): Sodium, fast leaves, render distance 5, drawn at 960x540
       CAMERA_MODS: sodium
-    volumes: [ "../logs:/logs", "console:/console", "../../camera/auth:/auth" ]
+    volumes: [ "../logs:/logs", "console:/console", "../../camera/auth:/auth", "../../fb:/fb:ro" ]
     tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
     cpus: 6
     mem_limit: 3g

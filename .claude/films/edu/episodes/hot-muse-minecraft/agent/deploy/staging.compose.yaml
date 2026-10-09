@@ -8,7 +8,11 @@
 # there finds no file at all):
 #   cd ~/workspace/muse-staging/app/deploy && docker compose -p muse-staging -f staging.compose.yaml up -d --build
 #   docker compose -p muse-staging -f staging.compose.yaml down        # the world and the logs stay
-# No streamer or camera (production runs neither today); camera-test.compose.yaml shows how to add one.
+# The real-client camera runs here only with the "camera" profile, which deploy/push.sh turns on when deploy/camera.env
+# exists in the staging folder and no other camera container runs (the one camera account allows one client at a
+# time). With FB_LIVE=on in camera.env every staging game goes live on the Facebook Page by itself (README, "Live on a
+# Facebook Page"); with FB_LIVE off it films each game to an MP4 in logs/streams (STREAM_OUT_DIR=/logs/streams there).
+# The agent then needs STREAM_ENABLED=1 and STREAM_SERVICE_URL=http://127.0.0.1:7862 in deploy/.env.
 # Keep the settings in step with compose.yaml (test/deploy.test.js compares them).
 # BODY=mineai on staging: its agent image is built with the Mine AI MCP runtime (build arg MINEAI=1, see
 # Dockerfile.agent), and their per-bot SQLite (status, inventory, every action) goes to ~/workspace/muse-staging/
@@ -43,6 +47,35 @@ services:
     volumes: [ "../../logs:/logs", "console:/console", "../../mineai-data:/mineai-data" ]
     ports: [ "172.24.0.1:7851:8787" ]
     networks: { mc: { ipv4_address: 10.77.79.11 } }
+  # As compose.yaml's camera, with staging's Paper and folders. The account's tokens are the one camera account's
+  # (~/workspace/muse-minecraft/camera/auth, shared with the other stacks: stop their camera first). The Page token for
+  # FB_LIVE is ~/workspace/muse-staging/fb/page-token (600, the token alone; FB_TOKEN_FILE=/fb/page-token in
+  # camera.env), mounted read-only; it reaches no other container, no environment and no command line.
+  camera:
+    build: { context: .., dockerfile: deploy/Dockerfile.camera }
+    profiles: [ camera ]
+    restart: unless-stopped
+    depends_on: [ agent ]
+    network_mode: "service:agent"
+    user: "${CAMERA_UID:-1014}:${CAMERA_GID:-1014}"
+    init: true
+    env_file: [ { path: camera.env, required: false } ]
+    environment:
+      STREAM_ENABLED: "1"
+      STREAM_MAX: "1"
+      STREAM_FPS: "30"
+      STREAM_BITRATE_K: "3500"
+      MC_HOST: 10.77.79.10
+      MC_CONSOLE: /console/console.in
+      CAMERA_GL: cpu
+      CAMERA_MODS: sodium
+    volumes: [ "../../logs:/logs", "console:/console", "${HOME}/workspace/muse-minecraft/camera/auth:/auth", "../../fb:/fb:ro" ]
+    tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
+    cpus: 6
+    mem_limit: 3g
+    pids_limit: 1024
+    shm_size: 256m
+    security_opt: [ "no-new-privileges:true" ]
 volumes:
   console: {}
 networks:

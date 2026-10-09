@@ -19,6 +19,7 @@ import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { createStream, createStreamManager, createStreamService, findChromium, findFfmpeg, managerConfig, maskOutput, STREAM_DEFAULTS } from '../src/stream.js';
 import { createCameraManager, createCameraRig, createCameraStream, cameraOptions, validName } from '../src/camera.js';
+import { readTokenFile } from '../src/fb-live.js';
 
 export const USAGE = `usage: node scripts/stream.mjs --source URL --out FILE.mp4|rtmps://... [options]
        node scripts/stream.mjs --serve [--port 7861]
@@ -122,11 +123,17 @@ async function serve(values, { print, printErr, env }) {
   const client = config.stream.source === 'client';
   if (!findFfmpeg(env) || (!client && !findChromium(env))) { printErr('no Chromium or ffmpeg found (STREAM_CHROMIUM, STREAM_FFMPEG)'); return 3; }
   const log = createLogger({ config, runId: `stream-${new Date().toISOString().replace(/[:.]/g, '-')}` });
-  const manager = client ? createCameraManager({ config, log }) : createStreamManager({ config: managerConfig(config.stream), log });
+  if (config.fb.live && !client) { printErr('FB_LIVE=on needs the real-client camera (STREAM_SOURCE=client)'); return 2; }
+  if (config.fb.live) {
+    // the Page token's file must be there and private before anything goes live (it is never printed)
+    try { readTokenFile(config.fb.tokenFile); } catch (err) { printErr(`FB_LIVE=on: ${err.message}`); return 2; }
+  }
+  // in the service, a game the agent stops reporting (it refreshes every minute) leaves the live channel after 3 min
+  const manager = client ? createCameraManager({ config, log, gameTtlMs: 180_000 }) : createStreamManager({ config: managerConfig(config.stream), log });
   if (!manager.enabled) printErr('note: STREAM_ENABLED is off or there is no output (STREAM_RTMP_URL / STREAM_OUT_DIR): every start is refused');
   const server = createStreamService({ manager, log });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
-  print(`stream service on http://127.0.0.1:${port}/streams (${manager.enabled ? `up to ${config.stream.max} stream(s)${client ? ' from the real-client camera' : ''}` : 'off'})`);
+  print(`stream service on http://127.0.0.1:${port}/streams (${config.fb.live ? `Facebook live channel on Page ${config.fb.pageId}, one camera` : manager.enabled ? `up to ${config.stream.max} stream(s)${client ? ' from the real-client camera' : ''}` : 'off'})`);
   const signal = await new Promise((resolve) => { process.once('SIGINT', () => resolve('SIGINT')); process.once('SIGTERM', () => resolve('SIGTERM')); });
   print(`${signal}: stopping every stream`);
   server.close();

@@ -74,9 +74,12 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
     assert.match(link.first_person_url, new RegExp(`^${agent.url}/eyes/[A-Za-z0-9_-]{22}/$`), '128-bit view ids');
     assert.match(link.behind_url, new RegExp(`^${agent.url}/watch/[A-Za-z0-9_-]{22}/$`));
     assert.ok(!link.first_person_url.includes(link.game), 'the view id is not the game id');
-    assert.deepEqual(JSON.parse(text(await a.callTool({ name: 'live_view', arguments: {} }))), link, 'link is the default');
+    const page = await a.callTool({ name: 'live_view', arguments: {} });
+    assert.match(text(page), new RegExp(`^Live view of game ${link.game}: live video is off on this server\\.\n3D view in a web page \\(plain link\\): ${link.first_person_url}\n`), 'html is the default');
+    assert.equal(page.structuredContent.format, 'html');
+    assert.equal(page.structuredContent.html.includes('<iframe'), false, 'no player without a live video');
     const embed = JSON.parse(text(await a.callTool({ name: 'live_view', arguments: { format: 'embed' } })));
-    assert.deepEqual(embed, { format: 'embed', game: link.game, live: false, player: null, embed_url: null, video_url: null }, 'no live video without a stream');
+    assert.deepEqual(embed, { format: 'embed', game: link.game, live: false, state: 'off', camera_game: null, player: null, embed_url: null, video_url: null }, 'no live video without a stream');
     assert.match(s, /State \(game g\w+, about 10 min left; it also ends after 5 min without calls\):\n[\s\S]*inventory/);
     assert.match(s, /- collect \{block: one of /);
     assert.match(text(await a.callTool({ name: 'start_game', arguments: START })), /^Resumed game g\w+\./);
@@ -388,11 +391,14 @@ test('mcp live_view: the embed data while a live video of the game runs; link da
   assert.equal(JSON.parse(text(await c.callTool({ name: 'live_view', arguments: { format: 'embed' } }))).live, false);
   live.add(id);
   assert.deepEqual(JSON.parse(text(await c.callTool({ name: 'live_view', arguments: { format: 'embed' } }))), {
-    format: 'embed', game: id, live: true, player: 'facebook',
+    format: 'embed', game: id, live: true, state: 'live', camera_game: id, player: 'facebook',
     embed_url: 'https://www.facebook.com/plugins/video.php?href=x&show_text=false', video_url: 'https://www.facebook.com/picassolab/videos/123/',
   });
   const link = JSON.parse(text(await c.callTool({ name: 'live_view', arguments: { format: 'link' } })));
   assert.match(link.first_person_url, new RegExp(`^${url}/eyes/[A-Za-z0-9_-]{22}/$`));
-  const bad = await c.callTool({ name: 'live_view', arguments: { format: 'html' } });
-  assert.equal(bad.isError, true, 'only link and embed for now');
+  const page = await c.callTool({ name: 'live_view', arguments: { format: 'html' } });
+  assert.match(text(page), /live on Facebook\.\nVideo \(plain link\): https:\/\/www\.facebook\.com\/picassolab\/videos\/123\/\n/);
+  assert.ok(page.structuredContent.html.includes('<iframe src="https://www.facebook.com/plugins/video.php?href=x&amp;show_text=false"'));
+  const bad = await c.callTool({ name: 'live_view', arguments: { format: 'gif' } });
+  assert.equal(bad.isError, true, 'html, link or embed');
 });

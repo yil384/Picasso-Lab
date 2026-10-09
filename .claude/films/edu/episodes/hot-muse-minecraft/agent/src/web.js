@@ -473,7 +473,9 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
  * @param {number} [opts.viewsPerHour]       new live-view connections per address per hour (default 120)
  * @param {number} [opts.viewMissesPerHour]  requests for live views that do not exist, per address per hour (default 60)
  * @param {(gameId: string) => ({videoUrl: string, embedUrl: string}|null)} [opts.liveVideo]  the live video of a game
- *   while its stream runs (STREAM_VIDEO_URL), for MCP's live_view {format: "embed"}
+ *   while its stream runs (STREAM_VIDEO_URL)
+ * @param {(gameId: string, o: {waitMs: number, signal: AbortSignal}) => Promise<object>} [opts.liveView]  what MCP's
+ *   live_view shows: the Facebook live channel pointed at the game (src/index.js), else STREAM_VIDEO_URL
  * @returns {import('./contracts.js').Web & {sweep: () => void}}
  */
 export function createWeb(opts = {}) {
@@ -1333,6 +1335,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
         leaseMs: web.leaseMs, initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs, skills: opts.skills,
         links: (s, b) => ({ eyes: `${b}/eyes/${s.viewId}/`, watch: `${b}/watch/${s.viewId}/` }),
         liveVideo: (s) => { try { return opts.liveVideo?.(s.id) ?? null; } catch { return null; } },
+        liveView: opts.liveView ? (s, o) => Promise.resolve(opts.liveView(s.id, o)).catch(() => null) : null,
         leaveQueue: (key) => { const i = waiting.findIndex((w) => w.key === key); if (i >= 0) waiting.splice(i, 1); },
         watching: (id) => { let n = 0; for (const k of viewSockets) if (k.gameId === id && !k.destroyed) n += 1; return n; },
       });

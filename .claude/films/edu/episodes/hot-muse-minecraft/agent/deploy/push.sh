@@ -10,7 +10,8 @@
 # Each deploy copies the code, then rebuilds and restarts the containers. Games in progress end when an agent restarts;
 # check https://play.picasso-lab.com/ first ("Bots in use"). With deploy/stream.env on picasso, the live-video streamer
 # (compose profile "stream") is built and started in production too; with deploy/camera.env, the real-client camera
-# (profile "camera"; its account signed in with scripts/camera-login.mjs). Staging runs neither.
+# (profile "camera"; its account signed in with scripts/camera-login.mjs). Staging runs the camera the same way when its
+# own deploy/camera.env exists, unless another camera container runs (one account, one client).
 # After each build it prunes our own dangling images (label org.picasso-lab.app=muse-minecraft, set in every Dockerfile
 # here, staging's images included): the lab shares the Docker root, so it never touches an image without that label.
 # picasso's docker wrapper refuses every prune for a non-root user: staging then prints a note with the number of our
@@ -52,6 +53,13 @@ staging() {
   x ssh picasso 'set -eo pipefail; cd ~/workspace/muse-staging/app
   [ -f deploy/.env ] || printf "WEB_ADMIN_TOKEN=%s\n" "$(openssl rand -base64 24 | tr -d "/+=" | head -c 32)" > deploy/.env
   chmod 600 deploy/.env
+  # the real-client camera only with its settings (deploy/camera.env, made by hand) and while no other camera runs: the
+  # one camera account allows one client, and a second would kick the first
+  if [ -f deploy/camera.env ]; then
+    chmod 600 deploy/camera.env; mkdir -p ../fb && chmod 700 ../fb
+    O=$(docker ps --format "{{.Names}}" | grep -E -- "-camera-[0-9]+$" | grep -v "^muse-staging-camera-" | tr "\n" " " || true)
+    if [ -n "$O" ]; then echo "note: another camera runs ($O); staging starts without its camera (stop that one first)"; else export COMPOSE_PROFILES=camera; fi
+  fi
   cd deploy && docker compose -p muse-staging -f staging.compose.yaml up -d --build 2>&1 | tail -4 && docker compose -p muse-staging -f staging.compose.yaml ps --format "staging {{.Service}}: {{.Status}}"
   docker image prune -f --filter "label=org.picasso-lab.app=muse-minecraft" 2>&1 | tail -1 || echo "note: the prune was refused (picasso allows it as root only); our dangling images left: $(docker images -q -f dangling=true -f label=org.picasso-lab.app=muse-minecraft | wc -l) (README, Deploy on picasso)"
   grep -q "^WEB_PROXY_SECRET=" .env || echo "note: staging deploy/.env has no WEB_PROXY_SECRET: forwarded headers are believed from any local peer on 7851 (README, Deploy on picasso)"'
@@ -76,7 +84,7 @@ prod() {
   P=""
   if [ -f deploy/stream.env ]; then chmod 600 deploy/stream.env; P=stream; fi
   # the real-client camera runs only when its output is there (deploy/camera.env, made by hand on picasso)
-  if [ -f deploy/camera.env ]; then chmod 600 deploy/camera.env; P="${P:+$P,}camera"; mkdir -p ../camera/auth && chmod 700 ../camera ../camera/auth; fi
+  if [ -f deploy/camera.env ]; then chmod 600 deploy/camera.env; P="${P:+$P,}camera"; mkdir -p ../camera/auth ../fb && chmod 700 ../camera ../camera/auth ../fb; fi
   if [ -n "$P" ]; then export COMPOSE_PROFILES=$P; fi
   cd deploy && docker compose up -d --build 2>&1 | tail -4 && docker compose ps --format "{{.Service}}: {{.Status}}"
   # the images this build replaced: dangling, ours only (an image a container still uses is never removed); picasso

@@ -26,8 +26,9 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import {
   STREAM_DEFAULTS, ffmpegArgs, findFfmpeg, findFont, maskOutput, scrubOutputs, cleanCaption, cleanPose, processTree,
-  spawnNiced, createStreamManager, managerConfig, encoderEnv,
+  spawnNiced, spawnEncoder, createStreamManager, managerConfig, encoderEnv, childEnv,
 } from './stream.js';
+import { createGraph, createLiveChannel } from './fb-live.js';
 
 const require = createRequire(import.meta.url);
 
@@ -446,7 +447,7 @@ export function createCameraRig(o = {}) {
       fs.mkdirSync(path.join(cmd.gameDir, 'config'), { recursive: true });
       fs.writeFileSync(path.join(cmd.gameDir, 'config', 'sodium-options.json'), `${JSON.stringify(sodiumOptions(c), null, 2)}\n`);
     }
-    const env = { ...process.env, ...cmd.env, MC_ACCESS_TOKEN: profile.token || '' };
+    const env = childEnv({ ...cmd.env, MC_ACCESS_TOKEN: profile.token || '' });
     const child = spawnNiced(cmd.file, cmd.args, c.javaNice, { cwd: cmd.cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     const me = { child, startedAt: Date.now(), joined: false, hidden: false, connected: false };
     client = me;
@@ -704,7 +705,10 @@ export function createCameraStream(o) {
   function startEncoder() {
     const ro = rig.options;
     const args = ffmpegArgs({ ...opt, font, captionFile, x11: x11Input(ro), progress: true });
-    const child = spawnNiced(ffmpeg, args, opt.encoderNice, { stdio: ['ignore', 'pipe', 'pipe'], env: encoderEnv(opt, { DISPLAY: `:${ro.display}` }) });
+    const { child, failure } = spawnEncoder({
+      ffmpeg, args, output: opt.output, nice: opt.encoderNice, stdio: ['ignore', 'pipe', 'pipe'],
+      env: encoderEnv(opt, { DISPLAY: `:${ro.display}` }), event: (k, d) => event(k, d), createPublisher: opt.createPublisher,
+    });
     const me = { child, startedAt: Date.now(), err: '', progress: {} };
     enc = me;
     let out = '';
@@ -722,7 +726,7 @@ export function createCameraStream(o) {
     child.on('exit', (code, signal) => {
       if (enc === me) enc = null;
       if (!running()) return;
-      const detail = clip(scrubOutputs(me.err, [opt.output]).split('\n').filter(Boolean).slice(-3).join(' | '));
+      const detail = clip(scrubOutputs(failure() ?? me.err, [opt.output]).split('\n').filter(Boolean).slice(-3).join(' | '));
       event('stream_ffmpeg_exit', { code, signal, detail });
       if (tooMany()) { fail(`ffmpeg failed ${opt.maxRestarts + 1} times in ${Math.round(opt.restartWindowMs / 60_000)} min: ${detail}`); return; }
       const wait = Math.min(30_000, 1_000 * 2 ** (restarts.ffmpeg.length - 1));
@@ -823,6 +827,20 @@ export function createCameraStream(o) {
       done({ ok: true, reason });
       return finished;
     },
+    /**
+     * Ride along with another player from now on (the live channel follows another game): the camera moves into that
+     * bot's head, the caption is cleared, the broadcast goes on without a break.
+     */
+    async follow(player) {
+      if (!validName(player)) throw new Error('the camera needs the bot\'s player name');
+      if (player === opt.player) return;
+      opt.player = player;
+      lastPose = null;
+      this.caption('');
+      event('stream_follow', { player });
+      if (state === 'live') await rig.follow(player);
+    },
+    get player() { return opt.player; },
     /** The bot's pose: a jump of more than 8 blocks (a respawn, a teleport) re-attaches the camera at once. */
     pose(p) {
       const q = cleanPose(p);
@@ -899,8 +917,26 @@ export function createCameraPool({ count = 1, camera = {}, log, createRig = crea
   };
 }
 
-/** A stream manager whose streams are real-client cameras (STREAM_SOURCE=client); stopAll also stops the cameras. */
-export function createCameraManager({ config, log, createRig } = {}) {
+/**
+ * A stream manager whose streams are real-client cameras (STREAM_SOURCE=client); stopAll also stops the cameras. With
+ * FB_LIVE=on it is the Facebook live channel instead (src/fb-live.js): one camera, every game on one channel, each
+ * broadcast a live video of the Page. gameTtlMs: in the camera service, a game the agent stops reporting leaves the
+ * channel after this long.
+ */
+export function createCameraManager({ config, log, createRig, graph = null, gameTtlMs = 0 } = {}) {
+  if (config.fb?.live) {
+    const pool = createCameraPool({ count: 1, camera: cameraOptions(config), log, createRig });
+    const channel = createLiveChannel({
+      graph: graph ?? createGraph({ pageId: config.fb.pageId, tokenFile: config.fb.tokenFile, version: config.fb.graphVersion, base: config.fb.graphUrl, log }),
+      createStream: (opts) => pool.create(opts), streamOptions: managerConfig(config.stream).options, log,
+      title: config.fb.title, stateFile: config.fb.stateFile, gameTtlMs,
+    });
+    pool.start();
+    const stopAll = channel.stopAll;
+    channel.stopAll = async (reason) => { await stopAll(reason); await pool.stop(); };
+    channel.pool = pool;
+    return channel;
+  }
   const pool = createCameraPool({ count: config.stream.max, camera: cameraOptions(config), log, createRig });
   const manager = createStreamManager({ config: managerConfig(config.stream), log, create: (opts) => pool.create(opts) });
   if (manager.enabled) pool.start();
