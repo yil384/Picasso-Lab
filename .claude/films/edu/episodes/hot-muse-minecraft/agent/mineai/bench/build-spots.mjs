@@ -218,7 +218,15 @@ async function serverCheck(cells) {
     else if (c.block_name !== 'air' && !(await holds(c.x, c.y, c.z, 'air')) && !(await holds(c.x, c.y, c.z, 'water')) && !(await holds(c.x, c.y, c.z, '#minecraft:replaceable'))) solid.push(at);
     else wrong.push(at);
   }
-  return { ok, of: cells.length, water, solid, wrong, done: wrong.length === 0 };
+  return { ok, of: cells.length, water, solid, wrong };
+}
+/**
+ * Complete: every cell as asked on the server, or left as the build's own audit says it left it on purpose (solid
+ * ground kept, water in a cell to clear; patch 0011). A runtime without those (before 0011) is complete only exact.
+ */
+function done(check, st) {
+  const kept = (st?.kept ?? []).reduce((n, k) => n + k.count, 0);
+  return check.wrong.length === 0 && check.solid.length <= kept && check.water.length <= (st?.water ?? 0);
 }
 
 for (const bp of BPS) {
@@ -240,7 +248,7 @@ for (const bp of BPS) {
         const { cells, facing } = blueprintCells(bp, 'cobblestone', feet, heading);
         const r = await act('build_structure', { blocks: cells, remove_wrong_blocks: true }, ` (built facing ${facing})`);
         let check = await serverCheck(cells);
-        const row = { spot: name, blueprint: bp, i, feet, facing, s: r.s, status: r.status, complete: check.done, exact: check.ok === check.of, server: check, audit: AUDIT(r.structure), error: r.error, reply: r.reply };
+        const row = { spot: name, blueprint: bp, i, feet, facing, s: r.s, status: r.status, complete: done(check, r.structure), exact: check.ok === check.of, server: check, audit: AUDIT(r.structure), error: r.error, reply: r.reply };
         if (values.retry && !row.complete) {
           // Muse's retry: the bot where the first build left it, turned a quarter; the gateway sends the same cells again
           const again = await where();
@@ -248,11 +256,11 @@ for (const bp of BPS) {
           await sleep(1500);
           const r2 = await act('build_structure', { blocks: cells, remove_wrong_blocks: true }, ` (continued the ${bp} facing ${facing})`);
           check = await serverCheck(cells);
-          Object.assign(row, { retry: { s: r2.s, status: r2.status, complete: check.done, exact: check.ok === check.of, server: check, audit: AUDIT(r2.structure), error: r2.error, reply: r2.reply } });
+          Object.assign(row, { retry: { s: r2.s, status: r2.status, complete: done(check, r2.structure), exact: check.ok === check.of, server: check, audit: AUDIT(r2.structure), error: r2.error, reply: r2.reply } });
         }
         rows.tries.push(row);
         const after = row.retry ? `; retry: ${row.retry.complete ? 'COMPLETE' : 'incomplete'} ${row.retry.server.ok}/${row.retry.server.of} in ${row.retry.s.toFixed(1)} s` : '';
-        const other = [check.solid.length ? `${check.solid.length} solid ground kept` : '', check.water.length ? `${check.water.length} water` : ''].filter(Boolean).join(', ');
+        const other = [check.solid.length ? `${check.solid.length} holding solid ground` : '', check.water.length ? `${check.water.length} water` : ''].filter(Boolean).join(', ');
         console.log(`${name.padEnd(10)} ${bp.padEnd(8)} #${i + 1}: ${row.complete ? 'COMPLETE  ' : 'incomplete'} ${check.ok}/${check.of} exact${other ? ` (${other})` : ''} on the server, ${r.s.toFixed(1)} s, placed ${r.structure?.placed ?? '-'}, dug ${r.structure?.dug ?? '-'}${r.structure?.supports?.length ? `, supports ${r.structure.supports.map((x) => `${x.count} ${x.block}`).join(', ')}` : ''}${after}`);
         if (!row.complete || row.retry || other) console.log(`    ${r.reply.slice(0, 900)}`);
         if (row.retry && !row.retry.complete) console.log(`    retry: ${row.retry.reply.slice(0, 600)}`);

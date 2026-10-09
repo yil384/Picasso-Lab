@@ -1,11 +1,12 @@
 // mineai/bench/build-staging.mjs - builds on rough ground through the public /mcp in plain HTTP JSON-RPC, as Muse sends
-// them (no model): one game per spot, each `collect cobblestone 40`, `build hut_3x3 cobblestone` (and once more when it
-// is left incomplete: the same hut must be continued, the reply says "continued"), then `build shelter cobblestone`,
-// every build reply printed in full and checked: ok, or a failure that names its cells and why; never a reply cut
-// mid-word or with a bracket left open. Where the games land is staging's business (SPREAD_SPOTS in its deploy/.env
-// for the run: "x z; x z; ...", one spot per game in turn); --go x,y,z walks there first (one per game, in order).
+// them (no model): one game per spot, each a wooden pickaxe, `collect cobblestone 43`, a stone pickaxe, then `build
+// hut_3x3 cobblestone` (and once more when it is left incomplete: the same hut must be continued, the reply says
+// "continued"), then `build shelter cobblestone`; every build reply printed in full and checked: ok, or a failure that
+// names its cells and why, never a reply cut mid-word or with a bracket left open. Where the games land is staging's
+// business (SPREAD_SPOTS in its deploy/.env for the run: "x z; x z; ...", one spot per game in turn); --go x,y,z walks
+// there after the collect, before the hut (one per game, in order).
 //
-//   node mineai/bench/build-staging.mjs [https://play-staging.picasso-lab.com] [--games 3] [--go x,y,z;x,y,z;...]
+//   node mineai/bench/build-staging.mjs [https://play-staging.picasso-lab.com] [--games 3] ["--go=x,y,z;x,y,z;..."]
 //     [--out builds.json]
 //
 // Exit codes: 0 every check held, 2 one did not, 1 the script broke. Refuses play.picasso-lab.com unless --production
@@ -78,9 +79,21 @@ for (let g = 0; g < Number(values.games); g++) {
   const where = /^position ([-\d]+ [-\d]+ [-\d]+)/m.exec(start.text)?.[1] ?? '?';
   console.log(`${at()} game ${game} at ${where}`);
   const go = goes[g];
+  // a wooden pickaxe from the nearest wood (as scripts/staging-check.mjs picks it), the cobblestone (the collect walks
+  // wherever the stone is), then to the spot, then the hut
+  const near = /^nearby blocks[^\n]*/m.exec(start.text)?.[0] ?? '';
+  const logs = [...near.matchAll(/(?:^|[:;] )((?:dark_)?[a-z]+)_log (\d+)\+? \(nearest ([\d.]+) away/g)]
+    .filter((m) => !m[1].startsWith('stripped') && m[1] !== 'pale_oak' && Number(m[2]) >= 3).sort((a, b) => Number(a[3]) - Number(b[3]));
+  const wood = logs[0]?.[1] ?? 'oak';
   const first = [
+    { skill: 'collect', args: { block: `${wood}_log`, n: 3 } },
+    { skill: 'craft', args: { item: `${wood}_planks`, n: 12 } },
+    { skill: 'craft', args: { item: 'stick', n: 4 } },
+    { skill: 'craft', args: { item: 'wooden_pickaxe', n: 1 } },
+    { skill: 'collect', args: { block: 'cobblestone', n: 43 } },
+    // a wooden pickaxe wears out digging a hut's cells out of stone (staging's first run): a stone one, as Muse carries
+    { skill: 'craft', args: { item: 'stone_pickaxe', n: 1 } },
     ...(go ? [{ skill: 'go_to', args: { x: go[0], y: go[1], z: go[2] } }] : []),
-    { skill: 'collect', args: { block: 'cobblestone', n: 40 } },
     { skill: 'build', args: { blueprint: 'hut_3x3', material: 'cobblestone' } },
   ];
   record((await tool('play_sequence', { steps: first })).data);

@@ -368,6 +368,17 @@ function describeLeft(st) {
   return parts.join('; ');
 }
 
+/**
+ * Why a build stopped before every cell was done, in a few words: a tool that wore out ("[TOOL_TIER_LOST]
+ * wooden_pickaxe was lost at ...; no pickaxe remains."), or their stop reason. Staging's first build with a wooden
+ * pickaxe stopped so, and the reply named 22 cells holding stone without saying why they were not dug.
+ */
+function buildStop(code, text) {
+  const lost = /^(\w+) was lost at [^;]*; (.*?)\.?$/.exec(text);
+  if (code === 'TOOL_TIER_LOST' && lost) return `your ${lost[1]} wore out (${lost[2]}); carry a better tool and build again to continue it`;
+  return cut(text.replace(/^The build stopped: /, '').replace(/\.$/, ''), 160);
+}
+
 /** What a build did besides the blueprint's own blocks: solid ground kept, water left, blocks put under walls. */
 function buildNotes(st) {
   const notes = [];
@@ -512,7 +523,7 @@ export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   // a build says which cells it could not do and why, from its audit, never its whole error text cut short
   const st = tool === 'build_structure' && r.structure && r.structure.wrong > 0 ? r.structure : null;
   const why = st
-    ? cut(`${Number(st.cells) - Number(st.wrong)} of ${st.cells} cells done; ${describeLeft(st) || 'some cells are still wrong'}${theirs === 'BUILD_STOPPED' ? `; the build stopped: ${cut(text.replace(/^The build stopped: /, ''), 160)}` : ''}`, 600)
+    ? cut(`${Number(st.cells) - Number(st.wrong)} of ${st.cells} cells done; ${describeLeft(st) || 'some cells are still wrong'}${theirs && theirs !== 'BUILD_INCOMPLETE' ? `; the build stopped: ${buildStop(theirs, text)}` : ''}`, 600)
     : cut(text || (status === 'partial' ? 'only part of it was done' : 'it did not work'));
   // a failure their code does not type, but whose words say something is not carried, is NEED_ITEMS
   let code = codeFor(theirs) ?? 'FAILED';

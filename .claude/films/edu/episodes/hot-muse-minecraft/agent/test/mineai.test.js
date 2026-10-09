@@ -1065,6 +1065,10 @@ test('mineai build: a failed build says which cells it could not do and why in p
     const depth = [...c].reduce((d, ch) => d + (ch === '(' ? 1 : ch === ')' ? -1 : 0), 0);
     assert.equal(depth, 0, c);
   }
+  // a build stopped by a tool that wore out says so (staging, 2026-10-08: "22 cells hold another block" and no why)
+  const worn = fromTheirs('build_structure', { result: { status: 'partial', error: '[TOOL_TIER_LOST] wooden_pickaxe was lost at -175,61,52; no pickaxe remains.', structure: { ...structure, wrong: 24, kept: [], water: 0, supports: [], left: [{ reason: 'holds_another_block', count: 22, named: [{ x: -175, y: 61, z: 51, holds: 'stone' }] }, { reason: 'not_reached', count: 2, named: [{ x: -175, y: 62, z: 53 }] }] } } }, { call });
+  assert.match(worn.result, /^only partly done: 3 of 27 cells done; 22 cells hold another block \(stone at -175,61,51, and 21 more\); 2 cells were still to do when the build stopped \(-175,62,53, and 1 more\); the build stopped: your wooden_pickaxe wore out \(no pickaxe remains\); carry a better tool and build again to continue it \(placed 17 cobblestone/);
+  assert.equal(worn.code, 'NEED_ITEMS');
   const old = fromTheirs('build_structure', { result: { status: 'failed', error: `[BUILD_INCOMPLETE] ${F3.slice(8)}` } });
   assert.doesNotMatch(old.result, /\bsea\b/, 'a reply without an audit is cut cleanly too');
 });
