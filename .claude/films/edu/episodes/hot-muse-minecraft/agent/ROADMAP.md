@@ -486,6 +486,27 @@ Meta's network.
 
 ### M4. The bot survives on its own (days 31–40)
 
+STATUS_M4_ROADMAP
+
+**Acceptance of the survival step (defined 2026-10-09, from the acceptance below).** The first step of M4 is the bot
+that stays alive while Muse is busy or slow, through real nights on Normal; the goal-level skills (`obtain`, bows,
+buckets, chests, `explore`, `travel`) come after it. Its gate, all on staging on picasso, scripted, no model, every
+step sent once:
+- **Natural** (the gate for production): at least 16 games, each from an empty inventory through its whole 30-minute
+  lease (1.5 in-game days, so at least one whole night), at fresh spots no earlier game touched, Normal, daylight
+  cycling, no console commands, played by a slow scripted player (`mineai/bench/survive.mjs`: wood, wooden and stone
+  tools and a furnace, then silences of 150-240 s with a small task now and then, some of them at night): **at most 1
+  death across all of them** (as the natural acceptance below) and **at least 15 of 16 games pass** (the lease ended
+  the game and its bot never died). Every action the body took by itself is in a reply. The same run with the care off
+  (`MINEAI_CARE=off`, only the runtime's reflexes) is the baseline, reported beside it, never mixed in.
+- **Prepared labs** (`mineai/bench/survive-labs.mjs`, console commands, reported apart from the natural runs): hunger
+  (no food, animals near), a night shelter (zombies near), a bed, zombie, skeleton and creeper fights at night, armor
+  from iron, a tool about to break in a collect, a death and the items back: **20 trials each, at least 16 pass (80%),
+  no death** a lab did not cause (as the prepared acceptance below). Each reports n, the rate and the p50 and p90 time
+  to the outcome.
+- No regression: the staging check (a wooden pickaxe, strict) passes.
+
+
 **Users get:** hour-long goals in the overworld ("full iron armor, a bow, a base with a bed and a chest") without Muse
 babysitting every mob.
 

@@ -329,6 +329,24 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
     const prey = preyNear(s, { cook });
     if (prey) return { kind: 'hunt', why: `food ${food}/20 and no food carried`, mob: prey.name, drop: PREY[prey.name], n: 3, cook, distance: Math.round(prey.nearest.distance) };
   }
+  // night, before any crafting (that is done inside the shelter): sleep in a bed it carries (the night passes when
+  // every player sleeps), else shelter
+  if (night && policy.night !== 'off') {
+    const pos = s.position;
+    const feet = pos ? { x: Math.floor(pos.x), y: Math.floor(pos.y), z: Math.floor(pos.z) } : null;
+    const sh = memory.shelter;
+    const sheltered = Boolean(sh && feet && sh.feet.x === feet.x && sh.feet.z === feet.z && Math.abs(sh.feet.y - feet.y) <= 1 && sh.night === memory.night);
+    const fresh = sheltered && now - sh.checked < 90_000; // inside a shelter checked lately: on to the crafts below
+    const bed = Object.keys(inventory).find((n) => BEDS.test(n) && inventory[n] > 0);
+    if (!fresh && bed && !sheltered && memory.slept !== memory.night && !cooling('sleep', 120_000) && !hostilesWithin(s, 10).length) {
+      return { kind: 'sleep', why: `night (time ${time}) and it carries a ${bed}`, bed };
+    }
+    // three shelters that would not close this night: it stops trying until the next (its reflexes still fight)
+    if (!fresh && ((!cooling('shelter', 45_000) && (memory.shelterFails?.[memory.night] ?? 0) < 3) || sheltered)) {
+      const { total } = shelterBlocks(inventory);
+      return { kind: 'shelter', why: `night (time ${time})`, blocks: total, check: sheltered };
+    }
+  }
   // a tool about to break: a spare from what it carries
   if (policy.tools !== 'off' && !cooling('tools', 60_000)) {
     for (const cls of TOOL_CLASSES) {
@@ -342,23 +360,6 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
     const used = {};
     for (const p of plan) used[p.uses] = (used[p.uses] ?? 0) + p.n;
     if (plan.length) return { kind: 'armor', why: `it carries ${Object.entries(used).map(([u, n]) => `${n} ${u}`).join(' and ')} for armor it does not wear`, pieces: plan };
-  }
-  // night: sleep in a bed it carries (the night passes when every player sleeps), else shelter
-  if (night && policy.night !== 'off') {
-    const pos = s.position;
-    const feet = pos ? { x: Math.floor(pos.x), y: Math.floor(pos.y), z: Math.floor(pos.z) } : null;
-    const sh = memory.shelter;
-    const sheltered = Boolean(sh && feet && sh.feet.x === feet.x && sh.feet.z === feet.z && Math.abs(sh.feet.y - feet.y) <= 1 && sh.night === memory.night);
-    if (sheltered && now - sh.checked < 90_000) return null;
-    const bed = Object.keys(inventory).find((n) => BEDS.test(n) && inventory[n] > 0);
-    if (bed && !sheltered && memory.slept !== memory.night && !cooling('sleep', 120_000) && !hostilesWithin(s, 10).length) {
-      return { kind: 'sleep', why: `night (time ${time}) and it carries a ${bed}`, bed };
-    }
-    // three shelters that would not close this night: it stops trying until the next (its reflexes still fight)
-    if ((!cooling('shelter', 45_000) && (memory.shelterFails?.[memory.night] ?? 0) < 3) || sheltered) {
-      const { total } = shelterBlocks(inventory);
-      return { kind: 'shelter', why: `night (time ${time})`, blocks: total, check: sheltered };
-    }
   }
   return null;
 }

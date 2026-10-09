@@ -1652,6 +1652,55 @@ BUN=... node mineai/bench/build-spots.mjs ~/picasso-work/mineai-runtime-11 --ser
 node mineai/bench/build-staging.mjs https://play-staging.picasso-lab.com --games 3 "--go=-176,61,52;-180,70,-27;-90,63,-13"
 ```
 
+### The bot looks after itself (ROADMAP M4, 2026-10-09)
+
+The world can now run its real day and night on Normal: the body keeps itself alive while Muse is busy or slow, and
+says what it did. The runtime's own reflexes already fight, flee, hide, eat carried food, swim up for air, leave fire
+and keep their footing, during a step and between steps. `src/mineai/care.js` adds what needs a plan over minutes,
+made only of the runtime's own actions (`sleep`, `build_structure`, `collect_mob_drop`, `smelt_item`, `eat_food`,
+`craft_item`, `equip`, `pick_up_items`, `navigate`), and acts only while no step of the player's runs (3 s after the
+last one ended), yielding at once to the next step (its action cancelled through their cancel and its result read
+first, as their result gate wants). In order, what it does when nothing else needs the body:
+
+| What | When | How |
+| --- | --- | --- |
+| a death's items | it died within the last 4.5 minutes (their items despawn after 5) and respawned within 300 blocks | `pick_up_items {recover_death_items}`; the only care action a step waits for (the step's time starts after it) |
+| armor | it carries a better piece than it wears, or a shield and an empty off-hand | `equip`, each piece to its slot |
+| food | food 14 or less (or hurt and below 18, which healing needs) and something safe to eat | `eat_food`, raw meat too (their hunger reflex keeps raw meat for emergencies) |
+| | no food at all, food 14 or less in daylight (6 or less at night) | hunts the nearest cow, pig, sheep or rabbit within 32 blocks for 3 meat (`collect_mob_drop`), cooks it when it carries a furnace and fuel, eats |
+| tools | a pickaxe, axe, shovel or sword with 6% of its life (or 6 uses) left and no other one with more | a spare of the best tier up to its own that what it carries pays for (`craft_item`, planks, sticks and a table made on the way) |
+| armor | leather, or more than 3 iron ingots (3 are kept for a pickaxe or a bucket), pays for a piece better than it has | chestplate, leggings, boots, helmet in that order, crafted then worn; never diamonds or gold by itself |
+| night | time of day 12300 to 23300 (beds take a player from 12542) in the overworld | with a bed it carries and no hostile mob within 10 blocks: `sleep` (the night passes when no other player is awake), then the bed is picked up again; otherwise, and when the night did not pass: a closed shelter (`build_structure` without digging out anything: a cell that already holds a solid block is wall enough) of carried blocks, cobblestone first, around the bot, with a one-block pocket in front of its feet for a temporary crafting table or furnace (a craft at night works inside it), 12 blocks on open ground; with fewer than 12 blocks it first digs two blocks down and the ground is the wall. It stays inside until the next call; one that will not close is tried at most three times a night |
+
+During a step, two things keep a tool from breaking in the middle of it: a `collect` of blocks a pickaxe mines gets a
+spare first when the best pickaxe has fewer uses left than the blocks asked for plus 4 ("on its own first: crafted a
+spare stone_pickaxe (your stone_pickaxe had 5 uses left, too few for 12 stone)"), and a pickaxe that breaks anyway
+(their `TOOL_TIER_LOST`) is replaced from what is carried and the collect goes on with the rest ("your stone_pickaxe
+broke after 4 of 10 stone; on its own: crafted a new stone_pickaxe and went on with the other 6"), at most twice a step.
+
+What Muse sees: every reply carries what the body did by itself since the last reply that reached the client, once,
+oldest first, as text ("On its own since your last reply (the body, not a step of yours):", a line each: "- 41 s ago,
+on its own, shelter: night (time 13287): closed itself in at 10 71 247 (placed 3 blocks, 3 wall cells already solid);
+it stays inside until your next call") and as `structuredContent.onItsOwn` (`source` care or reflex, `kind`, `ok`,
+`text`, `agoS`). The runtime's reflexes come from their event log (`read_recent_events`, read every 4 s): a fight of
+many short contacts is one line ("fought zombie and killed one; fled from creeper; 1 explosion near it; health 20 ->
+4.6"), with meals, air, fire, footing, a tool about to break or broken, and deaths with the server's cause; a reflex
+that interrupted a step is left to that step's own result (it says "on its own: ..." already), and chat is never read
+into a reply. The state says what the body does by itself right now ("on its own now: sheltering for the night") and
+the last thing it did; the short state has the time of day (`time`). The server instructions say the body looks after
+itself and that the policy skill changes it.
+
+`policy` takes four more knobs, kept in the gateway (never sent to the runtime) for the rest of the game: `night`
+(shelter, off), `armor` (craft, wear, off), `food` (hunt, eat, off), `tools` (spare, off); no arguments puts these and
+the runtime's back to the defaults. A new extra skill, `armor {}`, crafts the best pieces what is carried pays for
+(iron, leather, gold or diamonds, nothing kept back) and puts them on with any better piece or shield carried.
+`MINEAI_CARE=off` turns the care off (only the runtime's reflexes act), for measurements. The world: Paper's
+difficulty and daylight come from `PAPER_DIFFICULTY` (default easy) and `PAPER_DAYLIGHT` (locked or cycle, default
+locked) in the stack's `deploy/.env`, and `deploy/paper-entry.sh` sets both again at every start (a world that was
+locked stays locked otherwise: the game rule is saved in the world).
+
+MEASURED_M4
+
 ## What is mocked
 
 - The model: `test/mock-llm.js` speaks Chat Completions and the Responses API (streamed and not), replays scripted tool

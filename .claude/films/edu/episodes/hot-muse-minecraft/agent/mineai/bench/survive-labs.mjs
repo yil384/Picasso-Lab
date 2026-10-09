@@ -2,8 +2,8 @@
 // lab, set up with server console commands (prepared evidence, never mixed with the natural runs of survive.mjs), each
 // trial a new game through a running agent's /mcp with no model, and the body left alone to deal with it: no step is
 // sent unless the lab is about a step (tool). What each lab sets up and what counts as a pass:
-//   hunger   day; food drained to about 8 (the Hunger effect), nothing to eat, two cows summoned near by: food back
-//            above where it was within 150 s (a hunt, maybe a cooked meal, a meal)
+//   hunger   day; food drained to 14 or less (the Hunger effect), nothing to eat, two cows summoned near by: a hunt that
+//            ends in a meal and food above where the drain left it, within 150 s
 //   shelter  night; 16 cobblestone, three zombies summoned 10 blocks away: a closed shelter reported within 30 s and the
 //            bot alive with health 14 or more 90 s later
 //   bed      night; a white bed: it sleeps (the night passes when no other player is awake) or, when another player is
@@ -77,10 +77,10 @@ const vitals = (txt) => {
 const LABS = {
   hunger: {
     time: 'day', limitS: 150, kinds: ['hunt', 'eat'],
-    setup: (bot) => [`effect give ${bot} minecraft:hunger 5 99 true`, `clear ${bot}`],
-    after: async (bot) => { await sleep(5_500); con(`effect clear ${bot} minecraft:hunger`); for (const dx of [4, -4]) con(`execute at ${bot} run summon cow ~${dx} ~ ~2`); },
+    setup: (bot) => [`effect give ${bot} minecraft:hunger 8 99 true`, `clear ${bot}`],
+    after: async (bot) => { await sleep(8_500); con(`effect clear ${bot} minecraft:hunger`); for (const dx of [4, -4]) con(`execute at ${bot} run summon cow ~${dx} ~ ~2`); },
     start: (g) => { g.food0 = g.v.food; },
-    pass: (g) => g.food0 !== undefined && g.v.food >= Math.min(20, g.food0 + 3) && g.own.some((e) => e.kind === 'hunt' || e.kind === 'eat'),
+    pass: (g) => g.food0 !== undefined && g.v.food > g.food0 && g.own.some((e) => e.kind === 'hunt' && e.ok && /ate /.test(e.text)),
   },
   shelter: {
     time: 'night', limitS: 90, holdS: 90, kinds: ['shelter'],
@@ -157,16 +157,19 @@ async function trial(lab, k) {
     for (const line of L.setup(g.bot)) con(line);
     await sleep(1_000);
     await call('get_state');
-    L.start?.(g);
     const t1 = Date.now();
     g.t1 = t1;
     await L.after?.(g.bot);
+    if (L.start) { await call('get_state'); L.start(g); }
     for (const st of L.steps?.filter((x) => x.skill !== 'policy') ?? []) {
       let r = await call('play', st);
-      for (let w = 0; w < 8 && /still running/.test(r.text); w++) r = await call('get_state');
-      const line = (r.r.structuredContent?.steps?.[0] ?? r.r.structuredContent?.earlier?.at(-1)) ?? null;
+      let line = r.r.structuredContent?.steps?.find((x) => x.skill === st.skill) ?? null;
+      for (let w = 0; w < 8 && line && !['confirmed', 'failed', 'cancelled'].includes(line.status); w++) {
+        r = await call('get_state');
+        line = r.r.structuredContent?.earlier?.find((x) => x.skill === st.skill) ?? line;
+      }
       g.stepOk = line?.status === 'confirmed';
-      g.stepText = line?.result ?? r.text.slice(0, 300);
+      g.stepText = line?.result ?? r.text.split('\n').slice(0, 3).join(' ').slice(0, 300);
     }
     const end = t1 + L.limitS * 1000;
     while (Date.now() < end) {
@@ -188,6 +191,7 @@ async function trial(lab, k) {
     await c?.close().catch(() => {});
   }
   console.log(`${lab} #${k}: ${g.ok ? 'PASS' : 'FAIL'} ${g.seconds ?? '?'} s, game ${g.game}, deaths ${g.deaths.length}${g.deaths.length ? ` (${g.deaths.join('; ')})` : ''}; health ${g.v.health}, food ${g.v.food}; on its own: ${g.own.map((e) => `${e.kind}${e.ok ? '' : '(failed)'}`).join(', ') || 'nothing'}${g.error ? `; error ${g.error}` : ''}`);
+  if (g.stepText !== undefined) console.log(`    step: ${g.stepOk ? 'ok' : 'NOT ok'}: ${String(g.stepText).slice(0, 300)}`);
   for (const e of g.own) console.log(`    ${e.atS} s ${e.source} ${e.kind}: ${String(e.text).slice(0, 200)}`);
   trials.push(g);
   return g;
