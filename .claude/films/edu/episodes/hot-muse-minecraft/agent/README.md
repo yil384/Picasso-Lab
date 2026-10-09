@@ -347,6 +347,10 @@ deploy/push.sh --prod --dry-run    # print what would run, run nothing
 node scripts/staging-check.mjs [url] [--no-game]   # the checks by hand (default: the staging URL)
 ```
 
+Since ROADMAP M4 staging plays on Normal with real days and nights (`PAPER_DIFFICULTY=normal`, `PAPER_DAYLIGHT=cycle` in
+its `deploy/.env`): the check's strict game can be stopped by a mob at night (2026-10-09: a zombie took `craft stick`
+over at 3 blocks), so a deploy that matters goes out in daylight, or `deploy/push.sh --check` runs again.
+
 The checks (`scripts/staging-check.mjs`): the page answers; `openapi.json` names the host it was asked on (so
 `WEB_PUBLIC_URL` is staging's, not production's); `/mcp` initializes and lists the game tools; and a scripted game
 with no model goes from an empty inventory to a wooden pickaxe with one `play_sequence` (3 logs of the nearest wood,
