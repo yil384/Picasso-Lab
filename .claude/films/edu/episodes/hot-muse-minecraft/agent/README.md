@@ -11,7 +11,9 @@ Not affiliated with or endorsed by Meta or Mojang.
 
 **Status 2026-10-08: production (https://play.picasso-lab.com) plays with the Mine AI MCP body (`BODY=mineai`, the
 runtime at 2fe1306 with our 11 patches, builds on rough ground included); staging too.** Both stacks have the proxy secret and the Paper whitelist.
-Section "The switch" below; rollback `docs/SWITCH.md`, section 5.
+Section "The switch" below; rollback `docs/SWITCH.md`, section 5. **Staging since 2026-10-09: Normal with real days
+and nights, and the body looks after itself between calls (ROADMAP M4; section "The bot looks after itself"); its gate
+is not met yet, so production keeps easy and locked daylight and the build before it.**
 
 ## Architecture
 
@@ -1725,9 +1727,26 @@ through its whole 30-minute lease (1.5 in-game days, so one whole night) with th
 get_state and now and then a small task: 3 logs, 6 stone, 4 dirt, a walk, some of them at night). The baseline is the
 same build with `MINEAI_CARE=off` (only the runtime's reflexes), at its own 8 fresh spots of the same ring.
 
-NATURAL_TABLE
+| | baseline: care off | care on, build `3c25a22` | care on, build `8a0d855` (this branch's src) |
+| --- | --- | --- | --- |
+| when the games began | morning (time 3000) | morning (time 70) | the middle of the night (time 18800) |
+| games, passes (the lease ended it and the bot never died) | 8, **6** | 8, **7** | 8, **5** |
+| deaths (server log) | 2: drowned, shot by a skeleton, both idle at night between calls; neither said in a reply | 1: a bot that found no wood (no tools, no blocks), shot by a skeleton at night while it dug in | 3: two killed in the first night they joined in (a zombie while it collected dirt for walls; a skeleton at health 8 by day after that fight), one shot by a skeleton in the second night as zombies kept taking its shelter build over |
+| nights lived through | 8 | 8 | 8 |
+| health at its lowest, median (min) | 18 (2) | 12.3 (7) | 20 (8) |
+| what it did on its own (replies) | nothing reported | 27 shelters, 3 flights, 1 hide, 1 fight, the death and its recovery | 35 shelters, 6 dusk gatherings, 2 hides, 2 flights, 1 fight, 2 tool warnings, 3 deaths and their recoveries |
+| sheltered after dusk, p50 / p90 / max | - | 2 / 201 / 201 s | 4 / 461 / 479 s (when a step of the player's ran at dusk, the shelter waited for it) |
+| a care action's time, p50 / p90 | - | 2.9 / 41.7 s | 2.3 / 24.4 s |
+| told in a reply / done before the game's last reply | - | 34 / 40 (the bench counted later ones too then) | **55 / 55** |
+| steps ok, step time p50 / p90 | 112 of 121, 13.0 / 30.7 s | 105 of 116, 14.9 / 35.2 s | 86 of 110, 14.8 / 34.5 s (bots that joined at night lost their first steps to mobs) |
 
-LABS_TABLE
+**Against the gate (ROADMAP M4, "Acceptance of the survival step"): not met.** The care on cut the deaths from 2 in 8
+(baseline) to 1 in 8 with a day start, but a night start cost 3 in 8, and the gate allows at most 1 death in 16
+games. What kills: skeletons (4 of 6 deaths), and zombies close by that keep taking a shelter build over; bots with no
+tools or blocks are the weakest. Production keeps easy and locked daylight and was not changed. Not yet run on staging:
+the prepared labs (`survive-labs.mjs`; on the Mac's copy of the world, 4 trials each with an earlier build: hunger 3/4,
+shelter 3/4, armor 4/4, tool 4/4, bed 4/4, death 3/4, zombie, skeleton and creeper 2-3/4 with one lab death to a
+skeleton; prepared, on the Mac, not evidence for the gate).
 
 ```sh
 # on picasso (staging's deploy/.env: PAPER_DIFFICULTY=normal, PAPER_DAYLIGHT=cycle; for a run only: SPREAD_SPOTS,

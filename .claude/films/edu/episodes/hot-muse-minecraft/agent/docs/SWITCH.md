@@ -386,7 +386,9 @@ for a week (`docker rmi muse-minecraft-agent:pre-0011`).
 
 ## 8. The bot looks after itself, with real nights on Normal (ROADMAP M4)
 
-STATUS_M4
+**Not done: the M4 gate is not met (README, "The bot looks after itself": at most 1 death in 16 natural games is the
+bar; staging had 1 in 8 and 3 in 8). Production keeps easy and locked daylight and the build before M4.** The steps
+below are for when it is.
 
 The care (README, "The bot looks after itself") changes only the gateway (no runtime patch: the runtime stays `2fe1306
 with 11 patches`), and the world settings change through two lines in `deploy/.env`, which `deploy/compose.yaml` hands

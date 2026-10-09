@@ -486,7 +486,15 @@ Meta's network.
 
 ### M4. The bot survives on its own (days 31–40)
 
-STATUS_M4_ROADMAP
+**Status 2026-10-09: the survival step is built and on staging, its gate not met; production unchanged.** The body
+looks after itself between Muse's calls (`src/mineai/care.js`: a death's items, armor, food and hunting, spare tools,
+blocks at dusk, a shelter or a bed at night, their fight reflex set to wall itself in when badly hurt), and every reply
+says what it did on its own (README, "The bot looks after itself"). Staging plays on Normal with real days and nights
+(`PAPER_DIFFICULTY`, `PAPER_DAYLIGHT` in its `deploy/.env`). Natural runs on staging, 8 whole-lease games each: care
+off 6 of 8 passed (2 deaths), care on 7 of 8 (1 death, day start) and 5 of 8 (3 deaths, night start): the gate below
+allows at most 1 death in 16, so production keeps easy and locked daylight. Next: skeletons (a shield, armor before
+the first night, cover from arrows), shelters that a zombie close by cannot keep taking over, the prepared labs on
+staging.
 
 **Acceptance of the survival step (defined 2026-10-09, from the acceptance below).** The first step of M4 is the bot
 that stays alive while Muse is busy or slow, through real nights on Normal; the goal-level skills (`obtain`, bows,
