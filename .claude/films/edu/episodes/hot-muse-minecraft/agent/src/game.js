@@ -17,6 +17,12 @@ export const COLLECTABLE_BLOCKS = freeze([
   'crafting_table', 'furnace',
 ]);
 
+/**
+ * Blocks that drop more than one item, with the most one block gives (the rest give one, or nothing by chance): the
+ * check counts a collect's gain by it, and a collect's reply never puts what the targets themselves dropped "on the way".
+ */
+export const MAX_DROPS = freeze({ clay: 4, copper_ore: 5, deepslate_copper_ore: 5 });
+
 /** Items craft() may make (the iron-pickaxe tech tree, a hut, simple tools and food). */
 export const CRAFTABLE_ITEMS = freeze([
   ...PLANKS,

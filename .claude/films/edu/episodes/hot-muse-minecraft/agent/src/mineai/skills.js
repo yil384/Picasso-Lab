@@ -1,12 +1,13 @@
 // src/mineai/skills.js - what a guest's skill calls become on the Mine AI MCP runtime (BODY=mineai), and back: our 10
 // skills and craft_batch mapped onto their actions (collect -> collect_block, craft -> craft_item, smelt -> smelt_item,
 // go_to -> navigate, ...), the curated extra skills MCP offers with this body (equip, hunt, sleep, bucket, chest,
-// explore, policy, pick_up, drop: the M4 survival set of the reuse spike) with compact schemas of our own, and their
-// results turned into our result text and typed codes. Pure functions: no network here (src/mineai/body.js calls).
+// explore, policy, pick_up, drop: the M4 survival set of the reuse spike) with compact schemas of our own, their
+// results turned into our result text and typed codes, and what each action itself used and made, from their evidence
+// (ownChange), apart from what else changed meanwhile. Pure functions: no network here (src/mineai/body.js calls).
 // Their 37 tools, their 1.36 MB tools/list and their required rationales never reach a guest: only these skills do.
 
-import { skillSet, TOOL_TIMEOUTS_MS, SMELT_PER_CALL, CRAFT_BATCH_MAX, SCHEMAS } from '../contracts.js';
-import { BLUEPRINTS, SMELT, fuelPlan } from '../game.js';
+import { skillSet, TOOL_TIMEOUTS_MS, SMELT_PER_CALL, CRAFT_BATCH_MAX, SCHEMAS, NOT_HUNGRY_TEXT } from '../contracts.js';
+import { BLUEPRINTS, SMELT, MAX_DROPS, fuelPlan } from '../game.js';
 import { facingOf } from '../state.js';
 import { registryFor, requireMc } from '../mc.js';
 
@@ -77,7 +78,7 @@ export const EXTRA_DEFS = Object.freeze([
  */
 export const MINEAI_DESCRIPTIONS = Object.freeze({
   go_to: 'Walk to a block position; the body finds its own way (it may dig, bridge, pillar or swim). The target must be within 256 blocks. Seconds to two minutes; a walk that finds no way ends and says why.',
-  collect: 'Mine n blocks of one type and pick up the drops: the body searches every loaded chunk around you (not only the nearest 32 blocks), walks there and uses the best tool you carry. stone drops cobblestone; iron_ore drops raw_iron and needs a stone pickaxe or better.',
+  collect: 'Mine n blocks of one type and pick up the drops: the body searches every loaded chunk around you (not only the nearest 32 blocks), walks there and uses the best tool you carry. stone drops cobblestone (collect cobblestone mines stone for it); iron_ore drops raw_iron and needs a stone pickaxe or better. The reply says what the step mined and picked up, and apart from that what changed on the way (blocks dug through, scaffolding placed).',
   craft: 'Craft n of an item from your inventory (rounded up to whole recipe batches; planks and sticks it lacks are made from what you carry). When the recipe needs a crafting table, the one you carry is put down for the craft and picked up again; carrying none, a table within reach is used, else one is made from 4 planks and left standing.',
   craft_batch: `Craft several items in order in ONE skill, one after another, each as craft: later items use what the earlier ones made, and a crafting table you carry (or one made earlier in the list) is put down for each item that needs it and picked up again. Up to ${CRAFT_BATCH_MAX} items; stops at the first item that cannot be made and says what is missing.`,
   smelt: `Smelt n items in one furnace and wait until all are done (about 10 s an item). item is the INPUT (raw_iron -> iron_ingot, oak_log -> charcoal, cobblestone -> stone). A furnace you carry is put down for it and picked up again; else a furnace within 24 blocks is used. Fuel from your inventory (coal, charcoal, planks, sticks, logs), one kind after another when one is not enough. At most ${SMELT_PER_CALL} a call; call again for the rest.`,
@@ -150,6 +151,9 @@ export function blueprintCells(blueprint, material, feet, headingDegrees) {
   return { cells, facing: f.name };
 }
 
+/** The block collect mines for an item that is another block's drop: cobblestone comes from stone. */
+export const COLLECT_FROM = Object.freeze({ cobblestone: 'stone', cobbled_deepslate: 'deepslate' });
+
 /** Their tools that answer at once (no submission_id, no wait): the rest are foreground actions. */
 export const DIRECT_TOOLS = new Set(['set_survival_policy']);
 
@@ -179,8 +183,12 @@ export function toTheirs(skill, args, ctx) {
       return { calls: [{ tool: 'navigate', args: { x: args.x, y: args.y, z: args.z } }] };
     }
     case 'collect': {
+      // cobblestone is what stone drops: their collect would look for cobblestone BLOCKS (dungeon walls, other
+      // players' builds, the bot's own scaffolding) and count the stone it digs on the way there (the Muse run on
+      // staging: "mined 0 blocks and picked up 12 cobblestone")
+      const block = COLLECT_FROM[args.block] ?? args.block;
       const calls = [];
-      for (let left = args.n; left > 0; left -= 32) calls.push({ tool: 'collect_block', args: { block_name: args.block, count: Math.min(32, left) } });
+      for (let left = args.n; left > 0; left -= 32) calls.push({ tool: 'collect_block', args: { block_name: block, count: Math.min(32, left) } });
       return { calls };
     }
     case 'craft':
@@ -229,7 +237,7 @@ export function toTheirs(skill, args, ctx) {
       return { calls: [{ tool: 'collect_mob_drop', args: { mob_name: target, drop_name: ATTACK_DROP[target], count: 1, ...(HOSTILE_KINDS.has(target) ? { allow_without_shield: true } : {}) } }], attack: target };
     }
     case 'eat': {
-      if ((ctx.food ?? 0) >= 20) return refuse('not hungry: food is 20/20');
+      if ((ctx.food ?? 0) >= 20) return refuse(NOT_HUNGRY_TEXT, 'NOT_HUNGRY');
       const food = bestFood(inv);
       if (!food) return refuse('no safe food in your inventory; kill a cow, pig or sheep and cook the meat', 'NEED_ITEMS');
       return { calls: [{ tool: 'eat_food', args: { food_name: food } }] };
@@ -302,10 +310,54 @@ export function splitError(error) {
   return m ? { code: m[1], text: m[2] } : { code: null, text: String(error ?? '') };
 }
 
-/** What a settled action did, in our words: one or two plain sentences. */
-function describe(tool, r) {
+/** What a block drops when that is another item (stone -> cobblestone, iron_ore -> raw_iron), else null. */
+export function dropOf(block) {
+  const def = reg.blocksByName[block];
+  const ids = (def?.drops ?? []).map((d) => (typeof d === 'number' ? d : d?.drop?.id ?? d?.drop ?? d?.id));
+  const names = ids.map((id) => reg.items[id]?.name).filter(Boolean);
+  return names.length && !names.includes(block) ? names[0] : null;
+}
+/** Blocks whose drop is left to chance (gravel may give flint, leaves and grass often nothing). */
+const BY_CHANCE = /^(gravel|short_grass|tall_grass|.*_leaves)$/;
+
+/**
+ * What collect_block did, in words that never contradict the counts: their blocksBroken counts only the target blocks
+ * their collect broke itself; drops of the same item from blocks dug on the way (or lying there) count toward the gain.
+ * Only what the targets cannot have dropped is put on the way: a block of MAX_DROPS gives up to that many (copper ore
+ * 2-5 raw copper, clay 4 clay balls), any other one at most one, and a block whose drop is left to chance is not judged.
+ */
+function describeCollect(c, block) {
+  const broken = Number(c.blocksBroken) || 0;
+  const gained = Number(c.gained) || 0;
+  const drop = dropOf(block);
+  const picked = Object.entries(c.gainedByItem ?? {}).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${k}`).join(', ') || 'nothing';
+  const mined = broken ? `mined ${broken} ${block}${drop ? ` (${block} drops ${drop})` : ''}` : `mined no ${block} as a target`;
+  const most = MAX_DROPS[block] ?? 1;
+  const beyond = gained - broken * most; // the least that came from elsewhere
+  let more = '';
+  if (beyond > 0 && !BY_CHANCE.test(block)) {
+    more = !broken ? '; all of them from blocks dug or items picked up on the way'
+      : `; ${most > 1 ? 'at least ' : ''}${beyond} of them from blocks dug or items picked up on the way`;
+  } else if (most === 1 && broken > gained && !BY_CHANCE.test(block)) {
+    // their collect stops picking up once it has what was asked: the drops of blocks it broke past that stay behind
+    more = `; the drops of ${broken - gained} were not picked up`;
+  }
+  return `${mined} and picked up ${picked} (${gained} of ${c.requested ?? '?'} wanted${more})`;
+}
+
+/** The block a build places (its cells name one material, the rest air). */
+const materialOf = (args) => (args?.blocks ?? []).find((b) => b.block_name && b.block_name !== 'air')?.block_name ?? null;
+
+/** What a settled action did, in our words: one or two plain sentences. call: our call of theirs ({tool, args}). */
+function describe(tool, r, call) {
   const c = r?.collected;
-  if (c) return `mined ${c.blocksBroken ?? 0} block${c.blocksBroken === 1 ? '' : 's'} and picked up ${Object.entries(c.gainedByItem ?? {}).map(([k, v]) => `${v} ${k}`).join(', ') || 'nothing'} (${c.gained ?? 0} of ${c.requested ?? '?'} wanted)`;
+  if (c) return describeCollect(c, call?.args?.block_name ?? 'blocks');
+  if (r?.structure) {
+    const st = r.structure;
+    const material = materialOf(call?.args) ?? 'blocks';
+    const dug = Number(st.dug) || 0;
+    return `placed ${Number(st.placed) || 0} ${material}${dug ? ` and dug ${dug} cell${dug === 1 ? '' : 's'} clear` : ''} (${Number(st.correct) || 0} of ${Number(st.cells) || 0} cells as the blueprint)`;
+  }
   if (r?.craft) {
     const made = (r.craft.items ?? []).map((i) => `${i.gained} ${i.item}`).join(', ');
     const table = r.craft.craftingTablePlaced ? ` at a crafting table put down at ${xyz(r.craft.craftingTablePlaced)}` : '';
@@ -314,7 +366,9 @@ function describe(tool, r) {
   }
   if (r?.smelt) {
     const s = r.smelt;
-    return `smelted ${s.produced ?? 0} ${s.outputItem ?? 'items'} from ${s.requested} ${s.inputItem} with ${s.fuelItem} in the furnace at ${xyz(s.furnace)}${r.workstation?.recovered ? ' (the furnace was picked up again)' : ''}`;
+    // a smelt that failed before the furnace was loaded: their evidence says requested, but nothing went in
+    if (!(Number(s.produced) > 0) && !(Number(s.fuelInserted) > 0)) return `nothing was put into a furnace; your ${s.inputItem} and ${s.fuelItem} are still carried`;
+    return `smelted ${s.produced ?? 0} ${s.outputItem ?? 'items'} from ${s.requested} ${s.inputItem} with ${s.fuelItem}${s.furnace ? ` in the furnace at ${xyz(s.furnace)}` : ''}${r.workstation?.recovered ? ' (the furnace was picked up again)' : ''}`;
   }
   if (r?.navigation) {
     const n = r.navigation;
@@ -343,14 +397,15 @@ function doneInFull(r) {
  * A settled action's output (their {action, durationMs, result, interruptions}) as our SkillResult parts.
  * @param {string} tool their action
  * @param {object} output
- * @param {{stopped?: string|null}} [opts]  stopped: why we cancelled it (stop, a timeout)
+ * @param {{stopped?: string|null, call?: {tool: string, args: object}|null}} [opts]  stopped: why we cancelled it (stop, a
+ *   timeout); call: the call of theirs it answers (for the block a collect mined, the material a build placed)
  * @returns {{ok: boolean, result: string, code: string|null, theirs: string|null}}
  */
-export function fromTheirs(tool, output, { stopped = null } = {}) {
+export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   const r = output?.result ?? {};
   const status = String(r.status ?? 'failed');
   const { code: theirs, text } = splitError(r.error);
-  const said = describe(tool, r);
+  const said = describe(tool, r, call);
   const extra = (output?.interruptions ?? []).length ? ` [on its own: ${output.interruptions.map((x) => clean(String(x).replace(/^\s*\[[A-Z_]+\]\s*/, ''), 80)).join(', ')}]` : '';
   if (status === 'succeeded') return { ok: true, result: `${said ?? 'done'}${extra}`, code: null, theirs: null };
   if (status === 'cancelled' && stopped) return { ok: false, result: `stopped: ${stopped}${said ? `; ${said}` : ''}${extra}`, code: /timed out after/.test(stopped) ? 'TIMED_OUT' : 'STOPPED', theirs };
@@ -368,6 +423,88 @@ export function fromTheirs(tool, output, { stopped = null } = {}) {
   if (code === 'FAILED' && /\b(does not carry|not carried|no \w+ carried|short of \d+)\b/i.test(why)) code = 'NEED_ITEMS';
   // partial counts as failed: the steps queued after it were planned on all of it
   return { ok: false, result: `${status === 'partial' ? 'only partly done' : 'failed'}: ${why}${said ? ` (${said})` : ''}${extra}`, code, theirs };
+}
+
+const addTo = (o, k, n) => { if (k && Number.isFinite(n) && n) o[k] = (o[k] ?? 0) + n; };
+const nonZero = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v));
+
+/**
+ * What one settled action of theirs itself used (-) and made or collected (+), from its own evidence: a craft's recipe
+ * steps, a smelt's input, fuel and output, a collect's or hunt's gain, a build's placed blocks, a meal. The rest of the
+ * step's inventory change (src/mineai/body.js measures it from their status before and after) happened on the way:
+ * blocks dug through or scaffolding placed by a walk, items lying near a table or furnace picked up with it, the drops
+ * of cells a build dug clear. {} when the action itself changes no item (a walk); null when its evidence cannot say
+ * (then the reply shows the whole change, as before), or when the whole change is the action's own (drop, pick_up,
+ * chest, bucket).
+ * @param {string} tool their action
+ * @param {object} output their settled output ({action, durationMs, result})
+ * @param {{args?: object}} [call] our call of theirs
+ * @returns {Record<string, number>|null}
+ */
+export function ownChange(tool, output, call = {}) {
+  const r = output?.result ?? {};
+  const own = {};
+  // a temporary table or furnace that was not picked up again stays in the world: one fewer carried
+  const leftStanding = () => { if (r.workstation && r.workstation.recovered === false) addTo(own, r.workstation.block, -1); };
+  switch (tool) {
+    case 'navigate': case 'explore_frontier': case 'send_message': case 'equip': case 'sleep': case 'set_survival_policy':
+      return {};
+    case 'collect_block':
+      if (!r.collected) return null;
+      for (const [k, v] of Object.entries(r.collected.gainedByItem ?? {})) addTo(own, k, Number(v));
+      return nonZero(own);
+    case 'collect_mob_drop':
+      if (!r.hunt) return null;
+      addTo(own, r.hunt.drop, Number(r.hunt.gained));
+      return nonZero(own);
+    case 'craft_item': {
+      const steps = r.craft?.plan?.steps;
+      if (!Array.isArray(steps)) return null;
+      // every recipe step done, or nothing to split (a craft cut short part-way through a step)
+      const done = Number(r.craft.completedSteps);
+      if (r.status !== 'succeeded' && done !== steps.length) return null;
+      // a table their craft made and put down itself (no table carried or in reach) is outside the plan's steps
+      if (r.craft.craftingTablePlaced && !r.workstation) return null;
+      for (const st of steps) {
+        addTo(own, st.item, Number(st.count));
+        for (const i of st.ingredients ?? []) addTo(own, i.item, -Number(i.count));
+      }
+      leftStanding();
+      return nonZero(own);
+    }
+    case 'smelt_item': {
+      const sm = r.smelt;
+      if (!sm) return null;
+      const inserted = Number(sm.fuelInserted) || 0;
+      const produced = Number(sm.produced) || 0;
+      // a smelt that failed before the furnace was loaded (no furnace put down, one that held items, the walk to it
+      // stopped, input or fuel short) sends the same evidence with requested as asked and nothing inserted, produced
+      // or recovered: it used nothing
+      if (inserted === 0 && produced === 0) { leftStanding(); return nonZero(own); }
+      addTo(own, sm.inputItem, -Math.max(0, (Number(sm.requested) || 0) - (Number(sm.rawRecovered) || 0)));
+      addTo(own, sm.fuelItem, -Math.max(0, inserted - (Number(sm.fuelRecovered) || 0)));
+      addTo(own, sm.outputItem, produced);
+      leftStanding();
+      return nonZero(own);
+    }
+    case 'eat_food':
+      if (!r.eating) return null;
+      addTo(own, r.eating.food, -(Number(r.eating.inventoryBefore) - Number(r.eating.inventoryAfter)));
+      return nonZero(own);
+    case 'place_block':
+      if (r.status !== 'succeeded') return null;
+      addTo(own, call?.args?.block_name, -1);
+      return nonZero(own);
+    case 'build_structure': {
+      if (!r.structure) return null;
+      const material = materialOf(call?.args);
+      if (!material) return null;
+      addTo(own, material, -Number(r.structure.placed));
+      return nonZero(own);
+    }
+    default:
+      return null;
+  }
 }
 
 /** The arguments schema of a skill this body runs (the 10, craft_batch and the extras). */

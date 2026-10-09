@@ -73,3 +73,36 @@ misses, host restarts and downs, and no death. The shelter and eating are not pa
 skills Muse will be asked for, and their failures go to the ROADMAP rather than stop the switch. If the route does
 not finish, the report and the log say whether the body, our gateway or Muse's client was at fault; the body or the
 gateway means no switch yet.
+
+## Runs
+
+| Date | Game | Result |
+| --- | --- | --- |
+| 2026-10-08 | `g38e5ef` (staging, the image of the soak) | **passed**: the iron pickaxe 3:34 after `start_game`, 12 MCP calls, 0 transport failures, 0 heartbeat misses or host restarts, no death; shelter done, a pig hunted and 2 porkchops cooked, `eat` refused twice at 20/20. Muse's findings and their fixes: README, "The Muse run on staging" |
+| 2026-10-08 | `g42b738` (staging, the `muse-fix` build `02ad527`, 10 runtime patches; the re-test) | **passed**: Muse's own client (`muse-minecraft-mcp 1.0`), 23:40:26-23:47:41 UTC; the iron pickaxe 3:16 after `start_game`, every step of the iron route ok (13 of 13), no death, 0 heartbeat misses, host restarts or downs, the host closed in 172 ms with the data deleted. 21 steps, 15 ok: a pig hunted and 2 porkchops cooked; 4 builds (`hut_3x3` three times, `shelter`) failed on rough ground (cells refused when the path search for a place to stand hit its 2,000 ms limit) and `eat` twice `NOT_HUNGRY` at 20/20, neither part of the gate. Gate 2 passed with the `muse-fix` build, the last condition of the switch (`docs/SWITCH.md`, section 1) |
+
+The re-test after those fixes (branch `muse-fix`, deployed to staging with `deploy/push.sh`; the same prompt) should
+show, besides the iron route:
+
+- the steps of a `play_sequence` numbered as Muse sent them, with an added craft as a "+" line "added by the check
+  before step N" (also in `get_state`), and no step renumbered; items the check puts into a `craft_batch`'s list named
+  on that line ("the check added to your list: ...");
+- steps of an earlier call under a header naming the call: "From your play_sequence #1, sent 129 s ago:";
+- each step's own change first and the rest apart: `[-3 cobblestone, -2 stick, +1 stone_pickaxe; also changed
+  meanwhile (dug through, scaffolding, pickups, other drops): +1 cobblestone]`, and `used`, `gained`, `other` in
+  `structuredContent`;
+- `collect cobblestone` answered "mined N stone (stone drops cobblestone) and picked up N cobblestone";
+- smelt's `n` given as 1 to 24 in the tool description;
+- every skill (hunt included) named in the server instructions and in `play_sequence`'s description;
+- `eat` at 20/20 failing with code `NOT_HUNGRY` and the words "Harmless: nothing was eaten or used, and the steps
+  queued after it still run";
+- `build shelter` done with the bot inside ("placed 10 cobblestone ..."), in the open or underground (runtime patch
+  0010).
+
+The same calls without a model, through the same public `/mcp` (2026-10-08, the `muse-fix` build on staging, two fresh
+spots): `node mineai/bench/muse-replay.mjs https://play-staging.picasso-lab.com --out replay.json` (README, "The review
+of the fixes and the re-check on staging").
+
+If the body's runtime stops during a step anyway, the step fails with code `BODY_RESTARTED` ("This step may be what
+stopped it: do not send it again from here ... a second stop ends the game"), and `mineai_host_restart` appears in
+staging's log: note it with the bot's position and the step.

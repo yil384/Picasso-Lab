@@ -1,6 +1,11 @@
 <!-- ROADMAP.md - the plan to make "Muse plays Minecraft" commercial grade, able to beat the Ender Dragon, with the live view inside muse.ai's right-hand panel. Written 2026-10-07 from four research passes, then revised the same day after an adversarial review; no code was changed. -->
 # Muse plays Minecraft: roadmap (2026-10-07, revised after review)
 
+**Status 2026-10-08: production (`play.picasso-lab.com`) plays with the Mine AI MCP body (`BODY=mineai`, the runtime
+at 2fe1306 with our 10 patches, build of `muse-fix`), switched with `docs/SWITCH.md` after gate 2 passed (Muse re-test
+`g42b738` on staging).** M0 items 6 (the proxy secret, `X-Muse-Proxy`) and 7 (the Paper whitelist) are live on staging
+and production. Rollback: `docs/SWITCH.md`, section 5 (`BODY=ours`). README, "The switch".
+
 This plan comes from four research passes run on 2026-10-07 (the live view in muse.ai's panel, the Ender Dragon, the
 platform on picasso, smoothness and speed) and one adversarial review of the first draft the same day. No code was
 changed. Section 8 lists what the review changed and which of its points were rejected. Review IDs in brackets, like

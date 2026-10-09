@@ -8,7 +8,7 @@ import { createFakeBot } from './fake-bot.js';
 import { createBody, createPhases } from '../src/body.js';
 import { layout } from '../src/skills/build.js';
 import { SKILLS } from '../src/skills/index.js';
-import { SKILL_NAMES } from '../src/contracts.js';
+import { SKILL_NAMES, codeOf } from '../src/contracts.js';
 import { loadConfig } from '../src/config.js';
 import { createLogger } from '../src/log.js';
 import { Vec3 } from '../src/mc.js';
@@ -302,7 +302,9 @@ test('attack: best weapon, kill and loot; never players; nothing in range', asyn
 
 test('eat: only when hungry, best safe food first', async () => {
   const { bot, body } = await setup({ scene: 'flat', inventory: { bread: 1, rotten_flesh: 2, cooked_beef: 1 } });
-  assert.match((await body.run('eat', {})).result, /not hungry: food is 20\/20/);
+  const full = await body.run('eat', {});
+  assert.match(full.result, /^not hungry: food is 20\/20, and eat works only below 20\. Harmless: nothing was eaten or used/);
+  assert.equal(codeOf(full), 'NOT_HUNGRY');
   bot.fake.setFood(10);
   const r = await body.run('eat', {});
   assert.equal(r.ok, true, r.result);
@@ -480,9 +482,13 @@ test('collect drops: the sweep goes to the nearest drop next and skips the ones 
 
 test('smelt: at most 24 items per call; a busy furnace is said to be busy; a furnace that will not open stays the bot\'s', async () => {
   const { bot, body } = await setup({ scene: 'flat', inventory: { raw_iron: 30, coal: 4, furnace: 1, wooden_pickaxe: 1 } });
-  const r = await body.run('smelt', { item: 'raw_iron', n: 30 });
+  // 24 is the schema's maximum, as the description says (the Muse run on staging found "at most 24" against 1 to 64)
+  const over = await body.run('smelt', { item: 'raw_iron', n: 25 });
+  assert.equal(over.ok, false);
+  assert.match(over.result, /smelt\.n must be from 1 to 24/);
+  const r = await body.run('smelt', { item: 'raw_iron', n: 24 });
   assert.equal(r.ok, true, r.result);
-  assert.match(r.result, /^smelting 24 raw_iron in 1 furnace at -?\d+ 64 -?\d+, burning 3 coal: 24 iron_ingot ready in about 240 s\..* \(one call loads at most 24, call smelt again for the other 6\)$/);
+  assert.match(r.result, /^smelting 24 raw_iron in 1 furnace at -?\d+ 64 -?\d+, burning 3 coal: 24 iron_ingot ready in about 240 s\./);
   assert.equal(r.delta.raw_iron, -24);
   const busy = await body.run('smelt', { item: 'raw_iron', n: 6 });
   assert.equal(busy.ok, false);

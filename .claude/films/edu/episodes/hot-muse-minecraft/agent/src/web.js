@@ -741,6 +741,7 @@ export function createWeb(opts = {}) {
       .then((r) => ({
         ok: Boolean(r?.ok), result: String(r?.result ?? ''), delta: isPlainObject(r?.delta) ? r.delta : {}, ms: r?.ms,
         ...(isPlainObject(r?.phases) ? { phases: r.phases } : {}), ...(typeof r?.code === 'string' ? { code: r.code } : {}),
+        ...(isPlainObject(r?.own) ? { own: r.own } : {}),
       }), (e) => ({ ok: false, result: `error: ${e?.message ?? e}`, delta: {} }))
       .then((r) => {
         s.running = null;
@@ -748,7 +749,8 @@ export function createWeb(opts = {}) {
         const delta = fmtDelta(r.delta);
         addLine(s, `${tool} ${fmtArgs(args)} -> ${r.ok ? 'ok' : 'not done'}: ${r.result}${delta ? ` [${delta}]` : ''}`);
         // phases: where the skill's time went, in ms (path, dig, drop, sync, place, open, clicks, pickup, cook, other)
-        log.event('viewer_action', { session: s.id, tool, args, ok: r.ok, result: r.result.slice(0, 600), delta: r.delta, ms: r.ms ?? null, phases: r.phases ?? null });
+        // own: what the step itself used and made, when the body can tell (BODY=mineai); delta minus own changed on the way
+        log.event('viewer_action', { session: s.id, tool, args, ok: r.ok, result: r.result.slice(0, 600), delta: r.delta, ...(r.own ? { own: r.own } : {}), ms: r.ms ?? null, phases: r.phases ?? null });
         return r;
       });
     return { ok: true, promise };

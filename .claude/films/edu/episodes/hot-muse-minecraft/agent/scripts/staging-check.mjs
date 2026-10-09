@@ -64,15 +64,16 @@ export function woodNear(text) {
 }
 
 /**
- * The numbered step lines of a play_sequence reply: {n, skill, outcome: ok|FAILED|still running|queued|cancelled|not
- * run, line}. Lines look like `2. craft {"item":"stick","n":4}: ok: ...`, `1. collect {...}: still running after 44 s
- * ...`, `3. craft {...}: queued` and `3. craft: not run: ...`.
+ * The step lines of a play_sequence reply: {n (the caller's step number; null for a craft the check added), skill,
+ * outcome: ok|FAILED|still running|queued|cancelled|not run, line}. Lines look like `2. craft {"item":"stick","n":4}:
+ * ok: ...`, `1. collect {...}: still running after 44 s ...`, `3. craft {...}: queued`, `3. craft: not run: ...` and,
+ * for a craft the check added (no number of its own), `+ craft {...} (added by the check before step 4: ...): ok: ...`.
  */
 export function stepLines(text) {
   const out = [];
   for (const line of String(text).split('\n')) {
-    const m = /^(\d+)\. (\w+)(?: \{.*?\})?(?: \(added by the check[^)]*\))?: (ok|FAILED|still running|queued|cancelled|not run)\b/.exec(line);
-    if (m) out.push({ n: Number(m[1]), skill: m[2], outcome: m[3], line });
+    const m = /^(?:(\d+)(?: \(part \d+ of \d+\))?\.|\+) (\w+)(?: \{.*?\})?(?: \((?:added by the check|the check added|part \d+ of).*?\))?: (ok|FAILED|still running|queued|cancelled|not run)\b/.exec(line);
+    if (m) out.push({ n: m[1] ? Number(m[1]) : null, skill: m[2], outcome: m[3], line });
   }
   return out;
 }
@@ -82,7 +83,8 @@ export function finishedLines(text) {
   const block = /Finished since your last call:\n([\s\S]*?)\n\n/.exec(String(text));
   if (!block) return [];
   return block[1].split('\n').map((line) => {
-    const m = /^(\w+)(?: \{.*?\})?: (ok|FAILED)\b/.exec(line);
+    // a step of a call of several steps carries the caller's number ("4. "), a craft the check added "+ "
+    const m = /^(?:\d+(?: \(part \d+ of \d+\))?\. |\+ )?(\w+)(?: \{.*?\})?(?: \((?:added by the check|the check added|part \d+ of).*?\))?: (ok|FAILED)\b/.exec(line);
     return m ? { skill: m[1], outcome: m[2], line } : null;
   }).filter(Boolean);
 }

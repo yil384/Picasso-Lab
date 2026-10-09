@@ -1,11 +1,24 @@
 <!-- docs/SWITCH.md - the runbook for switching production (play.picasso-lab.com) to the Mine AI MCP body (BODY=mineai): pre-checks, the deploy with the production config, the proxy secret and the Paper whitelist (ROADMAP M0 items 6 and 7), the switch, the smoke checks, the one-line rollback, with the expected output of each command. -->
 # Switching production to the Mine AI MCP body
 
+**Done 2026-10-08 (23:51-23:58 UTC): production plays with `BODY=mineai`; every step's checks passed (README, "The
+switch").** The undo of each step below stays valid; the rollback is section 5.
+
 The go/no-go report (`../../../../research/muse-reuse-validation.md`) asks for three gates before production plays
 with `BODY=mineai`. Gate 1 (the production config) and gate 3 (the two runtime patches, 0007 and 0008) are in this
 commit; gate 2 is the soak on staging and one Muse run: the scripted soak passed on 2026-10-08 (the agent's README,
-"Gates before the switch": 10 of 10 one at a time, 6 of 8 at once, a whole 30-minute lease, 0 restarts), and the Muse
-run is the operator's; the switch waits for it.
+"Gates before the switch": 10 of 10 one at a time, 6 of 8 at once, a whole 30-minute lease, 0 restarts), and so did the
+owner's Muse run the same day (game g38e5ef: the iron pickaxe 3:34 after start_game, 12 MCP calls, 0 transport
+failures, 0 heartbeat misses or restarts, no death; README, "The Muse run on staging"). The owner chose to fix what
+Muse found first (branch `muse-fix`: stable step numbers, each step's own use and gain apart from the rest, smelt's
+limit, `collect cobblestone`, the skill list, `NOT_HUNGRY`, patch 0009; after its review, `BODY_RESTARTED`, call
+headers, the `craft_batch` notes and patch 0010, a build that stopped the runtime), deploy that to staging, run Muse
+again, and then switch. The `muse-fix` build has run on staging since 2026-10-08 (commit `02ad527`): Muse's calls
+replayed through the public `/mcp` at two fresh spots (11 of 11 reply checks each), the strict iron route 5 of 5 one
+at a time and 4 of 6 and 6 of 8 at once, 0 heartbeat misses, restarts or watchdog stops in 23 games, 1 death (a zombie
+in shade); README, "The review of the fixes and the re-check on staging". The Muse re-test on staging with that build
+passed too (game `g42b738`, 2026-10-08 23:40 UTC: the iron pickaxe 3:16 after `start_game`, every step of the iron
+route ok, no death, 0 heartbeat misses or restarts; `docs/MUSE-TEST.md`, "Runs"): gate 2 passed.
 
 Production is `play.picasso-lab.com` on picasso: compose project `muse-minecraft`, code in
 `~/workspace/muse-minecraft/app`, its world in `app/data`, logs in `app/logs`, the agent on `172.24.0.1:7850` behind
@@ -36,10 +49,10 @@ earlier fixes too; staging has run them since 2026-10-07.
 
 | Check | Command | Expected |
 | --- | --- | --- |
-| gate 2 passed | the soak's numbers (report, section 1; README, "Gates before the switch") | strict iron route at least 7 of 10 one at a time and 6 of 8 at once with today's build; 0 heartbeat restarts and 0 watchdog stops; a whole 30-minute lease; one Muse run through the gateway that finishes the iron route (2026-10-08: all but the Muse run; 10 of 10, 6 of 8, 0 in 23 games, the lease ended at 30.0 min) |
-| the commit's tests (Mac) | `npm test` | `ℹ pass 258`, `ℹ fail 0` (260 tests, 2 skipped) |
+| gate 2 passed | the soak's numbers (report, section 1; README, "Gates before the switch" and "The Muse run on staging") | strict iron route at least 7 of 10 one at a time and 6 of 8 at once with today's build; 0 heartbeat restarts and 0 watchdog stops; a whole 30-minute lease; one Muse run through the gateway that finishes the iron route (2026-10-08: 10 of 10, 6 of 8, 0 in 23 games, the lease ended at 30.0 min; the Muse run passed; the `muse-fix` build: 5 of 5, 4 of 6 and 6 of 8, 0 in 23 games), and the Muse re-test on staging with the `muse-fix` build done (passed: game `g42b738`, 2026-10-08) |
+| the commit's tests (Mac) | `npm test` | `ℹ pass 271`, `ℹ fail 0` (273 tests, 2 skipped) |
 | staging runs this commit (Mac) | `deploy/push.sh` | ends with `push: staging runs this code and passed its checks; deploy/push.sh --prod also puts it in production` |
-| staging's runtime is the pin plus eight patches | `docker exec muse-staging-agent-1 node scripts/mineai-fetch.mjs /opt/mine-ai-mcp --check` | `/opt/mine-ai-mcp: 2fe1306 with 8 patches, dependencies installed` |
+| staging's runtime is the pin plus ten patches | `docker exec muse-staging-agent-1 node scripts/mineai-fetch.mjs /opt/mine-ai-mcp --check` | `/opt/mine-ai-mcp: 2fe1306 with 10 patches, dependencies installed` |
 | production is idle (Mac) | `curl -s https://play.picasso-lab.com/ \| grep -o 'Bots in use: [0-9]* of [0-9]*'` | `Bots in use: 0 of 8` |
 | disk | `df -h /ssd2` | at least 5 GB available (96% used, 162 GB free on 2026-10-08) |
 | stream and camera off (picasso) | `ls ~/workspace/muse-minecraft/app/deploy/` | no `stream.env`, no `camera.env` (2026-10-08: neither). With either there, `recreate.sh` recreates it with the agent, but neither has run with `BODY=mineai` yet: try it on staging first |
@@ -78,7 +91,7 @@ production part does (`deploy/push.sh --prod --dry-run` prints every command):
 
 - `~/workspace/muse-minecraft/app/mineai-data` made, mode 700 (their per-bot SQLite; the bots' private names are in it);
 - `docker compose up -d --build` with `deploy/compose.yaml`: the agent image built with `MINEAI=1` (the runtime at the
-  pin, our eight patches, `bun install --frozen-lockfile`, typecheck and the tests of our patches, all inside the
+  pin, our ten patches, `bun install --frozen-lockfile`, typecheck and the tests of our patches, all inside the
   build: about 5-10 minutes on picasso), the agent under an init (`init: true`), the data folder mounted at
   `/mineai-data`; Paper's image with the whitelist (`paper-entry.sh` writes `white-list`, `enforce-whitelist` and
   `hide-online-players`) and the agent's `MC_WHITELIST`, in the same `up`, so Paper and the agent switch together;
@@ -107,7 +120,7 @@ Checks:
 | a game on production (Mac) | `node scripts/staging-check.mjs https://play.picasso-lab.com --production` | `PASS: wooden pickaxe in ... s from the first action, 3 MCP calls in all (game g...)` and `end_game -> game g... ended, its bot left` |
 | the whitelist is on | `grep -E '^(white-list\|enforce-whitelist\|hide-online-players)=' ~/workspace/muse-minecraft/app/data/server.properties` | `white-list=true`, `enforce-whitelist=true`, `hide-online-players=true` |
 | the bot was listed, then taken off | `docker logs --since 10m muse-minecraft-paper-1 2>&1 \| grep -cE '(Added\|Removed) .* (to\|from) the whitelist'` | 2 or more (one pair per game) |
-| the runtime in the image | `docker exec muse-minecraft-agent-1 node scripts/mineai-fetch.mjs /opt/mine-ai-mcp --check` | `/opt/mine-ai-mcp: 2fe1306 with 8 patches, dependencies installed` |
+| the runtime in the image | `docker exec muse-minecraft-agent-1 node scripts/mineai-fetch.mjs /opt/mine-ai-mcp --check` | `/opt/mine-ai-mcp: 2fe1306 with 10 patches, dependencies installed` |
 | the init | `docker inspect -f '{{.HostConfig.Init}}' muse-minecraft-agent-1` | `true` |
 | the data folder | `ls -ld ~/workspace/muse-minecraft/app/mineai-data` | `drwx------ ... yichen yichen ... mineai-data` |
 | still our body | `docker logs muse-minecraft-agent-1 2>&1 \| grep -c 'body: Mine AI MCP'` | `0` |
