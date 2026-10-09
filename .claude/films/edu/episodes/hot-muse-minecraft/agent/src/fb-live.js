@@ -362,15 +362,13 @@ export function createLiveChannel(o) {
   }, o.sweepMs ?? 30_000);
   retryTimer.unref?.();
 
-  /** The game the camera should film: the last one live_view asked for, else the one it films, else the newest. */
-  function pick() {
-    const list = [...games.values()];
-    if (!list.length) return null;
-    const asks = list.filter((g) => g.requestedAt > 0).sort((x, y) => y.requestedAt - x.requestedAt);
-    if (asks.length) return asks[0].id;
-    if (focus && games.has(focus)) return focus;
-    return list.sort((x, y) => y.startedAt - x.startedAt)[0].id;
-  }
+  /**
+   * Live only on demand: a game is filmed only after live_view asked for it (a game that merely started, a staging
+   * check or a bench never goes live). The games that asked, newest request first.
+   */
+  const wanted = () => [...games.values()].filter((g) => g.requestedAt > 0).sort((x, y) => y.requestedAt - x.requestedAt);
+  /** The game the camera should film: the one whose live_view request came last. */
+  const pick = () => wanted()[0]?.id ?? null;
 
   // ----- the broadcast's life, one step at a time
   function kick() {
@@ -392,8 +390,8 @@ export function createLiveChannel(o) {
     swept ??= sweep();
     await swept;
     focus = pick();
-    if (b && (closing || !games.size)) { await finish(closing ? 'the service stopped' : 'no game is left'); return; }
-    if (closing || !games.size) return;
+    if (b && (closing || !focus)) { await finish(closing ? 'the service stopped' : 'no game that asked for it is left'); return; }
+    if (closing || !focus) return;
     if (!b) {
       if (restingUntil > now()) return;
       await begin();
@@ -438,8 +436,8 @@ export function createLiveChannel(o) {
       }
       event('fb_live_created', { broadcast: me.id, game: game.id, video: me.videoUrl, status: me.status });
       if (b !== me) return;
-      if (closing || !games.size) { await finish(closing ? 'the service stopped' : 'no game is left'); return; }
-      const now0 = games.get(me.game) ? me.game : pick();
+      if (closing || !pick()) { await finish(closing ? 'the service stopped' : 'no game that asked for it is left'); return; }
+      const now0 = games.get(me.game) && games.get(me.game).requestedAt > 0 ? me.game : pick();
       me.game = now0;
       me.state = 'connecting';
       const stream = o.createStream({ ...(o.streamOptions ?? {}), output: ingest, player: games.get(now0).player, event: (k, d) => event(k, { session: now0, broadcast: me.id, ...d }) });
@@ -573,11 +571,12 @@ export function createLiveChannel(o) {
     },
     /** What the channel shows now: state off | starting | connecting | live | ending, the game on camera, the video. */
     live() {
-      const resting = !b && games.size > 0 && restingUntil > now();
+      const asked = pick();
+      const resting = !b && asked && restingUntil > now();
       return {
         fb: true,
-        state: b ? (b.state === 'ending' ? 'ending' : b.state) : games.size ? (resting ? 'retrying' : 'starting') : 'off',
-        game: b?.game ?? (games.size ? pick() : null),
+        state: b ? (b.state === 'ending' ? 'ending' : b.state) : asked ? (resting ? 'retrying' : 'starting') : 'off',
+        game: b?.game ?? asked,
         videoUrl: b?.videoUrl ?? null,
         embedUrl: b?.embedUrl ?? null,
         liveSince: b?.liveAt ? new Date(b.liveAt).toISOString() : null,
