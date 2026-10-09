@@ -357,6 +357,9 @@ stay; our body ignores them. To switch again: `sed -i "s/^BODY=.*/BODY=mineai/" 
 
 ## 7. A runtime update after the switch (patch 0011, 2026-10-08)
 
+**Done 2026-10-09 (01:45 UTC): production runs `2fe1306 with 11 patches`; every check below passed (README, "Builds on
+rough ground").**
+
 Builds on rough ground (README, "Builds on rough ground"; `mineai/README.md`, "Patch 0011 on Paper") changed the
 runtime (the pin plus eleven patches) and the gateway, so production gets them with `deploy/push.sh --prod`, as in
 section 2: staging first, then production only if staging's checks pass and nothing changed meanwhile. Production

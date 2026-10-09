@@ -2,7 +2,7 @@
 # Muse plays Minecraft: roadmap (2026-10-07, revised after review)
 
 **Status 2026-10-08: production (`play.picasso-lab.com`) plays with the Mine AI MCP body (`BODY=mineai`, the runtime
-at 2fe1306 with our 10 patches, build of `muse-fix`), switched with `docs/SWITCH.md` after gate 2 passed (Muse re-test
+at 2fe1306 with our 10 patches, build of `muse-fix`; patch 0011, builds on rough ground, since the same day), switched with `docs/SWITCH.md` after gate 2 passed (Muse re-test
 `g42b738` on staging).** M0 items 6 (the proxy secret, `X-Muse-Proxy`) and 7 (the Paper whitelist) are live on staging
 and production. Rollback: `docs/SWITCH.md`, section 5 (`BODY=ours`). README, "The switch".
 

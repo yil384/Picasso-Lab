@@ -10,7 +10,7 @@ operate from the accessibility tree. Plan and sources: `../../../research/muse-m
 Not affiliated with or endorsed by Meta or Mojang.
 
 **Status 2026-10-08: production (https://play.picasso-lab.com) plays with the Mine AI MCP body (`BODY=mineai`, the
-runtime at 2fe1306 with our 10 patches); staging too.** Both stacks have the proxy secret and the Paper whitelist.
+runtime at 2fe1306 with our 11 patches, builds on rough ground included); staging too.** Both stacks have the proxy secret and the Paper whitelist.
 Section "The switch" below; rollback `docs/SWITCH.md`, section 5.
 
 ## Architecture
@@ -1488,6 +1488,17 @@ hut_3x3 begun facing east at -176 61 52") and completed it. A hut built standing
 (2195 62 2012) completed with 2 cells left as water and 4 blocks put under its walls. The strict iron route through the
 public `/mcp` after the runs: **PASS in 155.7 s, 14 MCP calls, 0 failed steps** (`g39ca3d`). Staging's logs over the
 12 games since this branch was first deployed there: 0 heartbeat misses, host restarts or downs, no death.
+
+Production then got it with `deploy/push.sh --prod` (`docs/SWITCH.md`, section 7), idle (`Bots in use: 0 of 8`), the
+running image tagged `muse-minecraft-agent:pre-0011` first: staging again (its check PASS, wooden pickaxe in 23.0 s),
+then production: `production body: mineai`; its runtime `2fe1306 with 11 patches`; a production game PASS (wooden
+pickaxe in 33.1 s, 3 MCP calls, `g5d270e`); one build game through the public `/mcp`
+(`build-staging.mjs --production --games 1`, `g160515`): `RESULT PASS`, 5 of 5 checks, the hut ok ("placed 18
+cobblestone and dug 17 cells clear (22 of 27 cells as the blueprint; 5 cells kept the stone already there ...)") and
+the shelter ok; 0 heartbeat misses, host restarts or downs, both hosts closed with their data deleted. Undo (picasso):
+`docker tag muse-minecraft-agent:pre-0011 muse-minecraft-agent:latest && sh
+~/workspace/muse-minecraft/app/deploy/recreate.sh production`. Our dangling images of the three deploys were removed
+one at a time with `docker rmi`; the camera test project's five stay.
 
 ```sh
 BUN=... node mineai/bench/build-spots.mjs ~/picasso-work/mineai-runtime-11 --server <Paper folder with console.in> --tries 3
