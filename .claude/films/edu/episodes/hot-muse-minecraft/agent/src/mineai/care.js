@@ -38,6 +38,12 @@ export function describeCare(p = CARE_DEFAULTS) {
   return `${night}; ${armor}; ${food}; ${tools}; after a death it goes back for its items`;
 }
 
+/** A shield is made only in the day before this time (the last minutes of daylight are for the shelter's blocks), and
+ * only once the player has left the body alone this long. */
+export const SHIELD_BEFORE = 10_000;
+export const SHIELD_AFTER_IDLE_MS = 20_000;
+const PLANK_NAMES = ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'mangrove', 'cherry'].map((w) => `${w}_planks`);
+const LOG_NAMES = PLANK_NAMES.map((p) => p.replace('_planks', '_log'));
 /** The last minute or so of daylight: the body gets blocks for its shelter while it can still see what it digs. */
 export const DUSK_FROM = 10_800;
 /** Night for the body: from a little before beds are accepted (12542) until a little before they stop (23458). */
@@ -55,6 +61,8 @@ export const RECOVER_RANGE = 600;
 export const SHELTER_BLOCKS = Object.freeze([
   'cobblestone', 'cobbled_deepslate', 'stone', 'deepslate', 'andesite', 'diorite', 'granite', 'tuff', 'blackstone',
   'netherrack', 'sandstone', 'dirt', 'coarse_dirt', 'rooted_dirt', 'mud',
+  // last: logs (a fresh bot's only blocks may be the wood it collected)
+  'oak_log', 'spruce_log', 'birch_log', 'jungle_log', 'acacia_log', 'dark_oak_log', 'mangrove_log', 'cherry_log',
 ]);
 export const SHELTER_SIZE = 13;
 /** Below this health their fight reflex protects the bot (walls itself in, or runs) instead of fighting on. */
@@ -341,6 +349,16 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
     const prey = preyNear(s, { cook });
     if (prey) return { kind: 'hunt', why: `food ${food}/20 and no food carried`, mob: prey.name, drop: PREY[prey.name], n: 3, cook, distance: Math.round(prey.nearest.distance) };
   }
+  // a shield before the first night (skeletons killed 4 of 6 bots that died on staging; their fight reflex raises it
+  // against arrows): from its own resources, the cheapest way that works: iron it carries beyond 3 (a pickaxe), raw
+  // iron beyond 3 smelted, else one iron ore mined with its stone pickaxe and smelted; planks from its wood
+  if (policy.armor !== 'off' && overworld && Number.isFinite(time) && time < SHIELD_BEFORE && idleMs >= SHIELD_AFTER_IDLE_MS && !cooling('shield', 300_000) && !stacks.some((x) => x?.name === 'shield')) {
+    const wood = PLANK_NAMES.reduce((n, p) => n + (inventory[p] ?? 0), 0) + 4 * LOG_NAMES.reduce((n, l) => n + (inventory[l] ?? 0), 0);
+    const oven = (inventory.furnace ?? 0) > 0 || furnace || (inventory.cobblestone ?? 0) >= 8;
+    const stone = toolsCarried(stacks).some((t) => t.cls === 'pickaxe' && TIERS.indexOf(t.tier) >= 1);
+    const path = (inventory.iron_ingot ?? 0) >= 4 ? 'ingot' : (inventory.raw_iron ?? 0) >= 4 && oven ? 'raw' : stone && oven ? 'mine' : null;
+    if (path && wood >= 7) return { kind: 'shield', why: 'no shield before the night (skeletons)', path };
+  }
   // dusk: blocks for the night's shelter while there is light (with none, a bot on rock and with no pickaxe could not
   // dig in either: staging, 2026-10-09), cobblestone with a pickaxe, else dirt
   const dusk = overworld && Number.isFinite(time) && time >= DUSK_FROM && time < NIGHT_FROM;
@@ -369,7 +387,7 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
     const { total } = shelterBlocks(inventory);
     const lastFail = memory.shelterFailed;
     const changed = lastFail && (!feet || lastFail.feet.x !== feet.x || lastFail.feet.z !== feet.z || Math.abs(lastFail.feet.y - feet.y) > 1 || total > lastFail.blocks);
-    if (!fresh && !cooling('shelterTransient', 15_000) && (((!cooling('shelter', 45_000) || changed) && (memory.shelterFails?.[memory.night] ?? 0) < 3) || sheltered)) {
+    if (!fresh && !cooling('shelterTransient', 5_000) && (((!cooling('shelter', 45_000) || changed) && (memory.shelterFails?.[memory.night] ?? 0) < 3) || sheltered)) {
       return { kind: 'shelter', why: `night (time ${time})`, blocks: total, check: sheltered };
     }
   }
@@ -477,12 +495,12 @@ export function describeEvents(events = []) {
 const TICK_MS = 2_000;
 const JOURNAL_KEPT = 60;
 /** Each kind of care action's time limit. */
-const LIMITS = { recover: 150_000, wear: 20_000, eat: 15_000, hunt: 120_000, cook: 90_000, tools: 60_000, armor: 90_000, sleep: 50_000, shelter: 45_000, dig: 30_000, gather: 40_000, pickbed: 20_000 };
+const LIMITS = { mine: 90_000, recover: 150_000, wear: 20_000, eat: 15_000, hunt: 120_000, cook: 90_000, tools: 60_000, armor: 90_000, sleep: 50_000, shelter: 45_000, dig: 30_000, gather: 40_000, pickbed: 20_000 };
 /** What the body says it is doing while a care action runs. */
 const DOING = {
   recover: 'going back for the items it dropped when it died', wear: 'putting on armor', eat: 'eating', hunt: 'hunting for food',
   tools: 'crafting a spare tool', armor: 'crafting armor', sleep: 'sleeping', shelter: 'sheltering for the night',
-  gather: 'collecting blocks for a shelter before night falls',
+  gather: 'collecting blocks for a shelter before night falls', shield: 'making a shield',
 };
 
 /**
@@ -671,11 +689,47 @@ export function createCare(deps) {
         }
         return add({ kind: 'sleep', ok: Boolean(okOf(r) && out?.morning), ms: ms(), text: parts.join('; ') });
       }
+      case 'shield': {
+        memory.cool.shield = now();
+        const parts = [];
+        const fail = (why) => add({ kind: 'shield', ok: false, ms: ms(), text: `${d.why}: ${[...parts, why].join('; ')}` });
+        if (d.path === 'mine') {
+          const r = await run([{ tool: 'collect_block', args: { block_name: 'iron_ore', count: 1 } }], LIMITS.mine, ctl);
+          await deps.refresh();
+          if (!okOf(r) && !(inv().raw_iron > 0)) return fail(`could not mine iron ore (${errOf(r) ?? 'stopped'})`);
+          parts.push('mined 1 iron ore');
+        }
+        if (d.path !== 'ingot') {
+          let smelt = deps.plan('smelt', { item: 'raw_iron', n: 1 });
+          if (!smelt.calls && !(inv().furnace > 0)) {
+            const oven = craftCalls([{ item: 'furnace', n: 1 }]);
+            if (oven) { await run(oven, LIMITS.tools, ctl); await deps.refresh(); smelt = deps.plan('smelt', { item: 'raw_iron', n: 1 }); }
+          }
+          if (!smelt.calls) return fail(`could not smelt it (${smelt.refused?.result ?? 'no furnace or fuel'})`);
+          const r = await run(smelt.calls, LIMITS.cook, ctl);
+          await deps.refresh();
+          if (!okOf(r)) return fail(`could not smelt it (${errOf(r) ?? 'stopped'})`);
+          parts.push('smelted it');
+        }
+        const calls = craftCalls([{ item: 'shield', n: 1 }]);
+        if (!calls) return fail('the shield did not add up after all');
+        const c = await run(calls, LIMITS.tools, ctl);
+        await deps.refresh();
+        if (!(inv().shield > 0)) return fail(`could not craft it (${errOf(c) ?? 'stopped'})`);
+        const w = await run([{ tool: 'equip', args: { items: [{ item_name: 'shield', destination: 'off-hand' }] } }], LIMITS.wear, ctl);
+        parts.push(okOf(w) ? 'crafted a shield and put it in its off-hand (its fight reflex raises it against arrows)' : 'crafted a shield');
+        return add({ kind: 'shield', ok: true, ms: ms(), text: `${d.why}: ${parts.join(', ')}` });
+      }
       case 'gather': {
         memory.cool.gather = now();
         const before = shelterBlocks(inv()).total;
-        const r = await run([{ tool: 'collect_block', args: { block_name: d.block, count: d.n } }], LIMITS.gather, ctl);
+        let r = await run([{ tool: 'collect_block', args: { block_name: d.block, count: d.n } }], LIMITS.gather, ctl);
         await deps.refresh();
+        // no dirt it can reach: the grass on top drops dirt too
+        if (shelterBlocks(inv()).total === before && d.block === 'dirt' && !ctl.stopped) {
+          r = await run([{ tool: 'collect_block', args: { block_name: 'grass_block', count: d.n } }], LIMITS.gather, ctl);
+          await deps.refresh();
+        }
         const got = shelterBlocks(inv()).total - before;
         const what = d.block === 'stone' ? 'cobblestone' : 'dirt';
         return add({ kind: 'gather', ok: got > 0, ms: ms(), text: got > 0 ? `${d.why}: collected ${got} ${what} for it` : `${d.why}: could not collect ${what} (${errOf(r) ?? 'stopped'})` });
@@ -691,11 +745,33 @@ export function createCare(deps) {
         const here = () => { const q = deps.situation()?.position; return q ? { x: Math.floor(q.x), y: Math.floor(q.y), z: Math.floor(q.z) } : null; };
         let feet = here();
         if (!feet) return null;
+        const fightIn = (r) => /\b(fight|evade|hide|deflect) response for\b/.test(errOf(r) ?? '');
+        // the wall cells between the bot and the nearest hostile mob within 6 blocks (feet and head height)
+        const facingMob = (list) => {
+          const mob = hostilesWithin(deps.situation(), 6).filter((m) => m.nearest?.position).sort((a, b) => a.nearest.distance - b.nearest.distance)[0];
+          if (!mob) return [];
+          const dx = Math.sign(Math.floor(mob.nearest.position.x) - feet.x);
+          const dz = Math.sign(Math.floor(mob.nearest.position.z) - feet.z);
+          // on its side of the bot: the wall next to it, or the pocket's ceiling and front wall when the pocket faces it
+          return list.filter((c) => c.block_name !== 'air' && c.y >= feet.y && c.y <= feet.y + 1
+            && ((dx && (c.x - feet.x) * dx >= 1 && c.z === feet.z) || (dz && (c.z - feet.z) * dz >= 1 && c.x === feet.x)));
+        };
+        let fights = 0;
         const build = async (cells) => {
-          // never digs: a wall or roof cell that already holds a solid block is wall enough
-          const r = await run([{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: false } }], LIMITS.shelter, ctl);
-          await deps.refresh();
-          return { r, v: shelterVerdict(r[0]?.out?.output?.result?.structure ?? null) };
+          // never digs: a wall or roof cell that already holds a solid block is wall enough. A mob close by: the cells
+          // between it and the bot first; a fight that takes the build over (their reflex strikes it back) is followed by
+          // the build again at once, up to 4 times, instead of leaving the shelter open
+          let out;
+          for (let k = 0; k < 4; k++) {
+            const first = facingMob(cells);
+            if (first.length) await run([{ tool: 'build_structure', args: { blocks: first, remove_wrong_blocks: false } }], 10_000, ctl);
+            const r = await run([{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: false } }], LIMITS.shelter, ctl);
+            await deps.refresh();
+            out = { r, v: shelterVerdict(r[0]?.out?.output?.result?.structure ?? null) };
+            if (out.v.closed || ctl.stopped || !fightIn(r)) break;
+            fights += 1;
+          }
+          return out;
         };
         const layout = () => shelterCells(feet, deps.situation()?.position?.headingDegrees ?? 0, inv());
         // a check of the shelter it stands in asks for the same cells (the bot turns while it builds: a new heading
@@ -751,12 +827,13 @@ export function createCare(deps) {
         }
         memory.shelter = v.closed ? { feet: { ...feet }, cells, at: same ? memory.shelter.at : now(), checked: now(), night: memory.night } : null;
         if (d.check && v.closed && !v.placed) return null; // still standing: nothing to tell
+        if (fights) parts.push(`went on building through ${plural(fights, 'fight')}`);
         parts.push(v.closed
           ? `${d.check ? 'mended its shelter' : 'closed itself in'} at ${xyz(feet)} (${v.placed ? `placed ${plural(v.placed, 'block')}` : 'placed nothing'}${v.solid ? `, ${plural(v.solid, 'wall cell')} already solid` : ''}); it stays inside until your next call`
           : `could not close a shelter at ${xyz(feet)} (${v.why ?? errOf(r) ?? 'stopped'})`);
         // a fight that took the body over, or chunks not loaded yet (just arrived): tried again once idle, no failure
         const transient = fight() || /not loaded/.test(v.why ?? '');
-        // tried again once idle, but not at once: a mob the fight reflex keeps answering would take every try over
+        // tried again once idle, 5 s on: a mob the fight reflex keeps answering would otherwise take every try over
         if (!v.closed && transient) memory.cool.shelterTransient = now();
         if (!v.closed && !d.check && !transient) {
           memory.cool.shelter = now();

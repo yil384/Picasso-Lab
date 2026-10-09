@@ -248,18 +248,53 @@ test('care loop: a shelter at night, journaled once; a step of the player\'s sto
   assert.match(busy.care.last().text, /could not close a shelter|stopped before/);
 });
 
-test('care loop: a shelter a fight keeps taking over is tried again after 15 s and told once', async () => {
+test('care loop: a fight that takes the shelter over: built again at once (4 tries), then 5 s on; told once', async () => {
   const rig = careRig({ situation: situation({ clock: { timeOfDay: 14000 } }), inventory: { cobblestone: 20 }, results: {
     build_structure: { status: 'failed', error: '[HOSTILE_CONTACT] fight response for zombie#4 at 1,2,3 (3 blocks).', structure: { cells: 16, placed: 0, wrong: 13, left: [{ reason: 'not_reached', count: 13 }] } },
   } });
   await rig.care.tick();
+  assert.equal(rig.calls.length, 4, 'four builds in a row');
   await rig.care.tick();
-  assert.equal(rig.calls.length, 1, 'not again at once');
-  rig.state.clock += 16_000;
+  assert.equal(rig.calls.length, 4, 'then not at once');
+  rig.state.clock += 6_000;
   await rig.care.tick();
-  assert.equal(rig.calls.length, 2, 'again after 15 s');
+  assert.equal(rig.calls.length, 8, 'again after 5 s');
   assert.equal(rig.care.since(0).filter((e) => e.kind === 'shelter').length, 1, 'the same failure told once');
-  assert.equal(rig.events.filter((e) => e.repeat).length, 1, 'and logged');
+  assert.match(rig.care.last().text, /went on building through 4 fights/);
+});
+
+test('care loop: a zombie close by: the wall cells between it and the bot go up first', async () => {
+  const zombie = { name: 'zombie', kind: 'hostile', nearest: { distance: 2, position: { x: 12.5, y: 64, z: -3.5 } } };
+  const rig = careRig({ situation: situation({ clock: { timeOfDay: 14000 }, nearby: { mobs: [zombie] } }), inventory: { cobblestone: 20 },
+    results: { build_structure: { status: 'succeeded', structure: { cells: 16, placed: 13, wrong: 0, kept: [], left: [] } } } });
+  await rig.care.tick();
+  const [first, all] = rig.calls;
+  assert.deepEqual(first.args.blocks.map((c) => [c.x, c.y, c.z]).sort(), [[11, 65, -4], [12, 64, -4], [12, 65, -4]], 'the pocket faces it: its ceiling and front wall');
+  assert.equal(all.args.blocks.filter((c) => c.block_name !== 'air').length, 13);
+});
+
+test('care loop: a shield before the first night, from one iron ore it mines and smelts', async () => {
+  const pick = stack('stone_pickaxe', 1, 'hotbar', { remaining: 100, maximum: 131 });
+  const base = { now: NOW, policy: CARE_DEFAULTS, memory: { cool: {}, night: 0 }, stacks: [pick] };
+  assert.equal(decide(situation(), { ...base, inventory: { oak_log: 2, cobblestone: 8 } }).path, 'mine');
+  assert.equal(decide(situation(), { ...base, inventory: { oak_log: 2, iron_ingot: 4 } }).path, 'ingot');
+  assert.equal(decide(situation(), { ...base, inventory: { oak_log: 2, iron_ingot: 3 } }), null, 'three ingots kept, no furnace or way to make one');
+  assert.equal(decide(situation(), { ...base, inventory: { oak_log: 1, cobblestone: 8 } }), null, 'too little wood');
+  assert.equal(decide(situation(), { ...base, inventory: { oak_log: 2, cobblestone: 8 }, idleMs: 5_000 }), null, 'the player is still at work');
+  assert.equal(decide(situation({ clock: { timeOfDay: 11_000 } }), { ...base, inventory: { oak_log: 2, cobblestone: 8 } }).kind, 'gather', 'dusk is for the shelter');
+  const rig = careRig({ situation: situation(), inventory: { oak_log: 2, furnace: 1 }, results: {
+    collect_block: () => { rig.state.inventory = { ...rig.state.inventory, raw_iron: 1 }; return { status: 'succeeded' }; },
+    smelt_item: () => { rig.state.inventory = { oak_log: 1, oak_planks: 3, furnace: 1, iron_ingot: 1 }; return { status: 'succeeded' }; },
+    craft_item: () => { rig.state.inventory = { furnace: 1, shield: 1 }; return { status: 'succeeded' }; },
+  } });
+  rig.state.stacks = [pick];
+  rig.state.idleSince = NOW - 60_000;
+  const plan = rig.care;
+  rig.state.situation = situation();
+  // the rig's plan() knows only craft_batch: a smelt plan of its own for this test
+  await plan.tick().catch(() => {});
+  assert.equal(rig.calls[0].tool, 'collect_block');
+  assert.deepEqual(rig.calls[0].args, { block_name: 'iron_ore', count: 1 });
 });
 
 test('care loop: nothing while a step runs or just ended, or while one of their reflexes has the body', async () => {
