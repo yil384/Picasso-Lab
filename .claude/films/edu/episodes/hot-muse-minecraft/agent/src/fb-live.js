@@ -41,7 +41,6 @@ const ENDED = new Set(['LIVE_STOPPED', 'VOD', 'PROCESSING', 'SCHEDULED_EXPIRED',
 const NAME_RE = /^[A-Za-z0-9_]{3,16}$/;
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
-const realSleep = (ms) => new Promise((r) => { setTimeout(r, ms).unref?.(); });
 const clip = (s, n = 300) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
 
 export class GraphError extends Error {
@@ -225,7 +224,6 @@ export const titleFor = (base, game) => `${base} (game ${game})`.slice(0, 250);
 export function createLiveChannel(o) {
   const graph = o.graph;
   const now = o.now ?? Date.now;
-  const sleep = o.sleep ?? realSleep;
   const title = o.title ?? 'Picasso Lab demo: an AI plays Minecraft';
   const pollMs = o.pollMs ?? 3_000; // while the stream is starting
   const livePollMs = o.livePollMs ?? 30_000; // while it is live: did Facebook end it?
@@ -398,6 +396,8 @@ export function createLiveChannel(o) {
   }
 
   function streamLost(me, why) {
+    if (me.lost) return; // the stream's end and Facebook's can come together: one failure
+    me.lost = true;
     lastError = graph.scrub(clip(why, 200));
     event('fb_stream_lost', { broadcast: me.id, reason: lastError });
     rest();
