@@ -386,7 +386,8 @@ function buildNotes(st) {
   const keptN = kept.reduce((n, k) => n + k.count, 0);
   if (keptN) notes.push(`${plural(keptN, 'cell')} kept the ${kept.map((k) => k.block).join(' and ')} already there (solid, and it could not be dug out)`);
   if (st.water) notes.push(`${plural(st.water, 'cell')} to clear ${st.water === 1 ? 'is' : 'are'} water (water cannot be dug)`);
-  for (const sp of st.supports ?? []) notes.push(`put ${sp.count} ${sp.block} under walls that had nothing to place against`);
+  const supports = (st.supports ?? []).map((sp) => `${sp.count} ${sp.block}`);
+  if (supports.length) notes.push(`put ${supports.join(' and ')} under walls that had nothing to place against`);
   return notes;
 }
 

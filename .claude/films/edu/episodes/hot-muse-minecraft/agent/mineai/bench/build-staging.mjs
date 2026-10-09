@@ -108,7 +108,9 @@ for (let g = 0; g < Number(values.games); g++) {
     await drain();
     again = all().filter((st) => st.skill === 'build').at(-1);
     checkBuild(again, `game ${game} hut_3x3 again`);
-    expect(/continued the hut_3x3 begun facing/.test(again?.result ?? ''), `game ${game}: the second build continued the same hut`);
+    // a first build that ran and left the hut incomplete is continued; one that never ran (cancelled with its queue
+    // when a step before it failed) left nothing to continue
+    if (hut.status === 'failed') expect(/continued the hut_3x3 begun facing/.test(again?.result ?? ''), `game ${game}: the second build continued the same hut`);
   }
   record((await tool('play', { skill: 'build', args: { blueprint: 'shelter', material: 'cobblestone' } })).data);
   await drain();
