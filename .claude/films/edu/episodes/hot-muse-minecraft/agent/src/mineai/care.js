@@ -475,6 +475,7 @@ const DOING = {
  *   stacks: () => object[], refresh: () => Promise<void>, act: (call, deadline, ctl) => Promise<object>,
  *   rpc: (tool, args, ms) => Promise<object>, plan: (skill, args) => object, idle: () => boolean,
  *   idleSince: () => number, furnaceNear: () => boolean, tableNear: () => boolean, event: (kind, data) => void,
+ *   policy?: () => {revision: string|null, effective: object|null},
  *   now?: () => number, tickMs?: number, idleBeforeMs?: number, version?: string
  * }} deps
  */
@@ -645,48 +646,70 @@ export function createCare(deps) {
       }
       case 'shelter': {
         // no cooling down after a shelter that worked: a step of the player's that took the bot out of it is followed
-        // by a new one as soon as the body is idle again
+        // by a new one as soon as the body is idle again. In order, until one closes: walls of carried blocks where it
+        // stands; dug into the ground (two blocks down: the ground is the walls; first down to the ground when it stands
+        // above it, on a tree or a ledge); with dirt collected from around
         await deps.refresh();
-        let p = deps.situation()?.position;
-        if (!p) return null;
         const parts = [];
-        // too few blocks for walls: dig into the ground (two blocks down; the ground itself is the walls) and pick up
-        // what the digging dropped (the roof comes from it)
-        if (shelterBlocks(inv()).total < SHELTER_SIZE && !d.check) {
-          const target = { x: Math.floor(p.x), y: Math.floor(p.y) - 2, z: Math.floor(p.z) };
-          const r = await run([{ tool: 'navigate', args: target }], LIMITS.dig, ctl);
-          if (okOf(r) && !ctl.stopped) await run([{ tool: 'pick_up_items', args: {} }], LIMITS.pickbed, ctl);
-          await deps.refresh();
-          p = deps.situation()?.position ?? p;
-          parts.push(okOf(r) ? 'dug two blocks down (it carried too few blocks for walls)' : `could not dig in (${errOf(r) ?? 'stopped'})`);
-        }
         const stopped = () => add({ kind: 'shelter', ok: false, ms: ms(), text: `${d.why}: stopped before its shelter was closed (${ctl.stopped ?? 'stopped'})` });
-        if (ctl.stopped) return stopped();
-        const feet = { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) };
-        // a check of the shelter it stands in asks for the same cells (the bot turns while it builds: a new heading
-        // would lay out another shelter around it)
-        const same = d.check && memory.shelter?.cells && memory.shelter.feet.x === feet.x && memory.shelter.feet.z === feet.z;
-        const heading = deps.situation()?.position?.headingDegrees ?? 0;
+        const here = () => { const q = deps.situation()?.position; return q ? { x: Math.floor(q.x), y: Math.floor(q.y), z: Math.floor(q.z) } : null; };
+        let feet = here();
+        if (!feet) return null;
         const build = async (cells) => {
           // never digs: a wall or roof cell that already holds a solid block is wall enough
           const r = await run([{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: false } }], LIMITS.shelter, ctl);
           await deps.refresh();
           return { r, v: shelterVerdict(r[0]?.out?.output?.result?.structure ?? null) };
         };
-        let cells = same ? memory.shelter.cells : shelterCells(feet, heading, inv());
-        let { r, v } = await build(cells);
-        // short of blocks: dirt from around, then the rest of the shelter (once)
-        if (!v.closed && v.short > 0 && !ctl.stopped && !d.check) {
+        const layout = () => shelterCells(feet, deps.situation()?.position?.headingDegrees ?? 0, inv());
+        // a check of the shelter it stands in asks for the same cells (the bot turns while it builds: a new heading
+        // would lay out another shelter around it)
+        const same = d.check && memory.shelter?.cells && memory.shelter.feet.x === feet.x && memory.shelter.feet.z === feet.z;
+        let cells = same ? memory.shelter.cells : null;
+        let r = [];
+        let v = { closed: false, placed: 0, solid: 0, why: null, short: 0 };
+        if (cells || shelterBlocks(inv()).total >= SHELTER_SIZE) {
+          cells ??= layout();
+          ({ r, v } = await build(cells));
+        }
+        if (ctl.stopped) return stopped();
+        const fight = () => /\b(fight|evade|hide|deflect) response for\b/.test(errOf(r) ?? '');
+        // dig in (not after a fight took the body over: that is tried again once idle)
+        if (!v.closed && !d.check && !fight()) {
+          const dig = async () => {
+            const target = { x: feet.x, y: feet.y - 2, z: feet.z };
+            let g = await run([{ tool: 'navigate', args: target }], LIMITS.dig, ctl);
+            // standing above the ground (a tree, a ledge): down to the ground first, then into it
+            const ground = Number(/The ground in that column is at y=(-?\d+)/.exec(errOf(g) ?? '')?.[1]);
+            if (!okOf(g) && Number.isFinite(ground) && ground < feet.y - 1 && !ctl.stopped) {
+              const down = await run([{ tool: 'navigate', args: { x: feet.x, y: ground + 1, z: feet.z } }], LIMITS.dig, ctl);
+              if (okOf(down) && !ctl.stopped) {
+                parts.push(`climbed down to the ground at y=${ground + 1}`);
+                g = await run([{ tool: 'navigate', args: { x: feet.x, y: ground - 1, z: feet.z } }], LIMITS.dig, ctl);
+              }
+            }
+            if (okOf(g) && !ctl.stopped) await run([{ tool: 'pick_up_items', args: {} }], LIMITS.pickbed, ctl);
+            await deps.refresh();
+            return g;
+          };
+          const g = await dig();
+          if (ctl.stopped) return stopped();
+          parts.push(okOf(g) ? 'dug two blocks down' : `could not dig in (${errOf(g) ?? 'stopped'})`);
+          feet = here() ?? feet;
+          cells = layout();
+          ({ r, v } = await build(cells));
+          if (ctl.stopped) return stopped();
+        }
+        // short of blocks: dirt from around, then the shelter again (once)
+        if (!v.closed && v.short > 0 && !d.check && !fight()) {
           const want = v.short + 2;
           const g = await run([{ tool: 'collect_block', args: { block_name: 'dirt', count: want } }], LIMITS.gather, ctl);
           await deps.refresh();
           if (ctl.stopped) return stopped();
           if (okOf(g)) {
             parts.push(`collected ${want} dirt for walls`);
-            const p2 = deps.situation()?.position ?? p;
-            const feet2 = { x: Math.floor(p2.x), y: Math.floor(p2.y), z: Math.floor(p2.z) };
-            Object.assign(feet, feet2);
-            cells = shelterCells(feet, deps.situation()?.position?.headingDegrees ?? heading, inv());
+            feet = here() ?? feet;
+            cells = layout();
             ({ r, v } = await build(cells));
           } else parts.push(`could not collect dirt for walls (${errOf(g) ?? 'stopped'})`);
         }
@@ -695,9 +718,9 @@ export function createCare(deps) {
         parts.push(v.closed
           ? `${d.check ? 'mended its shelter' : 'closed itself in'} at ${xyz(feet)} (${v.placed ? `placed ${plural(v.placed, 'block')}` : 'placed nothing'}${v.solid ? `, ${plural(v.solid, 'wall cell')} already solid` : ''}); it stays inside until your next call`
           : `could not close a shelter at ${xyz(feet)} (${v.why ?? errOf(r) ?? 'stopped'})`);
-        // a fight that took the body over in the middle of it is not the shelter's failure: tried again once idle
-        const fought = /\b(fight|evade|hide|deflect) response for\b/.test(errOf(r) ?? '');
-        if (!v.closed && !d.check && !fought) {
+        // a fight that took the body over, or chunks not loaded yet (just arrived): tried again once idle, no failure
+        const transient = fight() || /not loaded/.test(v.why ?? '');
+        if (!v.closed && !d.check && !transient) {
           memory.cool.shelter = now();
           memory.shelterFailed = { feet: { ...feet }, blocks: shelterBlocks(inv()).total };
           memory.shelterFails = { [memory.night]: (memory.shelterFails?.[memory.night] ?? 0) + 1 };
@@ -707,6 +730,25 @@ export function createCare(deps) {
       default:
         return null;
     }
+  }
+
+  /**
+   * Their fight reflex may wall itself in when badly hurt even without food to heal with (hide: when_exposed; their
+   * default needs food or a full bar first, and a hurt bot with neither ran on and died: staging, 2026-10-09). Their
+   * policy goes back to its defaults at a death or a change of dimension (and when the player resets it), so this is
+   * checked on every tick and set again; one try every 30 s at most.
+   */
+  async function hideWhenExposed() {
+    const pol = deps.policy?.();
+    const hide = pol?.effective?.combat?.hide;
+    if (!hide || hide === 'when_exposed' || !pol.revision || now() - (memory.hideSetAt ?? 0) < 30_000) return;
+    memory.hideSetAt = now();
+    const r = await deps.rpc('set_survival_policy', {
+      operation: 'set', expected_revision: pol.revision, changes: { combat: { hide: 'when_exposed' } }, lifetime: { kind: 'session' },
+      reason: 'The body walls itself in when badly hurt, with or without food (the gateway care default).',
+    }, 10_000);
+    deps.event('care_policy', { hide: 'when_exposed', ok: r?.result?.status === 'succeeded' });
+    await deps.refresh().catch(() => {});
   }
 
   /** Read their reflex events (always, also during a step: deaths and broken tools come from there). */
@@ -722,6 +764,7 @@ export function createCare(deps) {
     ticking = true;
     try {
       if (now() - eventsAt >= 4_000) { eventsAt = now(); await readEvents().catch(() => {}); }
+      await hideWhenExposed().catch(() => {});
       if (deps.idle()) await deps.fresh?.().catch(() => {}); // a status a few seconds old at most (the clock, mobs)
       const situation = deps.situation();
       if (!situation) return;

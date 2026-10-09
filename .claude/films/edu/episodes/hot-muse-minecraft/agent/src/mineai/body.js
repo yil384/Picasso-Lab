@@ -122,6 +122,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   const containers = CONTAINERS.get(server);
   let lastDeath = null;
   let policyRevision = null;
+  let theirPolicy = null; // their survival policy in effect (view_status)
   let scan = { blocks: [], at: 0, from: null };
   let scanning = null;
   let goal = null;
@@ -234,6 +235,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     status = s;
     statusAt = Date.now();
     if (data.survivalPolicy?.revision) policyRevision = data.survivalPolicy.revision;
+    if (data.survivalPolicy?.effective) theirPolicy = data.survivalPolicy.effective;
     const list = s.inventory?.stacks ?? [];
     stacks = list;
     latest = {
@@ -631,6 +633,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (careOn) Promise.resolve(careGate).catch(() => {}).then(() => { if (ended || closed) return; idleSince = Date.now();
       care = createCare({
         situation: () => status, latest: () => latest, stacks: () => stacks, refresh, act, rpc,
+        policy: () => ({ revision: policyRevision, effective: theirPolicy }),
         fresh: async () => { if (Date.now() - statusAt > 2_000) await refresh(); },
         plan: (skill, a) => toTheirs(skill, a, context()),
         idle: () => body.connected && !ended && !closed && !body.busy && !host?.restarting,

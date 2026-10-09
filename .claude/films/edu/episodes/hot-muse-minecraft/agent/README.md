@@ -1676,6 +1676,11 @@ first, as their result gate wants). In order, what it does when nothing else nee
 | armor | the player has left it alone for 30 s, and leather, or iron beyond 6 ingots (kept for a pickaxe and a bucket), pays for a piece better than it has | chestplate, leggings, boots, helmet in that order, crafted then worn; never diamonds or gold by itself |
 | night | time of day 12300 to 23300 (beds take a player from 12542) in the overworld | with a bed it carries and no hostile mob within 10 blocks: `sleep` (the night passes when no other player is awake), then the bed is picked up again; otherwise, and when the night did not pass: a closed shelter (`build_structure` without digging out anything: a cell that already holds a solid block is wall enough) of carried blocks, cobblestone first, around the bot, with a one-block pocket in front of its feet for a temporary crafting table or furnace (a craft at night works inside it), 13 blocks on open ground; with fewer than 13 blocks it first digs two blocks down and the ground is the wall (where it cannot dig in, on a tree or on rock with no pickaxe, it collects dirt for walls). It stays inside until the next call; one that will not close is tried at most three times a night |
 
+One setting of the runtime's own goes with it: their fight reflex may wall itself in when badly hurt even without food
+to heal with (`hide: when_exposed`; their default `when_recovery_possible` needs carried food or a full bar first, and
+a hurt bot with neither ran on and died on staging). Their policy goes back to its defaults at a death, a change of
+dimension or the player's `policy {}`, so the care sets it again within seconds; `MINEAI_CARE=off` leaves it alone.
+
 During a step, two things keep a tool from breaking in the middle of it: a `collect` of blocks a pickaxe mines gets a
 spare first when the best pickaxe has fewer uses left than the blocks asked for plus 4 ("on its own first: crafted a
 spare stone_pickaxe (your stone_pickaxe had 5 uses left, too few for 12 stone)"), and a pickaxe that breaks anyway

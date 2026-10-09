@@ -67,6 +67,7 @@ export async function startFakeMineAi(opts = {}) {
     durability: {}, // item -> {remaining, maximum} in the status stacks
     breakAfter: null, // the next collect's pickaxe breaks after this many blocks (their TOOL_TIER_LOST)
     owner: 'idle', // their status activity.owner
+    hide: 'when_recovery_possible', // their combat policy's hide
   };
   const calls = [];
   const actions = new Map();
@@ -282,13 +283,15 @@ export async function startFakeMineAi(opts = {}) {
         inventory: { stacks: stacks() }, nearby: { players: world.players, hostiles: world.hostiles, mobs: world.mobs },
         activity: { owner: world.owner, activeAction: active },
       } },
-      survivalPolicy: { revision: world.revision },
+      survivalPolicy: { revision: world.revision, effective: { combat: { hide: world.hide } } },
     }));
     reg('read_recent_events', () => ({ action: 'read_recent_events', durationMs: 1, result: { status: 'succeeded', events: world.events.splice(0), remainingEventCount: 0 } }));
     reg('view_blocks', () => ({ action: 'view_blocks', durationMs: 1, result: { status: 'succeeded', blocks: { find: world.blocks } } }));
     reg('set_survival_policy', (a) => {
       if (a.expected_revision !== world.revision) return { action: 'set_survival_policy', durationMs: 1, result: { status: 'failed', error: '[POLICY_REVISION_STALE] stale' } };
       world.revision = `rev-${Number(world.revision.split('-')[1]) + 1}`;
+      if (a.operation === 'reset') world.hide = 'when_recovery_possible';
+      if (a.changes?.combat?.hide) world.hide = a.changes.combat.hide;
       return { action: 'set_survival_policy', durationMs: 1, result: { status: 'succeeded' } };
     });
     return server;

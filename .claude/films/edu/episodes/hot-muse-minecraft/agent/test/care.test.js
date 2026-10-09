@@ -205,7 +205,7 @@ test('care loop: a shelter at night, journaled once; a step of the player\'s sto
   const dig = careRig({ situation: situation({ clock: { timeOfDay: 14000 } }), inventory: { dirt: 2 }, results: { build_structure: { status: 'succeeded', structure: { cells: 12, correct: 4, placed: 1, wrong: 8, kept: [], left: [{ reason: 'holds_another_block', count: 8 }] } } } });
   await dig.care.tick();
   assert.deepEqual(dig.calls.map((c) => [c.tool, c.args.y]), [['navigate', 62], ['pick_up_items', undefined], ['build_structure', undefined]]);
-  assert.match(dig.care.last().text, /dug two blocks down .*closed itself in .*placed 1 block, 8 wall cells already solid/);
+  assert.match(dig.care.last().text, /dug two blocks down; closed itself in .*placed 1 block, 8 wall cells already solid/);
   // short of blocks after all: dirt from around, then the shelter again
   let builds = 0;
   const short = careRig({ situation: situation({ clock: { timeOfDay: 14000 } }), inventory: { dirt: 2 }, results: {
@@ -216,6 +216,14 @@ test('care loop: a shelter at night, journaled once; a step of the player\'s sto
   } });
   await short.care.tick();
   assert.deepEqual(short.calls.map((c) => c.tool), ['navigate', 'build_structure', 'collect_block', 'build_structure']);
+  // on a tree: down to the ground first (their navigate names the ground), then into it
+  const tree = careRig({ situation: situation({ clock: { timeOfDay: 14000 } }), inventory: {}, results: {
+    navigate: (c) => (c.args.y === 62 ? { status: 'failed', error: '[NAVIGATION_TARGET_UNSUPPORTED] No usable footing was observed within 1 blocks of 10, 62, -4. The ground in that column is at y=57. Choose ...' } : { status: 'succeeded' }),
+    build_structure: { status: 'succeeded', structure: { cells: 16, placed: 1, wrong: 11, kept: [], left: [{ reason: 'holds_another_block', count: 11 }] } },
+  } });
+  await tree.care.tick();
+  assert.deepEqual(tree.calls.map((c) => [c.tool, c.args.y]), [['navigate', 62], ['navigate', 58], ['navigate', 56], ['pick_up_items', undefined], ['build_structure', undefined]]);
+  assert.match(tree.care.last().text, /climbed down to the ground at y=58; dug two blocks down; closed itself in/);
   assert.equal(short.calls[2].args.count, 13);
   assert.match(short.care.last().text, /could not dig in .*collected 13 dirt for walls; closed itself in/);
   // the player's step: the care's action is cancelled and the step goes on once it settled
@@ -317,6 +325,19 @@ test('care in the body: night falls while idle: a shelter of carried blocks, jou
   } finally { await body.close(); }
 });
 
+test('care in the body: their fight reflex may wall itself in when badly hurt, set again after a reset', async () => {
+  const { body, fake } = await careBody({ inventory: {} });
+  try {
+    assert.ok(await until(() => fake.world.hide === 'when_exposed'), 'set once the care runs');
+    const pol = await body.run('policy', {}); // the player puts every default back
+    assert.equal(pol.ok, true, pol.result);
+    assert.equal(fake.world.hide, 'when_recovery_possible');
+    await body.refresh();
+    body.onItsOwn(0); // nothing said about it: it is part of what the care is
+    assert.ok(fake.tools('set_survival_policy').length >= 2);
+  } finally { await body.close(); }
+});
+
 test('care in the body: a pickaxe about to wear out gets a spare before a collect; one that breaks midway is replaced and the collect goes on', async () => {
   const { body, fake } = await careBody({ inventory: { stone_pickaxe: 1, cobblestone: 6, stick: 4, crafting_table: 1 } }, { durability: { stone_pickaxe: { remaining: 5, maximum: 131 } } });
   try {
@@ -344,7 +365,9 @@ test('care in the body: the armor skill crafts and wears; policy knobs stay in t
     const off = await body.run('policy', { armor: 'off', night: 'off' });
     assert.equal(off.ok, true, off.result);
     assert.match(off.result, /on its own between your calls: does nothing about the night; leaves armor to you; eats when hungry/);
-    assert.equal(fake.tools('set_survival_policy').length, 0, 'nothing sent to the runtime');
+    const ours = () => fake.tools('set_survival_policy').filter((c) => !c.args.changes?.combat?.hide);
+    assert.equal(ours().length, 0, 'nothing of the policy skill sent to the runtime');
+    assert.doesNotMatch(JSON.stringify(fake.tools('set_survival_policy')), /night|"armor"|tools/);
     const r = await body.run('armor', {});
     assert.equal(r.ok, true, r.result);
     assert.deepEqual(Object.keys(body.equipment()).sort(), ['feet', 'head', 'legs', 'torso']);
@@ -354,7 +377,8 @@ test('care in the body: the armor skill crafts and wears; policy knobs stay in t
     // both kinds of knobs in one call: theirs go to the runtime, ours stay here
     const both = await body.run('policy', { retreat_health: 10, food: 'eat' });
     assert.equal(both.ok, true, both.result);
-    assert.equal(fake.tools('set_survival_policy').length, 1);
+    assert.equal(ours().length, 1);
+    assert.equal(ours()[0].args.changes.combat.critical_health, 10);
     assert.deepEqual(body.carePolicy(), { night: 'off', armor: 'off', food: 'eat', tools: 'spare' });
   } finally { await body.close(); }
 });
