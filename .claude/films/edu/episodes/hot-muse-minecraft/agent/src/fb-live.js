@@ -235,6 +235,8 @@ export const titleFor = (base, game) => `${base} (game ${game})`.slice(0, 250);
  * @param {boolean} [o.allowPlainRtmp] (tests) accept an rtmp:// ingest
  * @param {string} [o.privacy]       the privacy asked for (a profile's videos): read back after each create, and a video
  *   Facebook stored with another one (it caps a post at the audience the owner allowed the app) is reported as a warning
+ * @param {number} [o.maxPerHour]    live videos created at most in any hour (FB_MAX_PER_HOUR, 6) and in any 24 hours
+ * @param {number} [o.maxPerDay]     (FB_MAX_PER_DAY, 20), counted in the state file so a restart does not reset them
  * @param {boolean} [o.deleteAfter]   after a live video is ended, delete it (FB_DELETE_AFTER; the profile target keeps
  *   the owner's timeline clean), and try again later when that fails
  */
@@ -272,7 +274,7 @@ export function createLiveChannel(o) {
       const ids = [...new Set([...(b?.id ? [b.id] : []), ...pendingEnds])];
       const del = [...pendingDeletes.values()].map(({ live, video }) => ({ live, video: video ?? null }));
       fs.mkdirSync(path.dirname(o.stateFile), { recursive: true });
-      fs.writeFileSync(`${o.stateFile}.tmp`, `${JSON.stringify({ open: ids, delete: del, at: new Date(now()).toISOString() })}\n`, { mode: 0o600 });
+      fs.writeFileSync(`${o.stateFile}.tmp`, `${JSON.stringify({ open: ids, delete: del, created, at: new Date(now()).toISOString() })}\n`, { mode: 0o600 });
       fs.renameSync(`${o.stateFile}.tmp`, o.stateFile);
     } catch (err) { event('fb_error', { what: 'write the state file', message: clip(err?.message ?? err, 200) }); }
   };
@@ -281,11 +283,26 @@ export function createLiveChannel(o) {
     try {
       const j = JSON.parse(fs.readFileSync(o.stateFile, 'utf8'));
       return {
+        created: (j.created ?? []).filter((x) => Number.isFinite(x)),
         open: (j.open ?? []).filter(isId).map(String),
         del: (j.delete ?? []).filter((e) => isId(e?.live)).map((e) => ({ live: String(e.live), video: isId(e.video) ? String(e.video) : null })),
       };
-    } catch { return { open: [], del: [] }; }
+    } catch { return { created: [], open: [], del: [] }; }
   };
+  // ----- the caps: Facebook asked for an identity check after many automatic public lives (2026-10-09)
+  const maxPerHour = o.maxPerHour ?? 6;
+  const maxPerDay = o.maxPerDay ?? 20;
+  let created = loadState().created; // when each live video was created (ms), the last 24 hours
+  let cap = null; // {until, why} while a cap holds
+  /** A cap that holds now ({until, why}), or null. */
+  function capped() {
+    const t = now();
+    created = created.filter((x) => x > t - 86_400_000);
+    const hour = created.filter((x) => x > t - 3_600_000);
+    if (hour.length >= maxPerHour) return { until: hour[0] + 3_600_000, why: `${maxPerHour} live videos in the last hour` };
+    if (created.length >= maxPerDay) return { until: created[0] + 86_400_000, why: `${maxPerDay} live videos in the last 24 hours` };
+    return null;
+  }
 
   /**
    * Delete an ended live video of ours (FB_DELETE_AFTER): the live video object, which takes its recording with it
@@ -394,6 +411,12 @@ export function createLiveChannel(o) {
     if (closing || !focus) return;
     if (!b) {
       if (restingUntil > now()) return;
+      cap = capped();
+      if (cap) {
+        event('fb_capped', { game: focus, why: cap.why, untilS: Math.ceil((cap.until - now()) / 1000) });
+        setTimeout(() => kick(), Math.max(1_000, cap.until - now() + 50)).unref?.();
+        return;
+      }
       await begin();
       return;
     }
@@ -415,6 +438,7 @@ export function createLiveChannel(o) {
       const r = await graph.createLive({ title: titleFor(title, game.id), description: DESCRIPTION });
       if (!r?.id) throw new Error('the Graph API created no live video');
       me.id = String(r.id);
+      created.push(now());
       saveState();
       let ingest = r.secure_stream_url ?? null;
       if (!ingest) ingest = (await graph.getLive(me.id, 'secure_stream_url'))?.secure_stream_url ?? null;
@@ -573,17 +597,18 @@ export function createLiveChannel(o) {
     live() {
       const asked = pick();
       const resting = !b && asked && restingUntil > now();
+      const capNow = !b && asked && !resting && cap && cap.until > now() ? cap : null;
       return {
         fb: true,
-        state: b ? (b.state === 'ending' ? 'ending' : b.state) : asked ? (resting ? 'retrying' : 'starting') : 'off',
+        state: b ? (b.state === 'ending' ? 'ending' : b.state) : asked ? (resting ? 'retrying' : capNow ? 'capped' : 'starting') : 'off',
         game: b?.game ?? asked,
         videoUrl: b?.videoUrl ?? null,
         embedUrl: b?.embedUrl ?? null,
         liveSince: b?.liveAt ? new Date(b.liveAt).toISOString() : null,
         warning: b?.warning ?? null,
         games: games.size,
-        error: lastError,
-        retryInS: resting ? Math.ceil((restingUntil - now()) / 1000) : null,
+        error: capNow ? `the limit of ${capNow.why} is reached` : lastError,
+        retryInS: resting ? Math.ceil((restingUntil - now()) / 1000) : capNow ? Math.ceil((capNow.until - now()) / 1000) : null,
       };
     },
     caption(id, text, pose) {

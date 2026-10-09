@@ -359,6 +359,49 @@ test('profile target: a live video Facebook stored with a narrower privacy than 
   await ch.stop(game);
 });
 
+test('caps: at most maxPerHour live videos in any hour and maxPerDay in 24 hours, kept across restarts; live_view says so plainly', async (t) => {
+  let jump = 0; // a running clock that the test can move an hour ahead
+  const clock = () => Date.now() + jump;
+  const { fake, rows, ch, dir, graph } = await channelOn(t, { now: clock, maxPerHour: 2, maxPerDay: 3 });
+  const once = async (g) => {
+    ch.start(g, { player: 'Muse_aaaa' });
+    ch.focus(g);
+    await until(() => ch.live().state === 'live');
+    await ch.stop(g);
+    await until(() => ch.live().state === 'off');
+  };
+  await once('g1');
+  await once('g2');
+  ch.start('g3', { player: 'Muse_aaaa' });
+  ch.focus('g3');
+  await until(() => ch.live().state === 'capped');
+  assert.equal(fake.videos.size, 2, 'no third live video in the hour');
+  assert.match(ch.live().error, /the limit of 2 live videos in the last hour is reached/);
+  assert.ok(ch.live().retryInS > 3_500 && ch.live().retryInS <= 3_600);
+  assert.ok(rows.some((r) => r.k === 'fb_capped'));
+  const state = JSON.parse(fs.readFileSync(path.join(dir, 'fb-live-state.json'), 'utf8'));
+  assert.equal(state.created.length, 2, 'the creates are kept in the state file');
+  // a restart keeps counting
+  const again = createLiveChannel({ graph, createStream: stubStreams(fake).create, stateFile: path.join(dir, 'fb-live-state.json'), now: clock, maxPerHour: 2, maxPerDay: 3, pollMs: 25, settleMs: 20 });
+  t.after(() => again.stopAll());
+  again.start('g4', { player: 'Muse_bbbb' });
+  again.focus('g4');
+  await until(() => again.live().state === 'capped');
+  await again.stop('g4');
+  // an hour later the hourly cap is free again; the day's cap of 3 then holds
+  jump += 3_601_000;
+  ch.focus('g3');
+  await until(() => ch.live().state === 'live');
+  assert.equal(fake.videos.size, 3);
+  await ch.stop('g3');
+  await until(() => ch.live().state === 'off');
+  ch.start('g5', { player: 'Muse_aaaa' });
+  ch.focus('g5');
+  await until(() => ch.live().state === 'capped');
+  assert.match(ch.live().error, /3 live videos in the last 24 hours/);
+  await ch.stop('g5');
+});
+
 test('channel: at start, live videos a crash left open are ended (the state file, and open ones of the Page with the marker); others are left alone', async (t) => {
   const fake = await fakeGraph();
   const rows = [];

@@ -933,7 +933,7 @@ export function createCameraManager({ config, log, createRig, graph = null, game
       }),
       createStream: (opts) => pool.create(opts), streamOptions: managerConfig(config.stream).options, log,
       title: config.fb.title, stateFile: config.fb.stateFile, gameTtlMs, deleteAfter: config.fb.deleteAfter,
-      privacy: config.fb.target === 'me' ? config.fb.privacy : null,
+      privacy: config.fb.target === 'me' ? config.fb.privacy : null, maxPerHour: config.fb.maxPerHour, maxPerDay: config.fb.maxPerDay,
     });
     pool.start();
     const stopAll = channel.stopAll;

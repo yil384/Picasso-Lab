@@ -348,6 +348,8 @@ export function loadConfig(env = process.env) {
     target: fbTarget,
     privacy: r.oneOf('FB_PRIVACY', 'EVERYONE', ['EVERYONE', 'ALL_FRIENDS', 'SELF']),
     deleteAfter: r.bool('FB_DELETE_AFTER', fbTarget === 'me'),
+    maxPerHour: r.int('FB_MAX_PER_HOUR', 6, 1, 60),
+    maxPerDay: r.int('FB_MAX_PER_DAY', 20, 1, 500),
     pageId: r.str('FB_PAGE_ID', ''),
     tokenFile: r.str('FB_TOKEN_FILE', '') ? path.resolve(r.str('FB_TOKEN_FILE', '')) : '',
     graphVersion: r.str('FB_GRAPH_VERSION', 'v23.0'),
