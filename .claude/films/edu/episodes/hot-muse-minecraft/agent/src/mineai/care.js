@@ -528,6 +528,8 @@ export function createCare(deps) {
       ctl.actionId = null;
       const out = await deps.act(call, deadline, ctl);
       results.push({ call, out });
+      // their reflexes that interrupted it (a fight during a hunt): said with the care's own line
+      for (const x of out.output?.interruptions ?? []) (ctl.interruptions ??= []).push(String(x).replace(/^\s*\[[A-Z_]+\]\s*/, '').slice(0, 80));
       if (out.error || out.output?.result?.status !== 'succeeded') break;
     }
     return results;
@@ -732,7 +734,10 @@ export function createCare(deps) {
       running = job;
       // the status is read again once it is done, so the next decision never acts on what it just changed
       job.done = carry(d, ctl).catch((err) => add({ kind: d.kind, ok: false, text: `${d.why}: ${String(err?.message ?? err).slice(0, 200)}` }))
-        .then(() => deps.refresh().catch(() => {})).finally(() => { if (running === job) running = null; });
+        .then((entry) => {
+          if (entry && ctl.interruptions?.length) entry.text = `${entry.text} [meanwhile its reflexes: ${[...new Set(ctl.interruptions)].join(', ')}]`;
+          return deps.refresh().catch(() => {});
+        }).finally(() => { if (running === job) running = null; });
       await job.done;
     } finally {
       ticking = false;
