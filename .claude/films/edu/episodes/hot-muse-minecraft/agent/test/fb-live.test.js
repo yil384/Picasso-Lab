@@ -168,7 +168,7 @@ test('graph: the token only in the Authorization header; transient errors tried 
 
 test('channel: a game goes live by itself; the embed is Facebook\'s player for the video; the game\'s end ends the live video', async (t) => {
   const { fake, rows, streams, ch, dir } = await channelOn(t);
-  assert.deepEqual(ch.live(), { fb: true, state: 'off', game: null, videoUrl: null, embedUrl: null, liveSince: null, games: 0, error: null, retryInS: null });
+  assert.deepEqual(ch.live(), { fb: true, state: 'off', game: null, videoUrl: null, embedUrl: null, liveSince: null, warning: null, games: 0, error: null, retryInS: null });
   assert.deepEqual(ch.start('g1', { player: 'Muse_aaaa' }), { id: 'g1' });
   assert.equal(ch.start('g2', { player: 'not a name' }), null, 'a bad player name');
   assert.equal(ch.live().state, 'starting');
@@ -324,6 +324,29 @@ test('profile target (FB_TARGET=me): /me/live_videos in public, each live video 
   assert.ok(fake.videos.has(old));
   assert.equal(fake.calls.some((c) => c.method !== 'GET' && (c.path.endsWith(`/${own}`) || c.path.endsWith(`/${old}`))), false);
   noSecrets(fake, rows);
+});
+
+test('profile target: a live video Facebook stored with a narrower privacy than asked is reported, in live() and in live_view', async (t) => {
+  const fake = await fakeGraph({ privacyCap: 'SELF' });
+  const rows = [];
+  const log = { event: (k, d) => rows.push({ k, ...d }) };
+  const graph = createGraph({ pageId: 'me', privacy: { value: 'EVERYONE' }, token: () => PAGE_TOKEN, base: fake.url, minGapMs: 0, log });
+  const dir = tmp();
+  const ch = createLiveChannel({ graph, createStream: stubStreams(fake).create, log, stateFile: path.join(dir, 's.json'), privacy: 'EVERYONE', deleteAfter: true, pollMs: 25, settleMs: 20, sweepMs: 40 });
+  const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
+  const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams: ch, loopStatsMs: 0 });
+  const c = new Client({ name: 'fb-test', version: '1' });
+  t.after(async () => { await c.close().catch(() => {}); await agent.stop('test over'); await ch.stopAll(); await fake.close(); fs.rmSync(dir, { recursive: true, force: true }); });
+  await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
+  const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
+  ch.start(game, { player: 'Muse_test4' });
+  const r = await c.callTool({ name: 'live_view', arguments: {} });
+  assert.equal(r.structuredContent.state, 'live');
+  assert.match(r.content[0].text, /\nWarning: Facebook stored this live video as "Only me" \(SELF\), not EVERYONE: the player shows "Video unavailable" to anyone but its owner\./);
+  assert.match(r.structuredContent.warning, /Only me/);
+  assert.match(r.structuredContent.html, /<p>Live: game g\w+, but Facebook shows this video to its owner only\.<\/p>/);
+  assert.ok(rows.some((x) => x.k === 'fb_privacy' && x.asked === 'EVERYONE' && x.got === 'SELF'));
+  await ch.stop(game);
 });
 
 test('channel: at start, live videos a crash left open are ended (the state file, and open ones of the Page with the marker); others are left alone', async (t) => {

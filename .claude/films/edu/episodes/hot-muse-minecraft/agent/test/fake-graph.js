@@ -60,7 +60,9 @@ export async function fakeGraph(o = {}) {
       if ((a === PAGE_ID || a === 'me') && b === 'live_videos' && req.method === 'POST') {
         if (body.status !== 'LIVE_NOW') return send(400, { error: { message: 'status must be LIVE_NOW here', code: 100 } });
         const id = String(next++);
-        const v = { id, owner, videoId: String(next++), status: 'UNPUBLISHED', title: body.title, description: body.description, privacy: body.privacy ?? null, creation_time: new Date().toISOString() };
+        // o.privacyCap: what Facebook stores whatever is asked (it stored "Only me" for EVERYONE on 2026-10-08)
+        const asked = body.privacy ? JSON.parse(body.privacy).value : null;
+        const v = { id, owner, videoId: String(next++), status: 'UNPUBLISHED', title: body.title, description: body.description, privacy: o.privacyCap ?? asked, creation_time: new Date().toISOString() };
         videos.set(id, v);
         return send(200, { id, stream_url: ingest(id).replace(/^rtmps:\/\/([^/:]+):443/, 'rtmp://$1:80'), secure_stream_url: ingest(id) });
       }
@@ -76,6 +78,8 @@ export async function fakeGraph(o = {}) {
         return send(200, { success: true });
       }
       if (a === PAGE_ID && !b && req.method === 'GET') return send(200, { id: PAGE_ID, name: 'Picasso Lab Live' });
+      const rec = [...videos.values()].find((x) => x.videoId === a);
+      if (rec && req.method === 'GET') return send(200, { id: a, privacy: { value: rec.privacy ?? 'EVERYONE', description: { SELF: 'Only me', EVERYONE: 'Public' }[rec.privacy ?? 'EVERYONE'] } });
       const v = videos.get(a);
       if (!v || b) return send(400, { error: { message: `Unsupported request: object '${a}' does not exist`, code: 100, error_subcode: 33 } });
       if (req.method === 'GET') {

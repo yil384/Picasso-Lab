@@ -233,6 +233,8 @@ export const titleFor = (base, game) => `${base} (game ${game})`.slice(0, 250);
  * @param {number} [o.gameTtlMs]      a game the agent has not reported for this long leaves the channel (0: never)
  * @param {object} [o.streamOptions]  passed to every stream (fps, bitrate, ...)
  * @param {boolean} [o.allowPlainRtmp] (tests) accept an rtmp:// ingest
+ * @param {string} [o.privacy]       the privacy asked for (a profile's videos): read back after each create, and a video
+ *   Facebook stored with another one (it caps a post at the audience the owner allowed the app) is reported as a warning
  * @param {boolean} [o.deleteAfter]   after a live video is ended, delete it (FB_DELETE_AFTER; the profile target keeps
  *   the owner's timeline clean), and try again later when that fails
  */
@@ -425,6 +427,15 @@ export function createLiveChannel(o) {
       me.videoId = isId(info?.video?.id) ? String(info.video.id) : null;
       me.videoUrl = videoUrlOf(info, await graph.ownerId().catch(() => null));
       me.embedUrl = me.videoUrl ? facebookEmbedUrl(me.videoUrl) : null;
+      if (o.privacy && me.videoId) {
+        // measured 2026-10-08: asked for EVERYONE, Facebook stored "Only me", and the player shows "Video Unavailable"
+        const p = await graph.getLive(me.videoId, 'privacy').catch(() => null);
+        const got = p?.privacy?.value ?? null;
+        if (got && got !== o.privacy) {
+          me.warning = `Facebook stored this live video as "${clip(p.privacy.description || got, 40)}" (${got}), not ${o.privacy}: the player shows "Video unavailable" to anyone but its owner. Facebook caps a video at the audience the owner allowed the app (Facebook settings, Apps and websites).`;
+          event('fb_privacy', { broadcast: me.id, asked: o.privacy, got });
+        }
+      }
       event('fb_live_created', { broadcast: me.id, game: game.id, video: me.videoUrl, status: me.status });
       if (b !== me) return;
       if (closing || !games.size) { await finish(closing ? 'the service stopped' : 'no game is left'); return; }
@@ -570,6 +581,7 @@ export function createLiveChannel(o) {
         videoUrl: b?.videoUrl ?? null,
         embedUrl: b?.embedUrl ?? null,
         liveSince: b?.liveAt ? new Date(b.liveAt).toISOString() : null,
+        warning: b?.warning ?? null,
         games: games.size,
         error: lastError,
         retryInS: resting ? Math.ceil((restingUntil - now()) / 1000) : null,
