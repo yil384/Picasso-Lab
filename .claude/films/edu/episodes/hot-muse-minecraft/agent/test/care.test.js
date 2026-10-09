@@ -105,20 +105,22 @@ test('care: what to do first, and nothing while nothing is needed', () => {
 test('care: a shelter of carried blocks, best first, and a wall of solid ground is wall enough', () => {
   assert.deepEqual(shelterBlocks({ dirt: 4, cobblestone: 3, oak_planks: 9 }), { list: [{ name: 'cobblestone', count: 3 }, { name: 'dirt', count: 4 }], total: 7 });
   const cells = shelterCells({ x: 0, y: 64, z: 0 }, 0, { cobblestone: 3, dirt: 20 }); // facing north (-z)
-  assert.equal(cells.filter((c) => c.block_name !== 'air').length, 12);
+  assert.equal(cells.filter((c) => c.block_name !== 'air').length, 13);
   assert.equal(cells.filter((c) => c.block_name === 'cobblestone').length, 3);
   const at = (x, y, z) => cells.find((c) => c.x === x && c.y === y && c.z === z)?.block_name;
   assert.equal(at(0, 64, 0), 'air', 'the bot stands inside');
   assert.equal(at(0, 65, 0), 'air');
   assert.equal(at(0, 64, -1), 'air', 'a pocket in front of its feet for a table or furnace');
   assert.notEqual(at(0, 65, -1), 'air', 'the pocket has a ceiling');
+  assert.notEqual(at(0, 65, -2), 'air', 'and a block the ceiling goes against');
   assert.ok(at(0, 64, -2) && at(1, 64, -1) && at(-1, 64, -1) && at(0, 64, 1) && at(1, 64, 0) && at(-1, 64, 0), 'closed all round');
   assert.notEqual(at(0, 66, 0), 'air', 'a roof over its head');
   assert.equal(new Set(cells.map((c) => `${c.x},${c.y},${c.z}`)).size, cells.length, 'no cell twice');
-  assert.deepEqual(shelterVerdict({ placed: 1, cells: 12, wrong: 8, kept: [], left: [{ reason: 'holds_another_block', count: 8 }] }), { closed: true, placed: 1, solid: 8, why: null });
+  assert.deepEqual(shelterVerdict({ placed: 1, cells: 12, wrong: 8, kept: [], left: [{ reason: 'holds_another_block', count: 8 }] }), { closed: true, placed: 1, solid: 8, why: null, short: 0 });
   const open = shelterVerdict({ placed: 0, cells: 12, wrong: 2, kept: [], left: [{ reason: 'unreachable', count: 1 }, { reason: 'block_not_carried', count: 1 }], missing: [{ block: 'dirt', count: 1 }] });
   assert.equal(open.closed, false);
   assert.match(open.why, /1 cell: unreachable; 1 cell: block not carried; short of 1 dirt/);
+  assert.equal(open.short, 1);
 });
 
 test('care: their reflex events in our words, a fight of many contacts as one line', () => {
@@ -185,7 +187,7 @@ test('care loop: a shelter at night, journaled once; a step of the player\'s sto
   await rig.care.tick();
   assert.deepEqual(rig.calls.map((c) => c.tool), ['build_structure']);
   assert.equal(rig.calls[0].args.remove_wrong_blocks, false, 'never digs a wall out');
-  assert.equal(rig.calls[0].args.blocks.filter((b) => b.block_name === 'cobblestone').length, 12);
+  assert.equal(rig.calls[0].args.blocks.filter((b) => b.block_name === 'cobblestone').length, 13);
   const [entry] = rig.care.since(0);
   assert.equal(entry.kind, 'shelter');
   assert.equal(entry.source, 'care');
@@ -193,11 +195,23 @@ test('care loop: a shelter at night, journaled once; a step of the player\'s sto
   await rig.care.tick();
   assert.equal(rig.calls.length, 1, 'sheltered: nothing more until it is checked again');
   assert.equal(rig.care.since(entry.seq).length, 0);
-  // too few blocks: dig in first
+  // too few blocks: dig in first (and where it cannot, collect dirt)
   const dig = careRig({ situation: situation({ clock: { timeOfDay: 14000 } }), inventory: { dirt: 2 }, results: { build_structure: { status: 'succeeded', structure: { cells: 12, correct: 4, placed: 1, wrong: 8, kept: [], left: [{ reason: 'holds_another_block', count: 8 }] } } } });
   await dig.care.tick();
-  assert.deepEqual(dig.calls.map((c) => [c.tool, c.args.y]), [['navigate', 62], ['build_structure', undefined]]);
+  assert.deepEqual(dig.calls.map((c) => [c.tool, c.args.y]), [['navigate', 62], ['pick_up_items', undefined], ['build_structure', undefined]]);
   assert.match(dig.care.last().text, /dug two blocks down .*closed itself in .*placed 1 block, 8 wall cells already solid/);
+  // short of blocks after all: dirt from around, then the shelter again
+  let builds = 0;
+  const short = careRig({ situation: situation({ clock: { timeOfDay: 14000 } }), inventory: { dirt: 2 }, results: {
+    navigate: { status: 'failed', error: '[NAVIGATION_TARGET_UNSUPPORTED] No usable footing' },
+    build_structure: () => (++builds === 1
+      ? { status: 'failed', error: '[BUILD_INCOMPLETE]', structure: { cells: 16, placed: 2, wrong: 11, kept: [], left: [{ reason: 'block_not_carried', count: 11 }], missing: [{ block: 'dirt', count: 11 }] } }
+      : { status: 'succeeded', structure: { cells: 16, placed: 11, wrong: 0, kept: [], left: [] } }),
+  } });
+  await short.care.tick();
+  assert.deepEqual(short.calls.map((c) => c.tool), ['navigate', 'build_structure', 'collect_block', 'build_structure']);
+  assert.equal(short.calls[2].args.count, 13);
+  assert.match(short.care.last().text, /could not dig in .*collected 13 dirt for walls; closed itself in/);
   // the player's step: the care's action is cancelled and the step goes on once it settled
   const busy = careRig({ situation: situation({ clock: { timeOfDay: 14000 } }), inventory: { cobblestone: 20 } });
   busy.state.hold = true;
@@ -285,13 +299,13 @@ async function careBody(fakeOpts = {}, world = {}) {
 }
 
 test('care in the body: night falls while idle: a shelter of carried blocks, journaled, then yields to a step', async () => {
-  const { body, fake } = await careBody({ inventory: { cobblestone: 14, oak_log: 3 } }, { timeOfDay: 14000 });
+  const { body, fake } = await careBody({ inventory: { cobblestone: 15, oak_log: 3 } }, { timeOfDay: 14000 });
   try {
     assert.ok(await until(() => fake.tools('build_structure').length > 0), 'the shelter was built');
     const cells = fake.tools('build_structure')[0].args.blocks;
-    assert.equal(cells.filter((c) => c.block_name === 'cobblestone').length, 12);
+    assert.equal(cells.filter((c) => c.block_name === 'cobblestone').length, 13);
     assert.ok(await until(() => body.onItsOwn(0).some((e) => e.kind === 'shelter')));
-    assert.match(body.onItsOwn(0).find((e) => e.kind === 'shelter').text, /^night \(time 14000\): closed itself in at 10 64 -4 \(placed 12 blocks\)/);
+    assert.match(body.onItsOwn(0).find((e) => e.kind === 'shelter').text, /^night \(time 14000\): closed itself in at 10 64 -4 \(placed 13 blocks\)/);
     assert.match(body.state(), /last done on its own \(\d+ s ago\): night \(time 14000\): closed itself in/);
     // a step of the player's runs as before
     const r = await body.run('craft', { item: 'oak_planks', n: 4 });
@@ -342,7 +356,7 @@ test('care in the body: the armor skill crafts and wears; policy knobs stay in t
 });
 
 test('care through MCP: what the body did on its own is in the next reply, once', async () => {
-  const hosts = fakeHosts(() => ({ inventory: { cobblestone: 14 } }));
+  const hosts = fakeHosts(() => ({ inventory: { cobblestone: 15 } }));
   const web = createWeb({
     config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '' }), log, skills: MINEAI_SKILLS,
     makeBody: (id, o) => createMineAiBody({ config, log, hosts, gameId: id, username: `Tst_rv_${id}`, viewId: o?.viewId, careTickMs: 30, careIdleMs: 50 }),

@@ -53,7 +53,7 @@ export const SHELTER_BLOCKS = Object.freeze([
   'cobblestone', 'cobbled_deepslate', 'stone', 'deepslate', 'andesite', 'diorite', 'granite', 'tuff', 'blackstone',
   'netherrack', 'sandstone', 'dirt', 'coarse_dirt', 'rooted_dirt', 'mud',
 ]);
-export const SHELTER_SIZE = 12;
+export const SHELTER_SIZE = 13;
 /** Food eaten when food is at or below this (or when hurt and below 18, which healing needs), like their hunger reflex. */
 export const EAT_AT = 14;
 /** With no food carried, the body hunts when food is at or below this in daylight (any time at or below 6). */
@@ -246,8 +246,9 @@ export function shelterBlocks(inventory = {}) {
  * The care's shelter around the bot (build_structure's blocks): the bot's two cells and, in front of its feet, a pocket
  * one block high where a crafting table or furnace can be put down for a craft (the player's steps craft and smelt at
  * night too), closed all round: walls two high around the bot and one high around the pocket, a ceiling over the
- * pocket, the roof over the bot's head and the block behind it that the roof is placed against. 12 blocks on open
- * ground, fewer where the ground is the wall; each taken from the carried blocks in turn (best first).
+ * pocket, the roof over the bot's head, and the blocks the ceiling and the roof are placed against (a block goes down
+ * only against a solid face). 13 blocks on open ground, fewer where the ground is the wall; each taken from the carried
+ * blocks in turn (best first).
  */
 export function shelterCells(feet, heading, inventory) {
   const f = facingOf((-Number(heading || 0) * Math.PI) / 180); // compass degrees -> mineflayer yaw
@@ -255,7 +256,7 @@ export function shelterCells(feet, heading, inventory) {
   const at = (a, b, y) => ({ x: feet.x + f.dx * a + r.dx * b, y: feet.y + y, z: feet.z + f.dz * a + r.dz * b });
   const solid = [
     at(-1, 0, 0), at(0, 1, 0), at(0, -1, 0), at(2, 0, 0), at(1, 1, 0), at(1, -1, 0), // feet level: around the bot and the pocket
-    at(-1, 0, 1), at(0, 1, 1), at(0, -1, 1), at(1, 0, 1), // head level: around the bot, the pocket's ceiling
+    at(-1, 0, 1), at(0, 1, 1), at(0, -1, 1), at(2, 0, 1), at(1, 0, 1), // head level: around the bot, the block the pocket's ceiling goes against, the ceiling
     at(-1, 0, 2), at(0, 0, 2), // the block the roof goes against, the roof
   ];
   const air = [at(0, 0, 0), at(0, 0, 1), at(1, 0, 0)];
@@ -270,7 +271,7 @@ export function shelterCells(feet, heading, inventory) {
  * solid block (wall enough). {closed, placed, solid, why}.
  */
 export function shelterVerdict(st) {
-  if (!st) return { closed: false, placed: 0, solid: 0, why: null };
+  if (!st) return { closed: false, placed: 0, solid: 0, why: null, short: 0 };
   const placed = Number(st.placed) || 0;
   const left = st.left ?? [];
   const solid = left.filter((g) => g.reason === 'holds_another_block').reduce((n, g) => n + (Number(g.count) || 0), 0)
@@ -278,7 +279,10 @@ export function shelterVerdict(st) {
   const open = left.filter((g) => g.reason !== 'holds_another_block');
   const missing = (st.missing ?? []).map((m) => `short of ${m.count} ${m.block}`);
   const why = open.length ? [...open.map((g) => `${g.count} cell${g.count === 1 ? '' : 's'}: ${String(g.reason).replace(/_/g, ' ')}`), ...missing].join('; ') : null;
-  return { closed: open.length === 0, placed, solid, why };
+  // blocks it lacks for the cells still to place (their audit's missing, or the cells it does not carry a block for)
+  const short = (st.missing ?? []).reduce((n, m) => n + (Number(m.count) || 0), 0)
+    || left.filter((g) => g.reason === 'block_not_carried').reduce((n, g) => n + (Number(g.count) || 0), 0);
+  return { closed: open.length === 0, placed, solid, why, short };
 }
 
 const BEDS = /_bed$/;
@@ -634,25 +638,51 @@ export function createCare(deps) {
       case 'shelter': {
         // no cooling down after a shelter that worked: a step of the player's that took the bot out of it is followed
         // by a new one as soon as the body is idle again
+        await deps.refresh();
         let p = deps.situation()?.position;
         if (!p) return null;
         const parts = [];
-        // too few blocks for walls: dig into the ground (two blocks down; the ground itself is the walls)
+        // too few blocks for walls: dig into the ground (two blocks down; the ground itself is the walls) and pick up
+        // what the digging dropped (the roof comes from it)
         if (shelterBlocks(inv()).total < SHELTER_SIZE && !d.check) {
           const target = { x: Math.floor(p.x), y: Math.floor(p.y) - 2, z: Math.floor(p.z) };
           const r = await run([{ tool: 'navigate', args: target }], LIMITS.dig, ctl);
+          if (okOf(r) && !ctl.stopped) await run([{ tool: 'pick_up_items', args: {} }], LIMITS.pickbed, ctl);
           await deps.refresh();
           p = deps.situation()?.position ?? p;
-          parts.push(okOf(r) ? `dug two blocks down (it carried too few blocks for walls)` : `could not dig in (${errOf(r) ?? 'stopped'})`);
+          parts.push(okOf(r) ? 'dug two blocks down (it carried too few blocks for walls)' : `could not dig in (${errOf(r) ?? 'stopped'})`);
         }
-        if (ctl.stopped) return add({ kind: 'shelter', ok: false, ms: ms(), text: `${d.why}: stopped before its shelter was closed (your call came)` });
+        const stopped = () => add({ kind: 'shelter', ok: false, ms: ms(), text: `${d.why}: stopped before its shelter was closed (your call came)` });
+        if (ctl.stopped) return stopped();
         const feet = { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) };
-        const cells = shelterCells(feet, deps.situation()?.position?.headingDegrees ?? 0, inv());
-        // never digs: a wall or roof cell that already holds a solid block is wall enough
-        const r = await run([{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: false } }], LIMITS.shelter, ctl);
-        await deps.refresh();
-        const v = shelterVerdict(r[0]?.out?.output?.result?.structure ?? null);
-        memory.shelter = v.closed ? { feet, at: now(), checked: now(), night: memory.night } : null;
+        // a check of the shelter it stands in asks for the same cells (the bot turns while it builds: a new heading
+        // would lay out another shelter around it)
+        const same = d.check && memory.shelter?.cells && memory.shelter.feet.x === feet.x && memory.shelter.feet.z === feet.z;
+        const heading = deps.situation()?.position?.headingDegrees ?? 0;
+        const build = async (cells) => {
+          // never digs: a wall or roof cell that already holds a solid block is wall enough
+          const r = await run([{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: false } }], LIMITS.shelter, ctl);
+          await deps.refresh();
+          return { r, v: shelterVerdict(r[0]?.out?.output?.result?.structure ?? null) };
+        };
+        let cells = same ? memory.shelter.cells : shelterCells(feet, heading, inv());
+        let { r, v } = await build(cells);
+        // short of blocks: dirt from around, then the rest of the shelter (once)
+        if (!v.closed && v.short > 0 && !ctl.stopped && !d.check) {
+          const want = v.short + 2;
+          const g = await run([{ tool: 'collect_block', args: { block_name: 'dirt', count: want } }], LIMITS.gather, ctl);
+          await deps.refresh();
+          if (ctl.stopped) return stopped();
+          if (okOf(g)) {
+            parts.push(`collected ${want} dirt for walls`);
+            const p2 = deps.situation()?.position ?? p;
+            const feet2 = { x: Math.floor(p2.x), y: Math.floor(p2.y), z: Math.floor(p2.z) };
+            Object.assign(feet, feet2);
+            cells = shelterCells(feet, deps.situation()?.position?.headingDegrees ?? heading, inv());
+            ({ r, v } = await build(cells));
+          } else parts.push(`could not collect dirt for walls (${errOf(g) ?? 'stopped'})`);
+        }
+        memory.shelter = v.closed ? { feet: { ...feet }, cells, at: same ? memory.shelter.at : now(), checked: now(), night: memory.night } : null;
         if (d.check && v.closed && !v.placed) return null; // still standing: nothing to tell
         parts.push(v.closed
           ? `${d.check ? 'mended its shelter' : 'closed itself in'} at ${xyz(feet)} (${v.placed ? `placed ${plural(v.placed, 'block')}` : 'placed nothing'}${v.solid ? `, ${plural(v.solid, 'wall cell')} already solid` : ''}); it stays inside until your next call`
