@@ -695,7 +695,9 @@ export function createCare(deps) {
         parts.push(v.closed
           ? `${d.check ? 'mended its shelter' : 'closed itself in'} at ${xyz(feet)} (${v.placed ? `placed ${plural(v.placed, 'block')}` : 'placed nothing'}${v.solid ? `, ${plural(v.solid, 'wall cell')} already solid` : ''}); it stays inside until your next call`
           : `could not close a shelter at ${xyz(feet)} (${v.why ?? errOf(r) ?? 'stopped'})`);
-        if (!v.closed && !d.check) {
+        // a fight that took the body over in the middle of it is not the shelter's failure: tried again once idle
+        const fought = /\b(fight|evade|hide|deflect) response for\b/.test(errOf(r) ?? '');
+        if (!v.closed && !d.check && !fought) {
           memory.cool.shelter = now();
           memory.shelterFailed = { feet: { ...feet }, blocks: shelterBlocks(inv()).total };
           memory.shelterFails = { [memory.night]: (memory.shelterFails?.[memory.night] ?? 0) + 1 };

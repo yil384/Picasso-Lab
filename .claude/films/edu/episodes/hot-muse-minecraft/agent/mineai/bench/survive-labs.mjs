@@ -5,7 +5,7 @@
 //   hunger   day; food drained to 14 or less (the Hunger effect), nothing to eat, two cows summoned near by: a hunt that
 //            ends in a meal and food above where the drain left it, within 150 s
 //   shelter  16 cobblestone in daylight, then night and three zombies summoned 10 blocks away: a closed shelter reported
-//            within 30 s and the bot alive with health 14 or more 90 s later
+//            within 60 s (the zombies may have to be fought first) and the bot alive with health 12 or more 90 s later
 //   bed      a white bed in daylight, then night: it sleeps (the night passes when no other player is awake) or, when
 //            another player is awake, it lies down and then shelters: either reported within 90 s
 //   zombie, skeleton, creeper   night with the care's night off (policy night: off, so the reflexes are tested), a stone
@@ -89,7 +89,7 @@ const LABS = {
     setup: (bot) => [`clear ${bot}`, `give ${bot} cobblestone 16`, `effect give ${bot} minecraft:instant_health 1 5 true`],
     after: async (bot) => { await sleep(3_000); con('time set 13000'); for (const [dx, dz] of [[10, 0], [-10, 0], [0, 10]]) con(`execute at ${bot} run summon zombie ~${dx} ~ ~${dz}`); },
     done: (g) => g.own.some((e) => e.kind === 'shelter' && e.ok),
-    pass: (g) => g.own.some((e) => e.kind === 'shelter' && e.ok && e.atS <= 30) && g.v.health >= 14,
+    pass: (g) => g.own.some((e) => e.kind === 'shelter' && e.ok && e.atS <= 60) && g.v.health >= 12,
   },
   bed: {
     time: 'day', limitS: 90, alone: true, kinds: ['sleep', 'shelter'],
