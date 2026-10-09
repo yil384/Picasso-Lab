@@ -1703,7 +1703,34 @@ difficulty and daylight come from `PAPER_DIFFICULTY` (default easy) and `PAPER_D
 locked) in the stack's `deploy/.env`, and `deploy/paper-entry.sh` sets both again at every start (a world that was
 locked stays locked otherwise: the game rule is saved in the world).
 
-MEASURED_M4
+Measured on staging (picasso, 2026-10-09; `deploy/push.sh`, its check PASS; Paper 1.21.4, seed 71811045, **Normal,
+daylight cycling**, set with `PAPER_DIFFICULTY=normal` and `PAPER_DAYLIGHT=cycle` in staging's `deploy/.env`; the
+runtime `2fe1306 with 11 patches`, no runtime change). Natural: fresh spots 12,000 blocks from spawn that no game had
+touched (land spots found on a same-seed copy on the Mac by spreading an armor stand there, ocean ones left out; never
+generated on staging), no console commands, 8 games at once through the public `/mcp`, each from an empty inventory
+through its whole 30-minute lease (1.5 in-game days, so one whole night) with the slow scripted player of
+`mineai/bench/survive.mjs` (wood, wooden and stone tools, a furnace, then silences of 150-240 s, each followed by
+get_state and now and then a small task: 3 logs, 6 stone, 4 dirt, a walk, some of them at night). The baseline is the
+same build with `MINEAI_CARE=off` (only the runtime's reflexes), at its own 8 fresh spots of the same ring.
+
+NATURAL_TABLE
+
+LABS_TABLE
+
+```sh
+# on picasso (staging's deploy/.env: PAPER_DIFFICULTY=normal, PAPER_DAYLIGHT=cycle; for a run only: SPREAD_SPOTS,
+# WEB_MCP_GAMES_PER_ADDRESS=8, MC_USERNAME=Tst_m4, and MINEAI_CARE=off for the baseline, then the agent recreated)
+rsync -az --relative test/e2e mineai/bench picasso:workspace/muse-staging/accept-m4/          # on the Mac
+cd ~/workspace/muse-staging; L=$(ls -t logs | grep run-serve | head -1)
+docker run -d --name m4-care-a --network host --user $(id -u):$(id -g) -v $PWD/accept-m4:/app/rv -v $PWD/logs:/staging-logs:ro \
+  -v $PWD/data/logs:/paper-logs:ro muse-staging-agent node rv/mineai/bench/survive.mjs https://play-staging.picasso-lab.com \
+  --label care-a --games 8 --stagger-ms 5000 --agent-log /staging-logs/$L --server-log /paper-logs/latest.log --out rv/runs
+# the labs: the console through the compose volume, the lab spots 15,000 blocks out, no SPREAD_SPOTS
+docker run -d --name m4-labs --network host --user $(id -u):$(id -g) -v $PWD/accept-m4:/app/rv -v $PWD/logs:/staging-logs:ro \
+  -v $PWD/data/logs:/paper-logs:ro -v muse-staging_console:/console muse-staging-agent node rv/mineai/bench/survive-labs.mjs \
+  https://play-staging.picasso-lab.com --console /console/console.in --agent-log /staging-logs/$L --server-log /paper-logs/latest.log \
+  --labs hunger,shelter,bed,zombie,skeleton,creeper,armor,tool,death --n 20 --parallel 8 --spots "15000 0; 14712 2926; ..." --out rv/runs
+```
 
 ## What is mocked
 
