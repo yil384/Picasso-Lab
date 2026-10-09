@@ -1,7 +1,7 @@
 // test/fake-mineai.js - a stand-in for one Mine AI MCP host (BODY=mineai tests): /health and /mcp (streamable HTTP,
 // JSON replies) on 127.0.0.1, the bearer token of our patch 0004, and a tiny world behind the tools our body uses:
 // foreground actions with submission_id / wait_timeout_ms / wait_for_action / cancel_foreground_action and their result
-// gate, view_status, view_blocks, set_survival_policy, recursive crafting with a temporary workstation, collect,
+// gate, view_status (its clock, mobs and activity settable), read_recent_events (world.events), view_blocks, set_survival_policy, recursive crafting with a temporary workstation, collect,
 // smelt, equip (worn and off-hand stacks in the status), and the rest answering simply. Every call is recorded (calls).
 // Failures and durations are set per tool; world.held = {owner, until} makes one of their reflexes hold the body (a
 // submission is refused ACTION_BUSY with no action id until then); world.huntKillAfterMs makes a hunt's progress show a
@@ -29,6 +29,10 @@ const RECIPES = {
   iron_pickaxe: { out: 1, need: { iron_ingot: 3, stick: 2 }, table: true },
 };
 for (const w of WOODS) RECIPES[`${w}_planks`] = { out: 4, need: { [`${w}_log`]: 1 } };
+RECIPES.stone_sword = { out: 1, need: { cobblestone: 2, stick: 1 }, table: true };
+for (const [m, unit] of [['iron', 'iron_ingot'], ['leather', 'leather']]) {
+  for (const [piece, n] of [['helmet', 5], ['chestplate', 8], ['leggings', 7], ['boots', 4]]) RECIPES[`${m}_${piece}`] = { out: 1, need: { [unit]: n }, table: true };
+}
 const DROPS = { stone: 'cobblestone', coal_ore: 'coal', iron_ore: 'raw_iron', logs: 'oak_log' };
 const SMELTS = { raw_iron: 'iron_ingot', cobblestone: 'stone', oak_log: 'charcoal', beef: 'cooked_beef' };
 const FUELS = { coal: 8, charcoal: 8, oak_planks: 1.5, birch_planks: 1.5, oak_log: 1.5, birch_log: 1.5 };
@@ -57,6 +61,12 @@ export async function startFakeMineAi(opts = {}) {
     buildLeft: 0, // cells a build leaves out of reach (their audit's "unreachable"), as on rough ground
     heading: 90, // compass degrees the bot faces (their status)
     die: null, // a tool whose next run kills the bot
+    timeOfDay: 1000, // their clock (night from 12542 to 23458)
+    mobs: [{ name: 'cow', kind: 'animal', count: 2, nearest: { entityId: 5, distance: 7, position: { x: 15, y: 64, z: -1 } } }],
+    events: [], // their event log, read (and emptied) by read_recent_events
+    durability: {}, // item -> {remaining, maximum} in the status stacks
+    breakAfter: null, // the next collect's pickaxe breaks after this many blocks (their TOOL_TIER_LOST)
+    owner: 'idle', // their status activity.owner
   };
   const calls = [];
   const actions = new Map();
@@ -66,7 +76,7 @@ export async function startFakeMineAi(opts = {}) {
   const add = (k, n) => { const v = have(k) + n; if (v > 0) world.inventory.set(k, v); else world.inventory.delete(k); };
   const SLOT = { head: 5, torso: 6, legs: 7, feet: 8, 'off-hand': 45 };
   const stacks = () => [
-    ...[...world.inventory].map(([name, count], i) => ({ slot: 36 + i, location: i < 9 ? 'hotbar' : 'main', name, count, held: i === 0, durability: null })),
+    ...[...world.inventory].map(([name, count], i) => ({ slot: 36 + i, location: i < 9 ? 'hotbar' : 'main', name, count, held: i === 0, durability: world.durability[name] ?? null })),
     ...[...world.equipment].map(([location, x]) => ({ slot: SLOT[location], location, name: x.name, count: x.count, held: false, durability: null })),
   ];
   const slotFor = (name) => (name === 'shield' ? 'off-hand' : /_helmet$/.test(name) ? 'head' : /_chestplate$/.test(name) ? 'torso' : /_leggings$/.test(name) ? 'legs' : /_boots$/.test(name) ? 'feet' : 'hand');
@@ -113,6 +123,14 @@ export async function startFakeMineAi(opts = {}) {
       case 'collect_block': {
         const drop = DROPS[a.block_name] ?? a.block_name;
         if (a.block_name === 'iron_ore' && !have('stone_pickaxe')) return { status: 'failed', error: '[TARGET_UNMINEABLE] iron_ore needs a stone pickaxe' };
+        if (world.breakAfter !== null) {
+          const got = world.breakAfter;
+          world.breakAfter = null;
+          const pick = ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe'].find((x) => have(x));
+          if (pick) { add(pick, -1); delete world.durability[pick]; }
+          add(drop, got);
+          return { collected: { requested: a.count ?? 1, gained: got, gainedByItem: { [drop]: got }, blocksBroken: got }, status: 'partial', error: `[TOOL_TIER_LOST] ${pick ?? 'pickaxe'} was lost at 1,64,2; no pickaxe remains. Broke ${got} matching blocks; inventory gained ${got}/${a.count} requested items.` };
+        }
         add(drop, a.count ?? 1);
         return { collected: { requested: a.count ?? 1, gained: a.count ?? 1, gainedByItem: { [drop]: a.count ?? 1 }, blocksBroken: world.collectBroken ?? a.count ?? 1 }, status: 'succeeded' };
       }
@@ -260,11 +278,13 @@ export async function startFakeMineAi(opts = {}) {
       action: 'view_status', durationMs: 1,
       result: { status: 'succeeded', situation: {
         dimension: 'overworld', lastDeath: world.lastDeath, vitals: { health: world.health, food: world.food, airSupplyTicks: null },
-        clock: { timeOfDay: 1000, phase: 'day' }, position: { ...world.position, headingDegrees: world.heading },
-        inventory: { stacks: stacks() }, nearby: { players: world.players, hostiles: world.hostiles, mobs: [{ name: 'cow', kind: 'animal', count: 2, nearest: { entityId: 5, distance: 7, position: { x: 15, y: 64, z: -1 } } }] },
+        clock: { timeOfDay: world.timeOfDay, phase: world.timeOfDay >= 12542 && world.timeOfDay <= 23458 ? 'night' : 'day' }, position: { ...world.position, headingDegrees: world.heading },
+        inventory: { stacks: stacks() }, nearby: { players: world.players, hostiles: world.hostiles, mobs: world.mobs },
+        activity: { owner: world.owner, activeAction: active },
       } },
       survivalPolicy: { revision: world.revision },
     }));
+    reg('read_recent_events', () => ({ action: 'read_recent_events', durationMs: 1, result: { status: 'succeeded', events: world.events.splice(0), remainingEventCount: 0 } }));
     reg('view_blocks', () => ({ action: 'view_blocks', durationMs: 1, result: { status: 'succeeded', blocks: { find: world.blocks } } }));
     reg('set_survival_policy', (a) => {
       if (a.expected_revision !== world.revision) return { action: 'set_survival_policy', durationMs: 1, result: { status: 'failed', error: '[POLICY_REVISION_STALE] stale' } };

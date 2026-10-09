@@ -448,7 +448,7 @@ const DOING = {
  *   stacks: () => object[], refresh: () => Promise<void>, act: (call, deadline, ctl) => Promise<object>,
  *   rpc: (tool, args, ms) => Promise<object>, plan: (skill, args) => object, idle: () => boolean,
  *   idleSince: () => number, furnaceNear: () => boolean, tableNear: () => boolean, event: (kind, data) => void,
- *   now?: () => number, tickMs?: number, version?: string
+ *   now?: () => number, tickMs?: number, idleBeforeMs?: number, version?: string
  * }} deps
  */
 export function createCare(deps) {
@@ -658,13 +658,14 @@ export function createCare(deps) {
     ticking = true;
     try {
       if (now() - eventsAt >= 4_000) { eventsAt = now(); await readEvents().catch(() => {}); }
+      if (deps.idle()) await deps.fresh?.().catch(() => {}); // a status a few seconds old at most (the clock, mobs)
       const situation = deps.situation();
       if (!situation) return;
       // nights are counted as the body sees them fall (a sleep or a shelter belongs to one night)
       const nightNow = isNight(situation.clock?.timeOfDay);
       if (nightNow && memory.wasNight === false) memory.night += 1;
       memory.wasNight = nightNow;
-      if (running || !deps.idle() || now() - deps.idleSince() < IDLE_BEFORE_MS) return;
+      if (running || !deps.idle() || now() - deps.idleSince() < (deps.idleBeforeMs ?? IDLE_BEFORE_MS)) return;
       if (situation.activity?.owner && situation.activity.owner !== 'idle') return; // one of their reflexes has the body
       const latest = deps.latest();
       const d = decide(situation, { inventory: latest.inventory ?? {}, stacks: deps.stacks(), policy, memory, now: now(), canCraft, furnace: (latest.inventory?.furnace ?? 0) > 0 || deps.furnaceNear() });

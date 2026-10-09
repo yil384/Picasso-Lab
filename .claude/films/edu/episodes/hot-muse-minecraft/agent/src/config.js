@@ -253,6 +253,8 @@ export function loadConfig(env = process.env) {
     keepFailed: r.int('MINEAI_KEEP_FAILED', 10, 0, 1_000),
     dataDays: r.num('MINEAI_DATA_DAYS', 3, 0.01, 365),
     views: r.bool('MINEAI_VIEWS', true), // the live views (/eyes, /watch) from a viewer inside the host's bot process
+    // the body looks after itself between the player's calls (src/mineai/care.js, ROADMAP M4); off: only their reflexes
+    care: r.bool('MINEAI_CARE', true),
   };
   if (body.kind === 'mineai' && !mineai.dir) problems.push('BODY=mineai needs MINEAI_DIR, the folder with the Mine AI MCP runtime (mineai/fetch-and-patch.sh <dir>)');
   if (mineai.portBase + 3 * mineai.ports > 65_535) problems.push('MINEAI_PORT_BASE + 3 x MINEAI_PORTS must stay under 65536 (each host takes a port and its two live views two more)');

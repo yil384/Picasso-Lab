@@ -106,7 +106,7 @@ function listening(port, ms) {
  *   timeouts?: Record<string, number>}} opts
  * @returns {import('../contracts.js').Body & {refresh: () => Promise<void>, temporaryStations: true, kind: 'mineai'}}
  */
-export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOn = true, careTickMs }) {
+export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOn = true, careTickMs, careIdleMs }) {
   const emitter = new EventEmitter();
   emitter.setMaxListeners(50);
   let host = null;
@@ -491,7 +491,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         const calls = [...plan.calls];
         // a collect that would wear its pickaxe out gets a spare first (crafted from what is carried)
         const spare = tool === 'collect' ? spareFirst(calls[0]?.args) : null;
-        if (spare) { calls.unshift(...spare.calls); parts.push({ ok: true, result: `on its own first: ${spare.text}`, code: null, care: true }); }
+        if (spare) { calls.unshift(...spare.calls.map((c) => ({ ...c, quiet: true }))); parts.push({ ok: true, result: `on its own first: ${spare.text}`, code: null }); }
         let replaced = 0;
         for (let i = 0; i < calls.length; i++) {
           const call = calls[i];
@@ -515,7 +515,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             if (again) {
               replaced += 1;
               parts.push({ ok: true, result: `${again.before}; on its own: ${again.text}`, code: null });
-              calls.splice(i + 1, 0, ...again.calls);
+              calls.splice(i + 1, 0, ...again.calls.map((c) => (c.tool === 'craft_item' ? { ...c, quiet: true } : c)));
               continue;
             }
           }
@@ -527,7 +527,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             rescued = true;
           }
           if (res.ok && call.tool === 'place_block' && CONTAINER_BLOCKS.has(call.args.block_name)) containers.set(keyOf(call.args), gameId);
-          parts.push(res);
+          // a craft the body added on its own (a spare tool, a new one) is told by its own line, not again
+          if (!(res.ok && call.quiet)) parts.push(res);
           if (!res.ok) break;
         }
         const failed = parts.find((x) => !x.ok);
@@ -626,11 +627,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (careOn) {
       care = createCare({
         situation: () => status, latest: () => latest, stacks: () => stacks, refresh, act, rpc,
+        fresh: async () => { if (Date.now() - statusAt > 2_000) await refresh(); },
         plan: (skill, a) => toTheirs(skill, a, context()),
         idle: () => body.connected && !ended && !closed && !body.busy && !host?.restarting,
         idleSince: () => idleSince,
         furnaceNear: () => body.stationNear('furnace'), tableNear: () => body.stationNear('crafting_table'),
-        event, tickMs: careTickMs,
+        event, tickMs: careTickMs, idleBeforeMs: careIdleMs,
       });
       care.start();
     }

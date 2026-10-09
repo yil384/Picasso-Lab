@@ -421,7 +421,7 @@ export async function startAgent(opts = {}) {
    */
   function joinMineAi(sessionId, username, viewId) {
     const body = createMineAiBody({
-      config, log, hosts, gameId: sessionId, username, viewId,
+      config, log, hosts, gameId: sessionId, username, viewId, care: config.mineai?.care !== false,
       onEyes: (port, eyesPath) => streamFrom(body, sessionId)?.(port, eyesPath),
     });
     if (consolePath) {

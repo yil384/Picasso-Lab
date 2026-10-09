@@ -81,8 +81,9 @@ async function playGame(i) {
       g.onItsOwn.push({ at: sec(), ...e });
       say(`on its own: ${e.kind ?? '?'}: ${String(e.text ?? '').slice(0, 160)}`);
     }
-    if (r.data?.code === 'DIED' || /\byou died\b/.test(r.text)) {
-      const line = /you died[^\n.;]*/.exec(r.text)?.[0] ?? 'DIED';
+    const diedAt = /you died at -?\d+ -?\d+ -?\d+/.exec(r.text);
+    if (r.data?.code === 'DIED' || diedAt) {
+      const line = diedAt?.[0] ?? 'DIED';
       if (!g.died.some((d) => d.line === line)) { g.died.push({ at: sec(), line }); say(`DIED: ${line}`); }
     }
   };
