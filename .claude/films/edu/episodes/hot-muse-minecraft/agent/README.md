@@ -1728,6 +1728,12 @@ MEASURED_M4
 
 ## Not tested yet
 
+- The care (section "The bot looks after itself", ROADMAP M4): not yet with Muse itself as the player (the runs are
+  scripted), not in a private world (M3), not past one 30-minute lease (1.5 in-game days: phantoms come after three
+  nights without sleep), not in the Nether or the End (no night there; its shelter is never built there), and not with
+  several guests' bots trying to sleep in the same shared world (the night passes only when every player sleeps; each
+  bot that lay down for nothing shelters after).
+
 - The day-0 fixes (2026-10-07) ran on this Mac only: `npm test`, and against the local Paper server through MCP (two
   strict iron-pickaxe runs: one PASS in 214 s with 15 calls and no failed step; one FAIL: the crafting table vanished
   while `craft stone_pickaxe` tried to place it, 15.5 s in `place`, and the run went on without a stone pickaxe; two
