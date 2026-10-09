@@ -54,6 +54,8 @@ export const SHELTER_BLOCKS = Object.freeze([
   'netherrack', 'sandstone', 'dirt', 'coarse_dirt', 'rooted_dirt', 'mud',
 ]);
 export const SHELTER_SIZE = 13;
+/** Below this health their fight reflex protects the bot (walls itself in, or runs) instead of fighting on. */
+export const CRITICAL_HEALTH = 10;
 /** Food eaten when food is at or below this (or when hurt and below 18, which healing needs), like their hunger reflex. */
 export const EAT_AT = 14;
 /** With no food carried, the body hunts when food is at or below this in daylight (any time at or below 6). */
@@ -752,11 +754,13 @@ export function createCare(deps) {
     const hide = pol?.effective?.combat?.hide;
     if (!hide || hide === 'when_exposed' || !pol.revision || now() - (memory.hideSetAt ?? 0) < 30_000) return;
     memory.hideSetAt = now();
+    // and protects itself from 10 health on (their default 8: two arrows of a skeleton on Normal from death)
+    const combat = { hide: 'when_exposed', ...(pol.effective?.combat?.critical_health === 8 ? { critical_health: CRITICAL_HEALTH } : {}) };
     const r = await deps.rpc('set_survival_policy', {
-      operation: 'set', expected_revision: pol.revision, changes: { combat: { hide: 'when_exposed' } }, lifetime: { kind: 'session' },
-      reason: 'The body walls itself in when badly hurt, with or without food (the gateway care default).',
+      operation: 'set', expected_revision: pol.revision, changes: { combat }, lifetime: { kind: 'session' },
+      reason: 'The body walls itself in when badly hurt, with or without food, from 10 health on (the gateway care default).',
     }, 10_000);
-    deps.event('care_policy', { hide: 'when_exposed', ok: r?.result?.status === 'succeeded' });
+    deps.event('care_policy', { ...combat, ok: r?.result?.status === 'succeeded' });
     await deps.refresh().catch(() => {});
   }
 

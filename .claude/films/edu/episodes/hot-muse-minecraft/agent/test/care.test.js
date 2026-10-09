@@ -339,10 +339,11 @@ test('care in the body: night falls while idle: a shelter of carried blocks, jou
   } finally { await body.close(); }
 });
 
-test('care in the body: their fight reflex may wall itself in when badly hurt, set again after a reset', async () => {
+test('care in the body: their fight reflex may wall itself in when badly hurt (from 10 health), set again after a reset', async () => {
   const { body, fake } = await careBody({ inventory: {} });
   try {
     assert.ok(await until(() => fake.world.hide === 'when_exposed'), 'set once the care runs');
+    assert.equal(fake.world.critical, 10, 'and it protects itself from 10 health on');
     const pol = await body.run('policy', {}); // the player puts every default back
     assert.equal(pol.ok, true, pol.result);
     assert.equal(fake.world.hide, 'when_recovery_possible');
