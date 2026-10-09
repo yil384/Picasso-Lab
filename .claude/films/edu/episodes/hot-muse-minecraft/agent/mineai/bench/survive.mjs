@@ -212,7 +212,12 @@ for (const g of results) {
   g.serverDeaths = g.bot ? serverLines.map((l) => /\]: (\S+) (.*)$/.exec(l)).filter((m) => m && m[1] === g.bot && DEATH.test(m[2])).map((m) => m[2]) : [];
   // what the body did by itself (the agent's care rows, its own plans and their reflexes; a step's own spare tool is in
   // that step's result) against what the replies carried: the last ones of a game may come after its last reply
-  g.careLogged = agentRows.filter((r) => r.kind === 'care' && r.game === g.game && r.source !== 'step').length;
+  // (a line said again within 2 minutes is logged with repeat and on purpose not told again; what came after the game's
+  // last reply that carried a state could not be told)
+  const lastReply = g.samples.length ? g.startedMs + g.samples.at(-1).at * 1000 : 0;
+  const told = agentRows.filter((r) => r.kind === 'care' && r.game === g.game && r.source !== 'step' && !r.repeat);
+  g.careLogged = told.length;
+  g.careLoggedBeforeLastReply = told.filter((r) => Date.parse(r.time) < lastReply - 500).length;
   g.careReported = g.onItsOwn.length;
   g.deaths = Math.max(g.died.length, g.serverDeaths.length);
   g.leaseEnded = /lease/.test(String(g.endedWhy ?? ''));
@@ -263,6 +268,7 @@ const summary = {
   careActionMs: (() => { const xs = results.flatMap((g) => g.careMs.map((x) => x.ms)); return { n: xs.length, p50: median(xs), p90: pct(xs, 90) }; })(),
   careLogged: results.reduce((a, g) => a + g.careLogged, 0),
   careReported: results.reduce((a, g) => a + g.careReported, 0),
+  careLoggedBeforeLastReply: results.reduce((a, g) => a + g.careLoggedBeforeLastReply, 0),
 };
 console.log(`SUMMARY ${JSON.stringify(summary)}`);
 fs.mkdirSync(values.out, { recursive: true });
