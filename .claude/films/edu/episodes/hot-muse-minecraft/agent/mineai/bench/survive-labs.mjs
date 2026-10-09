@@ -10,7 +10,8 @@
 //            awake, it lies down and then shelters: either reported within 60 s
 //   zombie, skeleton, creeper   night with the care's night off (policy night: off, so the reflexes are tested), a stone
 //            sword, the mob summoned 4 blocks away: the bot alive 60 s later and the fight or flight reported
-//   armor    day; 24 iron ingots and a crafting table: chestplate, leggings and boots worn within 90 s (3 ingots kept)
+//   armor    day; 27 iron ingots and a crafting table: chestplate, leggings and boots worn within 90 s (6 ingots kept, and
+//            the body waits until the player has left it alone for 30 s)
 //   tool     day; a stone pickaxe with 5 uses left, 3 cobblestone, 2 sticks, a crafting table; the step collect stone 12:
 //            it works, with a spare crafted on its own (while it waited for the step, or first thing in it)
 //   death    day, within 150 blocks of the world spawn (where it respawns); 16 cobblestone, 5 bread, 3 iron ingots, then
@@ -104,7 +105,7 @@ const LABS = {
   }])),
   armor: {
     time: 'day', limitS: 90, kinds: ['armor'],
-    setup: (bot) => [`clear ${bot}`, `give ${bot} iron_ingot 24`, `give ${bot} crafting_table 1`],
+    setup: (bot) => [`clear ${bot}`, `give ${bot} iron_ingot 27`, `give ${bot} crafting_table 1`],
     done: (g) => /iron_chestplate \(torso\)/.test(g.v.worn) && /iron_leggings \(legs\)/.test(g.v.worn) && /iron_boots \(feet\)/.test(g.v.worn),
     pass: (g) => LABS.armor.done(g) && g.own.some((e) => e.kind === 'armor' && e.ok),
   },

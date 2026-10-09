@@ -5,7 +5,7 @@
 // craft_item, equip, pick_up_items, navigate):
 //   - after a death: back to the death spot for the items it dropped (within their 5 minutes);
 //   - armor: wears the best pieces it carries (and a shield in the off-hand), and crafts missing pieces from leather
-//     or from iron beyond 3 ingots kept for a pickaxe or a bucket;
+//     or from iron beyond 6 ingots kept for a pickaxe and a bucket, once the player has left it alone for 30 s;
 //   - food: eats when hungry (raw meat too), and with no food left hunts an animal near by, cooks the meat when it
 //     carries a furnace and fuel, and eats;
 //   - tools: a pickaxe, axe, shovel or sword about to break gets a spare crafted from what it carries;
@@ -31,7 +31,7 @@ export { CARE_DEFAULTS, CARE_KNOBS };
 export function describeCare(p = CARE_DEFAULTS) {
   const q = { ...CARE_DEFAULTS, ...(p ?? {}) };
   const night = q.night === 'off' ? 'does nothing about the night' : 'shelters at night (sleeps instead when it carries a bed and the night can pass)';
-  const armor = { craft: 'wears the armor it carries and crafts missing pieces from leather or from iron beyond 3 ingots', wear: 'wears the armor it carries', off: 'leaves armor to you' }[q.armor];
+  const armor = { craft: 'wears the armor it carries and, left alone for 30 s, crafts missing pieces from leather or from iron beyond 6 ingots', wear: 'wears the armor it carries', off: 'leaves armor to you' }[q.armor];
   const food = { hunt: 'eats when hungry and hunts an animal when it has no food', eat: 'eats when hungry', off: 'leaves eating to you (the runtime still eats carried food at food 14 or less)' }[q.food];
   const tools = q.tools === 'off' ? 'makes no spare tools' : 'crafts a spare tool before one breaks';
   return `${night}; ${armor}; ${food}; ${tools}; after a death it goes back for its items`;
@@ -60,8 +60,10 @@ export const EAT_AT = 14;
 export const HUNT_AT = 14;
 /** Animals the body hunts for food (their meat), nearest first; raw chicken only when it can be cooked. */
 export const PREY = Object.freeze({ cow: 'beef', mooshroom: 'beef', pig: 'porkchop', sheep: 'mutton', rabbit: 'rabbit', chicken: 'chicken' });
-/** Iron ingots the body keeps when it crafts armor by itself (a pickaxe or a bucket). */
-export const IRON_RESERVE = 3;
+/** Iron ingots the body keeps when it crafts armor by itself (a pickaxe and a bucket), and how long the player must
+ * have left it alone first (a player still working with that iron would have called again by then). */
+export const IRON_RESERVE = 6;
+export const ARMOR_AFTER_IDLE_MS = 30_000;
 /** A tool this close to breaking gets a spare (uses left, or a fraction of its whole life). */
 export const TOOL_LOW = (max) => Math.max(6, Math.ceil(max * 0.06));
 export const TOOL_CLASSES = Object.freeze(['pickaxe', 'axe', 'shovel', 'sword']);
@@ -298,7 +300,7 @@ const hostilesWithin = (situation, r) => [...(situation?.nearby?.hostiles ?? [])
  *   canCraft: (item: string) => boolean, furnace: boolean}} o
  * @returns {{kind: string, why: string, ...}|null}
  */
-export function decide(situation, { inventory = {}, stacks = [], policy = CARE_DEFAULTS, memory = {}, now = Date.now(), canCraft = () => false, furnace = false } = {}) {
+export function decide(situation, { inventory = {}, stacks = [], policy = CARE_DEFAULTS, memory = {}, now = Date.now(), canCraft = () => false, furnace = false, idleMs = Infinity } = {}) {
   const s = situation ?? {};
   if (!s.vitals || s.vitals.health <= 0) return null;
   const overworld = String(s.dimension ?? 'overworld').replace(/^minecraft:/, '') === 'overworld';
@@ -360,7 +362,7 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
     }
   }
   // armor it can craft by itself: leather, and iron beyond the reserve
-  if (policy.armor === 'craft' && !cooling('armor', 60_000)) {
+  if (policy.armor === 'craft' && !cooling('armor', 60_000) && idleMs >= ARMOR_AFTER_IDLE_MS) {
     const plan = armorPlan(inventory, stacks).filter((p) => canCraft(p.item));
     const used = {};
     for (const p of plan) used[p.uses] = (used[p.uses] ?? 0) + p.n;
@@ -721,7 +723,7 @@ export function createCare(deps) {
       if (running || !deps.idle() || now() - deps.idleSince() < (deps.idleBeforeMs ?? IDLE_BEFORE_MS)) return;
       if (situation.activity?.owner && situation.activity.owner !== 'idle') return; // one of their reflexes has the body
       const latest = deps.latest();
-      const d = decide(situation, { inventory: latest.inventory ?? {}, stacks: deps.stacks(), policy, memory, now: now(), canCraft, furnace: (latest.inventory?.furnace ?? 0) > 0 || deps.furnaceNear() });
+      const d = decide(situation, { inventory: latest.inventory ?? {}, stacks: deps.stacks(), policy, memory, now: now(), canCraft, furnace: (latest.inventory?.furnace ?? 0) > 0 || deps.furnaceNear(), idleMs: now() - deps.idleSince() });
       if (!d) return;
       const ctl = { skill: `care:${d.kind}`, actionId: null, stopped: null, cancel: null, attack: null, killed: 0 };
       const preemptible = d.kind !== 'recover';

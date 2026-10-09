@@ -32,10 +32,10 @@ test('care: armor worn and crafted, best first, iron kept back for a pickaxe', (
   ]);
   assert.deepEqual(wearPlan([stack('leather_boots'), stack('iron_boots', 1, 'feet')]), [], 'a worse piece is not put on');
   assert.deepEqual(wearPlan([stack('shield'), stack('totem_of_undying', 1, 'off-hand')]), [], 'the off-hand is not emptied');
-  // 24 ingots, 3 kept: chestplate 8, leggings 7, boots 4 (2 left over plus the 3): no helmet
-  assert.deepEqual(armorPlan({ iron_ingot: 24 }, []).map((p) => p.item), ['iron_chestplate', 'iron_leggings', 'iron_boots']);
+  // 27 ingots, 6 kept: chestplate 8, leggings 7, boots 4 (2 left over plus the 6): no helmet
+  assert.deepEqual(armorPlan({ iron_ingot: 27 }, []).map((p) => p.item), ['iron_chestplate', 'iron_leggings', 'iron_boots']);
   assert.deepEqual(armorPlan({ iron_ingot: 24 }, [], { reserve: 0 }).map((p) => p.item), ['iron_chestplate', 'iron_leggings', 'iron_boots', 'iron_helmet']);
-  assert.deepEqual(armorPlan({ iron_ingot: 7 }, []).map((p) => p.item), ['iron_boots'], 'only what the ingots beyond 3 pay for');
+  assert.deepEqual(armorPlan({ iron_ingot: 10 }, []).map((p) => p.item), ['iron_boots'], 'only what the ingots beyond 6 pay for');
   assert.deepEqual(armorPlan({ leather: 8 }, [stack('iron_chestplate', 1, 'torso')]).map((p) => p.item), ['leather_leggings'], 'nothing worse than what is worn');
   assert.deepEqual(armorPlan({ diamond: 8 }, []), [], 'diamonds are never used by the body itself');
   assert.deepEqual(armorPlan({ diamond: 8 }, [], { reserve: 0, materials: ['diamond', 'iron', 'leather'] }).map((p) => p.item), ['diamond_chestplate']);
@@ -97,9 +97,10 @@ test('care: what to do first, and nothing while nothing is needed', () => {
   const t = decide(situation(), { ...base, stacks: [stack('stone_pickaxe', 1, 'hotbar', { remaining: 4, maximum: 131 })], canCraft: (i) => i === 'stone_pickaxe' });
   assert.deepEqual([t.kind, t.item], ['tools', 'stone_pickaxe']);
   // armor crafted from leather or spare iron
-  const a = decide(situation(), { ...base, inventory: { iron_ingot: 11 }, canCraft: () => true });
+  const a = decide(situation(), { ...base, inventory: { iron_ingot: 14 }, canCraft: () => true });
   assert.deepEqual([a.kind, a.pieces.map((p) => p.item)], ['armor', ['iron_chestplate']]);
-  assert.equal(decide(situation(), { ...base, policy: { ...CARE_DEFAULTS, armor: 'wear' }, inventory: { iron_ingot: 11 }, canCraft: () => true }), null);
+  assert.equal(decide(situation(), { ...base, inventory: { iron_ingot: 14 }, canCraft: () => true, idleMs: 10_000 }), null, 'not while the player may still be using that iron');
+  assert.equal(decide(situation(), { ...base, policy: { ...CARE_DEFAULTS, armor: 'wear' }, inventory: { iron_ingot: 14 }, canCraft: () => true }), null);
 });
 
 test('care: a shelter of carried blocks, best first, and a wall of solid ground is wall enough', () => {
@@ -253,12 +254,10 @@ test('care loop: a death\'s items, armor crafted and worn, a hunt that cooks and
   assert.deepEqual(rig.calls[0].args, { recover_death_items: true });
   assert.match(rig.care.last().text, /^it died \(was slain by Zombie\) at 5 60 7 20 s ago: went back and picked up/);
   // armor from spare iron, then worn
-  const arm = careRig({ situation: situation(), inventory: { iron_ingot: 11, stick: 4 } });
-  arm.care.memory.cool = {};
-  const results = { craft_item: () => { arm.state.inventory = { iron_ingot: 3, iron_chestplate: 1 }; arm.state.stacks = [stack('iron_chestplate')]; return { status: 'succeeded' }; } };
-  Object.assign(arm, careRig({ situation: situation(), inventory: { iron_ingot: 11 }, results }));
-  arm.state.stacks = [];
-  results.craft_item = () => { arm.state.inventory = { iron_ingot: 3, iron_chestplate: 1 }; arm.state.stacks = [stack('iron_chestplate')]; return { status: 'succeeded' }; };
+  const results = {};
+  const arm = careRig({ situation: situation(), inventory: { iron_ingot: 14 }, results });
+  arm.state.idleSince = NOW - 60_000;
+  results.craft_item = () => { arm.state.inventory = { iron_ingot: 6, iron_chestplate: 1 }; arm.state.stacks = [stack('iron_chestplate')]; return { status: 'succeeded' }; };
   await arm.care.tick();
   assert.deepEqual(arm.calls.map((c) => c.tool), ['craft_item', 'equip']);
   assert.deepEqual(arm.calls[1].args.items, [{ item_name: 'iron_chestplate', destination: 'torso' }]);
