@@ -13,7 +13,8 @@ Not affiliated with or endorsed by Meta or Mojang.
 runtime at 2fe1306 with our 11 patches, builds on rough ground included); staging too.** Both stacks have the proxy secret and the Paper whitelist.
 Section "The switch" below; rollback `docs/SWITCH.md`, section 5. **Staging since 2026-10-09: Normal with real days
 and nights, and the body looks after itself between calls (ROADMAP M4; section "The bot looks after itself"); its gate passed
-in round 2 (15 of 16 natural games, 1 death).**
+in round 2 (15 of 16 natural games, 1 death), and production plays the same way since 2026-10-09 18:55 UTC
+(`docs/SWITCH.md`, section 8, with its undo).**
 
 ## Architecture
 
