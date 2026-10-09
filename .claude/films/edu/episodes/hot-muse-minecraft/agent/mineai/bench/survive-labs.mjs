@@ -109,6 +109,32 @@ const LABS = {
     pass: (g) => g.v.health > 0,
     engaged: (g) => g.own.some((e) => ['fight', 'flee', 'hide'].includes(e.kind)),
   }])),
+  // round 2 (2026-10-09): a skeleton at night against what a day of the care gives a bot, a zombie at the shelter
+  // as it closes, a fresh bot with nothing at dusk, and the shield made from the bot's own resources
+  skelnight: {
+    time: 'day', limitS: 120, holdS: 120, kinds: ['shelter', 'fight', 'flee', 'hide'],
+    setup: (bot) => [`clear ${bot}`, `give ${bot} stone_sword 1`, `give ${bot} shield 1`, `give ${bot} cobblestone 16`, `give ${bot} bread 3`],
+    after: async (bot) => { await sleep(6_000); con('time set 13000'); for (const [dx, dz] of [[7, 0], [-6, 3]]) con(`execute at ${bot} run summon skeleton ~${dx} ~ ~${dz}`); },
+    pass: (g) => g.v.health > 0,
+  },
+  zombieshelter: {
+    time: 'day', limitS: 90, holdS: 90, kinds: ['shelter'],
+    setup: (bot) => [`clear ${bot}`, `give ${bot} cobblestone 16`],
+    after: async (bot) => { await sleep(3_000); con('time set 13000'); con(`execute at ${bot} run summon zombie ~2 ~ ~`); con(`execute at ${bot} run summon zombie ~-2 ~ ~1`); },
+    pass: (g) => g.own.some((e) => e.kind === 'shelter' && e.ok && e.atS <= 60) && g.v.health > 0,
+  },
+  freshnight: {
+    time: 'day', limitS: 200, holdS: 200, kinds: ['gather', 'shelter'],
+    setup: (bot) => [`clear ${bot}`],
+    after: async () => { await sleep(2_000); con('time set 11000'); },
+    pass: (g) => g.v.health > 0 && g.own.some((e) => e.kind === 'shelter' && e.ok),
+  },
+  shieldcraft: {
+    time: 'day', limitS: 240, kinds: ['shield'],
+    setup: (bot) => [`clear ${bot}`, `give ${bot} stone_pickaxe 1`, `give ${bot} oak_log 3`, `give ${bot} furnace 1`, `give ${bot} coal 2`, `give ${bot} crafting_table 1`],
+    done: (g) => g.own.some((e) => e.kind === 'shield'),
+    pass: (g) => g.own.some((e) => e.kind === 'shield' && e.ok) && /shield/.test(g.text) && g.v.health > 0,
+  },
   armor: {
     time: 'day', limitS: 90, kinds: ['armor'],
     setup: (bot) => [`clear ${bot}`, `give ${bot} iron_ingot 27`, `give ${bot} crafting_table 1`],
