@@ -210,7 +210,10 @@ const DEATH = /^(was |drowned|died|fell |hit the ground|burned|went up in flames
 for (const g of results) {
   g.bot = names.get(g.game) ?? null;
   g.serverDeaths = g.bot ? serverLines.map((l) => /\]: (\S+) (.*)$/.exec(l)).filter((m) => m && m[1] === g.bot && DEATH.test(m[2])).map((m) => m[2]) : [];
-  g.careLogged = agentRows.filter((r) => r.kind === 'care' && r.game === g.game).length;
+  // what the body did by itself (the agent's care rows, its own plans and their reflexes; a step's own spare tool is in
+  // that step's result) against what the replies carried: the last ones of a game may come after its last reply
+  g.careLogged = agentRows.filter((r) => r.kind === 'care' && r.game === g.game && r.source !== 'step').length;
+  g.careReported = g.onItsOwn.length;
   g.deaths = Math.max(g.died.length, g.serverDeaths.length);
   g.leaseEnded = /lease/.test(String(g.endedWhy ?? ''));
   g.pass = g.leaseEnded && g.deaths === 0 && !g.error;
@@ -229,6 +232,16 @@ for (const g of results) {
   const byKind = {};
   for (const e of g.onItsOwn) byKind[e.kind ?? '?'] = (byKind[e.kind ?? '?'] ?? 0) + 1;
   g.onItsOwnByKind = byKind;
+  // how long after nightfall (12300) the body was sheltered or asleep, from the time of day each night's first one names
+  const firsts = new Map();
+  for (const e of g.onItsOwn) {
+    const t = Number(/^night \(time (\d+)\)/.exec(e.text ?? '')?.[1]);
+    if (!(e.ok && ['shelter', 'sleep'].includes(e.kind) && t >= 12_300)) continue;
+    const night = Math.floor((e.at - (t - 12_300) / 20) / 600); // the night it belongs to (10-minute buckets of its start)
+    if (!firsts.has(night)) firsts.set(night, Math.round((t - 12_300) / 20));
+  }
+  g.shelterAfterDuskS = [...firsts.values()];
+  g.careMs = agentRows.filter((r) => r.kind === 'care' && r.game === g.game && r.source === 'care' && r.ms != null).map((r) => ({ kind: r.kind, ms: r.ms, text: r.text }));
   console.log(`game ${g.i} (${g.game}): ${g.pass ? 'PASS' : 'FAIL'} lived ${g.livedS} s, ended: ${g.endedWhy}; deaths ${g.deaths}${g.serverDeaths.length ? ` (${g.serverDeaths.join('; ')})` : ''}; nights entered ${nights}, lived through ${fullNights}; health min ${g.healthMin}, food min ${g.foodMin}; on its own ${JSON.stringify(byKind)}; steps ${g.steps.filter((x) => x.ok).length}/${g.steps.length} ok`);
 }
 const lived = results.map((g) => g.livedS);
@@ -246,8 +259,10 @@ const summary = {
   foodMin: { median: median(results.map((g) => g.foodMin).filter((x) => x !== null)), min: Math.min(...results.map((g) => g.foodMin ?? 20)) },
   steps: { n: results.reduce((a, g) => a + g.steps.length, 0), ok: results.reduce((a, g) => a + g.steps.filter((x) => x.ok).length, 0), p50S: median(stepTimes), p90S: pct(stepTimes, 90) },
   onItsOwn: results.reduce((a, g) => { for (const [k, v] of Object.entries(g.onItsOwnByKind)) a[k] = (a[k] ?? 0) + v; return a; }, {}),
+  shelterAfterDuskS: (() => { const xs = results.flatMap((g) => g.shelterAfterDuskS); return { n: xs.length, p50: median(xs), p90: pct(xs, 90), max: xs.length ? Math.max(...xs) : null }; })(),
+  careActionMs: (() => { const xs = results.flatMap((g) => g.careMs.map((x) => x.ms)); return { n: xs.length, p50: median(xs), p90: pct(xs, 90) }; })(),
   careLogged: results.reduce((a, g) => a + g.careLogged, 0),
-  careReported: results.reduce((a, g) => a + g.onItsOwn.filter((e) => e.source === 'care').length, 0),
+  careReported: results.reduce((a, g) => a + g.careReported, 0),
 };
 console.log(`SUMMARY ${JSON.stringify(summary)}`);
 fs.mkdirSync(values.out, { recursive: true });

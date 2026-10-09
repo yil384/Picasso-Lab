@@ -12,7 +12,7 @@
 //            sword, the mob summoned 4 blocks away: the bot alive 60 s later and the fight or flight reported
 //   armor    day; 24 iron ingots and a crafting table: chestplate, leggings and boots worn within 90 s (3 ingots kept)
 //   tool     day; a stone pickaxe with 5 uses left, 3 cobblestone, 2 sticks, a crafting table; the step collect stone 12:
-//            it works (a spare first)
+//            it works, with a spare crafted on its own (while it waited for the step, or first thing in it)
 //   death    day; 16 cobblestone, 5 bread, 3 iron ingots, then killed: the items back (at least 20 of the 24) within 5
 //            minutes, reported
 // A death the lab did not cause (the server log's death lines for the trial's bot) fails the trial. Reports n, passes,
@@ -111,7 +111,8 @@ const LABS = {
     time: 'day', limitS: 200,
     setup: (bot) => [`clear ${bot}`, `give ${bot} stone_pickaxe[damage=126] 1`, `give ${bot} cobblestone 3`, `give ${bot} stick 2`, `give ${bot} crafting_table 1`],
     steps: [{ skill: 'collect', args: { block: 'stone', n: 12 } }],
-    pass: (g) => g.stepOk === true && /spare|new stone_pickaxe/.test(g.stepText ?? ''),
+    // the spare comes on its own while the bot waits for the step, or first thing in the step
+    pass: (g) => g.stepOk === true && (/spare|new stone_pickaxe/.test(g.stepText ?? '') || g.own.some((e) => e.kind === 'tools' && e.source === 'care' && e.ok)),
   },
   death: {
     time: 'day', limitS: 300, expectDeath: true, kinds: ['recover'],
@@ -141,8 +142,8 @@ async function trial(lab, k) {
       const text = r.content.map((x) => x.text ?? '').join('\n');
       // when it happened, from the setup on (the reply says how long ago)
       for (const e of r.structuredContent?.onItsOwn ?? []) g.own.push({ ...e, atS: g.t1 ? Math.round((Date.now() - g.t1) / 100) / 10 - (e.agoS ?? 0) : null });
-      g.v = vitals(text);
-      g.text = text;
+      const v = vitals(text);
+      if (v.health !== null) { g.v = v; g.text = text; }
       return { r, text };
     };
     let s = await call('start_game', { adult: true });

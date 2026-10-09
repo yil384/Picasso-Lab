@@ -9,8 +9,8 @@
 //   - food: eats when hungry (raw meat too), and with no food left hunts an animal near by, cooks the meat when it
 //     carries a furnace and fuel, and eats;
 //   - tools: a pickaxe, axe, shovel or sword about to break gets a spare crafted from what it carries;
-//   - night: sleeps when it carries a bed and the night can pass, else shelters in a 1x1 box of carried blocks (or dug
-//     into the ground) until the player's next call.
+//   - night: sleeps when it carries a bed and the night can pass, else shelters in a closed box of carried blocks (or
+//     dug into the ground), with a pocket for a crafting table or furnace, until the player's next call.
 // It acts only while no step of the player's runs, and yields at once to the next one (a death recovery finishes
 // first: the items despawn). Everything it does, and every reflex of the runtime's that acted while no step ran, goes
 // into a journal that the next MCP reply and the state carry ("On its own since your last call"), so the player always
@@ -20,7 +20,8 @@
 import { createPlanner } from '../plan.js';
 import { registryFor } from '../mc.js';
 import { fuelPlan } from '../game.js';
-import { blueprintCells, bestFood, CARE_DEFAULTS, CARE_KNOBS } from './skills.js';
+import { bestFood, CARE_DEFAULTS, CARE_KNOBS } from './skills.js';
+import { facingOf } from '../state.js';
 
 const reg = registryFor('1.21.4');
 
@@ -44,12 +45,14 @@ export const isNight = (t) => Number.isFinite(t) && t >= NIGHT_FROM && t < NIGHT
 export const IDLE_BEFORE_MS = 3_000;
 /** A death's items despawn after 5 minutes; a recovery starts only well within that. */
 export const RECOVER_WITHIN_MS = 4 * 60_000 + 30_000;
+/** ...and only from where it can walk there in that time (it respawns at its bed or the world spawn). */
+export const RECOVER_RANGE = 300;
 /** Blocks a shelter is built of, best first (cobblestone first: endermen cannot take it), and how many one needs. */
 export const SHELTER_BLOCKS = Object.freeze([
   'cobblestone', 'cobbled_deepslate', 'stone', 'deepslate', 'andesite', 'diorite', 'granite', 'tuff', 'blackstone',
   'netherrack', 'sandstone', 'dirt', 'coarse_dirt', 'rooted_dirt', 'mud',
 ]);
-export const SHELTER_SIZE = 10;
+export const SHELTER_SIZE = 12;
 /** Food eaten when food is at or below this (or when hurt and below 18, which healing needs), like their hunger reflex. */
 export const EAT_AT = 14;
 /** With no food carried, the body hunts when food is at or below this in daylight (any time at or below 6). */
@@ -238,18 +241,27 @@ export function shelterBlocks(inventory = {}) {
   return { list, total: list.reduce((n, b) => n + b.count, 0) };
 }
 
-/** The shelter's cells, each block taken from the carried blocks in turn (best first): build_structure's blocks. */
+/**
+ * The care's shelter around the bot (build_structure's blocks): the bot's two cells and, in front of its feet, a pocket
+ * one block high where a crafting table or furnace can be put down for a craft (the player's steps craft and smelt at
+ * night too), closed all round: walls two high around the bot and one high around the pocket, a ceiling over the
+ * pocket, the roof over the bot's head and the block behind it that the roof is placed against. 12 blocks on open
+ * ground, fewer where the ground is the wall; each taken from the carried blocks in turn (best first).
+ */
 export function shelterCells(feet, heading, inventory) {
+  const f = facingOf((-Number(heading || 0) * Math.PI) / 180); // compass degrees -> mineflayer yaw
+  const r = { dx: -f.dz, dz: f.dx };
+  const at = (a, b, y) => ({ x: feet.x + f.dx * a + r.dx * b, y: feet.y + y, z: feet.z + f.dz * a + r.dz * b });
+  const solid = [
+    at(-1, 0, 0), at(0, 1, 0), at(0, -1, 0), at(2, 0, 0), at(1, 1, 0), at(1, -1, 0), // feet level: around the bot and the pocket
+    at(-1, 0, 1), at(0, 1, 1), at(0, -1, 1), at(1, 0, 1), // head level: around the bot, the pocket's ceiling
+    at(-1, 0, 2), at(0, 0, 2), // the block the roof goes against, the roof
+  ];
+  const air = [at(0, 0, 0), at(0, 0, 1), at(1, 0, 0)];
   const { list } = shelterBlocks(inventory);
-  const { cells } = blueprintCells('shelter', 'cobblestone', feet, heading);
   const left = list.map((b) => ({ ...b }));
-  return cells.map((c) => {
-    if (c.block_name === 'air') return c;
-    const b = left.find((x) => x.count > 0);
-    if (!b) return { ...c, block_name: list[0]?.name ?? 'cobblestone' };
-    b.count -= 1;
-    return { ...c, block_name: b.name };
-  });
+  const pick = () => { const b = left.find((x) => x.count > 0); if (!b) return list[0]?.name ?? 'cobblestone'; b.count -= 1; return b.name; };
+  return [...solid.map((c) => ({ ...c, block_name: pick() })), ...air.map((c) => ({ ...c, block_name: 'air' }))];
 }
 
 /**
@@ -296,7 +308,8 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
   if (death?.observedAt && death.observedAt !== memory.recovered) {
     const age = now - Date.parse(death.observedAt);
     if (age >= 0 && age < RECOVER_WITHIN_MS && String(death.dimension ?? 'overworld').replace(/^minecraft:/, '') === String(s.dimension ?? 'overworld').replace(/^minecraft:/, '')) {
-      return { kind: 'recover', why: `it died${death.cause ? ` (${death.cause.replace(/^\S+ /, '')})` : ''} at ${xyz(death.position)} ${Math.round(age / 1000)} s ago`, key: death.observedAt, at: death.position };
+      const far = s.position && death.position ? Math.round(Math.hypot(s.position.x - death.position.x, s.position.z - death.position.z)) : 0;
+      return { kind: 'recover', why: `it died${death.cause ? ` (${death.cause.replace(/^\S+ /, '')})` : ''} at ${xyz(death.position)} ${Math.round(age / 1000)} s ago`, key: death.observedAt, at: death.position, far: far > RECOVER_RANGE ? far : 0 };
     }
   }
   // armor and a shield it carries but does not wear
@@ -326,7 +339,9 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
   // armor it can craft by itself: leather, and iron beyond the reserve
   if (policy.armor === 'craft' && !cooling('armor', 60_000)) {
     const plan = armorPlan(inventory, stacks).filter((p) => canCraft(p.item));
-    if (plan.length) return { kind: 'armor', why: `it carries ${plan.map((p) => `${p.n} ${p.uses}`).join(' and ')} for armor it does not have`, pieces: plan };
+    const used = {};
+    for (const p of plan) used[p.uses] = (used[p.uses] ?? 0) + p.n;
+    if (plan.length) return { kind: 'armor', why: `it carries ${Object.entries(used).map(([u, n]) => `${n} ${u}`).join(' and ')} for armor it does not wear`, pieces: plan };
   }
   // night: sleep in a bed it carries (the night passes when every player sleeps), else shelter
   if (night && policy.night !== 'off') {
@@ -339,7 +354,8 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
     if (bed && !sheltered && memory.slept !== memory.night && !cooling('sleep', 120_000) && !hostilesWithin(s, 10).length) {
       return { kind: 'sleep', why: `night (time ${time}) and it carries a ${bed}`, bed };
     }
-    if (!cooling('shelter', 45_000) || sheltered) {
+    // three shelters that would not close this night: it stops trying until the next (its reflexes still fight)
+    if ((!cooling('shelter', 45_000) && (memory.shelterFails?.[memory.night] ?? 0) < 3) || sheltered) {
       const { total } = shelterBlocks(inventory);
       return { kind: 'shelter', why: `night (time ${time})`, blocks: total, check: sheltered };
     }
@@ -525,6 +541,7 @@ export function createCare(deps) {
     switch (d.kind) {
       case 'recover': {
         memory.recovered = d.key;
+        if (d.far) return add({ kind: 'recover', ok: false, ms: 0, text: `${d.why}: it respawned ${d.far} blocks away, too far to get back to its items before they despawn` });
         const before = { ...inv() };
         const r = await run([{ tool: 'pick_up_items', args: { recover_death_items: true } }], LIMITS.recover, ctl);
         await deps.refresh();
@@ -613,7 +630,8 @@ export function createCare(deps) {
         return add({ kind: 'sleep', ok: Boolean(okOf(r) && out?.morning), ms: ms(), text: parts.join('; ') });
       }
       case 'shelter': {
-        memory.cool.shelter = now();
+        // no cooling down after a shelter that worked: a step of the player's that took the bot out of it is followed
+        // by a new one as soon as the body is idle again
         let p = deps.situation()?.position;
         if (!p) return null;
         const parts = [];
@@ -637,7 +655,10 @@ export function createCare(deps) {
         parts.push(v.closed
           ? `${d.check ? 'mended its shelter' : 'closed itself in'} at ${xyz(feet)} (${v.placed ? `placed ${plural(v.placed, 'block')}` : 'placed nothing'}${v.solid ? `, ${plural(v.solid, 'wall cell')} already solid` : ''}); it stays inside until your next call`
           : `could not close a shelter at ${xyz(feet)} (${v.why ?? errOf(r) ?? 'stopped'})`);
-        if (!v.closed && !d.check) memory.cool.shelter = now();
+        if (!v.closed && !d.check) {
+          memory.cool.shelter = now();
+          memory.shelterFails = { [memory.night]: (memory.shelterFails?.[memory.night] ?? 0) + 1 };
+        }
         return add({ kind: 'shelter', ok: v.closed, ms: ms(), text: `${d.why}: ${parts.join('; ')}` });
       }
       default:
@@ -675,7 +696,9 @@ export function createCare(deps) {
       deps.event('care_start', { kind: d.kind, why: String(d.why).slice(0, 200) });
       const job = { kind: d.kind, ctl, preemptible, startedAt: now() };
       running = job;
-      job.done = carry(d, ctl).catch((err) => add({ kind: d.kind, ok: false, text: `${d.why}: ${String(err?.message ?? err).slice(0, 200)}` })).finally(() => { if (running === job) running = null; });
+      // the status is read again once it is done, so the next decision never acts on what it just changed
+      job.done = carry(d, ctl).catch((err) => add({ kind: d.kind, ok: false, text: `${d.why}: ${String(err?.message ?? err).slice(0, 200)}` }))
+        .then(() => deps.refresh().catch(() => {})).finally(() => { if (running === job) running = null; });
       await job.done;
     } finally {
       ticking = false;
