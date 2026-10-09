@@ -525,6 +525,7 @@ export function createCare(deps) {
   /** One of their actions for the care, under its own control (a stop cancels it). */
   async function run(calls, limitMs, ctl) {
     const deadline = now() + limitMs;
+    ctl.limitMs = limitMs; // what a time-out says
     const results = [];
     for (const call of calls) {
       if (ctl.stopped) break;
@@ -659,7 +660,7 @@ export function createCare(deps) {
           p = deps.situation()?.position ?? p;
           parts.push(okOf(r) ? 'dug two blocks down (it carried too few blocks for walls)' : `could not dig in (${errOf(r) ?? 'stopped'})`);
         }
-        const stopped = () => add({ kind: 'shelter', ok: false, ms: ms(), text: `${d.why}: stopped before its shelter was closed (your call came)` });
+        const stopped = () => add({ kind: 'shelter', ok: false, ms: ms(), text: `${d.why}: stopped before its shelter was closed (${ctl.stopped ?? 'stopped'})` });
         if (ctl.stopped) return stopped();
         const feet = { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) };
         // a check of the shelter it stands in asks for the same cells (the bot turns while it builds: a new heading

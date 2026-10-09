@@ -4,10 +4,10 @@
 // sent unless the lab is about a step (tool). What each lab sets up and what counts as a pass:
 //   hunger   day; food drained to 14 or less (the Hunger effect), nothing to eat, two cows summoned near by: a hunt that
 //            ends in a meal and food above where the drain left it, within 150 s
-//   shelter  night; 16 cobblestone, three zombies summoned 10 blocks away: a closed shelter reported within 30 s and the
-//            bot alive with health 14 or more 90 s later
-//   bed      night; a white bed: it sleeps (the night passes when no other player is awake) or, when another player is
-//            awake, it lies down and then shelters: either reported within 60 s
+//   shelter  16 cobblestone in daylight, then night and three zombies summoned 10 blocks away: a closed shelter reported
+//            within 30 s and the bot alive with health 14 or more 90 s later
+//   bed      a white bed in daylight, then night: it sleeps (the night passes when no other player is awake) or, when
+//            another player is awake, it lies down and then shelters: either reported within 90 s
 //   zombie, skeleton, creeper   night with the care's night off (policy night: off, so the reflexes are tested), a stone
 //            sword, the mob summoned 4 blocks away: the bot alive 60 s later and the fight or flight reported
 //   armor    day; 27 iron ingots and a crafting table: chestplate, leggings and boots worn within 90 s (6 ingots kept, and
@@ -84,15 +84,17 @@ const LABS = {
     pass: (g) => g.food0 !== undefined && g.v.food > g.food0 && g.own.some((e) => e.kind === 'hunt' && e.ok && /ate /.test(e.text)),
   },
   shelter: {
-    time: 'night', limitS: 90, holdS: 90, kinds: ['shelter'],
+    // the bot joins in daylight, gets its blocks, then night falls (the clock is the world's: set for the whole group)
+    time: 'day', limitS: 90, holdS: 90, kinds: ['shelter'],
     setup: (bot) => [`clear ${bot}`, `give ${bot} cobblestone 16`, `effect give ${bot} minecraft:instant_health 1 5 true`],
-    after: async (bot) => { for (const [dx, dz] of [[10, 0], [-10, 0], [0, 10]]) con(`execute at ${bot} run summon zombie ~${dx} ~ ~${dz}`); },
+    after: async (bot) => { await sleep(3_000); con('time set 13000'); for (const [dx, dz] of [[10, 0], [-10, 0], [0, 10]]) con(`execute at ${bot} run summon zombie ~${dx} ~ ~${dz}`); },
     done: (g) => g.own.some((e) => e.kind === 'shelter' && e.ok),
     pass: (g) => g.own.some((e) => e.kind === 'shelter' && e.ok && e.atS <= 30) && g.v.health >= 14,
   },
   bed: {
-    time: 'night', limitS: 90, alone: true, kinds: ['sleep', 'shelter'],
-    setup: (bot) => [`clear ${bot}`, `give ${bot} white_bed 1`, `give ${bot} cobblestone 12`],
+    time: 'day', limitS: 90, alone: true, kinds: ['sleep', 'shelter'],
+    setup: (bot) => [`clear ${bot}`, `give ${bot} white_bed 1`, `give ${bot} cobblestone 14`],
+    after: async () => { await sleep(3_000); con('time set 13000'); },
     done: (g) => LABS.bed.pass(g),
     // the night passed in its bed, or it lay down, the night went on (another player awake) and it sheltered after
     pass: (g) => g.own.some((e) => e.kind === 'sleep' && e.ok) || (g.own.some((e) => e.kind === 'sleep') && g.own.some((e) => e.kind === 'shelter' && e.ok && e.atS > g.own.find((x) => x.kind === 'sleep').atS)),

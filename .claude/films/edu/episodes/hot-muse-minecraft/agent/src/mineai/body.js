@@ -134,6 +134,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   let stacks = []; // their status stacks (carried, worn, the off-hand; with durability)
   let idleSince = Date.now(); // when the last step of the player's ended (the care waits a moment after it)
   let care = null;
+  let careGate = null; // what the care waits for before it starts (body.deferCare)
   let ended = null;
   let seq = 0;
   const event = (kind, data = {}) => { try { log.event(kind, { game: gameId, ...data }); } catch { /* best effort */ } };
@@ -173,6 +174,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     onItsOwn: (after = 0) => (care ? care.since(after) : []),
     /** The care's knobs (policy skill). */
     carePolicy: () => (care ? care.policy : null),
+    /** The care starts only once this settles (the agent's spread of a new bot: nothing of its own at the spawn). */
+    deferCare: (promise) => { careGate = promise; },
   };
 
   // what src/mcp.js reads from a bot for its short state and its check (health, food, position, day, version)
@@ -384,7 +387,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       ctl.actionId ??= data.actionId;
       if (ctl.attack && !cancelled && deaths(data) > 0) { ctl.killed = deaths(data); await cancel(KILLED, { self: true }); }
       else if (ctl.stopped) await cancel(ctl.stopped);
-      else if (left() <= 0) await cancel(`timed out after ${Math.round((timeouts[ctl.skill] ?? 60_000) / 1000)} s`);
+      else if (left() <= 0) await cancel(`timed out after ${Math.round((ctl.limitMs ?? timeouts[ctl.skill] ?? 60_000) / 1000)} s`);
       const ms = cancelled ? 15_000 : ctl.attack ? Math.max(500, Math.min(ATTACK_POLL_MS, waitFor())) : Math.max(1_000, waitFor());
       data = await rpc('wait_for_action', { action_id: ctl.actionId, timeout_ms: ms }, ms + RPC_SLACK_MS);
     }
@@ -623,8 +626,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     event('bot_ready', { username, body: 'mineai', pos: latest.position ? floorPos(latest.position) : null });
     emit('ready', {});
     scanBlocks();
-    // the body looks after itself between the player's steps (src/mineai/care.js)
-    if (careOn) {
+    // the body looks after itself between the player's steps (src/mineai/care.js), once it has landed where it plays
+    // (not awaited here: the agent's spread waits for this ready)
+    if (careOn) Promise.resolve(careGate).catch(() => {}).then(() => { if (ended || closed) return; idleSince = Date.now();
       care = createCare({
         situation: () => status, latest: () => latest, stacks: () => stacks, refresh, act, rpc,
         fresh: async () => { if (Date.now() - statusAt > 2_000) await refresh(); },
@@ -635,7 +639,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         event, tickMs: careTickMs, idleBeforeMs: careIdleMs,
       });
       care.start();
-    }
+    });
     if (host.viewPorts) {
       // the live views listen inside their bot's process once it has spawned (src/mineai/preload.mjs)
       const { watch, eyes } = host.viewPorts;
