@@ -101,13 +101,14 @@ test('BODY=mineai: both images carry the Mine AI MCP runtime, run under an init 
   assert.match(docker, /^ARG MINEAI=0$/m);
   assert.match(docker, /^ENV MINEAI_DIR=\/opt\/mine-ai-mcp MINEAI_RUNTIME=bun MINEAI_EXEC=\/usr\/local\/bin\/bun$/m);
   // the patches the image applies and the start check demands are UPSTREAM.json's, 0007 and 0008 (gate 3), 0009 (a
-  // mob in the placement cell, the soak) and 0010 (a build that stalled the event loop) included; the build runs 0009's
-  // tests with 0007's (nearby-placement) and 0010's (build-process)
+  // mob in the placement cell, the soak), 0010 (a build that stalled the event loop) and 0011 (builds on rough ground,
+  // the Muse re-test) included; the build runs 0009's tests with 0007's (nearby-placement), 0010's and 0011's
+  // (build-process, build-structure, the movement policy's scaffolding rule)
   const up = JSON.parse(read('mineai/UPSTREAM.json'));
-  assert.deepEqual(up.patches.map((p) => p.slice(8, 12)), ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010']);
+  assert.deepEqual(up.patches.map((p) => p.slice(8, 12)), ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011']);
   for (const p of up.patches) assert.ok(fs.existsSync(path.join(ROOT, 'mineai', p)), p);
   const fetch = read('mineai/fetch-and-patch.sh');
-  for (const t of ['src/world/block-classification.test.ts', 'src/world/nearby-placement.test.ts', 'src/actions/collect-block', 'src/world/landing.test.ts', 'src/navigation/processes/building/build-process.test.ts']) {
+  for (const t of ['src/world/block-classification.test.ts', 'src/world/nearby-placement.test.ts', 'src/actions/collect-block', 'src/world/landing.test.ts', 'src/navigation/processes/building/build-process.test.ts', 'src/actions/build-structure', 'src/navigation/mineflayer/movement-policy.test.ts']) {
     assert.ok(fetch.includes(t), `the build runs ${t}`);
   }
 });

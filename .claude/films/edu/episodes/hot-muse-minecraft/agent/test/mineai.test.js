@@ -24,7 +24,7 @@ import { startAgent } from '../src/index.js';
 import { createPlanner } from '../src/plan.js';
 import { blueprintBlockCount, fuelPlan, FUEL_ORDER } from '../src/game.js';
 import { MCP_SKILLS } from '../src/contracts.js';
-import { MINEAI_SKILLS, EXTRA_DEFS, SPAWN_GUARD, toTheirs, fromTheirs, codeFor, needsTable, bestFood, chooseFuel, blueprintCells, ownChange, dropOf, COLLECT_FROM } from '../src/mineai/skills.js';
+import { MINEAI_SKILLS, EXTRA_DEFS, SPAWN_GUARD, toTheirs, fromTheirs, codeFor, needsTable, bestFood, chooseFuel, blueprintCells, ownChange, dropOf, COLLECT_FROM, continuesLast, cut, CONTINUE_RADIUS } from '../src/mineai/skills.js';
 import { createMineAiBody, inventoryOfStacks, equipmentOfStacks } from '../src/mineai/body.js';
 import { createHostManager, hostCommand, hostEnv, offlineUuid, killGrace, PRELOAD } from '../src/mineai/host.js';
 import { readUpstream, check as checkFetched, main as fetchMain, stampFor, STAMP } from '../scripts/mineai-fetch.mjs';
@@ -920,6 +920,7 @@ test('mineai: what a step itself used and made, from their evidence (ownChange)'
   assert.deepEqual(ownChange('collect_mob_drop', { result: { status: 'succeeded', hunt: { drop: 'porkchop', gained: 2 } } }), { porkchop: 2 });
   assert.deepEqual(ownChange('eat_food', { result: { status: 'succeeded', eating: { food: 'cooked_porkchop', inventoryBefore: 2, inventoryAfter: 1 } } }), { cooked_porkchop: -1 });
   assert.deepEqual(ownChange('build_structure', { result: { status: 'succeeded', structure: { placed: 10, dug: 2 } } }, { args: { blocks: [{ block_name: 'cobblestone' }, { block_name: 'air' }] } }), { cobblestone: -10 });
+  assert.deepEqual(ownChange('build_structure', { result: { status: 'succeeded', structure: { placed: 10, dug: 0, supports: [{ block: 'dirt', count: 2 }, { block: 'cobblestone', count: 1 }] } } }, { args: { blocks: [{ block_name: 'cobblestone' }] } }), { cobblestone: -11, dirt: -2 }, 'blocks put under walls are the step\'s own use too');
   assert.deepEqual(ownChange('navigate', { result: { status: 'succeeded' } }), {}, 'a walk itself uses and makes nothing');
   assert.equal(ownChange('pick_up_items', { result: { status: 'succeeded' } }), null, 'all of it is the step\'s own: shown whole');
 });
@@ -1005,14 +1006,108 @@ test('mineai body and MCP: a step\'s own use and gain apart from what changed on
   }
 });
 
-test('mineai start check: a runtime built before patch 0009 or 0010 is refused', () => {
+// The Muse re-test on staging (2026-10-08, game g42b738): build hut_3x3 three times in a row on rough ground, each one a
+// new hut facing the way the bot then looked; and a reply cut 400 characters in ("-178,64,58: sea (placed ...") whose
+// parenthesis never closed, which read as a cell of sea water. Its words, as staging logged them:
+const F3 = 'failed: 3 cells still wrong: 3 were refused (-176,64,58: search timed out after 2000 ms compute (limit 2000 ms); no path or usable partial route found; visited 32508 nodes, generated 50479; closest node was -179,62,58; -177,64,58: search timed out after 2000 ms compute (limit 2000 ms); no path or usable partial route found; visited 33194 nodes, generated 51483; closest node was -179,62,58; -178,64,58: search timed out after 2000 ms compute (limit 2000 ms); no path or usable partial route found; visited 33194 nodes, generated 51483; closest node was -179,62,58)';
+
+test('mineai build: the same build near an incomplete structure continues it; a complete, far or other one starts anew (Muse re-test, g42b738)', () => {
+  const feet = { x: 10, y: 64, z: -4 };
+  const first = toTheirs('build', { blueprint: 'hut_3x3', material: 'cobblestone' }, { position: { x: 10.5, y: 64, z: -3.5 }, heading: 90 });
+  assert.equal(first.note, 'built facing east');
+  assert.deepEqual(first.build, { blueprint: 'hut_3x3', material: 'cobblestone', cells: first.calls[0].args.blocks, facing: 'east', feet });
+  const last = first.build;
+  // turned south and stepped two blocks: the same cells, the same facing
+  const again = toTheirs('build', { blueprint: 'hut_3x3', material: 'cobblestone' }, { position: { x: 12.5, y: 64, z: -1.5 }, heading: 180, lastBuild: last });
+  assert.deepEqual(again.calls[0].args, { blocks: last.cells, remove_wrong_blocks: true });
+  assert.equal(again.note, 'continued the hut_3x3 begun facing east at 10 64 -4');
+  // another blueprint, another material, or farther than CONTINUE_RADIUS from every cell: a new one, facing south
+  for (const [args, pos] of [
+    [{ blueprint: 'wall_5x2', material: 'cobblestone' }, { x: 12.5, y: 64, z: -1.5 }],
+    [{ blueprint: 'hut_3x3', material: 'dirt' }, { x: 12.5, y: 64, z: -1.5 }],
+    [{ blueprint: 'hut_3x3', material: 'cobblestone' }, { x: 13.5 + CONTINUE_RADIUS + 1, y: 64, z: -3.5 }],
+    [{ blueprint: 'hut_3x3', material: 'cobblestone' }, { x: 12.5, y: 74, z: -1.5 }],
+  ]) {
+    const fresh = toTheirs('build', args, { position: pos, heading: 180, lastBuild: last });
+    assert.equal(fresh.note, 'built facing south', JSON.stringify([args, pos]));
+  }
+  // a shelter is built around the bot: continued only from where it was built
+  const shelter = toTheirs('build', { blueprint: 'shelter', material: 'cobblestone' }, { position: { x: 10.5, y: 64, z: -3.5 }, heading: 90 }).build;
+  assert.equal(continuesLast(shelter, { blueprint: 'shelter', material: 'cobblestone' }, feet), true);
+  assert.equal(continuesLast(shelter, { blueprint: 'shelter', material: 'cobblestone' }, { x: 13, y: 64, z: -4 }), false, 'three blocks off: a new shelter around the bot');
+  assert.equal(continuesLast(null, { blueprint: 'shelter', material: 'cobblestone' }, feet), false);
+});
+
+test('mineai build: a failed build says which cells it could not do and why in plain words, never cut mid-word or with a bracket open (Muse re-test, F3)', () => {
+  const call = { tool: 'build_structure', args: { blocks: [{ x: 0, y: 64, z: 0, block_name: 'cobblestone' }, { x: 1, y: 64, z: 0, block_name: 'air' }] } };
+  const structure = {
+    dimension: 'overworld', cells: 27, correct: 24, placed: 17, dug: 9, wrong: 3, passes: 5, complete: false, missing: [],
+    kept: [{ block: 'stone', count: 1 }], water: 1, supports: [{ block: 'dirt', count: 2 }],
+    left: [
+      { reason: 'unreachable', count: 2, named: [{ x: -176, y: 64, z: 58, detail: '3 places to stand tried: path search gave up after 5 s' }, { x: -177, y: 64, z: 58, detail: '3 places to stand tried: path search gave up after 5 s' }] },
+      { reason: 'refused', count: 1, named: [{ x: -178, y: 64, z: 58, detail: 'The expected block did not appear after placement.' }] },
+    ],
+  };
+  const r = fromTheirs('build_structure', { result: { status: 'failed', error: '[BUILD_INCOMPLETE] 3 cells still wrong: 2 could not be reached (...); 1 was refused (...).', structure } }, { call });
+  assert.equal(r.ok, false);
+  assert.equal(r.code, 'FAILED');
+  assert.equal(r.result, 'failed: 24 of 27 cells done; could not reach 2 cells (-176,64,58; -177,64,58): 3 places to stand tried: path search gave up after 5 s; 1 cell refused (-178,64,58): The expected block did not appear after placement. (placed 17 cobblestone and dug 9 cells clear (24 of 27 cells as the blueprint; 1 cell kept the stone already there (solid, and it could not be dug out); 1 cell to clear is water (water cannot be dug); put 2 dirt under walls that had nothing to place against))');
+  const short = fromTheirs('build_structure', { result: { status: 'failed', error: '[BUILD_INCOMPLETE] ...', structure: { ...structure, left: [{ reason: 'block_not_carried', count: 3, named: [{ x: 1, y: 2, z: 3 }] }], missing: [{ block: 'cobblestone', count: 3 }] } } }, { call });
+  assert.match(short.result, /3 cells need a block you do not carry \(1,2,3, and 2 more\); short of 3 cobblestone/);
+  assert.equal(short.code, 'NEED_ITEMS');
+  // F3's own text (the runtime before 0011 named every refusal in full): cut at a clause, never in "search", and every
+  // bracket it opened closed
+  for (const text of [F3, `${F3} (placed 17 cobblestone and dug 9 cells clear (24 of 27 cells as the blueprint))`]) {
+    const c = cut(text, 400);
+    assert.ok(c.length <= 400, `${c.length}`);
+    assert.doesNotMatch(c, /\bsea\b/);
+    assert.match(c, / \.\.\.\)$/);
+    const depth = [...c].reduce((d, ch) => d + (ch === '(' ? 1 : ch === ')' ? -1 : 0), 0);
+    assert.equal(depth, 0, c);
+  }
+  // a build stopped by a tool that wore out says so (staging, 2026-10-08: "22 cells hold another block" and no why)
+  const worn = fromTheirs('build_structure', { result: { status: 'partial', error: '[TOOL_TIER_LOST] wooden_pickaxe was lost at -175,61,52; no pickaxe remains.', structure: { ...structure, wrong: 24, kept: [], water: 0, supports: [], left: [{ reason: 'holds_another_block', count: 22, named: [{ x: -175, y: 61, z: 51, holds: 'stone' }] }, { reason: 'not_reached', count: 2, named: [{ x: -175, y: 62, z: 53 }] }] } } }, { call });
+  assert.match(worn.result, /^only partly done: 3 of 27 cells done; 22 cells hold another block \(stone at -175,61,51, and 21 more\); 2 cells were still to do when the build stopped \(-175,62,53, and 1 more\); the build stopped: your wooden_pickaxe wore out \(no pickaxe remains\); carry a better tool and build again to continue it \(placed 17 cobblestone/);
+  assert.equal(worn.code, 'NEED_ITEMS');
+  const old = fromTheirs('build_structure', { result: { status: 'failed', error: `[BUILD_INCOMPLETE] ${F3.slice(8)}` } });
+  assert.doesNotMatch(old.result, /\bsea\b/, 'a reply without an audit is cut cleanly too');
+});
+
+test('mineai body: build again where an incomplete build stands continues it, and says so (Muse re-test, g42b738)', async () => {
+  const { body, fake } = await bodyOn({ inventory: { cobblestone: 64 } });
+  try {
+    fake.world.buildLeft = 2;
+    const first = await body.run('build', { blueprint: 'hut_3x3', material: 'cobblestone' });
+    assert.equal(first.ok, false);
+    assert.match(first.result, /^failed: 25 of 27 cells done; could not reach 2 cells \(11,64,-5; 11,64,-3\): 3 places to stand tried: path search gave up after 5 s \(placed 21 cobblestone \(25 of 27 cells as the blueprint\)\) \(built facing east\)$/);
+    // Muse turned and stepped aside, and sent the same build again
+    fake.world.heading = 180;
+    fake.world.position = { x: 12.5, y: 64, z: -1.5 };
+    fake.world.buildLeft = 0;
+    const second = await body.run('build', { blueprint: 'hut_3x3', material: 'cobblestone' });
+    assert.equal(second.ok, true, second.result);
+    assert.match(second.result, /\(continued the hut_3x3 begun facing east at 10 64 -4\)$/);
+    const sent = fake.tools('build_structure');
+    assert.deepEqual(sent[1].args.blocks, sent[0].args.blocks, 'the same cells: the same hut');
+    // that one is complete: the next build is a new one, facing the way the bot looks now
+    const third = await body.run('build', { blueprint: 'hut_3x3', material: 'cobblestone' });
+    assert.match(third.result, /\(built facing south\)$/);
+    assert.notDeepEqual(fake.tools('build_structure')[2].args.blocks, sent[0].args.blocks);
+  } finally {
+    await body.close();
+  }
+});
+
+test('mineai start check: a runtime built before patch 0009, 0010 or 0011 is refused', () => {
   const up = readUpstream();
-  assert.ok(up.patches.at(-2).endsWith('0009-placement-around-a-mob.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-2), 'utf8'), /overlaps bat #44444/);
-  assert.ok(up.patches.at(-1).endsWith('0010-build-never-stalls-the-event-loop.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-1), 'utf8'), /^\+const STEP_OUT_PASSES = 3;$/m);
+  assert.ok(up.patches.at(-3).endsWith('0009-placement-around-a-mob.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-3), 'utf8'), /overlaps bat #44444/);
+  assert.ok(up.patches.at(-2).endsWith('0010-build-never-stalls-the-event-loop.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-2), 'utf8'), /^\+const STEP_OUT_PASSES = 3;$/m);
+  assert.ok(up.patches.at(-1).endsWith('0011-build-on-rough-ground.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-1), 'utf8'), /^\+export const STANDS_PER_CELL = 3;$/m);
   const dir = tmp('mineai-eight-');
-  for (const cut of [-1, -2]) {
+  for (const cut of [-1, -2, -3]) {
     fs.writeFileSync(path.join(dir, STAMP), JSON.stringify(stampFor({ ...up, patches: up.patches.slice(0, cut) })));
     const old = checkFetched(dir, up);
     assert.equal(old.ok, false);

@@ -106,3 +106,10 @@ of the fixes and the re-check on staging").
 If the body's runtime stops during a step anyway, the step fails with code `BODY_RESTARTED` ("This step may be what
 stopped it: do not send it again from here ... a second stop ends the game"), and `mineai_host_restart` appears in
 staging's log: note it with the bot's position and the step.
+
+After `g42b738`, its build failures were fixed (2026-10-08, runtime patch 0011 and the gateway; README, "Builds on
+rough ground"). A next Muse run that builds should show: a `build` on rough ground ok, or failed with the cells it
+could not do and why in plain words ("24 of 27 cells done; could not reach 2 cells (...): 3 places to stand tried:
+path search gave up after 5 s"), never a reply cut mid-word; "kept the stone already there", "to clear is water" or
+"put 2 dirt under walls" where that happened; and a second `build` of the same blueprint and material near an
+incomplete one answered "(continued the hut_3x3 begun facing south at x y z)", the same hut, not a new one.

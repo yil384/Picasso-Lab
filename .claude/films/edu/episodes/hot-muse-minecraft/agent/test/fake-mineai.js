@@ -54,6 +54,8 @@ export async function startFakeMineAi(opts = {}) {
     side: {}, // tool -> {item: n}: what else changes while it runs (not in its evidence)
     collectBroken: null,
     buildDug: 0,
+    buildLeft: 0, // cells a build leaves out of reach (their audit's "unreachable"), as on rough ground
+    heading: 90, // compass degrees the bot faces (their status)
     die: null, // a tool whose next run kills the bot
   };
   const calls = [];
@@ -158,8 +160,15 @@ export async function startFakeMineAi(opts = {}) {
         const solid = cells.filter((b) => b.block_name !== 'air');
         const material = solid[0]?.block_name;
         if (material && have(material) < solid.length) return { status: 'failed', error: `[BUILD_INCOMPLETE] ${solid.length - have(material)} cells still wrong: short of ${solid.length - have(material)} ${material}.`, structure: null };
-        if (material) add(material, -solid.length);
-        return { status: 'succeeded', structure: { dimension: 'overworld', cells: cells.length, correct: cells.length, placed: solid.length, dug: world.buildDug, wrong: 0, left: [], missing: [], passes: 1, complete: true } };
+        // world.buildLeft cells could not be reached (the first ones listed), as their audit names them
+        const left = Math.min(world.buildLeft, solid.length);
+        if (material) add(material, -(solid.length - left));
+        const audit = { dimension: 'overworld', cells: cells.length, correct: cells.length - left, placed: solid.length - left, dug: world.buildDug, wrong: left, kept: [], water: 0, supports: [], missing: [], passes: left ? 3 : 1, complete: !left };
+        if (left) {
+          const named = solid.slice(0, 4).slice(0, left).map((c) => ({ x: c.x, y: c.y, z: c.z, detail: '3 places to stand tried: path search gave up after 5 s' }));
+          return { status: 'failed', error: `[BUILD_INCOMPLETE] ${left} cells still wrong: ${left} could not be reached.`, structure: { ...audit, left: [{ reason: 'unreachable', count: left, named }] } };
+        }
+        return { status: 'succeeded', structure: { ...audit, left: [] } };
       }
       case 'collect_mob_drop': add(a.drop_name, a.count ?? 1); return { status: 'succeeded', hunt: { mob: a.mob_name, drop: a.drop_name, requested: a.count ?? 1, gained: a.count ?? 1, targetDeathsObserved: a.count ?? 1 } };
       case 'drop_item': for (const i of a.items) add(i.item_name, -Math.min(have(i.item_name), i.count ?? have(i.item_name))); return { status: 'succeeded' };
@@ -251,7 +260,7 @@ export async function startFakeMineAi(opts = {}) {
       action: 'view_status', durationMs: 1,
       result: { status: 'succeeded', situation: {
         dimension: 'overworld', lastDeath: world.lastDeath, vitals: { health: world.health, food: world.food, airSupplyTicks: null },
-        clock: { timeOfDay: 1000, phase: 'day' }, position: { ...world.position, headingDegrees: 90 },
+        clock: { timeOfDay: 1000, phase: 'day' }, position: { ...world.position, headingDegrees: world.heading },
         inventory: { stacks: stacks() }, nearby: { players: world.players, hostiles: world.hostiles, mobs: [{ name: 'cow', kind: 'animal', count: 2, nearest: { entityId: 5, distance: 7, position: { x: 15, y: 64, z: -1 } } }] },
       } },
       survivalPolicy: { revision: world.revision },

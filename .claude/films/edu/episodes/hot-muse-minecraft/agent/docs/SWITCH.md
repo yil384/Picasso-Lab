@@ -354,3 +354,32 @@ stay; our body ignores them. To switch again: `sed -i "s/^BODY=.*/BODY=mineai/" 
 - Bot data: deleted when a game ends, the last 10 failed games kept (`MINEAI_KEEP_FAILED`), folders older than 3 days
   removed at agent start (`MINEAI_DATA_DAYS`).
 - Capacity: production allows 8 guest bots (`WEB_MAX_SESSIONS`), about 0.4 GB and a fifth of a core each.
+
+## 7. A runtime update after the switch (patch 0011, 2026-10-08)
+
+**Done 2026-10-09 (01:45 UTC): production runs `2fe1306 with 11 patches`; every check below passed (README, "Builds on
+rough ground").**
+
+Builds on rough ground (README, "Builds on rough ground"; `mineai/README.md`, "Patch 0011 on Paper") changed the
+runtime (the pin plus eleven patches) and the gateway, so production gets them with `deploy/push.sh --prod`, as in
+section 2: staging first, then production only if staging's checks pass and nothing changed meanwhile. Production
+must be idle (section 1's check) and the running image tagged first, for the undo (picasso):
+
+```sh
+docker tag muse-minecraft-agent:latest muse-minecraft-agent:pre-0011
+```
+
+Checks after it: `docker exec muse-minecraft-agent-1 node scripts/mineai-fetch.mjs /opt/mine-ai-mcp --check` says
+`/opt/mine-ai-mcp: 2fe1306 with 11 patches, dependencies installed`; `node scripts/staging-check.mjs
+https://play.picasso-lab.com --production` passes; one build game through the public `/mcp`:
+`node mineai/bench/build-staging.mjs https://play.picasso-lab.com --production --games 1` ends `RESULT PASS`.
+
+Undo (picasso; the image of before the update, no build; `recreate.sh` waits for production to be idle):
+
+```sh
+docker tag muse-minecraft-agent:pre-0011 muse-minecraft-agent:latest && sh ~/workspace/muse-minecraft/app/deploy/recreate.sh production
+```
+
+The code folder then holds the newer files, which the old image does not read (the agent's code is in its image); the
+next `deploy/push.sh --prod` from an older commit replaces them. Remove the `pre-0011` tag once the update has held
+for a week (`docker rmi muse-minecraft-agent:pre-0011`).
