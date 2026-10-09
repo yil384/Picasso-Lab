@@ -22,7 +22,10 @@ case $target in
     if [ -f "$here/camera.env" ]; then profiles="${profiles:+$profiles,}camera"; extra="$extra camera"; fi
     ;;
   staging)
-    file=staging.compose.yaml; container=muse-staging-agent-1; set -- -p muse-staging -f staging.compose.yaml ;;
+    file=staging.compose.yaml; container=muse-staging-agent-1; set -- -p muse-staging -f staging.compose.yaml
+    # staging's camera lives in its agent's namespace too (push.sh starts it when camera.env is there)
+    if [ -f "$here/camera.env" ]; then profiles=camera; extra=" camera"; fi
+    ;;
   *) usage ;;
 esac
 [ -f "$here/$file" ] || { echo "recreate: no $file in $here (the deployed deploy/ folder of $target?)" >&2; exit 2; }

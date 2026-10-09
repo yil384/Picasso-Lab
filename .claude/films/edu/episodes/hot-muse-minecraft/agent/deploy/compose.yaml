@@ -6,7 +6,7 @@ services:
   paper:
     build: { context: .., dockerfile: deploy/Dockerfile.paper }
     restart: unless-stopped
-    environment: { DIFFICULTY: easy, DAYLIGHT: locked, SEED: "71811045", MEMORY: 6G }
+    environment: { DIFFICULTY: "${PAPER_DIFFICULTY:-easy}", DAYLIGHT: "${PAPER_DAYLIGHT:-locked}", SEED: "71811045", MEMORY: 6G }
     volumes: [ "../data:/data", "console:/console" ]
     networks: { mc: { ipv4_address: 10.77.77.10 } }
   # deploy/.env (made by push.sh, kept on picasso) holds WEB_ADMIN_TOKEN and should hold WEB_PROXY_SECRET: a secret

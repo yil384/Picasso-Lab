@@ -27,7 +27,7 @@ services:
   paper:
     build: { context: .., dockerfile: deploy/Dockerfile.paper }
     restart: unless-stopped
-    environment: { DIFFICULTY: easy, DAYLIGHT: locked, SEED: "71811045", MEMORY: 6G }
+    environment: { DIFFICULTY: "${PAPER_DIFFICULTY:-easy}", DAYLIGHT: "${PAPER_DAYLIGHT:-locked}", SEED: "71811045", MEMORY: 6G }
     volumes: [ "../../data:/data", "console:/console" ]
     networks: { mc: { ipv4_address: 10.77.79.10 } }
   agent:

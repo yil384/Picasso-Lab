@@ -421,7 +421,7 @@ export async function startAgent(opts = {}) {
    */
   function joinMineAi(sessionId, username, viewId) {
     const body = createMineAiBody({
-      config, log, hosts, gameId: sessionId, username, viewId,
+      config, log, hosts, gameId: sessionId, username, viewId, care: config.mineai?.care !== false,
       onEyes: (port, eyesPath) => streamFrom(body, sessionId)?.(port, eyesPath),
     });
     if (consolePath) {
@@ -449,6 +449,7 @@ export async function startAgent(opts = {}) {
         log.event('spread', { session: sessionId, at: at ? `${Math.floor(at.x)} ${Math.floor(at.y)} ${Math.floor(at.z)}` : null });
       });
       body.ready.catch(() => {});
+      body.deferCare?.(body.ready); // nothing of its own at the spawn: the care starts where the bot was spread to
     }
     return body;
   }

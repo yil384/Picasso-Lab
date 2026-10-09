@@ -223,6 +223,8 @@ test('recreate.sh: the agent with whatever lives in its namespace, never a build
     [['production'], ['camera.env'], `COMPOSE_PROFILES=camera ${UP} agent camera`],
     [['production', 'all'], ['stream.env', 'camera.env'], `COMPOSE_PROFILES=stream,camera ${UP} paper agent stream camera`],
     [['staging'], ['stream.env'], `COMPOSE_PROFILES= docker compose -p muse-staging -f staging.compose.yaml up -d --no-build --no-deps --force-recreate agent`],
+    [['staging'], ['camera.env'], `COMPOSE_PROFILES=camera docker compose -p muse-staging -f staging.compose.yaml up -d --no-build --no-deps --force-recreate agent camera`],
+    [['staging', 'all'], ['camera.env'], `COMPOSE_PROFILES=camera docker compose -p muse-staging -f staging.compose.yaml up -d --no-build --no-deps --force-recreate paper agent camera`],
   ];
   for (const [args, envFiles, want] of cases) {
     const r = recreate(args, { envFiles, bots: 0 });
@@ -264,6 +266,11 @@ test('recreate.sh knows every service that lives in the agent\'s network namespa
   assert.deepEqual(shared, ['camera', 'stream']);
   const script = fs.readFileSync(path.join(ROOT, 'deploy/recreate.sh'), 'utf8');
   for (const name of shared) assert.match(script, new RegExp(`if \\[ -f "\\$here/${name}\\.env" \\]`));
+  // staging's: its camera (2026-10-09: a bare agent recreate on staging left the camera in the old namespace)
+  const staging = fs.readFileSync(path.join(ROOT, 'deploy/staging.compose.yaml'), 'utf8').split(/^ {2}(?=[\w-]+:\s*$)/m).slice(1)
+    .filter((b) => /^ {4}network_mode: "service:agent"/m.test(b)).map((b) => b.split(':')[0]);
+  assert.deepEqual(staging, ['camera']);
+  assert.match(script.slice(script.indexOf('staging)')), /if \[ -f "\$here\/camera\.env" \]; then profiles=camera/);
 });
 
 test('docs/SWITCH.md: the agent only through recreate.sh, Caddy only through caddy-proxy-line.py, no restores of shared files', () => {
@@ -275,5 +282,5 @@ test('docs/SWITCH.md: the agent only through recreate.sh, Caddy only through cad
   assert.doesNotMatch(commands, /data\/[^\s]*\.bak|> *data\//, 'nothing written into Paper\'s root-owned data folder');
   assert.doesNotMatch(doc, /<T>/, 'no backup named by a placeholder the reader has to guess');
   assert.match(commands, /caddy-proxy-line\.py add staging[\s\S]*caddy-proxy-line\.py remove staging[\s\S]*caddy-proxy-line\.py add production[\s\S]*caddy-proxy-line\.py remove production/);
-  assert.equal((commands.match(/recreate\.sh (production|staging)/g) ?? []).length, 8, '3a, its undo, 3b, its undo, the switch, the undo of step 2, the rollback, the undo of the 0011 update (section 7)');
+  assert.equal((commands.match(/recreate\.sh (production|staging)/g) ?? []).length, 10, '3a, its undo, 3b, its undo, the switch, the undo of step 2, the rollback, the undo of the 0011 update (section 7), the M4 world and its undo (section 8)');
 });

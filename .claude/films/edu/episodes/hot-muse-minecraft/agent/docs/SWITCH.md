@@ -383,3 +383,51 @@ docker tag muse-minecraft-agent:pre-0011 muse-minecraft-agent:latest && sh ~/wor
 The code folder then holds the newer files, which the old image does not read (the agent's code is in its image); the
 next `deploy/push.sh --prod` from an older commit replaces them. Remove the `pre-0011` tag once the update has held
 for a week (`docker rmi muse-minecraft-agent:pre-0011`).
+
+## 8. The bot looks after itself, with real nights on Normal (ROADMAP M4)
+
+**Not done: the M4 gate is not met (README, "The bot looks after itself": at most 1 death in 16 natural games is the
+bar; staging had 1 in 8 and 3 in 8). Production keeps easy and locked daylight and the build before M4.** The steps
+below are for when it is.
+
+The care (README, "The bot looks after itself") changes only the gateway (no runtime patch: the runtime stays `2fe1306
+with 11 patches`), and the world settings change through two lines in `deploy/.env`, which `deploy/compose.yaml` hands
+to Paper (`PAPER_DIFFICULTY`, `PAPER_DAYLIGHT`; `deploy/paper-entry.sh` sets both again at every start). Production gets
+both only after the M4 gate passed on staging (ROADMAP, M4, "Acceptance of the survival step"), idle, with the running
+images tagged first for the undo (picasso):
+
+```sh
+docker tag muse-minecraft-agent:latest muse-minecraft-agent:pre-m4 && docker tag muse-minecraft-paper:latest muse-minecraft-paper:pre-m4
+```
+
+Then the code (Mac, this folder; staging first, production only when staging's checks pass):
+
+```sh
+deploy/push.sh --prod
+```
+
+Then the world (picasso; the idle check again, then Paper and the agent recreated from the images just built):
+
+```sh
+cd ~/workspace/muse-minecraft/app/deploy &&
+B=~/workspace/muse-minecraft/backups && mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S) &&
+sed -i '/^PAPER_\(DIFFICULTY\|DAYLIGHT\)=/d' .env && printf 'PAPER_DIFFICULTY=normal\nPAPER_DAYLIGHT=cycle\n' >> .env &&
+sh recreate.sh production all
+```
+
+Checks: `docker logs --since 2m muse-minecraft-paper-1 2>&1 | grep -E 'doDaylightCycle is now set to: true|difficulty has been set to Normal'`
+prints both lines; `node scripts/staging-check.mjs https://play.picasso-lab.com --production` passes; one game through
+the public `/mcp` at night shows a shelter in its reply (`node mineai/bench/survive-labs.mjs` is for staging only: it
+writes to the server console).
+
+Undo (picasso; the world first, then the code; `recreate.sh` waits for production to be idle):
+
+```sh
+cd ~/workspace/muse-minecraft/app/deploy && sed -i '/^PAPER_\(DIFFICULTY\|DAYLIGHT\)=/d' .env &&
+docker tag muse-minecraft-agent:pre-m4 muse-minecraft-agent:latest && docker tag muse-minecraft-paper:pre-m4 muse-minecraft-paper:latest &&
+sh recreate.sh production all
+```
+
+Paper starts again with easy and locked daylight at morning (the old entry script locks the clock and the server
+properties say easy), the agent without the care. Only the care, keeping the world as it is: `MINEAI_CARE=off` in
+`.env` and `sh recreate.sh production`. Remove the `pre-m4` tags once the update has held for a week.

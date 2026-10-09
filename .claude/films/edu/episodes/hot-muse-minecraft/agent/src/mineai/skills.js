@@ -39,6 +39,11 @@ export const PLAYER_GUARD = 4;
 /** The blocks a chest skill opens (and whose placement a body records as its own). */
 export const CONTAINER_BLOCKS = new Set(['chest', 'trapped_chest', 'barrel']);
 const RAW_FOOD = ['never', 'emergency_only', 'always'];
+/** What the body looks after by itself between the player's calls (src/mineai/care.js), and the policy skill's knobs. */
+export const CARE_DEFAULTS = Object.freeze({ night: 'shelter', armor: 'craft', food: 'hunt', tools: 'spare' });
+export const CARE_KNOBS = Object.freeze({
+  night: Object.freeze(['shelter', 'off']), armor: Object.freeze(['craft', 'wear', 'off']), food: Object.freeze(['hunt', 'eat', 'off']), tools: Object.freeze(['spare', 'off']),
+});
 
 /**
  * The extra skills (MCP only, BODY=mineai), as [name, description, parameters]. Optional keys are listed by each
@@ -68,8 +73,14 @@ export const EXTRA_DEFS = Object.freeze([
     'Walk into unexplored land in a compass heading (0 north, 90 east, 180 south, 270 west) for 1 to 8 chunks; with biome, stop as soon as you stand in it.',
     obj({ heading: int('compass heading in degrees, 0 to 359', 0, 359), chunks: int('how far, in chunks of 16 blocks (default 1)', 1, 8), biome: NAME('a biome to look for, e.g. plains, desert, badlands') }, ['heading'])],
   ['policy',
-    'How the body looks after itself between your calls (for the rest of the game): retreat_health = protect itself below this health; raw_food = when it may eat raw meat on its own; fight = respond_to_threats (fight mobs that come close) or defend_only. Without any of them: back to the defaults.',
-    obj({ retreat_health: int('health 1 to 19 (default 8)', 1, 19), raw_food: pick('raw meat on its own', RAW_FOOD), fight: pick('fight or only defend', ['respond_to_threats', 'defend_only']) }, [])],
+    'How the body looks after itself for the rest of the game: retreat_health, raw_food and fight in fights; night (shelter, or sleep with a bed), armor (craft or wear), food (hunt or eat) and tools (spare) between your calls; off stops one. No arguments: the defaults.',
+    obj({
+      retreat_health: int('health 1 to 19 (default 8)', 1, 19), raw_food: pick('raw meat on its own', RAW_FOOD), fight: pick('fight or only defend', ['respond_to_threats', 'defend_only']),
+      night: pick('night', CARE_KNOBS.night), armor: pick('armor', CARE_KNOBS.armor), food: pick('food', CARE_KNOBS.food), tools: pick('tools', CARE_KNOBS.tools),
+    }, [])],
+  ['armor',
+    'Craft the best armor you can pay for (iron ingots, leather, gold or diamonds) and put it on, with any better piece or shield you carry.',
+    obj({}, [])],
   ['pick_up',
     'Pick up items lying within 8 blocks (only item if given); death_items: true walks back to where you died and picks up what you dropped (within 5 minutes).',
     obj({ item: NAME('only this item'), death_items: { type: 'boolean', description: 'true: recover what you dropped when you died' } }, [])],
@@ -100,7 +111,7 @@ export const MINEAI_TIMEOUTS = Object.freeze({
   ...TOOL_TIMEOUTS_MS,
   smelt: 300_000, // their smelt waits for the whole load: about 10 s an item, 24 at most
   equip: 20_000, hunt: 300_000, sleep: 60_000, bucket: 120_000, chest: 60_000, explore: 300_000, policy: 15_000,
-  pick_up: 90_000, drop: 30_000,
+  pick_up: 90_000, drop: 30_000, armor: 150_000,
 });
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -289,7 +300,13 @@ export function toTheirs(skill, args, ctx) {
       return { calls: [{ tool: 'use_container', args: { operation: args.action, x: args.pos.x, y: args.pos.y, z: args.pos.z, ...(args.action !== 'inspect' ? { items: args.items.map(({ item, n }) => ({ item_name: item, count: n })) } : {}) } }] };
     }
     case 'explore': return { calls: [{ tool: 'explore_frontier', args: { heading: args.heading, chunks: args.chunks ?? 1, ...(args.biome ? { biome: args.biome } : {}) } }] };
+    case 'armor': return { local: 'armor', calls: [] };
     case 'policy': {
+      // the care's knobs stay in the gateway (src/mineai/care.js); the rest goes to the runtime's survival policy
+      const knobs = Object.fromEntries(Object.keys(CARE_KNOBS).filter((k) => args[k] !== undefined).map((k) => [k, args[k]]));
+      const theirs = ['retreat_health', 'fight', 'raw_food'].some((k) => args[k] !== undefined);
+      const care = Object.keys(knobs).length ? knobs : theirs ? null : 'reset';
+      if (!theirs && care !== 'reset') return { calls: [], care };
       if (!ctx.policyRevision) return refuse('the body has not read its policy yet; try again in a moment');
       const combat = {
         ...(args.retreat_health !== undefined ? { critical_health: args.retreat_health } : {}),
@@ -297,8 +314,8 @@ export function toTheirs(skill, args, ctx) {
       };
       const changes = { ...(Object.keys(combat).length ? { combat } : {}), ...(args.raw_food ? { food: { raw: { allow: args.raw_food } } } : {}) };
       const base = { expected_revision: ctx.policyRevision, reason: 'Set by the player through the policy skill.' };
-      if (!Object.keys(changes).length) return { calls: [{ tool: 'set_survival_policy', args: { ...base, operation: 'reset' } }] };
-      return { calls: [{ tool: 'set_survival_policy', args: { ...base, operation: 'set', changes, lifetime: { kind: 'session' } } }] };
+      if (!Object.keys(changes).length) return { calls: [{ tool: 'set_survival_policy', args: { ...base, operation: 'reset' } }], care: 'reset' };
+      return { calls: [{ tool: 'set_survival_policy', args: { ...base, operation: 'set', changes, lifetime: { kind: 'session' } } }], ...(care ? { care } : {}) };
     }
     case 'pick_up': return { calls: [{ tool: 'pick_up_items', args: { ...(args.item ? { item: args.item } : {}), ...(args.death_items ? { recover_death_items: true } : {}) } }] };
     // the item in hand may go too (the body holds whatever it last used); worn armor and the off-hand never do

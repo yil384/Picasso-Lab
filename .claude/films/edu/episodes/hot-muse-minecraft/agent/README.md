@@ -11,7 +11,9 @@ Not affiliated with or endorsed by Meta or Mojang.
 
 **Status 2026-10-08: production (https://play.picasso-lab.com) plays with the Mine AI MCP body (`BODY=mineai`, the
 runtime at 2fe1306 with our 11 patches, builds on rough ground included); staging too.** Both stacks have the proxy secret and the Paper whitelist.
-Section "The switch" below; rollback `docs/SWITCH.md`, section 5.
+Section "The switch" below; rollback `docs/SWITCH.md`, section 5. **Staging since 2026-10-09: Normal with real days
+and nights, and the body looks after itself between calls (ROADMAP M4; section "The bot looks after itself"); its gate
+is not met yet, so production keeps easy and locked daylight and the build before it.**
 
 ## Architecture
 
@@ -68,9 +70,10 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `deploy/slim-modules.mjs` | run in the agent image after `npm ci`: keeps the game data of one Minecraft version only |
 | `src/mineai/host.js` | `BODY=mineai`: one Mine AI MCP host per guest game (their runtime from `MINEAI_DIR`), on a loopback port of a private range with a token and the player name in its environment only, watched by heartbeat, restarted once after a crash, stopped with its game (its whole process group), its bot data deleted after the game unless the game failed (section "The Mine AI MCP body") |
 | `src/mineai/body.js` | a Body (`src/contracts.js`) driving that host as an MCP client: our skills onto their actions, their status as our state, stop and time limits through their cancel |
-| `src/mineai/skills.js` | the mapping (our 10 skills and `craft_batch` onto their tools, their results and codes back) and the extra skills MCP offers with this body (`equip`, `hunt`, `sleep`, `bucket`, `chest`, `explore`, `policy`, `pick_up`, `drop`) |
+| `src/mineai/skills.js` | the mapping (our 10 skills and `craft_batch` onto their tools, their results and codes back) and the extra skills MCP offers with this body (`equip`, `hunt`, `sleep`, `bucket`, `chest`, `explore`, `policy`, `armor`, `pick_up`, `drop`) |
+| `src/mineai/care.js` | what the body does by itself between the player's calls (ROADMAP M4): a death's items, armor worn and crafted, food eaten and hunted, a spare tool before one breaks, a shelter or a bed at night; their reflexes' events in our words; the journal every MCP reply reports from (section "The bot looks after itself") |
 | `src/mineai/preload.mjs` | loaded into their host's processes: ends the host when the agent closes its stdin (game end) or goes away, serves `/eyes` and `/watch` from inside the bot's process |
-| `mineai/` | `UPSTREAM.json` (their repository, the pinned commit and our patches in order), `patches/` (ours: crafting on Paper and its tests, the watchdog window, the host token, the player name off the command line, the runtime's exit), `fetch-and-patch.sh` (the build), `LICENSE-mine-ai-mcp` (their MIT notice), `bench/` (crafting and window flows on their tools; `gateway-iron.mjs`: the iron route through our `/mcp` with resources), `README.md` (the pins, the Paper fix and its numbers); their code is never in this repo |
+| `mineai/` | `UPSTREAM.json` (their repository, the pinned commit and our patches in order), `patches/` (ours: crafting on Paper and its tests, the watchdog window, the host token, the player name off the command line, the runtime's exit), `fetch-and-patch.sh` (the build), `LICENSE-mine-ai-mcp` (their MIT notice), `bench/` (crafting and window flows on their tools; `gateway-iron.mjs`: the iron route through our `/mcp` with resources; `survive.mjs` and `survive-labs.mjs`: the M4 survival runs, natural and prepared), `README.md` (the pins, the Paper fix and its numbers); their code is never in this repo |
 | `scripts/mineai-fetch.mjs` | the same fetch in Node (also updates a folder in place); `--check` says whether a folder is exactly the pin plus our patches |
 | `test/fake-mineai.js`, `test/fake-mineai-host.mjs` | a stand-in Mine AI host (MCP tools, `/health`, the token, a tiny world) in-process and as a process |
 | `test/mock-llm.js` | local mock of the chat (and Responses) endpoint, also `npm run mock` |
@@ -345,6 +348,10 @@ deploy/push.sh --check             # the staging checks alone, against what stag
 deploy/push.sh --prod --dry-run    # print what would run, run nothing
 node scripts/staging-check.mjs [url] [--no-game]   # the checks by hand (default: the staging URL)
 ```
+
+Since ROADMAP M4 staging plays on Normal with real days and nights (`PAPER_DIFFICULTY=normal`, `PAPER_DAYLIGHT=cycle` in
+its `deploy/.env`): the check's strict game can be stopped by a mob at night (2026-10-09: a zombie took `craft stick`
+over at 3 blocks), so a deploy that matters goes out in daylight, or `deploy/push.sh --check` runs again.
 
 The checks (`scripts/staging-check.mjs`): the page answers; `openapi.json` names the host it was asked on (so
 `WEB_PUBLIC_URL` is staging's, not production's); `/mcp` initializes and lists the game tools; and a scripted game
@@ -814,6 +821,8 @@ in to Facebook in the same browser, may still see it in the muse.ai panel (UNVER
 | `MINEAI_START_MS`, `MINEAI_HEARTBEAT_MS`, `MINEAI_HEARTBEAT_MISSES` | `90000`, `5000`, `3` | time to be ready; our `/health` heartbeat and how many may go unanswered before a restart |
 | `MINEAI_UNRESPONSIVE_MS` | `5000` | their own event-loop watchdog (patch 0003), up to 120000 for a loaded machine |
 | `MINEAI_DATA_DIR`, `MINEAI_VIEWS` | (none: temporary), `true` | their per-bot SQLite (made mode 700); the live views from inside the host |
+| `MINEAI_CARE` | `true` | the body looks after itself between the player's calls (src/mineai/care.js); `false`: only the runtime's reflexes (measurements) |
+| `PAPER_DIFFICULTY`, `PAPER_DAYLIGHT` | `easy`, `locked` | read by the compose files from the stack's `deploy/.env` and handed to Paper: the difficulty, and `locked` (the clock stopped at morning) or `cycle` (real days and nights); both set again at every Paper start |
 | `MINEAI_KEEP_FAILED`, `MINEAI_DATA_DAYS` | `10`, `3` | a game's bot data and incidents are deleted when it ends, except the last N games that crashed or failed to join; at agent start, game folders older than this many days go |
 | `STEP_CAP`, `COST_CAP_RUN`, `COST_CAP_HOUR` | `300`, `1.00`, `3.00` | per run, per run in US$, rolling hour in US$ |
 | `ERROR_CAP`, `LOOP_REPEAT` | `8`, `3` | errors in a row (8 leaves room to explore for ore); same call failing (or changing nothing) before a hint |
@@ -1083,7 +1092,8 @@ What a guest's skill becomes (`src/mineai/skills.js`):
 | `bucket {action, liquid?, pos?}` | `use_bucket` | extra; the world is shared: lava is never poured (filling is fine), nothing within 32 blocks of where the bot joined (the world spawn) or 4 of another player |
 | `chest {action, pos, items?}` | `use_container` | extra; inspect, deposit, withdraw; never a chest another game's bot put down (the bodies record the chests they place) |
 | `explore {heading, chunks?, biome?}` | `explore_frontier` | extra |
-| `policy {retreat_health?, raw_food?, fight?}` | `set_survival_policy` | extra; for the rest of the game, with the revision read from their status; none of them: back to the defaults |
+| `policy {retreat_health?, raw_food?, fight?, night?, armor?, food?, tools?}` | `set_survival_policy` | extra; for the rest of the game, with the revision read from their status; `night`, `armor`, `food` and `tools` are the care's (src/mineai/care.js) and stay in the gateway; none of them: back to the defaults |
+| `armor {}` | `craft_item` per piece, then `equip` | extra; the best armor the carried iron, leather, gold or diamonds pay for, then worn with any better piece or shield carried |
 | `pick_up {item?, death_items?}` | `pick_up_items` | extra |
 | `drop {item, n}` | `drop_item` | extra |
 
@@ -1652,6 +1662,107 @@ BUN=... node mineai/bench/build-spots.mjs ~/picasso-work/mineai-runtime-11 --ser
 node mineai/bench/build-staging.mjs https://play-staging.picasso-lab.com --games 3 "--go=-176,61,52;-180,70,-27;-90,63,-13"
 ```
 
+### The bot looks after itself (ROADMAP M4, 2026-10-09)
+
+The world can now run its real day and night on Normal: the body keeps itself alive while Muse is busy or slow, and
+says what it did. The runtime's own reflexes already fight, flee, hide, eat carried food, swim up for air, leave fire
+and keep their footing, during a step and between steps. `src/mineai/care.js` adds what needs a plan over minutes,
+made only of the runtime's own actions (`sleep`, `build_structure`, `collect_mob_drop`, `smelt_item`, `eat_food`,
+`craft_item`, `equip`, `pick_up_items`, `navigate`), and acts only while no step of the player's runs (3 s after the
+last one ended), yielding at once to the next step (its action cancelled through their cancel and its result read
+first, as their result gate wants). In order, what it does when nothing else needs the body:
+
+| What | When | How |
+| --- | --- | --- |
+| a death's items | it died within the last 4.5 minutes (their items despawn after 5) and respawned within 600 blocks (new bots land up to 400 from the world spawn, where they respawn) | `pick_up_items {recover_death_items}`, once more 10 s after a walk that found no way through; the only care action a step waits for (the step's time starts after it) |
+| armor | it carries a better piece than it wears, or a shield and an empty off-hand | `equip`, each piece to its slot |
+| food | food 14 or less (or hurt and below 18, which healing needs) and something safe to eat | `eat_food`, raw meat too (their hunger reflex keeps raw meat for emergencies) |
+| | no food at all, food 14 or less in daylight (6 or less at night) | hunts the nearest cow, pig, sheep or rabbit within 32 blocks for 3 meat (`collect_mob_drop`), cooks it when it carries a furnace and fuel, eats |
+| tools | a pickaxe, axe, shovel or sword with 6% of its life (or 6 uses) left and no other one with more | a spare of the best tier up to its own that what it carries pays for (`craft_item`, planks, sticks and a table made on the way) |
+| armor | the player has left it alone for 30 s, and leather, or iron beyond 6 ingots (kept for a pickaxe and a bucket), pays for a piece better than it has | chestplate, leggings, boots, helmet in that order, crafted then worn; never diamonds or gold by itself |
+| dusk | time of day 10800 to 12300 (the last minute of daylight) with fewer than 13 blocks for a shelter and no bed | collects them while it can see: stone (cobblestone) with a pickaxe, else dirt (`collect_block`); a bot with no blocks and no pickaxe on rock could not dig in either (staging) |
+| night | time of day 12300 to 23300 (beds take a player from 12542) in the overworld | with a bed it carries and no hostile mob within 10 blocks: `sleep` (the night passes when no other player is awake), then the bed is picked up again; otherwise, and when the night did not pass: a closed shelter (`build_structure` without digging out anything: a cell that already holds a solid block is wall enough) of carried blocks, cobblestone first, around the bot, with a one-block pocket in front of its feet for a temporary crafting table or furnace (a craft at night works inside it), 13 blocks on open ground; with fewer than 13 blocks it first digs two blocks down and the ground is the wall (where it cannot dig in, on a tree or on rock with no pickaxe, it collects dirt for walls). It stays inside until the next call; one that will not close is tried at most three times a night |
+
+Two settings of the runtime's own go with it: their fight reflex may wall itself in when badly hurt even without food
+to heal with (`hide: when_exposed`; their default `when_recovery_possible` needs carried food or a full bar first, and
+a hurt bot with neither ran on and died on staging), and it protects itself from 10 health on instead of 8
+(`critical_health`; two arrows of a skeleton on Normal kill from 8: a lab death on the Mac). Their policy goes back to
+its defaults at a death, a change of dimension or the player's `policy {}`, so the care sets both again within seconds
+(a `retreat_health` the player set stays); `MINEAI_CARE=off` leaves them alone.
+
+During a step, two things keep a tool from breaking in the middle of it: a `collect` of blocks a pickaxe mines gets a
+spare first when the best pickaxe has fewer uses left than the blocks asked for plus 4 ("on its own first: crafted a
+spare stone_pickaxe (your stone_pickaxe had 5 uses left, too few for 12 stone)"), and a pickaxe that breaks anyway
+(their `TOOL_TIER_LOST`) is replaced from what is carried and the collect goes on with the rest ("your stone_pickaxe
+broke after 4 of 10 stone; on its own: crafted a new stone_pickaxe and went on with the other 6"), at most twice a step.
+
+What Muse sees: every reply carries what the body did by itself since the last reply that reached the client, once,
+oldest first, as text ("On its own since your last reply (the body, not a step of yours):", a line each: "- 41 s ago,
+on its own, shelter: night (time 13287): closed itself in at 10 71 247 (placed 3 blocks, 3 wall cells already solid);
+it stays inside until your next call") and as `structuredContent.onItsOwn` (`source` care or reflex, `kind`, `ok`,
+`text`, `agoS`). The runtime's reflexes come from their event log (`read_recent_events`, read every 4 s): a fight of
+many short contacts is one line ("fought zombie and killed one; fled from creeper; 1 explosion near it; health 20 ->
+4.6"), with meals, air, fire, footing, a tool about to break or broken, and deaths with the server's cause; a reflex
+that interrupted a step is left to that step's own result (it says "on its own: ..." already), and chat is never read
+into a reply. The state says what the body does by itself right now ("on its own now: sheltering for the night") and
+the last thing it did; the short state has the time of day (`time`). The server instructions say the body looks after
+itself and that the policy skill changes it.
+
+`policy` takes four more knobs, kept in the gateway (never sent to the runtime) for the rest of the game: `night`
+(shelter, off), `armor` (craft, wear, off), `food` (hunt, eat, off), `tools` (spare, off); no arguments puts these and
+the runtime's back to the defaults. A new extra skill, `armor {}`, crafts the best pieces what is carried pays for
+(iron, leather, gold or diamonds, nothing kept back) and puts them on with any better piece or shield carried.
+`MINEAI_CARE=off` turns the care off (only the runtime's reflexes act), for measurements. The world: Paper's
+difficulty and daylight come from `PAPER_DIFFICULTY` (default easy) and `PAPER_DAYLIGHT` (locked or cycle, default
+locked) in the stack's `deploy/.env`, and `deploy/paper-entry.sh` sets both again at every start (a world that was
+locked stays locked otherwise: the game rule is saved in the world).
+
+Measured on staging (picasso, 2026-10-09; `deploy/push.sh`, its check PASS; Paper 1.21.4, seed 71811045, **Normal,
+daylight cycling**, set with `PAPER_DIFFICULTY=normal` and `PAPER_DAYLIGHT=cycle` in staging's `deploy/.env`; the
+runtime `2fe1306 with 11 patches`, no runtime change). Natural: fresh spots 12,000 blocks from spawn that no game had
+touched (land spots found on a same-seed copy on the Mac by spreading an armor stand there, ocean ones left out; never
+generated on staging), no console commands, 8 games at once through the public `/mcp`, each from an empty inventory
+through its whole 30-minute lease (1.5 in-game days, so one whole night) with the slow scripted player of
+`mineai/bench/survive.mjs` (wood, wooden and stone tools, a furnace, then silences of 150-240 s, each followed by
+get_state and now and then a small task: 3 logs, 6 stone, 4 dirt, a walk, some of them at night). The baseline is the
+same build with `MINEAI_CARE=off` (only the runtime's reflexes), at its own 8 fresh spots of the same ring.
+
+| | baseline: care off | care on, build `3c25a22` | care on, build `8a0d855` (this branch's src) |
+| --- | --- | --- | --- |
+| when the games began | morning (time 3000) | morning (time 70) | the middle of the night (time 18800) |
+| games, passes (the lease ended it and the bot never died) | 8, **6** | 8, **7** | 8, **5** |
+| deaths (server log) | 2: drowned, shot by a skeleton, both idle at night between calls; neither said in a reply | 1: a bot that found no wood (no tools, no blocks), shot by a skeleton at night while it dug in | 3: two killed in the first night they joined in (a zombie while it collected dirt for walls; a skeleton at health 8 by day after that fight), one shot by a skeleton in the second night as zombies kept taking its shelter build over |
+| nights lived through | 8 | 8 | 8 |
+| health at its lowest, median (min) | 18 (2) | 12.3 (7) | 20 (8) |
+| what it did on its own (replies) | nothing reported | 27 shelters, 3 flights, 1 hide, 1 fight, the death and its recovery | 35 shelters, 6 dusk gatherings, 2 hides, 2 flights, 1 fight, 2 tool warnings, 3 deaths and their recoveries |
+| sheltered after dusk, p50 / p90 / max | - | 2 / 201 / 201 s | 4 / 461 / 479 s (when a step of the player's ran at dusk, the shelter waited for it) |
+| a care action's time, p50 / p90 | - | 2.9 / 41.7 s | 2.3 / 24.4 s |
+| told in a reply / done before the game's last reply | - | 34 / 40 (the bench counted later ones too then) | **55 / 55** |
+| steps ok, step time p50 / p90 | 112 of 121, 13.0 / 30.7 s | 105 of 116, 14.9 / 35.2 s | 86 of 110, 14.8 / 34.5 s (bots that joined at night lost their first steps to mobs) |
+
+**Against the gate (ROADMAP M4, "Acceptance of the survival step"): not met.** The care on cut the deaths from 2 in 8
+(baseline) to 1 in 8 with a day start, but a night start cost 3 in 8, and the gate allows at most 1 death in 16
+games. What kills: skeletons (4 of 6 deaths), and zombies close by that keep taking a shelter build over; bots with no
+tools or blocks are the weakest. Production keeps easy and locked daylight and was not changed. Not yet run on staging:
+the prepared labs (`survive-labs.mjs`; on the Mac's copy of the world, 4 trials each with an earlier build: hunger 3/4,
+shelter 3/4, armor 4/4, tool 4/4, bed 4/4, death 3/4, zombie, skeleton and creeper 2-3/4 with one lab death to a
+skeleton; prepared, on the Mac, not evidence for the gate).
+
+```sh
+# on picasso (staging's deploy/.env: PAPER_DIFFICULTY=normal, PAPER_DAYLIGHT=cycle; for a run only: SPREAD_SPOTS,
+# WEB_MCP_GAMES_PER_ADDRESS=8, MC_USERNAME=Tst_m4, and MINEAI_CARE=off for the baseline, then the agent recreated)
+rsync -az --relative test/e2e mineai/bench picasso:workspace/muse-staging/accept-m4/          # on the Mac
+cd ~/workspace/muse-staging; L=$(ls -t logs | grep run-serve | head -1)
+docker run -d --name m4-care-a --network host --user $(id -u):$(id -g) -v $PWD/accept-m4:/app/rv -v $PWD/logs:/staging-logs:ro \
+  -v $PWD/data/logs:/paper-logs:ro muse-staging-agent node rv/mineai/bench/survive.mjs https://play-staging.picasso-lab.com \
+  --label care-a --games 8 --stagger-ms 5000 --agent-log /staging-logs/$L --server-log /paper-logs/latest.log --out rv/runs
+# the labs: the console through the compose volume, the lab spots 15,000 blocks out, no SPREAD_SPOTS
+docker run -d --name m4-labs --network host --user $(id -u):$(id -g) -v $PWD/accept-m4:/app/rv -v $PWD/logs:/staging-logs:ro \
+  -v $PWD/data/logs:/paper-logs:ro -v muse-staging_console:/console muse-staging-agent node rv/mineai/bench/survive-labs.mjs \
+  https://play-staging.picasso-lab.com --console /console/console.in --agent-log /staging-logs/$L --server-log /paper-logs/latest.log \
+  --labs hunger,shelter,bed,zombie,skeleton,creeper,armor,tool,death --n 20 --parallel 8 --spots "15000 0; 14712 2926; ..." --out rv/runs
+```
+
 ## What is mocked
 
 - The model: `test/mock-llm.js` speaks Chat Completions and the Responses API (streamed and not), replays scripted tool
@@ -1674,6 +1785,12 @@ node mineai/bench/build-staging.mjs https://play-staging.picasso-lab.com --games
   through the same window clicks as on a real server (`test/craft.test.js`).
 
 ## Not tested yet
+
+- The care (section "The bot looks after itself", ROADMAP M4): not yet with Muse itself as the player (the runs are
+  scripted), not in a private world (M3), not past one 30-minute lease (1.5 in-game days: phantoms come after three
+  nights without sleep), not in the Nether or the End (no night there; its shelter is never built there), and not with
+  several guests' bots trying to sleep in the same shared world (the night passes only when every player sleeps; each
+  bot that lay down for nothing shelters after).
 
 - The day-0 fixes (2026-10-07) ran on this Mac only: `npm test`, and against the local Paper server through MCP (two
   strict iron-pickaxe runs: one PASS in 214 s with 15 calls and no failed step; one FAIL: the crafting table vanished

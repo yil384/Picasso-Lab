@@ -83,7 +83,7 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
 });
 
 test('mineai skills: the extra skills (M4 survival set) become their tools; compact and validated', () => {
-  assert.deepEqual(EXTRA_DEFS.map(([n]) => n), ['equip', 'hunt', 'sleep', 'bucket', 'chest', 'explore', 'policy', 'pick_up', 'drop']);
+  assert.deepEqual(EXTRA_DEFS.map(([n]) => n), ['equip', 'hunt', 'sleep', 'bucket', 'chest', 'explore', 'policy', 'armor', 'pick_up', 'drop']);
   assert.deepEqual(MINEAI_SKILLS.names.slice(0, 11), ['get_state', 'go_to', 'collect', 'craft', 'smelt', 'place', 'build', 'attack', 'eat', 'say', 'craft_batch']);
   const v = (s, a) => MINEAI_SKILLS.validate(s, a);
   assert.ok(v('equip', { item: 'iron_chestplate' }).ok);
@@ -404,7 +404,8 @@ test('mineai through MCP: the queue, request_id, typed codes and the extra skill
   try {
     const listed = await c.listTools();
     const size = JSON.stringify(listed).length;
-    assert.ok(size < 40_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
+    // 39,994 bytes before M4; the armor skill, the policy's care knobs and onItsOwn in the reply schema add about 2 KB
+    assert.ok(size < 43_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
     assert.doesNotMatch(JSON.stringify(listed), /rationale|submission_id|wait_for_action|response_format/);
     const play = listed.tools.find((t) => t.name === 'play');
     assert.match(play.description, /- hunt \{mob: one of cow\|pig[^}]*, drop: text \(1 to 48 characters\), n: integer 1 to 64, without_shield: true\|false \(optional\)\}/);
