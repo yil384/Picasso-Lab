@@ -298,7 +298,7 @@ test('channel: a refusal only a person can fix (the Page not eligible to go live
 });
 
 test('profile target (FB_TARGET=me): /me/live_videos in public, each live video ended then deleted with its recording, a failed delete tried again, crash leftovers of ours deleted, nothing else on the profile touched', async (t) => {
-  const { fake, rows, ch, dir } = await channelOn(t, { deleteAfter: true, graphOpts: { pageId: 'me', privacy: { value: 'EVERYONE' }, sleep: async () => {} } });
+  const { fake, rows, ch, dir } = await channelOn(t, { deleteAfter: true, deleteDelayMs: 400, graphOpts: { pageId: 'me', privacy: { value: 'EVERYONE' }, sleep: async () => {} } });
   // on the profile before we start: the owner's own live video and an old video, and one of ours a crash left ended
   const own = fake.add({ owner: USER_ID, description: 'the owner streaming by hand' });
   const old = fake.add({ owner: USER_ID, description: 'an old video', status: 'VOD' });
@@ -306,14 +306,20 @@ test('profile target (FB_TARGET=me): /me/live_videos in public, each live video 
   ch.start('g1', { player: 'Muse_aaaa' });
   ch.focus('g1');
   await until(() => ch.live().state === 'live');
-  assert.equal(fake.videos.has(ours), false, 'the leftover of ours was deleted at start');
+  await until(() => !fake.videos.has(ours)); // the leftover of ours: deleted after the delay too
   const id = [...fake.videos.values()].find((v) => v.title?.includes('game g1')).id;
   const v = fake.videos.get(id);
   const create = fake.calls.find((c) => c.method === 'POST' && c.path === '/v23.0/me/live_videos');
   assert.equal(create.body.privacy, '{"value":"EVERYONE"}', 'public: the embed plays only public videos');
   assert.equal(ch.live().videoUrl, `https://www.facebook.com/${USER_ID}/videos/${v.videoId}/`);
   await ch.stop('g1');
-  await until(() => ch.live().state === 'off' && fake.deleted.includes(id));
+  await until(() => ch.live().state === 'off');
+  // ended at once, deleted only after the delay (a viewer whose panel opens late still sees the end)
+  assert.equal(fake.videos.get(id)?.status, 'VOD');
+  const waiting = JSON.parse(fs.readFileSync(path.join(dir, 'fb-live-state.json'), 'utf8')).delete;
+  assert.equal(waiting.length, 1);
+  assert.ok(waiting[0].live === id && waiting[0].due > Date.now(), 'the due time is kept in the state file');
+  await until(() => fake.deleted.includes(id));
   assert.equal(fake.videos.has(id), false);
   const after = fake.calls.filter((c) => c.path === `/v23.0/${id}` && c.method !== 'GET').map((c) => `${c.method} ${c.body.end_live_video ?? ''}`.trim());
   assert.deepEqual(after.slice(-2), ['POST true', 'DELETE'], 'ended, then deleted (the live video object: its recording goes with it)');

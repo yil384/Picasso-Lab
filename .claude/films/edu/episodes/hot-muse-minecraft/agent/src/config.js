@@ -348,6 +348,7 @@ export function loadConfig(env = process.env) {
     target: fbTarget,
     privacy: r.oneOf('FB_PRIVACY', 'EVERYONE', ['EVERYONE', 'ALL_FRIENDS', 'SELF']),
     deleteAfter: r.bool('FB_DELETE_AFTER', fbTarget === 'me'),
+    deleteDelayS: r.int('FB_DELETE_DELAY_S', 600, 0, 86_400),
     maxPerHour: r.int('FB_MAX_PER_HOUR', 6, 1, 60),
     maxPerDay: r.int('FB_MAX_PER_DAY', 20, 1, 500),
     pageId: r.str('FB_PAGE_ID', ''),

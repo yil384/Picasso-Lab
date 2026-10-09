@@ -261,7 +261,9 @@ export function createLiveChannel(o) {
   let lastError = null;
   let closing = false;
   const pendingEnds = new Set(); // live videos whose end call failed: tried again later
-  const pendingDeletes = new Map(); // live video id -> {live, video, tries}: deletes that failed, tried again later
+  const pendingDeletes = new Map(); // live video id -> {live, video, due, tries}: deletes waiting for their time, or tried again
+  // a viewer whose panel opens late still sees the end: an ended live video is deleted this long after its game
+  const deleteDelayMs = o.deleteDelayMs ?? 600_000;
   const deleteAfter = Boolean(o.deleteAfter);
   let swept = null;
   let running = null;
@@ -272,7 +274,7 @@ export function createLiveChannel(o) {
     if (!o.stateFile) return;
     try {
       const ids = [...new Set([...(b?.id ? [b.id] : []), ...pendingEnds])];
-      const del = [...pendingDeletes.values()].map(({ live, video }) => ({ live, video: video ?? null }));
+      const del = [...pendingDeletes.values()].map(({ live, video, due }) => ({ live, video: video ?? null, due: due ?? 0 }));
       fs.mkdirSync(path.dirname(o.stateFile), { recursive: true });
       fs.writeFileSync(`${o.stateFile}.tmp`, `${JSON.stringify({ open: ids, delete: del, created, at: new Date(now()).toISOString() })}\n`, { mode: 0o600 });
       fs.renameSync(`${o.stateFile}.tmp`, o.stateFile);
@@ -285,7 +287,7 @@ export function createLiveChannel(o) {
       return {
         created: (j.created ?? []).filter((x) => Number.isFinite(x)),
         open: (j.open ?? []).filter(isId).map(String),
-        del: (j.delete ?? []).filter((e) => isId(e?.live)).map((e) => ({ live: String(e.live), video: isId(e.video) ? String(e.video) : null })),
+        del: (j.delete ?? []).filter((e) => isId(e?.live)).map((e) => ({ live: String(e.live), video: isId(e.video) ? String(e.video) : null, due: Number(e.due) || 0 })),
       };
     } catch { return { created: [], open: [], del: [] }; }
   };
@@ -311,8 +313,16 @@ export function createLiveChannel(o) {
    * An id Facebook no longer knows counts as deleted; any other failure is kept and tried again (every 30 s and at
    * the next start), giving up after 20 tries.
    */
+  /** Delete this ended live video once deleteDelayMs has passed (kept in the state file meanwhile). */
+  function deleteLater(entry, why) {
+    const live = String(entry.live);
+    if (pendingDeletes.has(live)) return;
+    pendingDeletes.set(live, { live, video: entry.video ? String(entry.video) : null, due: entry.due || now() + deleteDelayMs, tries: 0, why });
+    saveState();
+  }
+
   async function removeVideo(entry, why) {
-    const e = { live: String(entry.live), video: entry.video ? String(entry.video) : null, tries: (pendingDeletes.get(String(entry.live))?.tries ?? 0) + 1 };
+    const e = { live: String(entry.live), video: entry.video ? String(entry.video) : null, due: entry.due ?? 0, tries: (pendingDeletes.get(String(entry.live))?.tries ?? 0) + 1 };
     let deleted = null;
     let keep = false;
     for (const id of [e.live, e.video].filter(isId)) {
@@ -353,9 +363,9 @@ export function createLiveChannel(o) {
     for (const id of st.open) {
       if (id === b?.id) continue;
       await endVideo(id, 'left open by an earlier run');
-      if (deleteAfter) await removeVideo({ live: id }, 'left by an earlier run');
+      if (deleteAfter) deleteLater({ live: id }, 'left by an earlier run');
     }
-    for (const e of st.del) if (e.live !== b?.id) await removeVideo(e, 'its delete failed in an earlier run');
+    for (const e of st.del) if (e.live !== b?.id) deleteLater(e, 'waiting from an earlier run');
     try {
       const list = await graph.listLive();
       for (const v of list?.data ?? []) {
@@ -365,14 +375,14 @@ export function createLiveChannel(o) {
           event('fb_orphan', { broadcast: v.id, status: v.status });
           await endVideo(String(v.id), 'an open live video of ours that no game uses');
         }
-        if (deleteAfter) await removeVideo({ live: String(v.id), video: v.video?.id ?? null }, 'a live video of ours left after its game');
+        if (deleteAfter) deleteLater({ live: String(v.id), video: v.video?.id ?? null }, 'a live video of ours left after its game');
       }
     } catch { /* logged by the Graph client; tried again before the next create */ }
   }
 
   const retryTimer = setInterval(() => {
     for (const id of [...pendingEnds]) if (id !== b?.id) endVideo(id, 'trying again').catch(() => {});
-    for (const e of [...pendingDeletes.values()]) if (e.live !== b?.id) removeVideo(e, 'trying again').catch(() => {});
+    for (const e of [...pendingDeletes.values()]) if (e.live !== b?.id && e.due <= now()) removeVideo(e, e.why ?? 'its time came').catch(() => {});
     if (o.gameTtlMs > 0) {
       for (const g of [...games.values()]) if (now() - g.seenAt > o.gameTtlMs) api.stop(g.id, 'the agent stopped reporting the game');
     }
@@ -544,7 +554,7 @@ export function createLiveChannel(o) {
     if (me.stream) await Promise.resolve(me.stream.stop(why)).catch(() => {});
     if (me.id) {
       await endVideo(me.id, why);
-      if (deleteAfter) await removeVideo({ live: me.id, video: me.videoId }, why);
+      if (deleteAfter) deleteLater({ live: me.id, video: me.videoId }, why);
     }
     event('fb_live_stop', { broadcast: me.id, why: clip(why, 160), seconds: Math.round((now() - me.createdAt) / 1000), wasLive: Boolean(me.liveAt) });
     if (b === me) b = null;

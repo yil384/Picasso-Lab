@@ -670,7 +670,8 @@ bench never creates a live video.
 **Where it goes live (`FB_TARGET`).** `page` (the default, and the long-term setup) posts to the Page with the Page
 token, which never expires, and keeps each video. `me` posts to the token owner's own profile with a long-lived user
 token: `POST /me/live_videos` with `privacy={"value":"EVERYONE"}` (`FB_PRIVACY`; the video plugin plays only public
-videos), and with `FB_DELETE_AFTER` (on by default for `me`) every live video is deleted once it is ended, so the
+videos), and with `FB_DELETE_AFTER` (on by default for `me`) every live video is deleted `FB_DELETE_DELAY_S` (10 min)
+after it is ended, so the
 owner's timeline stays clean. The delete is of the live video object, which takes its recording with it; deleting the
 recording's own id is refused on a profile ("publish_actions ... deprecated"). A delete that fails is kept in
 `FB_STATE_FILE` and tried again every 30 s and at the next start; the start sweep also ends and deletes our own
@@ -836,6 +837,7 @@ in to Facebook in the same browser, may still see it in the muse.ai panel (UNVER
 | `STREAM_VIDEO_URL` | (none) | the public URLs of the Facebook live videos those ingests feed (same order; one URL serves all): MCP `live_view` returns Facebook's player for it while a game's stream runs (without `FB_LIVE`) |
 | `FB_LIVE` | `off` | `on`: a guest game goes live on Facebook when `live_view` asks for it, one camera, one live channel (section "Live on a Facebook Page"); read by the process that runs the camera |
 | `FB_PAGE_ID`, `FB_TOKEN_FILE` | (none) | the Page's numeric id; the file (600) holding the Page token alone (or, with `FB_TARGET=me`, the long-lived user token; `scripts/fb-token.mjs` writes either); the token is never an environment variable and never logged |
+| `FB_DELETE_DELAY_S` | `600` | with `FB_DELETE_AFTER`, an ended live video is deleted this long after its game (a viewer whose panel opens late still sees the end); the due time is kept in `FB_STATE_FILE` |
 | `FB_MAX_PER_HOUR`, `FB_MAX_PER_DAY` | `6`, `20` | live videos created at most in any hour and any 24 hours (kept in `FB_STATE_FILE` across restarts); at the cap `live_view` says so and when the next one can start (Facebook asked for an identity check after many automatic public lives, 2026-10-09) |
 | `FB_TARGET`, `FB_PRIVACY`, `FB_DELETE_AFTER` | `page`, `EVERYONE`, `true` for `me` (`false` for `page`) | where the live videos go: the Page (long-term) or `me`, the token owner's profile; a profile video's privacy (the embed plays only `EVERYONE`); delete each live video after it is ended |
 | `FB_GRAPH_VERSION`, `FB_GRAPH_URL`, `FB_STATE_FILE`, `FB_TITLE` | `v23.0`, `https://graph.facebook.com`, `<LOG_DIR>/fb-live-state.json`, `Picasso Lab demo: an AI plays Minecraft` | the Graph API (another URL only on this machine, for tests); where the ids of open live videos are kept; the live video's title before " (game g...)" |
