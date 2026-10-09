@@ -160,7 +160,8 @@ async function trial(lab, k) {
     // a clean scene: no mob left from an earlier trial at this spot (players and the bot's own drops stay)
     con(`execute at ${g.bot} run kill @e[type=!minecraft:player,type=!minecraft:item,distance=..48]`);
     for (const line of L.setup(g.bot)) con(line);
-    await sleep(1_000);
+    // the body reads the server's inventory every few seconds: what the console gave is in its state by then
+    await sleep(L.steps?.some((x) => x.skill !== 'policy') ? 5_000 : 1_000);
     await call('get_state');
     const t1 = Date.now();
     g.t1 = t1;
