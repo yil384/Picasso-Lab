@@ -81,7 +81,8 @@ const LABS = {
     setup: (bot) => [`effect give ${bot} minecraft:hunger 8 99 true`, `clear ${bot}`],
     after: async (bot) => { await sleep(8_500); con(`effect clear ${bot} minecraft:hunger`); for (const dx of [4, -4]) con(`execute at ${bot} run summon cow ~${dx} ~ ~2`); },
     start: (g) => { g.food0 = g.v.food; },
-    pass: (g) => g.food0 !== undefined && g.v.food > g.food0 && g.own.some((e) => e.kind === 'hunt' && e.ok && /ate /.test(e.text)),
+    // a hunt that got meat, and food above where the drain left it (eaten with the hunt, or by itself after a fight)
+    pass: (g) => g.food0 !== undefined && g.v.food > g.food0 && g.own.some((e) => e.kind === 'hunt' && e.ok) && g.own.some((e) => (e.kind === 'eat' && e.ok) || (e.kind === 'hunt' && /ate /.test(e.text))),
   },
   shelter: {
     // the bot joins in daylight, gets its blocks, then night falls (the clock is the world's: set for the whole group)
