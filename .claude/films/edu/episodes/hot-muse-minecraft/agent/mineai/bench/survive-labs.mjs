@@ -90,10 +90,11 @@ const LABS = {
     pass: (g) => g.own.some((e) => e.kind === 'shelter' && e.ok && e.atS <= 30) && g.v.health >= 14,
   },
   bed: {
-    time: 'night', limitS: 60, alone: true, kinds: ['sleep', 'shelter'],
+    time: 'night', limitS: 90, alone: true, kinds: ['sleep', 'shelter'],
     setup: (bot) => [`clear ${bot}`, `give ${bot} white_bed 1`, `give ${bot} cobblestone 12`],
-    done: (g) => g.own.some((e) => e.kind === 'sleep'),
-    pass: (g) => g.own.some((e) => e.kind === 'sleep' && e.ok) || (g.own.some((e) => e.kind === 'sleep') && g.own.some((e) => e.kind === 'shelter' && e.ok)),
+    done: (g) => LABS.bed.pass(g),
+    // the night passed in its bed, or it lay down, the night went on (another player awake) and it sheltered after
+    pass: (g) => g.own.some((e) => e.kind === 'sleep' && e.ok) || (g.own.some((e) => e.kind === 'sleep') && g.own.some((e) => e.kind === 'shelter' && e.ok && e.atS > g.own.find((x) => x.kind === 'sleep').atS)),
   },
   ...Object.fromEntries(['zombie', 'skeleton', 'creeper'].map((mob) => [mob, {
     time: 'night', limitS: 60, holdS: 60, kinds: ['fight', 'flee', 'hide'], steps: [{ skill: 'policy', args: { night: 'off' } }],
@@ -155,6 +156,8 @@ async function trial(lab, k) {
     if (L.nearSpawn) { con(`spreadplayers 0 0 20 150 false ${g.bot}`); await sleep(3_000); }
     else if (spots.length) { const [x, z] = spots[spotNo++ % spots.length]; con(`spreadplayers ${x} ${z} 0 1 false ${g.bot}`); await sleep(3_000); }
     for (const st of L.steps?.filter((x) => x.skill === 'policy') ?? []) await call('play', st);
+    // a clean scene: no mob left from an earlier trial at this spot (players and the bot's own drops stay)
+    con(`execute at ${g.bot} run kill @e[type=!minecraft:player,type=!minecraft:item,distance=..48]`);
     for (const line of L.setup(g.bot)) con(line);
     await sleep(1_000);
     await call('get_state');
