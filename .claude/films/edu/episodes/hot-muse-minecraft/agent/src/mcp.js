@@ -726,6 +726,7 @@ export function createMcp(hooks) {
       if (format === 'link') return text(JSON.stringify({ format: 'link', game: s.id, first_person_url: l.eyes, behind_url: l.watch }));
       // the Facebook live channel: the camera is pointed at this game and the call waits for Facebook to show it
       const budget = Math.max(0, waitMs - 3_000);
+      const asked = Date.now();
       const v = (await hooks.liveView?.(s, { waitMs: budget, signal: signalOf(extra) })) ?? (() => {
         const old = hooks.liveVideo?.(s) ?? null; // STREAM_VIDEO_URL while the game's stream runs
         return old ? { fb: false, state: 'live', camera: s.id, videoUrl: old.videoUrl, embedUrl: old.embedUrl } : { fb: false, state: 'off' };
@@ -742,9 +743,12 @@ export function createMcp(hooks) {
       const since = v.liveSince ? ` since ${String(v.liveSince).slice(11, 19)} UTC` : '';
       if (live) lines.push(`Live view of game ${s.id}: live on Facebook${since}.`);
       else if (v.state === 'live') lines.push(`Live view: the camera is on game ${camera} now, not on ${s.id}: that game asked for the live view after this one. A new live_view call points the camera back at ${s.id}.`);
-      else if (['starting', 'connecting', 'retrying', 'ending'].includes(v.state)) {
-        const why = v.error ? ` The last try failed (${String(v.error).slice(0, 160)}); it tries again by itself${v.retryInS ? ` in ${v.retryInS} s` : ''}.` : '';
-        lines.push(`Live view of game ${s.id}: the live video is starting but was not live within ${Math.round(budget / 1000)} s.${why} Call live_view again in about 20 s for a page that shows it live.`);
+      else if (v.state === 'retrying') {
+        const why = v.error ? ` (${String(v.error).slice(0, 200)})` : '';
+        const when = v.retryInS ? ` in ${v.retryInS} s` : '';
+        lines.push(`Live view of game ${s.id}: not live: the live video could not start${why}. It is tried again by itself${when}; call live_view again after that.`);
+      } else if (['starting', 'connecting', 'ending'].includes(v.state)) {
+        lines.push(`Live view of game ${s.id}: the live video is starting but was not live after ${Math.round((Date.now() - asked) / 1000)} s. Call live_view again in about 20 s for a page that shows it live.`);
       } else if (v.fb) lines.push(`Live view of game ${s.id}: no live video yet; the camera picks the game up once its bot is in the world. Call live_view again in about 20 s.`);
       else lines.push(`Live view of game ${s.id}: live video is off on this server.`);
       lines.push(videoUrl ? `Video (plain link): ${videoUrl}` : `3D view in a web page (plain link): ${l.eyes}`);

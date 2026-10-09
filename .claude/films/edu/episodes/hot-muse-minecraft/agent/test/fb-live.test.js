@@ -402,6 +402,7 @@ test('live page: under 1 KB, no script or request of its own, only Facebook\'s p
   assert.match(waiting, /Waiting for the next game\./);
   assert.match(liveViewHtml({ state: 'off', fb: false }), /Live video is off on this server\./);
   assert.equal(statusLine({ state: 'live', game: 'g1', camera: 'g2' }), 'Live: the camera is on game g2 now (it films the game that asked for the live view last).');
+  assert.equal(statusLine({ state: 'retrying', game: 'g1' }), 'Not live yet: the live video could not start; it is tried again by itself.');
   // anything but Facebook's player, or a strange game id, stays out
   assert.equal(liveViewHtml({ state: 'live', game: 'g1', embedUrl: 'https://evil.example/plugins/video.php?href=x' }).includes('<iframe'), false);
   assert.equal(isPlayerUrl('https://www.facebook.com/plugins/video.php?href=x#y'), false);
@@ -450,10 +451,30 @@ test('MCP live_view: not live within the wait, it says so and when to ask again;
   ch.start(game, { player: 'Muse_test2' });
   const r = await c.callTool({ name: 'live_view', arguments: { format: 'html' } });
   const txt = r.content[0].text;
-  assert.match(txt, new RegExp(`^Live view of game ${game}: the live video is starting but was not live within \\d s\\. Call live_view again in about 20 s for a page that shows it live\\.\\nVideo \\(plain link\\): https://www\\.facebook\\.com/`));
+  assert.match(txt, new RegExp(`^Live view of game ${game}: the live video is starting but was not live after \\d s\\. Call live_view again in about 20 s for a page that shows it live\\.\\nVideo \\(plain link\\): https://www\\.facebook\\.com/`));
   assert.equal(r.structuredContent.live, false);
   assert.match(r.structuredContent.html, /<iframe src="https:\/\/www\.facebook\.com\/plugins\/video\.php\?href=/);
   assert.match(r.structuredContent.html, /Joining: the live video of game g\w+ starts in a few seconds\./);
+});
+
+test('MCP live_view: a refusal the channel waits out is said at once, with the reason and when it tries again', async (t) => {
+  const { fake, ch } = await channelOn(t, { permanentRetryMs: 600_000 });
+  fake.fault((c) => c.method === 'POST' && c.path.endsWith('/live_videos'), 400, { message: 'Permissions error', code: 200, error_subcode: 1363120 }, 1);
+  const dir = tmp();
+  const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
+  const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams: ch, loopStatsMs: 0 });
+  const c = new Client({ name: 'fb-test', version: '1' });
+  t.after(async () => { await c.close().catch(() => {}); await agent.stop('test over'); fs.rmSync(dir, { recursive: true, force: true }); });
+  await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
+  const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
+  ch.start(game, { player: 'Muse_test3' });
+  await until(() => ch.live().state === 'retrying');
+  const t0 = Date.now();
+  const r = await c.callTool({ name: 'live_view', arguments: {} });
+  assert.ok(Date.now() - t0 < 5_000, 'no 40 s wait for a try ten minutes away');
+  assert.match(r.content[0].text, new RegExp(`^Live view of game ${game}: not live: the live video could not start \\(Facebook says the Page is not eligible to go live yet: a profile or Page must be at least 60 days old \\(code 200/1363120\\)\\)\\. It is tried again by itself in \\d+ s; call live_view again after that\\.\n3D view in a web page \\(plain link\\): `));
+  assert.match(r.structuredContent.html, /<p>Not live yet: the live video could not start; it is tried again by itself\.<\/p>/);
+  assert.equal(r.structuredContent.html.includes('<iframe'), false);
 });
 
 test('config: FB_LIVE off by default; on, it needs the Page id, the token file and the camera; FB_* checked', () => {

@@ -23,7 +23,8 @@ export function statusLine(v) {
   const cam = gameId(v.camera);
   if (v.state === 'live' && cam && g && cam !== g) return `Live: the camera is on game ${cam} now (it films the game that asked for the live view last).`;
   if (v.state === 'live') return `Live${g ? `: game ${g}` : ''}. One camera films the game that asked for the live view last.`;
-  if (['connecting', 'starting', 'retrying'].includes(v.state)) return `Joining: the live video${g ? ` of game ${g}` : ''} starts in a few seconds.`;
+  if (v.state === 'retrying') return 'Not live yet: the live video could not start; it is tried again by itself.';
+  if (['connecting', 'starting'].includes(v.state)) return `Joining: the live video${g ? ` of game ${g}` : ''} starts in a few seconds.`;
   if (v.state === 'ending' || v.state === 'waiting') return 'Waiting for the next game.';
   return v.fb === false ? 'Live video is off on this server.' : 'Waiting for the next game.';
 }
