@@ -163,7 +163,7 @@ test('care: the policy in words', () => {
 });
 
 /** Stand-ins for what the body gives the care: a status, the latest inventory, their actions (recorded). */
-function careRig({ situation: sit, inventory = {}, stacks = [], results = {}, idle = true } = {}) {
+function careRig({ situation: sit, inventory = {}, stacks = [], results = {}, idle = true, mode = 'full' } = {}) {
   const calls = [];
   const events = [];
   const state = { situation: sit, inventory, stacks, idle, idleSince: NOW - 10_000, clock: NOW, events: [] };
@@ -187,6 +187,7 @@ function careRig({ situation: sit, inventory = {}, stacks = [], results = {}, id
     event: (kind, data) => events.push({ kind, ...data }),
     now: () => state.clock,
     tickMs: 1_000_000,
+    mode,
   };
   return { care: createCare(deps), calls, events, state };
 }
@@ -358,7 +359,7 @@ const until = async (fn, ms = 4000) => { const end = Date.now() + ms; while (Dat
 
 async function careBody(fakeOpts = {}, world = {}) {
   const hosts = fakeHosts(() => fakeOpts);
-  const body = createMineAiBody({ config, log, hosts, gameId: 'gcare01', username: 'Tst_rv_c', careTickMs: 30, careIdleMs: 50 });
+  const body = createMineAiBody({ config, log, hosts, gameId: 'gcare01', username: 'Tst_rv_c', care: 'full', careTickMs: 30, careIdleMs: 50 });
   const fake = await (async () => { await until(() => hosts.started[0]); return hosts.started[0].fake; })();
   Object.assign(fake.world, world);
   await body.ready;
@@ -435,15 +436,15 @@ test('care in the body: the armor skill crafts and wears; policy knobs stay in t
     assert.equal(both.ok, true, both.result);
     assert.equal(ours().length, 1);
     assert.equal(ours()[0].args.changes.combat.critical_health, 10);
-    assert.deepEqual(body.carePolicy(), { night: 'off', armor: 'off', food: 'eat', tools: 'spare' });
+    assert.deepEqual(body.carePolicy(), { night: 'off', armor: 'off', food: 'eat', tools: 'spare', defend: 'on', eat: 'auto', escape: 'on' });
   } finally { await body.close(); }
 });
 
 test('care through MCP: what the body did on its own is in the next reply, once', async () => {
   const hosts = fakeHosts(() => ({ inventory: { cobblestone: 15 } }));
   const web = createWeb({
-    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '' }), log, skills: MINEAI_SKILLS,
-    makeBody: (id, o) => createMineAiBody({ config, log, hosts, gameId: id, username: `Tst_rv_${id}`, viewId: o?.viewId, careTickMs: 30, careIdleMs: 50 }),
+    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '' }), log, skills: MINEAI_SKILLS, careMode: 'full',
+    makeBody: (id, o) => createMineAiBody({ config, log, hosts, gameId: id, username: `Tst_rv_${id}`, viewId: o?.viewId, care: 'full', careTickMs: 30, careIdleMs: 50 }),
   });
   const { url } = await web.start();
   const c = new Client({ name: 'test', version: '1' });

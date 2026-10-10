@@ -206,7 +206,9 @@ const REPLY_OUT = z.object({
   queue: z.object({ running: z.string().nullable(), waiting: z.number() }),
   changed: z.record(z.string(), z.number()).describe('inventory change of every finished step in this reply'),
   state: z.record(z.string(), z.any()).nullable().describe('health, food, pos, inventory, timeLeftS'),
-  onItsOwn: z.array(z.object({ seq: z.number(), agoS: z.number(), source: z.enum(['care', 'reflex']), kind: z.string(), ok: z.boolean(), text: z.string() }).loose()).optional().describe('what the body did by itself since your last reply (care: its own plans between your calls; reflex: fights, meals, deaths)'),
+  onItsOwn: z.array(z.object({ seq: z.number(), agoS: z.number(), source: z.enum(['care', 'reflex']), kind: z.string(), ok: z.boolean(), text: z.string() }).loose()).optional().describe('what the body did by itself since your last reply (care: its own plans between your calls, full mode only; reflex: fights, meals, deaths)'),
+  advice: z.array(z.object({ kind: z.string(), text: z.string(), hint: z.object({ skill: z.string(), args: z.record(z.string(), z.any()) }).optional() }).loose()).optional().describe('what needs doing that the body will not do by itself, most urgent first; hint: a skill that would do it'),
+  attribution: z.object({ muse: z.number(), reflex: z.number(), care: z.number(), musePct: z.number().nullable() }).optional().describe('get_state: who acted this game (your skills, the body\'s reflexes, its own plans in full mode)'),
 }).loose();
 
 /**
@@ -233,7 +235,11 @@ export function createMcp(hooks) {
   // so a client never relies on notes about another server (Muse's own notes listed only some, and it had to guess hunt)
   const SKILL_NAMES_TEXT = skills.names.join(', ');
   // a body that looks after itself between calls (BODY=mineai, src/mineai/care.js) says so in the instructions
-  const CARE_TEXT = skills.names.includes('armor') ? ' Between your calls the body looks after itself: it shelters at night (or sleeps when it carries a bed), eats and hunts when hungry, wears and crafts armor, crafts a spare before a tool breaks, and goes back for its items after a death; its reflexes fight or flee from mobs. Every reply says what it did on its own (structuredContent.onItsOwn); the policy skill changes it.' : '';
+  // advise (the default): the player plans; full: the body also carries out its own survival plans; off: neither
+  const careMode = hooks.careMode ?? 'advise';
+  const CARE_TEXT = !skills.names.includes('armor') || careMode === 'off' ? ''
+    : careMode === 'full' ? ' Between your calls the body looks after itself: it shelters at night (or sleeps when it carries a bed), eats and hunts when hungry, wears and crafts armor, crafts a spare before a tool breaks, and goes back for its items after a death; its reflexes fight or flee from mobs. Every reply says what it did on its own (structuredContent.onItsOwn); the policy skill changes it.'
+      : ' You plan everything: the body acts by itself only through its reflexes (it fights back or flees when attacked, eats only when starving at food 4 or less, surfaces for air, leaves fire and lava, gets its footing back), each of which the policy skill switches (defend, eat, escape). Every reply carries "Body advice": what needs doing that the body will not do by itself (night coming with no shelter or shield, low food, a tool about to break, items to recover after a death), with the facts and the skill that would do it (shelter and shield are skills too); following it or not is your decision. Replies also say what the reflexes did (structuredContent.onItsOwn), and get_state and end_game count who acted this game (structuredContent.attribution).';
   const now = hooks.now ?? Date.now; // the web's clock (leases, idle, repeats); call deadlines run on the real one
   const callMs = hooks.callMs ?? CALL_MS;
   /** How long a call waits for its steps: callMs less the time its reply takes to build, so the reply leaves within callMs. */
@@ -379,6 +385,7 @@ export function createMcp(hooks) {
   /** One thing the body did by itself, as a reply line: "- 41 s ago, night: closed itself in at ... (ok)". */
   const ownAgo = (e) => Math.max(0, Math.round((now() - Date.parse(e.at)) / 1000));
   const ownLine = (e) => `- ${ownAgo(e)} s ago, ${e.source === 'reflex' ? 'reflex' : 'on its own'}, ${e.kind}: ${e.text}${e.ok === false ? ' (did not work)' : ''}`;
+  const adviceLine = (a) => `- ${a.text}${a.hint ? ` (to do it: ${a.hint.skill} ${JSON.stringify(a.hint.args ?? {})})` : ''}`;
   const ownOut = (e) => ({ seq: e.seq, agoS: ownAgo(e), source: e.source, kind: e.kind, ok: e.ok !== false, text: e.text });
   /** The body's own actions a reply carries count as told once its HTTP response was written out in full. */
   function deliverOwnWhenSent(s, seq, extra) {
@@ -409,7 +416,7 @@ export function createMcp(hooks) {
    * The reply to a call (or to get_state / stop): what finished since the last delivered reply, this call's steps,
    * the state. The final steps it carries count as delivered once the reply reached the client (deliverWhenSent).
    */
-  function reply(s, extra, { steps = [], numbered = false, lead = '', tail = '', code = null, isError = false, more = {} } = {}) {
+  function reply(s, extra, { steps = [], numbered = false, lead = '', tail = '', code = null, isError = false, more = {}, withAttribution = false } = {}) {
     const q = s ? queueOf(s) : null;
     const earlier = q ? q.finished(steps) : [];
     const shown = [...earlier, ...steps.filter(isFinal)];
@@ -423,11 +430,16 @@ export function createMcp(hooks) {
     // steps cancelled before they started are listed once, in the tail ("Not run: ...")
     const lines = steps.filter((st) => st.status !== 'cancelled' || st.result).map((st) => stepLine(st, numbered)).join('\n');
     const main = `${lead.trimEnd()}${lead.trim() && lines ? '\n' : ''}${lines}${tail}`.trim();
+    // advise mode (BODY=mineai, src/mineai/care.js): what needs doing that the body will not do by itself
+    const advice = s && typeof s.body?.advice === 'function' ? safely(() => s.body.advice(), []) ?? [] : [];
+    const attribution = withAttribution && s && typeof s.body?.attribution === 'function' ? safely(() => s.body.attribution(), null) : null;
     const blocks = [
       earlier.length ? `Finished since your last call:\n${earlierText(earlier)}` : '',
       own.length ? `On its own since your last reply (the body, not a step of yours):\n${own.map(ownLine).join('\n')}` : '',
       main,
+      advice.length ? `Body advice (the body will not do these by itself; your call):\n${advice.map(adviceLine).join('\n')}` : '',
       s ? stateBlock(s) : '',
+      attribution ? `${attribution.text}.` : '',
     ];
     const body = blocks.filter(Boolean).join('\n\n');
     const structured = {
@@ -439,6 +451,8 @@ export function createMcp(hooks) {
       changed,
       state: shortState(s),
       ...(own.length ? { onItsOwn: own.map(ownOut) } : {}),
+      ...(advice.length ? { advice } : {}),
+      ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } : {}),
       ...more,
     };
     return { content: [{ type: 'text', text: body }], structuredContent: structured, ...(isError ? { isError: true } : {}) };
@@ -721,7 +735,7 @@ export function createMcp(hooks) {
         if (q.busy) lead = `${describe(q.running ?? q.waiting[0])} is still running${q.waiting.length ? ` (${q.waiting.length} more queued)` : ''}; call get_state again to keep waiting, or stop.\n`;
       }
       const more = full ? { full: safely(() => s.body.snapshot(), null) } : {};
-      return reply(s, extra, { lead, more });
+      return reply(s, extra, { lead, more, withAttribution: true });
     });
 
     server.registerTool('stop', {
@@ -787,12 +801,14 @@ export function createMcp(hooks) {
 
     server.registerTool('end_game', { description: 'End the game and free the bot.', inputSchema: {} }, async () => {
       const s = game(entry);
+      const attribution = s && typeof s.body?.attribution === 'function' ? safely(() => s.body.attribution(), null) : null;
       if (s) {
         queues.get(s)?.stop('the game ended');
         hooks.endSession(s, 'ended through MCP');
       }
       forget('you ended it with end_game');
-      return text('Game ended. start_game gives you a new bot.');
+      const out = text(`Game ended.${attribution ? ` ${attribution.text}.` : ''} start_game gives you a new bot.`);
+      return attribution ? { ...out, structuredContent: { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } } : out;
     });
     return server;
   }

@@ -689,7 +689,8 @@ export function createWeb(opts = {}) {
     while (ended.size > ENDED_KEPT) ended.delete(ended.keys().next().value);
     while (endedViews.size > ENDED_KEPT) endedViews.delete(endedViews.keys().next().value);
     for (const off of s.offs) { try { off?.(); } catch { /* ignore */ } }
-    log.event('session_end', { session: s.id, reason });
+    const attribution = typeof s.body?.attribution === 'function' ? (() => { try { return s.body.attribution(); } catch { return null; } })() : null;
+    log.event('session_end', { session: s.id, reason, ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } : {}) });
     const body = s.body;
     s.closed = !body ? Promise.resolve() : Promise.resolve()
       .then(() => body.close?.())
@@ -752,7 +753,7 @@ export function createWeb(opts = {}) {
         addLine(s, `${tool} ${fmtArgs(args)} -> ${r.ok ? 'ok' : 'not done'}: ${r.result}${delta ? ` [${delta}]` : ''}`);
         // phases: where the skill's time went, in ms (path, dig, drop, sync, place, open, clicks, pickup, cook, other)
         // own: what the step itself used and made, when the body can tell (BODY=mineai); delta minus own changed on the way
-        log.event('viewer_action', { session: s.id, tool, args, ok: r.ok, result: r.result.slice(0, 600), delta: r.delta, ...(r.own ? { own: r.own } : {}), ms: r.ms ?? null, phases: r.phases ?? null });
+        log.event('viewer_action', { session: s.id, source: 'muse', tool, args, ok: r.ok, result: r.result.slice(0, 600), delta: r.delta, ...(r.own ? { own: r.own } : {}), ms: r.ms ?? null, phases: r.phases ?? null });
         return r;
       });
     return { ok: true, promise };
@@ -1332,7 +1333,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (p === '/mcp') {
       mcp ??= createMcp({
         newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log, now, clientKey, base,
-        leaseMs: web.leaseMs, initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs, skills: opts.skills,
+        leaseMs: web.leaseMs, initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs, skills: opts.skills, careMode: opts.careMode,
         links: (s, b) => ({ eyes: `${b}/eyes/${s.viewId}/`, watch: `${b}/watch/${s.viewId}/` }),
         liveVideo: (s) => { try { return opts.liveVideo?.(s.id) ?? null; } catch { return null; } },
         liveView: opts.liveView ? (s, o) => Promise.resolve(opts.liveView(s.id, o)).catch(() => null) : null,

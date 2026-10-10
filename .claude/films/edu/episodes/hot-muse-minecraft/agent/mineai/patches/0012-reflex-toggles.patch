@@ -1,0 +1,209 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0012: reflex toggles, so the player (Muse) decides what the body does by itself. food.reflex: full (their rule, the
+default: eat at hunger 14 or less, or when hurt below the regeneration bar), starving (hunger 4 or less only) or never;
+navigation.escape_reflexes (default true): false keeps the breath, fire and footing reflexes from acting. Both are
+policy fields, set with set_survival_policy. Explicit eat_food and navigate requests are never affected. With tests
+(hunger, breath).
+
+diff --git a/src/survival/policy/contract.ts b/src/survival/policy/contract.ts
+index f1f6c8b..9aee4e1 100644
+--- a/src/survival/policy/contract.ts
++++ b/src/survival/policy/contract.ts
+@@ -42,12 +42,18 @@ export const foodPolicySchema = z.strictObject({
+         ),
+     })
+     .describe("Uncooked food is worth far more cooked; this rule stops a hunt from eating its own drops."),
++  reflex: z
++    .enum(["full", "starving", "never"])
++    .describe(
++      "When the hunger reflex eats on its own: full (hunger 14 or less, or hurt below the regeneration bar), starving (hunger 4 or less only), never. Explicit eat_food requests are never affected.",
++    ),
+ });
+ export type FoodPolicy = z.infer<typeof foodPolicySchema>;
+ export const DEFAULT_FOOD_POLICY: Readonly<FoodPolicy> = Object.freeze({
+   // Sprinting stops at six hunger; ten is half health, where the fight and
+   // hide decisions already treat the bot as in trouble.
+   raw: Object.freeze({ allow: "emergency_only", hunger_at_most: 6, health_below: 10 }),
++  reflex: "full",
+ });
+ 
+ export const navigationPolicySchema = z.strictObject({
+@@ -59,6 +65,7 @@ export const navigationPolicySchema = z.strictObject({
+       "Carried block names automatic navigation and survival responses may place as scaffold, in preference order. An empty list disables automatic scaffold placement.",
+     ),
+   bucket_fall_save: z.boolean().describe("Automatically use carried water to save a damaging fall on a loaded safe full-block floor, then verify water recovery. Unavailable in the Nether."),
++  escape_reflexes: z.boolean().describe("Let the breath, fire and footing reflexes act on their own (surface for air, leave fire or lava, recover a knocked-off footing). False leaves those to explicit requests."),
+   bucket_drops: z.boolean().describe("Permit planned water-bucket drops up to 80 blocks onto loaded safe full-block floors; require a carried water bucket and verified recovery before continuing. Independent of scaffolding."),
+   hostile_avoidance_multiplier: z
+     .number()
+@@ -76,6 +83,7 @@ export const DEFAULT_NAVIGATION_POLICY: Readonly<NavigationPolicy> = Object.free
+   hostile_avoidance_multiplier: 1,
+   bucket_fall_save: true,
+   bucket_drops: true,
++  escape_reflexes: true,
+ });
+ 
+ export const survivalPolicySchema = z.strictObject({
+@@ -100,7 +108,7 @@ export const changesSchema = z
+       .partial()
+       .extend({ terrain: combatPolicySchema.shape.terrain.partial().optional() })
+       .optional(),
+-    food: z.strictObject({ raw: foodPolicySchema.shape.raw.partial().optional() }).optional(),
++    food: z.strictObject({ raw: foodPolicySchema.shape.raw.partial().optional(), reflex: foodPolicySchema.shape.reflex.optional() }).optional(),
+   })
+   .describe("Only the fields named here change; each becomes its own override under the given lifetime.");
+ export type PolicyChanges = z.infer<typeof changesSchema>;
+diff --git a/src/survival/reflexes/breath.test.ts b/src/survival/reflexes/breath.test.ts
+index 9229f2d..373330a 100644
+--- a/src/survival/reflexes/breath.test.ts
++++ b/src/survival/reflexes/breath.test.ts
+@@ -4,6 +4,8 @@ import { Vec3 } from "vec3";
+ import { waterFixture } from "../../test-support/water.js";
+ import { type SurvivalTransition } from "../control/contract.js";
+ import { attachBreathReflex } from "./breath.js";
++import { setNavigationPolicyProvider } from "../state/navigation-policy.js";
++import { DEFAULT_NAVIGATION_POLICY } from "../policy/contract.js";
+ 
+ test("an owned dive uses its escape floor and preserves the failed budget after ownership transfers", async (t) => {
+   const fixture = waterFixture(t);
+@@ -181,3 +183,23 @@ test("claims the body at half air and records the surfacing", async (t) => {
+ 
+   await control[Symbol.asyncDispose]();
+ });
++
++test("muse patch 0012: navigation.escape_reflexes false leaves surfacing to the player", async (t) => {
++  const fixture = waterFixture(t);
++  Object.assign(fixture.entity, { position: new Vec3(0.5, -59, 0.5) });
++  Object.assign(fixture.bot, { oxygenLevel: 8, health: 20, username: "Diver", blockAt: () => null });
++  setNavigationPolicyProvider(fixture.bot, () => ({ ...DEFAULT_NAVIGATION_POLICY, escape_reflexes: false }));
++  const claims: string[] = [];
++  const runner = fixture.reflex.runner;
++  const claim = runner.claim;
++  Object.assign(runner, {
++    claim: (owner: string, description: string, work: never) => {
++      claims.push(owner);
++      return claim(owner, description, work);
++    },
++  });
++  attachBreathReflex(fixture.bot, fixture.reflex);
++  fixture.entity.isInWater = true;
++  for (let tick = 0; tick < 5; tick += 1) fixture.bot.emit("physicsTick");
++  assert.deepEqual(claims, []);
++});
+diff --git a/src/survival/reflexes/breath.ts b/src/survival/reflexes/breath.ts
+index 1424079..8f453ec 100644
+--- a/src/survival/reflexes/breath.ts
++++ b/src/survival/reflexes/breath.ts
+@@ -1,3 +1,4 @@
++import { readNavigationPolicy } from "../state/navigation-policy.js";
+ import type { Bot } from "mineflayer";
+ import type { ReflexDriver } from "../control/driver.js";
+ import { airSupplyPoints, isInWater } from "../perception/body.js";
+@@ -17,6 +18,7 @@ export function attachBreathReflex(bot: Bot, driver: ReflexDriver, diveBackstop:
+     name: BREATH_REFLEX,
+     intervalTicks: CHECK_INTERVAL_TICKS,
+     sense: () => {
++      if (readNavigationPolicy(bot).escape_reflexes === false) return null; // Patched for Muse plays Minecraft (picasso-lab), 0012
+       const air = airSupplyPoints(bot);
+       if (air === null) return { kind: "unknown", missing: "own_air_metadata" };
+       if (!isInWater(bot)) return null;
+diff --git a/src/survival/reflexes/fire.ts b/src/survival/reflexes/fire.ts
+index 0532a78..8b45d69 100644
+--- a/src/survival/reflexes/fire.ts
++++ b/src/survival/reflexes/fire.ts
+@@ -1,3 +1,4 @@
++import { readNavigationPolicy } from "../state/navigation-policy.js";
+ import type { Bot } from "mineflayer";
+ import type { WorldView } from "../../navigation/index.js";
+ import { advancingLavaAt } from "../../world/lava-flow.js";
+@@ -22,6 +23,7 @@ export function attachFireReflex(bot: Bot, driver: ReflexDriver, world: WorldVie
+   const registration = driver.register({
+     name: "fire_reflex",
+     sense: () => {
++      if (readNavigationPolicy(bot).escape_reflexes === false) return null; // Patched for Muse plays Minecraft (picasso-lab), 0012
+       advancing &&= advancingLavaAt(bot);
+       const inLava = isInLava(bot);
+       const inFire = isInFire(bot);
+diff --git a/src/survival/reflexes/footing.ts b/src/survival/reflexes/footing.ts
+index 52bac35..04f9ab4 100644
+--- a/src/survival/reflexes/footing.ts
++++ b/src/survival/reflexes/footing.ts
+@@ -23,6 +23,7 @@ export function attachFootingReflex(
+     name: "recover_footing",
+     sense: () => {
+       if (!recovery.needed) return null;
++      if ((combat as { policy?: { effective?: { navigation?: { escape_reflexes?: boolean } } } }).policy?.effective?.navigation?.escape_reflexes === false) return null; // Patched for Muse plays Minecraft (picasso-lab), 0012
+       const facts = {
+         unsafeImpulse: recovery.snapshot ? recovery.snapshot()?.phase === "pending" : true,
+         combatActive: combat.activeEngagement() !== null,
+diff --git a/src/survival/reflexes/hunger.test.ts b/src/survival/reflexes/hunger.test.ts
+index 4ae75c3..01dee73 100644
+--- a/src/survival/reflexes/hunger.test.ts
++++ b/src/survival/reflexes/hunger.test.ts
+@@ -166,3 +166,50 @@ test("revoking raw food releases the active bite without waiting for its native
+     await driver[Symbol.asyncDispose]();
+   }
+ });
++
++test("muse patch 0012: food.reflex starving eats only at hunger 4, never stays quiet", async () => {
++  let foodReads = 0;
++  const bot = Object.assign(new EventEmitter(), {
++    health: 12,
++    food: 10,
++    inventory: {
++      items: () => {
++        foodReads += 1;
++        return [];
++      },
++    },
++  }) as unknown as Bot;
++  const driver = new ReflexDriver(bot, new ActionRunner());
++  const policy = new SurvivalPolicyState(bot);
++  const reflex = attachHungerReflex(bot, driver, { activeEngagement: () => null }, policy);
++  const check = () => {
++    for (let tick = 0; tick < 20; tick += 1) bot.emit("physicsTick");
++  };
++  try {
++    await policy.edit({
++      operation: "set",
++      expected_revision: policy.snapshot().revision,
++      changes: { food: { reflex: "starving" } },
++      lifetime: { kind: "session" },
++      reason: "test",
++    } as never);
++    check();
++    assert.equal(foodReads, 0, "hunger 10 is left to the player");
++    bot.food = 4;
++    check();
++    assert.equal(foodReads, 1, "starving still eats");
++    await policy.edit({
++      operation: "set",
++      expected_revision: policy.snapshot().revision,
++      changes: { food: { reflex: "never" } },
++      lifetime: { kind: "session" },
++      reason: "test",
++    } as never);
++    bot.food = 2;
++    check();
++    assert.equal(foodReads, 1, "never leaves even starving to the player");
++  } finally {
++    await reflex[Symbol.asyncDispose]();
++    await driver[Symbol.asyncDispose]();
++  }
++});
+diff --git a/src/survival/reflexes/hunger.ts b/src/survival/reflexes/hunger.ts
+index 3fa4d61..745977f 100644
+--- a/src/survival/reflexes/hunger.ts
++++ b/src/survival/reflexes/hunger.ts
+@@ -26,6 +26,9 @@ export function attachHungerReflex(
+     intervalTicks: CHECK_INTERVAL_TICKS,
+     sense: () => {
+       if (policy.settling || !needsFood(bot.health, bot.food)) return null;
++      // Patched for Muse plays Minecraft (picasso-lab), 0012: the player may keep this reflex for starving only, or off
++      const reflex = policy.food.reflex ?? "full";
++      if (reflex === "never" || (reflex === "starving" && bot.food > 4)) return null;
+       const owner = driver.runner.status().owner;
+       const bodyBusy = owner === "takeover" || owner === "yielding";
+       const combatActive = combat.activeEngagement() !== null;

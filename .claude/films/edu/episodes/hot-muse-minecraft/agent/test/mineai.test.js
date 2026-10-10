@@ -83,7 +83,7 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
 });
 
 test('mineai skills: the extra skills (M4 survival set) become their tools; compact and validated', () => {
-  assert.deepEqual(EXTRA_DEFS.map(([n]) => n), ['equip', 'hunt', 'sleep', 'bucket', 'chest', 'explore', 'policy', 'armor', 'pick_up', 'drop']);
+  assert.deepEqual(EXTRA_DEFS.map(([n]) => n), ['equip', 'hunt', 'sleep', 'bucket', 'chest', 'explore', 'policy', 'shelter', 'shield', 'armor', 'pick_up', 'drop']);
   assert.deepEqual(MINEAI_SKILLS.names.slice(0, 11), ['get_state', 'go_to', 'collect', 'craft', 'smelt', 'place', 'build', 'attack', 'eat', 'say', 'craft_batch']);
   const v = (s, a) => MINEAI_SKILLS.validate(s, a);
   assert.ok(v('equip', { item: 'iron_chestplate' }).ok);
@@ -404,8 +404,9 @@ test('mineai through MCP: the queue, request_id, typed codes and the extra skill
   try {
     const listed = await c.listTools();
     const size = JSON.stringify(listed).length;
-    // 39,994 bytes before M4; the armor skill, the policy's care knobs and onItsOwn in the reply schema add about 2 KB
-    assert.ok(size < 43_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
+    // 39,994 bytes before M4; the armor skill, the policy's care knobs and onItsOwn in the reply schema add about 2 KB;
+    // advise mode (the reflex knobs, the shelter and shield skills, advice and attribution in the schema) about 4 KB
+    assert.ok(size < 48_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
     assert.doesNotMatch(JSON.stringify(listed), /rationale|submission_id|wait_for_action|response_format/);
     const play = listed.tools.find((t) => t.name === 'play');
     assert.match(play.description, /- hunt \{mob: one of cow\|pig[^}]*, drop: text \(1 to 48 characters\), n: integer 1 to 64, without_shield: true\|false \(optional\)\}/);
@@ -1099,16 +1100,18 @@ test('mineai body: build again where an incomplete build stands continues it, an
   }
 });
 
-test('mineai start check: a runtime built before patch 0009, 0010 or 0011 is refused', () => {
+test('mineai start check: a runtime built before patch 0009, 0010, 0011 or 0012 is refused', () => {
   const up = readUpstream();
-  assert.ok(up.patches.at(-3).endsWith('0009-placement-around-a-mob.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-3), 'utf8'), /overlaps bat #44444/);
-  assert.ok(up.patches.at(-2).endsWith('0010-build-never-stalls-the-event-loop.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-2), 'utf8'), /^\+const STEP_OUT_PASSES = 3;$/m);
-  assert.ok(up.patches.at(-1).endsWith('0011-build-on-rough-ground.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-1), 'utf8'), /^\+export const STANDS_PER_CELL = 3;$/m);
+  assert.ok(up.patches.at(-4).endsWith('0009-placement-around-a-mob.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-4), 'utf8'), /overlaps bat #44444/);
+  assert.ok(up.patches.at(-3).endsWith('0010-build-never-stalls-the-event-loop.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-3), 'utf8'), /^\+const STEP_OUT_PASSES = 3;$/m);
+  assert.ok(up.patches.at(-2).endsWith('0011-build-on-rough-ground.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-2), 'utf8'), /^\+export const STANDS_PER_CELL = 3;$/m);
+  assert.ok(up.patches.at(-1).endsWith('0012-reflex-toggles.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-1), 'utf8'), /\.enum\(\["full", "starving", "never"\]\)/);
   const dir = tmp('mineai-eight-');
-  for (const cut of [-1, -2, -3]) {
+  for (const cut of [-1, -2, -3, -4]) {
     fs.writeFileSync(path.join(dir, STAMP), JSON.stringify(stampFor({ ...up, patches: up.patches.slice(0, cut) })));
     const old = checkFetched(dir, up);
     assert.equal(old.ok, false);

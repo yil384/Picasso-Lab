@@ -38,6 +38,17 @@ export function describeCare(p = CARE_DEFAULTS) {
   return `${night}; ${armor}; ${food}; ${tools}; after a death it goes back for its items`;
 }
 
+/** The reflex knobs in words (policy skill replies): what the body still does by itself in advise mode. */
+export function describeReflexes(p = CARE_DEFAULTS, mode = 'advise') {
+  const q = { ...CARE_DEFAULTS, ...(p ?? {}) };
+  const eat = q.eat === 'auto' ? (mode === 'advise' ? 'starving' : 'hungry') : q.eat;
+  return [
+    q.defend === 'off' ? 'never strikes a mob (still flees)' : 'fights back or flees when a hostile mob comes for it',
+    { starving: 'eats by itself only at food 4 or less', hungry: 'eats by itself at food 14 or less', off: 'never eats by itself' }[eat],
+    q.escape === 'off' ? 'leaves air, fire, lava and footing to you' : 'surfaces for air, leaves fire and lava and gets its footing back',
+  ].join('; ');
+}
+
 /** A shield is made only in the day before this time (the last minutes of daylight are for the shelter's blocks), and
  * only once the player has left the body alone this long. */
 export const SHIELD_BEFORE = 10_000;
@@ -353,11 +364,8 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
   // against arrows): from its own resources, the cheapest way that works: iron it carries beyond 3 (a pickaxe), raw
   // iron beyond 3 smelted, else one iron ore mined with its stone pickaxe and smelted; planks from its wood
   if (policy.armor !== 'off' && overworld && Number.isFinite(time) && time < SHIELD_BEFORE && idleMs >= SHIELD_AFTER_IDLE_MS && !cooling('shield', 300_000) && !stacks.some((x) => x?.name === 'shield')) {
-    const wood = PLANK_NAMES.reduce((n, p) => n + (inventory[p] ?? 0), 0) + 4 * LOG_NAMES.reduce((n, l) => n + (inventory[l] ?? 0), 0);
-    const oven = (inventory.furnace ?? 0) > 0 || furnace || (inventory.cobblestone ?? 0) >= 8;
-    const stone = toolsCarried(stacks).some((t) => t.cls === 'pickaxe' && TIERS.indexOf(t.tier) >= 1);
-    const path = (inventory.iron_ingot ?? 0) >= 4 ? 'ingot' : (inventory.raw_iron ?? 0) >= 4 && oven ? 'raw' : stone && oven ? 'mine' : null;
-    if (path && wood >= 7) return { kind: 'shield', why: 'no shield before the night (skeletons)', path };
+    const path = shieldPath(inventory, stacks, furnace);
+    if (path) return { kind: 'shield', why: 'no shield before the night (skeletons)', path };
   }
   // dusk: blocks for the night's shelter while there is light (with none, a bot on rock and with no pickaxe could not
   // dig in either: staging, 2026-10-09), cobblestone with a pickaxe, else dirt
@@ -407,6 +415,112 @@ export function decide(situation, { inventory = {}, stacks = [], policy = CARE_D
   }
   return null;
 }
+/**
+ * How the body could make a shield from what it carries, the cheapest way that works: iron it carries beyond 3 (a
+ * pickaxe), raw iron beyond 3 smelted, else one iron ore mined with its stone pickaxe and smelted; planks from its
+ * wood. 'ingot' | 'raw' | 'mine', or null.
+ */
+export function shieldPath(inventory = {}, stacks = [], furnace = false) {
+  const wood = PLANK_NAMES.reduce((n, p) => n + (inventory[p] ?? 0), 0) + 4 * LOG_NAMES.reduce((n, l) => n + (inventory[l] ?? 0), 0);
+  const oven = (inventory.furnace ?? 0) > 0 || furnace || (inventory.cobblestone ?? 0) >= 8;
+  const stone = toolsCarried(stacks).some((t) => t.cls === 'pickaxe' && TIERS.indexOf(t.tier) >= 1);
+  const path = (inventory.iron_ingot ?? 0) >= 4 ? 'ingot' : (inventory.raw_iron ?? 0) >= 4 && oven ? 'raw' : stone && oven ? 'mine' : null;
+  return path && wood >= 7 ? path : null;
+}
+
+/** Night falls this long (ticks) ahead: the advice warns from here on. */
+export const WARN_BEFORE_NIGHT = 2_700;
+/** At most this many advice items a reply. */
+export const ADVICE_MAX = 5;
+
+/**
+ * Advise mode (MINEAI_CARE=advise, the default): what the body would see to by itself in full mode, as advice for the
+ * player instead of an action. A pure function of their status (situation) and what is carried and worn: a list of
+ * {kind, text, hint?} with the facts in the text (time to night, food, durability) and, where one skill would do it, a
+ * hint {skill, args} the player may send as it is. Most urgent first, at most ADVICE_MAX.
+ */
+export function advise(situation, { inventory = {}, stacks = [], memory = {}, now = Date.now(), canCraft = () => false, furnace = false } = {}) {
+  const s = situation ?? {};
+  if (!s.vitals || s.vitals.health <= 0) return [];
+  const out = [];
+  const say = (kind, text, hint = null) => out.push({ kind, text, ...(hint ? { hint } : {}) });
+  const dim = (d) => String(d ?? 'overworld').replace(/^minecraft:/, '');
+  const overworld = dim(s.dimension) === 'overworld';
+  const time = s.clock?.timeOfDay;
+  const night = overworld && isNight(time);
+  const food = s.vitals.food ?? 20;
+  const health = s.vitals.health ?? 20;
+  const near = hostilesWithin(s, 16);
+  const shield = stacks.some((x) => x?.name === 'shield');
+  const bed = Object.keys(inventory).find((n) => BEDS.test(n) && inventory[n] > 0);
+  const blocks = shelterBlocks(inventory).total;
+  const pickaxe = toolsCarried(stacks).some((t) => t.cls === 'pickaxe');
+
+  // a death: its items despawn 5 minutes after it
+  const death = s.lastDeath;
+  if (death?.observedAt && death.observedAt !== memory.recovered && dim(death.dimension) === dim(s.dimension)) {
+    const age = now - Date.parse(death.observedAt);
+    if (age >= 0 && age < RECOVER_WITHIN_MS) {
+      const far = s.position && death.position ? Math.round(Math.hypot(s.position.x - death.position.x, s.position.z - death.position.z)) : null;
+      say('recover', `you died at ${xyz(death.position)} ${Math.round(age / 1000)} s ago${far != null ? ` (${far} blocks away)` : ''}; your items there despawn in about ${Math.max(0, Math.round((300_000 - age) / 1000))} s`, { skill: 'pick_up', args: { death_items: true } });
+    }
+  }
+  // health and food
+  const hurt = health <= 14 && food < 18;
+  if (food <= EAT_AT || hurt) {
+    const meal = bestFood(inventory);
+    const why = `food ${food}/20${hurt ? `, health ${round(health)}/20 (it heals only at food 18 or more)` : ''}`;
+    if (meal) say('eat', `${why}; you carry ${inventory[meal]} ${meal}`, { skill: 'eat', args: {} });
+    else {
+      const prey = preyNear(s, { cook: furnace });
+      if (prey) say('hunt', `${why}; no food carried; a ${prey.name} ${Math.round(prey.nearest.distance)} blocks away`, { skill: 'hunt', args: { mob: prey.name, drop: PREY[prey.name], n: 3 } });
+      else say('food', `${why}; no food carried and no animal in sight`);
+    }
+  } else if (health <= CRITICAL_HEALTH && near.length) say('danger', `health ${round(health)}/20 with ${near.length} hostile mob${near.length > 1 ? 's' : ''} within 16 blocks`, bed || blocks >= SHELTER_SIZE || pickaxe ? { skill: 'shelter', args: {} } : null);
+  // the night
+  const sh = memory.shelter;
+  const pos = s.position;
+  const feet = pos ? { x: Math.floor(pos.x), y: Math.floor(pos.y), z: Math.floor(pos.z) } : null;
+  const sheltered = Boolean(sh && feet && sh.feet.x === feet.x && sh.feet.z === feet.z && Math.abs(sh.feet.y - feet.y) <= 1 && (sh.night === memory.night || !night));
+  if (overworld && Number.isFinite(time) && !sheltered) {
+    if (night) {
+      const mobs = near.length ? `, ${near.length} hostile mob${near.length > 1 ? 's' : ''} within 16 blocks` : '';
+      if (bed) say('night', `night (time ${time}) and you carry a ${bed}${mobs}`, { skill: 'sleep', args: {} });
+      else say('night', `night (time ${time}): you stand in the open${mobs}${shield ? '' : ', no shield'}; ${blocks} blocks for a shelter${pickaxe ? '' : ', no pickaxe to dig in'}`, { skill: 'shelter', args: {} });
+    } else if (time >= NIGHT_FROM - WARN_BEFORE_NIGHT && time < NIGHT_FROM) {
+      const left = Math.max(0, Math.round((NIGHT_FROM - time) / 20));
+      const lack = [bed ? null : 'no bed', shield ? null : 'no shield', `${blocks} blocks for a shelter (${SHELTER_SIZE} make one)`].filter(Boolean).join(', ');
+      const hint = bed ? null : blocks < SHELTER_SIZE ? { skill: 'collect', args: { block: pickaxe ? 'cobblestone' : 'dirt', n: SHELTER_SIZE - blocks + 2 } } : { skill: 'shelter', args: {} };
+      say('dusk', `night in about ${left} s: ${lack}`, hint);
+    }
+  }
+  // a shield (their fight reflex raises it against arrows)
+  if (overworld && !shield) {
+    const path = shieldPath(inventory, stacks, furnace);
+    if (path) say('shield', `no shield; you can make one ${{ ingot: 'from the iron you carry', raw: 'by smelting the raw iron you carry', mine: 'by mining 1 iron ore and smelting it' }[path]} (skeletons shoot at night)`, { skill: 'shield', args: {} });
+  }
+  // armor and a shield carried but not worn
+  const wear = wearPlan(stacks);
+  if (wear.length) say('wear', `you carry ${wear.map((w) => w.item).join(', ')} and do not wear ${wear.length > 1 ? 'them' : 'it'}`, { skill: 'equip', args: { item: wear[0].item } });
+  // a tool about to break
+  for (const t of toolsCarried(stacks)) {
+    if (!TOOL_CLASSES.includes(t.cls) || !Number.isFinite(t.left) || t.left > TOOL_LOW(t.max ?? 60)) continue;
+    if (toolsCarried(stacks).some((u) => u !== t && u.cls === t.cls && (u.left ?? 0) > TOOL_LOW(u.max ?? 60))) continue;
+    const spare = sparePlan(stacks, t.cls, canCraft);
+    say('tools', `your ${t.name} has ${t.left} use${t.left === 1 ? '' : 's'} left (${Math.round((100 * t.left) / (t.max || 60))}%)${spare ? '' : '; you cannot craft another from what you carry'}`, spare ? { skill: 'craft', args: { item: spare.item, n: 1 } } : null);
+    break;
+  }
+  // armor it could craft
+  const pieces = armorPlan(inventory, stacks).filter((p) => canCraft(p.item));
+  if (pieces.length) say('armor', `you could craft ${pieces.map((p) => p.item).join(', ')} from what you carry`, { skill: 'armor', args: {} });
+  return out.slice(0, ADVICE_MAX);
+}
+
+/** Advice in words (MCP replies, get_state): one line each, the hint as the call to send. */
+export function describeAdvice(list = []) {
+  return list.map((a) => `- ${a.text}${a.hint ? ` (to do it: ${a.hint.skill} ${JSON.stringify(a.hint.args ?? {})})` : ''}`);
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Their reflexes, from their event log (read_recent_events), in our words
 
@@ -517,7 +631,12 @@ const DOING = {
 export function createCare(deps) {
   const now = deps.now ?? Date.now;
   const planner = createPlanner({ version: deps.version ?? '1.21.4' });
+  // advise: survival plans are the player's (advice in every reply), the body acts by itself only through its reflexes;
+  // full: it also carries its plans out between the player's calls (shelter, shield, food, armor, tools, a death)
+  const mode = deps.mode === 'full' ? 'full' : 'advise';
   let policy = { ...CARE_DEFAULTS };
+  let performing = false; // a care routine the player asked for (shelter, shield skills): the player's action
+  const counts = { reflex: 0, care: 0 };
   const memory = { cool: {}, recovered: null, shelter: null, slept: null, night: 0, wasNight: null };
   const journal = []; // {seq, at, kind, text, ok, source}
   let seq = 0;
@@ -530,16 +649,21 @@ export function createCare(deps) {
   const add = (entry) => {
     // the same thing said again within 2 minutes (a shelter a fight keeps taking over, say) is logged, not told again
     const same = (x) => `${x.kind}|${x.ok}|${String(x.text).replace(/\(time \d+\)/g, '').replace(/\d+ s ago/g, '')}`;
+    if (performing) {
+      deps.event('care', { kind: entry.kind, source: 'muse', ok: entry.ok, text: String(entry.text).slice(0, 300) });
+      return { ...entry, source: 'muse' };
+    }
+    counts[entry.reflex ? 'reflex' : 'care'] += 1;
     const prev = [...journal].reverse().find((x) => x.kind === entry.kind);
     if (prev && same(prev) === same(entry) && now() - Date.parse(prev.at) < 120_000) {
-      deps.event('care', { kind: entry.kind, source: entry.reflex ? 'reflex' : 'care', ok: entry.ok, repeat: true, text: String(entry.text).slice(0, 300) });
+      deps.event('care', { kind: entry.kind, source: entry.reflex ? 'reflex' : 'care-full', ok: entry.ok, repeat: true, text: String(entry.text).slice(0, 300) });
       return prev;
     }
     const e = { seq: ++seq, at: new Date(now()).toISOString(), source: entry.reflex ? 'reflex' : 'care', ...entry };
     delete e.reflex;
     journal.push(e);
     while (journal.length > JOURNAL_KEPT) journal.shift();
-    deps.event('care', { kind: e.kind, source: e.source, ok: e.ok, text: String(e.text).slice(0, 300), ...(entry.ms != null ? { ms: entry.ms } : {}) });
+    deps.event('care', { kind: e.kind, source: e.source === 'care' ? 'care-full' : e.source, ok: e.ok, text: String(e.text).slice(0, 300), ...(entry.ms != null ? { ms: entry.ms } : {}) });
     return e;
   };
 
@@ -861,23 +985,42 @@ export function createCare(deps) {
   }
 
   /**
-   * Their fight reflex may wall itself in when badly hurt even without food to heal with (hide: when_exposed; their
-   * default needs food or a full bar first, and a hurt bot with neither ran on and died: staging, 2026-10-09). Their
-   * policy goes back to its defaults at a death or a change of dimension (and when the player resets it), so this is
-   * checked on every tick and set again; one try every 30 s at most.
+   * Their reflexes as the knobs say (policy skill: defend, eat, escape), checked on every tick and set again: their
+   * policy goes back to its defaults at a death or a change of dimension (and when the player resets it). One try every
+   * 30 s at most. defend on: their fight reflex may wall itself in when badly hurt even without food to heal with (hide:
+   * when_exposed; their default needs food or a full bar first, and a hurt bot with neither ran on and died: staging,
+   * 2026-10-09) and protects itself from 10 health on (their default 8: two arrows of a skeleton on Normal from death);
+   * defend off: it never strikes (still flees). eat (patch 0012's food.reflex): auto is starving in advise mode (food 4 or
+   * less: the player plans the meals) and their own rule in full mode. escape (navigation.escape_reflexes).
    */
-  async function hideWhenExposed() {
+  async function reflexPolicy() {
     const pol = deps.policy?.();
-    const hide = pol?.effective?.combat?.hide;
-    if (!hide || hide === 'when_exposed' || !pol.revision || now() - (memory.hideSetAt ?? 0) < 30_000) return;
+    const eff = pol?.effective;
+    if (!eff?.combat || !pol.revision || now() - (memory.hideSetAt ?? 0) < 30_000) return;
+    const combat = {};
+    if (policy.defend === 'off') {
+      if (eff.combat.melee !== false) combat.melee = false;
+      if (eff.combat.bow !== false) combat.bow = false;
+    } else {
+      if (eff.combat.hide !== 'when_exposed') combat.hide = 'when_exposed';
+      if (eff.combat.critical_health === 8) combat.critical_health = CRITICAL_HEALTH;
+      if (memory.defendOff && eff.combat.melee === false) combat.melee = true;
+      if (memory.defendOff && eff.combat.bow === false) combat.bow = true;
+    }
+    const eat = policy.eat === 'auto' ? (mode === 'advise' ? 'starving' : null) : { hungry: 'full', starving: 'starving', off: 'never' }[policy.eat];
+    const food = eat && eff.food && eff.food.reflex !== undefined && eff.food.reflex !== eat ? { reflex: eat } : null;
+    const escape = policy.escape !== 'off';
+    const nav = eff.navigation && eff.navigation.escape_reflexes !== undefined && eff.navigation.escape_reflexes !== escape ? { escape_reflexes: escape } : null;
+    if (!Object.keys(combat).length && !food && !nav) return;
     memory.hideSetAt = now();
-    // and protects itself from 10 health on (their default 8: two arrows of a skeleton on Normal from death)
-    const combat = { hide: 'when_exposed', ...(pol.effective?.combat?.critical_health === 8 ? { critical_health: CRITICAL_HEALTH } : {}) };
+    const changes = { ...(Object.keys(combat).length ? { combat } : {}), ...(food ? { food } : {}), ...(nav ? { navigation: nav } : {}) };
     const r = await deps.rpc('set_survival_policy', {
-      operation: 'set', expected_revision: pol.revision, changes: { combat }, lifetime: { kind: 'session' },
-      reason: 'The body walls itself in when badly hurt, with or without food, from 10 health on (the gateway care default).',
+      operation: 'set', expected_revision: pol.revision, changes, lifetime: { kind: 'session' },
+      reason: 'The body\'s reflexes as the player set them (the gateway care: defend, eat, escape).',
     }, 10_000);
-    deps.event('care_policy', { ...combat, ok: r?.result?.status === 'succeeded' });
+    const ok = r?.result?.status === 'succeeded';
+    if (ok) memory.defendOff = policy.defend === 'off';
+    deps.event('care_policy', { ...combat, ...(food ? { eat: food.reflex } : {}), ...(nav ? nav : {}), ok });
     await deps.refresh().catch(() => {});
   }
 
@@ -894,7 +1037,7 @@ export function createCare(deps) {
     ticking = true;
     try {
       if (now() - eventsAt >= 4_000) { eventsAt = now(); await readEvents().catch(() => {}); }
-      await hideWhenExposed().catch(() => {});
+      await reflexPolicy().catch(() => {});
       if (deps.idle()) await deps.fresh?.().catch(() => {}); // a status a few seconds old at most (the clock, mobs)
       const situation = deps.situation();
       if (!situation) return;
@@ -902,6 +1045,7 @@ export function createCare(deps) {
       const nightNow = isNight(situation.clock?.timeOfDay);
       if (nightNow && memory.wasNight === false) memory.night += 1;
       memory.wasNight = nightNow;
+      if (mode === 'advise') return; // the plans are the player's: advice() says what they are
       if (running || !deps.idle() || now() - deps.idleSince() < (deps.idleBeforeMs ?? IDLE_BEFORE_MS)) return;
       if (situation.activity?.owner && situation.activity.owner !== 'idle') return; // one of their reflexes has the body
       const latest = deps.latest();
@@ -924,8 +1068,45 @@ export function createCare(deps) {
     }
   }
 
+  /** The advice inputs, as decide's. */
+  const inputs = () => {
+    const latest = deps.latest();
+    return { inventory: latest.inventory ?? {}, stacks: deps.stacks(), memory, now: now(), canCraft, furnace: (latest.inventory?.furnace ?? 0) > 0 || deps.furnaceNear() };
+  };
+
   return {
+    mode,
     get policy() { return { ...policy }; },
+    /** Advise mode: what needs doing, as advice for the player ([] in full mode: the body sees to it). */
+    advice() {
+      if (mode !== 'advise') return [];
+      try { return advise(deps.situation(), inputs()); } catch { return []; }
+    },
+    /** What the body did by itself this game: {reflex, care}. */
+    counts() { return { ...counts }; },
+    /** The player went back for a death's items (pick_up death_items): no more advice about that death. */
+    recovered(key) { if (key) memory.recovered = key; },
+    /**
+     * A care routine the player asked for (the shelter and shield skills), under the step's control: the player's
+     * action, not the body's (no journal entry). Returns {ok, text} or {ok: false, refused}.
+     */
+    async perform(kind, ctl) {
+      const { inventory, stacks, furnace } = inputs();
+      let d;
+      if (kind === 'shelter') d = { kind, why: 'shelter', blocks: shelterBlocks(inventory).total, check: false };
+      else if (kind === 'shield') {
+        if (stacks.some((x) => x?.name === 'shield')) return { ok: false, text: 'you already have a shield', code: 'BAD_ARGS' };
+        const path = shieldPath(inventory, stacks, furnace);
+        if (!path) return { ok: false, text: 'nothing to make a shield from: it needs 1 iron ingot (or raw iron and a furnace, or a stone pickaxe to mine iron ore and a furnace or 8 cobblestone) and 7 planks of wood', code: 'NEED_ITEMS' };
+        d = { kind, why: 'shield', path };
+      } else return { ok: false, text: `${kind} is not a routine of the body`, code: 'BAD_ARGS' };
+      performing = true;
+      try {
+        const entry = await carry(d, ctl);
+        if (kind === 'shelter' && memory.shelter) memory.shelter.night = memory.night;
+        return entry ? { ok: Boolean(entry.ok), text: String(entry.text).replace(/^(shelter|shield): /, ''), code: entry.ok ? null : 'FAILED' } : { ok: true, text: 'its shelter stands', code: null };
+      } finally { performing = false; }
+    },
     /** Set some knobs (CARE_KNOBS) for the rest of the game; none: back to the defaults. Returns the policy. */
     setPolicy(knobs = null) {
       policy = knobs ? { ...policy, ...Object.fromEntries(Object.entries(knobs).filter(([k, v]) => CARE_KNOBS[k]?.includes(v))) } : { ...CARE_DEFAULTS };

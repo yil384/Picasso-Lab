@@ -20,7 +20,7 @@ import { inventoryDelta } from '../contracts.js';
 import { renderState, describeCall, describeDelta } from '../state.js';
 import { NOTABLE_BLOCKS } from '../state.js';
 import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, toTheirs, fromTheirs, ownChange, splitError } from './skills.js';
-import { createCare, armorPlan, wearPlan, toolClassFor, toolOf, pickaxeTierFor, sparePlan, replacementFor, describeCare, ARMOR_SLOTS, armorOf } from './care.js';
+import { createCare, armorPlan, wearPlan, toolClassFor, toolOf, pickaxeTierFor, sparePlan, replacementFor, describeCare, describeReflexes, ARMOR_SLOTS, armorOf } from './care.js';
 
 /** Every call of ours says why in one sentence (their rationale is required and goes into their own log only). */
 const RATIONALE = 'Requested by the player through the game gateway.';
@@ -106,7 +106,15 @@ function listening(port, ms) {
  *   timeouts?: Record<string, number>}} opts
  * @returns {import('../contracts.js').Body & {refresh: () => Promise<void>, temporaryStations: true, kind: 'mineai'}}
  */
-export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOn = true, careTickMs, careIdleMs }) {
+/** Who acted in a game: {muse, reflex, care, musePct, text}. */
+export function attributionOf(muse, { reflex = 0, care = 0 } = {}) {
+  const all = muse + reflex + care;
+  const musePct = all ? Math.round((100 * muse) / all) : null;
+  const text = `This game: ${muse} action${muse === 1 ? '' : 's'} by Muse, ${reflex} reflex${reflex === 1 ? '' : 'es'}${care ? `, ${care} by the body's own plans` : ''}${musePct != null ? ` (${musePct}% Muse)` : ''}`;
+  return { muse, reflex, care, musePct, text };
+}
+
+export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs }) {
   const emitter = new EventEmitter();
   emitter.setMaxListeners(50);
   let host = null;
@@ -135,6 +143,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   let stacks = []; // their status stacks (carried, worn, the off-hand; with durability)
   let idleSince = Date.now(); // when the last step of the player's ended (the care waits a moment after it)
   let care = null;
+  // the care's mode: advise (the default: the plans are the player's, advice in every reply; the body acts by itself
+  // only through its reflexes), full (it also carries its plans out between the player's calls), or none (off)
+  const careMode = careOpt === false || careOpt === 'off' || careOpt == null ? null : careOpt === true || careOpt === 'full' ? 'full' : 'advise';
+  let museActions = 0; // the player's skills this game (get_state and policy not counted)
   let careGate = null; // what the care waits for before it starts (body.deferCare)
   let ended = null;
   let seq = 0;
@@ -175,6 +187,11 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     onItsOwn: (after = 0) => (care ? care.since(after) : []),
     /** The care's knobs (policy skill). */
     carePolicy: () => (care ? care.policy : null),
+    /** Advise mode: what needs doing that the body will not do by itself: [{kind, text, hint?: {skill, args}}]. */
+    advice: () => (care ? care.advice() : []),
+    /** Who acted this game: the player's skills, the body's reflexes and its own plans (full mode). */
+    attribution: () => attributionOf(museActions, care ? care.counts() : { reflex: 0, care: 0 }),
+    careMode: () => careMode,
     /** The care starts only once this settles (the agent's spread of a new bot: nothing of its own at the spawn). */
     deferCare: (promise) => { careGate = promise; },
   };
@@ -310,7 +327,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   /** What the body does by itself now, and the last thing it did, for the state. */
   function careNote() {
     const last = care.last();
-    return { now: care.now(), last: last ? { text: last.text, ok: last.ok, agoS: Math.max(0, Math.round((Date.now() - Date.parse(last.at)) / 1000)) } : null };
+    return { mode: care.mode, now: care.now(), last: last ? { text: last.text, ok: last.ok, agoS: Math.max(0, Math.round((Date.now() - Date.parse(last.at)) / 1000)) } : null };
   }
 
   /** What toTheirs needs to know now. */
@@ -482,9 +499,16 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       const plan = toTheirs(tool, v.args, context());
       built = plan.build ?? null;
       // the body's own care knobs (policy skill): kept here, never sent to the runtime
-      const careText = plan.care ? `; on its own between your calls: ${describeCare(care?.setPolicy(plan.care === 'reset' ? null : plan.care))}` : '';
+      const careText = plan.care ? (() => {
+        const knobs = care?.setPolicy(plan.care === 'reset' ? null : plan.care);
+        return `; its reflexes: ${describeReflexes(knobs, careMode)}${careMode === 'full' ? `; on its own between your calls: ${describeCare(knobs)}` : ''}`;
+      })() : '';
       if (plan.local === 'armor') { const a = armorCalls(); if (a.refused) plan.refused = a.refused; else { plan.calls = a.calls; plan.note = a.note; } }
       if (plan.local === 'state') r = { ok: true, result: renderState(snapshot()), code: null };
+      else if (plan.local === 'care') {
+        if (!care) r = { ok: false, result: `${tool}: the body's care is off on this server`, code: 'FAILED' };
+        else { const p = await care.perform(plan.kind, ctl); r = { ok: p.ok, result: p.text, code: p.ok ? null : p.code ?? 'FAILED' }; }
+      }
       else if (plan.refused) r = plan.refused;
       else if (!plan.calls?.length && plan.care) r = { ok: true, result: careText.replace(/^; /, ''), code: null };
       else {
@@ -557,6 +581,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (built) lastBuild = r.ok || r.code === 'BODY_RESTARTED' ? null : built;
     if (yielded === 'recover') r = { ...r, result: `${r.result} (before it the body finished going back for the items it dropped when it died)` };
     const ms = Date.now() - t0;
+    if (!['get_state', 'policy'].includes(tool)) museActions += 1;
+    if (tool === 'pick_up' && v.args.death_items && r.ok) care?.recovered(status?.lastDeath?.observedAt ?? null);
     body.busy = false;
     idleSince = Date.now();
     doing = null;
@@ -630,7 +656,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     scanBlocks();
     // the body looks after itself between the player's steps (src/mineai/care.js), once it has landed where it plays
     // (not awaited here: the agent's spread waits for this ready)
-    if (careOn) Promise.resolve(careGate).catch(() => {}).then(() => { if (ended || closed) return; idleSince = Date.now();
+    if (careMode) Promise.resolve(careGate).catch(() => {}).then(() => { if (ended || closed) return; idleSince = Date.now();
       care = createCare({
         situation: () => status, latest: () => latest, stacks: () => stacks, refresh, act, rpc,
         policy: () => ({ revision: policyRevision, effective: theirPolicy }),
@@ -639,7 +665,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         idle: () => body.connected && !ended && !closed && !body.busy && !host?.restarting,
         idleSince: () => idleSince,
         furnaceNear: () => body.stationNear('furnace'), tableNear: () => body.stationNear('crafting_table'),
-        event, tickMs: careTickMs, idleBeforeMs: careIdleMs,
+        event, tickMs: careTickMs, idleBeforeMs: careIdleMs, mode: careMode,
       });
       care.start();
     });
