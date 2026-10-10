@@ -92,7 +92,7 @@ test('console: validated lines; a FIFO nobody reads fails at once instead of han
   assert.ok(followCommands('MuseCam', 'Muse_g1', 'first')[0].includes('tag MuseCam remove muse_cam_third'), 'CAMERA_VIEW=first: the bot\'s head');
   const keep = keepFollowingCommands('MuseCam', 'Muse_g1').flat();
   assert.deepEqual(keep, ['tag Muse_g1 add muse_cam_target']);
-  assert.deepEqual(parkCommands('MuseCam'), ['tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'tag MuseCam remove muse_cam_ineye',
+  assert.deepEqual(parkCommands('MuseCam'), ['tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', 'tag MuseCam remove muse_cam_ineye',
     'tag MuseCam remove muse_cam_inhead', 'execute as MuseCam run spectate', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
   for (const l of [...followCommands('MuseCam', 'Muse_g1').flat(), ...keep, ...parkCommands('MuseCam')]) await consoleCommand(file, l);
 });
@@ -167,7 +167,7 @@ test('rig on stand-in programs: joins, spectator and park on the console, F1 onc
     await until(() => fs.existsSync(path.join(out, 'keys')));
     assert.equal(fs.readFileSync(path.join(out, 'keys'), 'utf8'), 'key F1\n');
     const lines = () => fs.readFileSync(consoleFile, 'utf8').trim().split('\n');
-    await until(() => lines().length >= 10);
+    await until(() => lines().length >= 11);
     // on the server's whitelist before it joins (the Paper container lets in only listed players); then a spectator
     // with night vision, tagged as the camera, parked
     assert.deepEqual(lines(), ['whitelist add MuseCam', 'gamemode spectator MuseCam', 'tag MuseCam add muse_cam', 'effect give MuseCam minecraft:night_vision infinite 0 true', ...parkCommands('MuseCam')]);

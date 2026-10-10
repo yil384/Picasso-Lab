@@ -220,7 +220,7 @@ export const followCommands = (camera, player, view = 'third') => [
 export const keepFollowingCommands = (camera, player) => [[`tag ${player} add muse_cam_target`]];
 /** Between games: no target, the eye removed, stop riding and float high above the spot looking at the sky (cheap). */
 export const parkCommands = (camera) => [
-  'tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', `tag ${camera} remove muse_cam_ineye`,
+  'tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', `tag ${camera} remove muse_cam_ineye`,
   `tag ${camera} remove muse_cam_inhead`, `execute as ${camera} run spectate`, `execute as ${camera} at @s run tp @s ~ 250 ~ ~ -90`,
 ];
 

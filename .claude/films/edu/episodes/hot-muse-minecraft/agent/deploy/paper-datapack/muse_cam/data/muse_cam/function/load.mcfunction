@@ -3,3 +3,8 @@
 scoreboard objectives add muse_cam_enc dummy
 scoreboard objectives add muse_cam_open dummy
 scoreboard objectives add muse_cam_t dummy
+# the smoothed yaw of the camera, in tenths of a degree, and the constants its arithmetic needs
+scoreboard objectives add muse_cam_y dummy
+scoreboard players set #3600 muse_cam_y 3600
+scoreboard players set #15 muse_cam_y 15
+scoreboard players set #100 muse_cam_y 100
