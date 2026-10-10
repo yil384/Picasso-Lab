@@ -131,6 +131,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   let lastDeath = null;
   let policyRevision = null;
   let dimension = null; // the last status's dimension (a change is logged)
+  let reflexNow = null; // the reflex of theirs that holds the body, as the last status said
   let theirPolicy = null; // their survival policy in effect (view_status)
   let scan = { blocks: [], at: 0, from: null };
   let scanning = null;
@@ -264,6 +265,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       equipment: equipmentOfStacks(list),
       held: list.find((x) => x.held)?.name ?? null,
     };
+    // one of their reflexes holding the body (a takeover): said to the live caption ("Reflex: defending itself")
+    const holder = ['takeover', 'yielding'].includes(s.activity?.owner) ? s.activity?.activeAction?.action ?? null : null;
+    if (holder !== reflexNow) { reflexNow = holder; emit('reflex', { name: holder }); }
     // a change of dimension and a death, in the game's log (docs/MUSE-LONG-RUN.md reads its milestones from there)
     const dim = String(s.dimension ?? 'overworld').replace(/^minecraft:/, '');
     if (dimension && dim !== dimension) event('dimension', { from: dimension, to: dim, pos: s.position ? floorPos(s.position) : null });

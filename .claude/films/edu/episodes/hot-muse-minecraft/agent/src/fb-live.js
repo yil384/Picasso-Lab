@@ -18,7 +18,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { captionFor, cleanCaption, maskOutput } from './stream.js';
+import { captionsOf, cleanCaption, maskOutput } from './stream.js';
 import { facebookEmbedUrl, isFacebookVideoUrl } from './config.js';
 
 export const GRAPH_DEFAULTS = Object.freeze({
@@ -574,7 +574,7 @@ export function createLiveChannel(o) {
       games.set(id, g);
       if (typeof body?.on === 'function') {
         try {
-          g.offs.push(body.on('skill', (evt) => api.caption(id, captionFor(evt))));
+          g.offs.push(...captionsOf(body, (text) => api.caption(id, text)));
           g.offs.push(body.on('end', () => api.stop(id, 'the game ended')));
         } catch { /* no captions */ }
       }

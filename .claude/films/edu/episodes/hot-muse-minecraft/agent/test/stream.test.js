@@ -21,7 +21,7 @@ import {
   patchViewerBundle, patchWorkerBundle, patchedBundle, createCameraSmoother, pageScript, PAGE_DEFAULTS,
 } from '../src/stream-page.js';
 import {
-  ffmpegArgs, chromiumArgs, maskOutput, scrubOutputs, captionFor, cleanCaption, createFrameClock, createStreamManager,
+  ffmpegArgs, chromiumArgs, maskOutput, scrubOutputs, captionFor, captionsOf, cleanCaption, createFrameClock, createStreamManager,
   createStreamService, createRemoteStreamManager, validSource, managerConfig, cpuSeconds, createStream, findChromium,
   findFfmpeg, isNetworkOutput,
 } from '../src/stream.js';
@@ -288,7 +288,7 @@ test('stream keys: masked in what is logged, scrubbed from ffmpeg messages and f
   assert.equal(JSON.stringify(log.tail()).includes(KEY), false);
 });
 
-test('captions: fixed words from the skill and its validated names and numbers; chat text never shows', () => {
+test('captions: fixed words from the skill and its validated names and numbers, with who acts (Muse or a reflex); chat text never shows', async () => {
   assert.equal(captionFor({ phase: 'start', tool: 'collect', args: { block: 'oak_log', n: 3 } }), 'Collecting oak log (3)');
   assert.equal(captionFor({ phase: 'start', tool: 'go_to', args: { x: -133, y: 70, z: 45 } }), 'Walking to -133 70 45');
   assert.equal(captionFor({ phase: 'start', tool: 'craft', args: { item: 'crafting_table', n: 1 } }), 'Crafting crafting table');
@@ -296,7 +296,22 @@ test('captions: fixed words from the skill and its validated names and numbers; 
   assert.equal(captionFor({ phase: 'start', tool: 'build', args: { blueprint: 'hut_3x3', material: 'oak_planks' } }), 'Building a hut 3x3 from oak planks');
   assert.equal(captionFor({ phase: 'end', tool: 'collect', args: {} }), '');
   assert.equal(captionFor({ phase: 'start', tool: 'get_state', args: {} }), '');
-  assert.equal(cleanCaption('Walking %{pts} \\n to: <b>x</b>'), "Walking pts n to b x b");
+  assert.equal(cleanCaption('Walking %{pts} \\n to: <b>x</b>'), "Walking pts n to: b x b");
+  // who acts: the player's skills as Muse's, the runtime's reflexes as reflexes, then the skill again
+  const { EventEmitter } = await import('node:events');
+  const em = new EventEmitter();
+  const fake = { on: (n, f) => { em.on(n, f); return () => em.off(n, f); } };
+  const shown = [];
+  const offs = captionsOf(fake, (t) => shown.push(t));
+  em.emit('skill', { phase: 'start', tool: 'collect', args: { block: 'iron_ore', n: 3 } });
+  em.emit('reflex', { name: 'hostile_reflex' });
+  em.emit('reflex', { name: null });
+  em.emit('skill', { phase: 'end', tool: 'collect', args: {} });
+  em.emit('skill', { phase: 'start', tool: 'shelter', args: {} });
+  assert.deepEqual(shown, ['Muse: collecting iron ore (3)', 'Reflex: defending itself', 'Muse: collecting iron ore (3)', '', 'Muse: building a shelter']);
+  assert.equal(cleanCaption(shown[1]), 'Reflex: defending itself');
+  for (const off of offs) off();
+  assert.equal(em.listenerCount('skill') + em.listenerCount('reflex'), 0);
 });
 
 test('ps CPU times: every format ps prints', () => {
@@ -354,7 +369,7 @@ test('manager: off unless enabled; one stream per game, at most max and one per 
 
   b1.emit('skill', { phase: 'start', tool: 'collect', args: { block: 'oak_log', n: 2 } });
   b1.emit('skill', { phase: 'end', tool: 'collect', args: {} });
-  assert.deepEqual(made[0].captions, ['Collecting oak log (2)', '']);
+  assert.deepEqual(made[0].captions, ['Muse: collecting oak log (2)', '']);
   b1.emit('end', {});
   await until(() => made[0].state === 'stopped' && !m.has('g1'));
   assert.equal(made[0].stopped, 'the game ended');
@@ -424,7 +439,7 @@ test('service and client: the agent starts, captions and stops a stream over loo
     body.bot = { entity: { position: { x: 5, y: 70, z: -2 }, yaw: 1.5, pitch: 0 } };
     body.emit('skill', { phase: 'start', tool: 'go_to', args: { x: 1, y: 2, z: 3 } });
     await until(() => made[0].captions.length === 1);
-    assert.equal(made[0].captions[0], 'Walking to 1 2 3');
+    assert.equal(made[0].captions[0], 'Muse: walking to 1 2 3');
     assert.deepEqual(made[0].poses, [{ x: 5, y: 70, z: -2, yaw: 1.5, pitch: 0 }], 'the bot\'s pose goes along, for a page that has none yet');
     const list = await (await fetch(`${url}/streams`)).json();
     assert.deepEqual(list.streams.map((s) => s.id), ['g1']);
