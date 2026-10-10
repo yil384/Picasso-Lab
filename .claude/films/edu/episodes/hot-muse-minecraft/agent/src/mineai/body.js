@@ -593,6 +593,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const ms = Date.now() - t0;
     if (!['get_state', 'policy'].includes(tool)) museActions += 1;
     if (tool === 'pick_up' && v.args.death_items && r.ok) care?.recovered(status?.lastDeath?.observedAt ?? null);
+    if (tool === 'pick_up' && v.args.death_items && r.code === 'DIED') care?.diedRecovering(status?.lastDeath?.observedAt ?? null);
     body.busy = false;
     idleSince = Date.now();
     doing = null;

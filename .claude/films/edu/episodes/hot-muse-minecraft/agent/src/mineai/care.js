@@ -462,7 +462,13 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
     const age = now - Date.parse(death.observedAt);
     if (age >= 0 && age < RECOVER_WITHIN_MS) {
       const far = s.position && death.position ? Math.round(Math.hypot(s.position.x - death.position.x, s.position.z - death.position.z)) : null;
-      say('recover', `you died at ${xyz(death.position)} ${Math.round(age / 1000)} s ago${far != null ? ` (${far} blocks away)` : ''}; your items there despawn in about ${Math.max(0, Math.round((300_000 - age) / 1000))} s`, { skill: 'pick_up', args: { death_items: true } });
+      const cause = death.cause ? ` (${String(death.cause).replace(/^\S+ /, '')})` : '';
+      const base = `you died${cause} at ${xyz(death.position)} ${Math.round(age / 1000)} s ago${far != null ? ` (${far} blocks away)` : ''}; your items there despawn in about ${Math.max(0, Math.round((300_000 - age) / 1000))} s`;
+      // no hint where going back is not worth it: too far to walk in time, or this death came on the way back for the
+      // items of the one before (staging, 2026-10-10: three deaths in a row to the drowned around a death spot in water)
+      if (far != null && far > RECOVER_RANGE) say('recover', `${base}; too far to walk back in time`);
+      else if (memory.diedRecovering === death.observedAt) say('recover', `${base}; you died going back for the items of the death before: the mobs there may still be around`);
+      else say('recover', base, { skill: 'pick_up', args: { death_items: true } });
     }
   }
   // health and food
@@ -1088,6 +1094,8 @@ export function createCare(deps) {
     counts() { return { ...counts }; },
     /** The player went back for a death's items (pick_up death_items): no more advice about that death. */
     recovered(key) { if (key) memory.recovered = key; },
+    /** The body died during a pick_up of a death's items: no hint to go back for this death's items. */
+    diedRecovering(key) { if (key) memory.diedRecovering = key; },
     /**
      * A care routine the player asked for (the shelter and shield skills), under the step's control: the player's
      * action, not the body's (no journal entry). Returns {ok, text} or {ok: false, refused}.

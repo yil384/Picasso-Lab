@@ -491,6 +491,12 @@ test('advise: the facts and the skill that would do it, most urgent first; nothi
   assert.deepEqual(a[2].hint, { skill: 'collect', args: { block: 'cobblestone', n: 12 } });
   assert.match(a[3].text, /^your wooden_pickaxe has 4 uses left \(7%\); you cannot craft another/);
   assert.equal(advise(situation({ lastDeath: died }), { ...base, memory: { recovered: died.observedAt }, stacks: [stack('shield', 1, 'off-hand')] }).length, 0, 'recovered: no more');
+  const far = advise(situation({ lastDeath: { ...died, position: { x: 12000, y: 70, z: 5 } } }), { ...base, stacks: [stack('shield', 1, 'off-hand')] })[0];
+  assert.match(far.text, /too far to walk back in time$/);
+  assert.equal(far.hint, undefined);
+  const again = advise(situation({ lastDeath: { ...died, cause: 'Tst_x was impaled by Drowned' } }), { ...base, memory: { diedRecovering: died.observedAt }, stacks: [stack('shield', 1, 'off-hand')] })[0];
+  assert.match(again.text, /^you died \(was impaled by Drowned\) at 5 60 7 .*you died going back for the items of the death before/);
+  assert.equal(again.hint, undefined);
   // night in the open: the shelter skill; with a bed: sleep; inside its shelter: nothing
   const night = situation({ clock: { timeOfDay: 14000 }, nearby: { mobs: [{ name: 'zombie', kind: 'hostile', nearest: { distance: 9 } }] } });
   const n = advise(night, { ...base, inventory: { cobblestone: 20 }, stacks: [stack('stone_pickaxe', 1, 'hand')] });
