@@ -410,7 +410,8 @@ test('mineai through MCP: the queue, request_id, typed codes and the extra skill
     assert.doesNotMatch(JSON.stringify(listed), /rationale|submission_id|wait_for_action|response_format/);
     const play = listed.tools.find((t) => t.name === 'play');
     assert.match(play.description, /- hunt \{mob: one of cow\|pig[^}]*, drop: text \(1 to 48 characters\), n: integer 1 to 64, without_shield: true\|false \(optional\)\}/);
-    assert.match(play.description, /- policy \{retreat_health: integer 1 to 19 \(optional\)/);
+    assert.match(play.description, /- policy \{defend: one of on\|off \(optional\).*retreat_health: integer 1 to 19 \(optional\)/);
+    assert.match(play.description, /- shelter \{\}/);
     assert.ok(play.inputSchema.properties.skill.enum.includes('explore'));
 
     const start = text(await c.callTool({ name: 'start_game', arguments: { adult: true } }));

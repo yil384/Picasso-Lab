@@ -1110,6 +1110,7 @@ export function createCare(deps) {
     /** Set some knobs (CARE_KNOBS) for the rest of the game; none: back to the defaults. Returns the policy. */
     setPolicy(knobs = null) {
       policy = knobs ? { ...policy, ...Object.fromEntries(Object.entries(knobs).filter(([k, v]) => CARE_KNOBS[k]?.includes(v))) } : { ...CARE_DEFAULTS };
+      memory.hideSetAt = 0; // the reflexes as the new knobs say, at the next tick
       return { ...policy };
     },
     start() { if (!timer && !stopped) timer = setInterval(() => { tick().catch(() => {}); }, deps.tickMs ?? TICK_MS); timer?.unref?.(); },

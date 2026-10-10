@@ -69,6 +69,9 @@ export async function startFakeMineAi(opts = {}) {
     owner: 'idle', // their status activity.owner
     hide: 'when_recovery_possible', // their combat policy's hide and critical health
     critical: 8,
+    foodReflex: 'full', // patch 0012: food.reflex and navigation.escape_reflexes
+    escape: true,
+    melee: true,
   };
   const calls = [];
   const actions = new Map();
@@ -284,14 +287,17 @@ export async function startFakeMineAi(opts = {}) {
         inventory: { stacks: stacks() }, nearby: { players: world.players, hostiles: world.hostiles, mobs: world.mobs },
         activity: { owner: world.owner, activeAction: active },
       } },
-      survivalPolicy: { revision: world.revision, effective: { combat: { hide: world.hide, critical_health: world.critical } } },
+      survivalPolicy: { revision: world.revision, effective: { combat: { hide: world.hide, critical_health: world.critical, melee: world.melee, bow: world.melee }, food: { reflex: world.foodReflex }, navigation: { escape_reflexes: world.escape } } },
     }));
     reg('read_recent_events', () => ({ action: 'read_recent_events', durationMs: 1, result: { status: 'succeeded', events: world.events.splice(0), remainingEventCount: 0 } }));
     reg('view_blocks', () => ({ action: 'view_blocks', durationMs: 1, result: { status: 'succeeded', blocks: { find: world.blocks } } }));
     reg('set_survival_policy', (a) => {
       if (a.expected_revision !== world.revision) return { action: 'set_survival_policy', durationMs: 1, result: { status: 'failed', error: '[POLICY_REVISION_STALE] stale' } };
       world.revision = `rev-${Number(world.revision.split('-')[1]) + 1}`;
-      if (a.operation === 'reset') { world.hide = 'when_recovery_possible'; world.critical = 8; }
+      if (a.operation === 'reset') { world.hide = 'when_recovery_possible'; world.critical = 8; world.foodReflex = 'full'; world.escape = true; world.melee = true; }
+      if (a.changes?.food?.reflex) world.foodReflex = a.changes.food.reflex;
+      if (a.changes?.navigation?.escape_reflexes !== undefined) world.escape = a.changes.navigation.escape_reflexes;
+      if (a.changes?.combat?.melee !== undefined) world.melee = a.changes.combat.melee;
       if (a.changes?.combat?.hide) world.hide = a.changes.combat.hide;
       if (a.changes?.combat?.critical_health) world.critical = a.changes.combat.critical_health;
       return { action: 'set_survival_policy', durationMs: 1, result: { status: 'succeeded' } };
