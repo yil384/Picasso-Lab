@@ -88,6 +88,9 @@ export const EXTRA_DEFS = Object.freeze([
   ['shield',
     'Make a shield and put it in your off-hand: from 1 iron ingot you carry, else raw iron smelted, else 1 iron ore mined (stone pickaxe) and smelted; planks from your wood. Your fight reflex raises it against arrows.',
     obj({}, [])],
+  ['portal',
+    'A Nether portal. light: light the obsidian frame one of whose blocks (or an inside cell) is at pos, with flint_and_steel you carry (build the frame first with place: obsidian, 4 wide and 5 tall, corners optional). enter: step into the active portal block at pos and wait to arrive (to the Nether, or back to the Overworld); entering the Nether asks for 16 food carried unless low_supplies is true.',
+    obj({ action: pick('light or enter', ['light', 'enter']), pos: POS, low_supplies: { type: 'boolean', description: 'true: enter with less than 16 food' } }, ['action', 'pos'])],
   ['armor',
     'Craft the best armor you can pay for (iron ingots, leather, gold or diamonds) and put it on, with any better piece or shield you carry.',
     obj({}, [])],
@@ -121,7 +124,7 @@ export const MINEAI_TIMEOUTS = Object.freeze({
   ...TOOL_TIMEOUTS_MS,
   smelt: 300_000, // their smelt waits for the whole load: about 10 s an item, 24 at most
   equip: 20_000, hunt: 300_000, sleep: 60_000, bucket: 120_000, chest: 60_000, explore: 300_000, policy: 15_000,
-  pick_up: 90_000, drop: 30_000, armor: 150_000, shelter: 240_000, shield: 300_000,
+  pick_up: 90_000, drop: 30_000, armor: 150_000, shelter: 240_000, shield: 300_000, portal: 120_000,
 });
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -312,6 +315,9 @@ export function toTheirs(skill, args, ctx) {
     case 'explore': return { calls: [{ tool: 'explore_frontier', args: { heading: args.heading, chunks: args.chunks ?? 1, ...(args.biome ? { biome: args.biome } : {}) } }] };
     case 'armor': return { local: 'armor', calls: [] };
     case 'shelter': return { local: 'care', kind: 'shelter', calls: [] };
+    case 'portal': return args.action === 'light'
+      ? { calls: [{ tool: 'activate_portal', args: { x: args.pos.x, y: args.pos.y, z: args.pos.z } }] }
+      : { calls: [{ tool: 'enter_nether_portal', args: { x: args.pos.x, y: args.pos.y, z: args.pos.z, ...(args.low_supplies ? { allow_low_supplies: true } : {}) } }] };
     case 'shield': return { local: 'care', kind: 'shield', calls: [] };
     case 'policy': {
       // the care's knobs stay in the gateway (src/mineai/care.js); the rest goes to the runtime's survival policy

@@ -653,17 +653,19 @@ export function createCare(deps) {
       deps.event('care', { kind: entry.kind, source: 'muse', ok: entry.ok, text: String(entry.text).slice(0, 300) });
       return { ...entry, source: 'muse' };
     }
-    counts[entry.reflex ? 'reflex' : 'care'] += 1;
+    // a death is something that happened to the body, not an action of its own: logged, never counted
+    if (entry.kind !== 'death') counts[entry.reflex ? 'reflex' : 'care'] += 1;
+    const logSource = entry.kind === 'death' ? 'event' : entry.reflex ? 'reflex' : 'care-full';
     const prev = [...journal].reverse().find((x) => x.kind === entry.kind);
     if (prev && same(prev) === same(entry) && now() - Date.parse(prev.at) < 120_000) {
-      deps.event('care', { kind: entry.kind, source: entry.reflex ? 'reflex' : 'care-full', ok: entry.ok, repeat: true, text: String(entry.text).slice(0, 300) });
+      deps.event('care', { kind: entry.kind, source: logSource, ok: entry.ok, repeat: true, text: String(entry.text).slice(0, 300) });
       return prev;
     }
     const e = { seq: ++seq, at: new Date(now()).toISOString(), source: entry.reflex ? 'reflex' : 'care', ...entry };
     delete e.reflex;
     journal.push(e);
     while (journal.length > JOURNAL_KEPT) journal.shift();
-    deps.event('care', { kind: e.kind, source: e.source === 'care' ? 'care-full' : e.source, ok: e.ok, text: String(e.text).slice(0, 300), ...(entry.ms != null ? { ms: entry.ms } : {}) });
+    deps.event('care', { kind: e.kind, source: logSource, ok: e.ok, text: String(e.text).slice(0, 300), ...(entry.ms != null ? { ms: entry.ms } : {}) });
     return e;
   };
 

@@ -80,10 +80,12 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   assert.deepEqual(toTheirs('eat', {}, ctx).calls[0].args, { food_name: 'cooked_beef' });
   assert.match(toTheirs('eat', {}, { ...ctx, food: 20 }).refused.result, /not hungry/);
   assert.deepEqual(toTheirs('say', { text: 'hi' }, ctx).calls[0], { tool: 'send_message', args: { message: 'hi' } });
+  assert.deepEqual(toTheirs('portal', { action: 'light', pos: { x: 1, y: 60, z: 2 } }, ctx).calls[0], { tool: 'activate_portal', args: { x: 1, y: 60, z: 2 } });
+  assert.deepEqual(toTheirs('portal', { action: 'enter', pos: { x: 1, y: 61, z: 2 }, low_supplies: true }, ctx).calls[0], { tool: 'enter_nether_portal', args: { x: 1, y: 61, z: 2, allow_low_supplies: true } });
 });
 
 test('mineai skills: the extra skills (M4 survival set) become their tools; compact and validated', () => {
-  assert.deepEqual(EXTRA_DEFS.map(([n]) => n), ['equip', 'hunt', 'sleep', 'bucket', 'chest', 'explore', 'policy', 'shelter', 'shield', 'armor', 'pick_up', 'drop']);
+  assert.deepEqual(EXTRA_DEFS.map(([n]) => n), ['equip', 'hunt', 'sleep', 'bucket', 'chest', 'explore', 'policy', 'shelter', 'shield', 'portal', 'armor', 'pick_up', 'drop']);
   assert.deepEqual(MINEAI_SKILLS.names.slice(0, 11), ['get_state', 'go_to', 'collect', 'craft', 'smelt', 'place', 'build', 'attack', 'eat', 'say', 'craft_batch']);
   const v = (s, a) => MINEAI_SKILLS.validate(s, a);
   assert.ok(v('equip', { item: 'iron_chestplate' }).ok);

@@ -130,6 +130,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   const containers = CONTAINERS.get(server);
   let lastDeath = null;
   let policyRevision = null;
+  let dimension = null; // the last status's dimension (a change is logged)
   let theirPolicy = null; // their survival policy in effect (view_status)
   let scan = { blocks: [], at: 0, from: null };
   let scanning = null;
@@ -263,9 +264,13 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       equipment: equipmentOfStacks(list),
       held: list.find((x) => x.held)?.name ?? null,
     };
+    // a change of dimension and a death, in the game's log (docs/MUSE-LONG-RUN.md reads its milestones from there)
+    const dim = String(s.dimension ?? 'overworld').replace(/^minecraft:/, '');
+    if (dimension && dim !== dimension) event('dimension', { from: dimension, to: dim, pos: s.position ? floorPos(s.position) : null });
+    dimension = dim;
     const death = s.lastDeath ? JSON.stringify(s.lastDeath) : null;
     if (death && death !== lastDeath) {
-      if (lastDeath !== null || body.connected) emit('death', { at: s.lastDeath });
+      if (lastDeath !== null || body.connected) { emit('death', { at: s.lastDeath }); event('death', { cause: s.lastDeath.cause ?? null, pos: s.lastDeath.position ? floorPos(s.lastDeath.position) : null }); }
       lastDeath = death;
     } else if (lastDeath === null) lastDeath = death ?? '';
   }
