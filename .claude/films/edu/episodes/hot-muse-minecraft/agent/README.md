@@ -540,6 +540,15 @@ profile `camera`, `deploy/Dockerfile.camera`).
   the view goes back. The camera player has night vision all the time (given again whenever it is gone: a respawn, a
   dimension change), so a night or a cave is never black. The camera service only tags through the console:
   `muse_cam` on the camera, `muse_cam_third` for the view, `muse_cam_target` on the bot.
+  The camera's yaw follows the bot's damped (it closes 30 % of the gap each tick, held on a server-only `marker`), so a
+  snapped turn is a quarter-second swing around the bot; the aim is absolute (`facing` a point ahead), because a
+  relative rotation in `tp` is the entity's own since 1.21.2. Spots, last that fits wins: 0.3 blocks in front of the
+  bot's face (inside its head the model's face is drawn from within), straight above its head looking down, 2.3 and
+  3.2 blocks behind. Seen on staging (2026-10-10, five games, `~/Downloads/muse-camera-third-person.mp4` and the whole
+  game `-full.mp4`): over the shoulder in open ground and along slopes, the shaft it digs from above; among dense trees
+  mostly from above; a grey picture for a few seconds deep in a narrow shaft (the camera inside stone); while it
+  shelters, the eye stays where it was and turns to it (no high spot fit under the trees there), so the picture is the
+  ground over the shelter.
 - Between games: the client stays in the world (a game goes live 3.5 s after it starts). After `CAMERA_IDLE_MS`
   (10 min) without a game it quits and Xvfb stays (0 % CPU, 46 MB); the next game starts it again (live after 15 s).
 - Supervision: a client that exits, is disconnected ("Client disconnected with reason", "Couldn't connect to server")
