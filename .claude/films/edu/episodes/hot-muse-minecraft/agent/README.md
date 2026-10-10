@@ -1892,6 +1892,35 @@ mode the spare pickaxe before a long `collect`, and its replacement during one, 
 - looks at the state every `--check-s` seconds during its silences;
 - sends the most urgent hinted advice as it is, after A to B seconds of "thought".
 
+**Measured on staging (2026-10-10, Normal, real day and night).** Three rounds of 8 natural games, each a 30-minute
+lease from a morning start, at fresh spots on rings of 18000, 21000 and 24000 blocks. The scripted player is the
+same in all three: wood, wooden and stone tools and a furnace, then silences of 150-240 s with small tasks. In the
+advise rounds it also follows the hinted advice after 10-30 s, looking in every 45 s.
+
+| | advise, first build | full care, same build | advise, with the recovery fix |
+| --- | --- | --- | --- |
+| games passed (the lease ended, no death) | 7 of 8 | 8 of 8 | 8 of 8 |
+| deaths (games with one) | 4 (1) | 0 | 0 |
+| lived, median / p90 | 1804 / 1823 s | 1930 / 2007 s | 1808 / 1839 s |
+| nights entered / lived through | 13 / 8 | 10 / 8 | 12 / 8 |
+| health at its lowest, median (min) | 20 (2) | 20 (12.5) | 20 (7.7) |
+| steps ok; step time p50 / p90 | 143 of 158; 9.3 / 36.6 s | 106 of 116; 13.6 / 35.1 s | 143 of 162; 9.9 / 39.0 s |
+| advice followed | shield 7, dusk 16, night 22, recover 6 | - | shield 7, dusk 16, night 26, hunt 1 |
+| done by the body itself | 12 reflexes (fight 7, hide 4, flee 1) | 31 plans (shelter 21, shield 7, gather 2, tool 1) | 9 reflexes (fight 9) |
+| actions by the player | 92% | - | 93% (156 of 167; 2 tool warnings counted then, not since) |
+
+The one game with deaths (first build, game 7) started badly. A creeper's evade broke off its first wood, so the
+strict harness had no tools all game. Its first night then killed it (a skeleton): the dirt it was told to collect at
+dusk timed out, and so did the shelter dug by hand. After that, the advice to go back for its items sent it three
+times into the drowned around a death spot in water, and each trip ended in another death.
+
+Since then, a death's advice names its cause and gives no hint to go back when the spot is too far to reach in time,
+or when the death came on the way back for the items of the death before. With that fix: 8 of 8 passed, no deaths.
+
+Against the gate (at most 1 death in 16): advise mode holds. Across the two advise rounds that is 15 of 16 games, 4
+deaths in one game, all before the fix; the fixed build passed 8 of 8 with no deaths. Full care, on the same build,
+passed 8 of 8.
+
 ## What is mocked
 
 - The model: `test/mock-llm.js` speaks Chat Completions and the Responses API (streamed and not), replays scripted tool

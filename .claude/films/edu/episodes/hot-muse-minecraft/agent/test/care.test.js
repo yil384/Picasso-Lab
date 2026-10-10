@@ -525,6 +525,11 @@ test('advise loop: no plan carried out by itself, advice instead; its reflexes s
   assert.equal(rig.care.advice()[0].kind, 'night');
   assert.deepEqual(rig.care.since(0).map((e) => [e.source, e.kind]), [['reflex', 'fight']]);
   assert.deepEqual(rig.care.counts(), { reflex: 1, care: 0 });
+  // a tool about to break, or a death, is logged as something that happened, never counted as an action
+  rig.care.add({ kind: 'tool', ok: false, text: 'its stone_pickaxe broke', reflex: true });
+  rig.care.add({ kind: 'death', ok: false, text: 'died: was shot by Skeleton at 1 2 3' });
+  assert.deepEqual(rig.care.counts(), { reflex: 1, care: 0 });
+  assert.deepEqual(rig.events.filter((e) => ['tool', 'death'].includes(e.kind)).map((e) => e.source), ['event', 'event']);
   // the shelter skill: the same routine, as the player's action (no journal entry, counted as the player's)
   rig.state.situation.clock.timeOfDay = 14000;
   const results = { build_structure: { status: 'succeeded', structure: { cells: 15, correct: 15, placed: 13, dug: 0, wrong: 0, kept: [], left: [], supports: [] } } };

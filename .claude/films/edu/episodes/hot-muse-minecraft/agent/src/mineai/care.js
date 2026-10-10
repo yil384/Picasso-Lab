@@ -659,9 +659,11 @@ export function createCare(deps) {
       deps.event('care', { kind: entry.kind, source: 'muse', ok: entry.ok, text: String(entry.text).slice(0, 300) });
       return { ...entry, source: 'muse' };
     }
-    // a death is something that happened to the body, not an action of its own: logged, never counted
-    if (entry.kind !== 'death') counts[entry.reflex ? 'reflex' : 'care'] += 1;
-    const logSource = entry.kind === 'death' ? 'event' : entry.reflex ? 'reflex' : 'care-full';
+    // a death, or a tool about to break or broken, is something that happened to the body, not an action of its own:
+    // logged (source event), never counted
+    const happened = entry.kind === 'death' || entry.kind === 'tool';
+    if (!happened) counts[entry.reflex ? 'reflex' : 'care'] += 1;
+    const logSource = happened ? 'event' : entry.reflex ? 'reflex' : 'care-full';
     const prev = [...journal].reverse().find((x) => x.kind === entry.kind);
     if (prev && same(prev) === same(entry) && now() - Date.parse(prev.at) < 120_000) {
       deps.event('care', { kind: entry.kind, source: logSource, ok: entry.ok, repeat: true, text: String(entry.text).slice(0, 300) });
