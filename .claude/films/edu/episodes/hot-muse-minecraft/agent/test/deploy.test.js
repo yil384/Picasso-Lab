@@ -59,7 +59,9 @@ test('staging compose: production settings, its own project, port, hostname, net
   assert.equal(stg.paper.env.SEED, '71811045');
   const { MC_HOST: ph, WEB_PUBLIC_URL: pu, ...prodAgent } = prod.agent.env;
   const { MC_HOST: sh, WEB_PUBLIC_URL: su, ...stgAgent } = stg.agent.env;
-  assert.deepEqual(stgAgent, prodAgent, 'the agent: the same settings apart from its Paper and its public URL');
+  // the lease is production's unless deploy/.env sets STAGING_LEASE_MS for a long Muse run (docs/MUSE-LONG-RUN.md)
+  assert.equal(stgAgent.WEB_LEASE_MS, `\${STAGING_LEASE_MS:-${prodAgent.WEB_LEASE_MS}}`);
+  assert.deepEqual({ ...stgAgent, WEB_LEASE_MS: prodAgent.WEB_LEASE_MS }, prodAgent, 'the agent: the same settings apart from its Paper, its public URL and a long run\'s lease');
   assert.equal(pu, 'https://play.picasso-lab.com');
   assert.equal(su, STAGING_URL);
   assert.notEqual(sh, ph);
@@ -105,10 +107,10 @@ test('BODY=mineai: both images carry the Mine AI MCP runtime, run under an init 
   // the Muse re-test) included; the build runs 0009's tests with 0007's (nearby-placement), 0010's and 0011's
   // (build-process, build-structure, the movement policy's scaffolding rule)
   const up = JSON.parse(read('mineai/UPSTREAM.json'));
-  assert.deepEqual(up.patches.map((p) => p.slice(8, 12)), ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011']);
+  assert.deepEqual(up.patches.map((p) => p.slice(8, 12)), ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012']);
   for (const p of up.patches) assert.ok(fs.existsSync(path.join(ROOT, 'mineai', p)), p);
   const fetch = read('mineai/fetch-and-patch.sh');
-  for (const t of ['src/world/block-classification.test.ts', 'src/world/nearby-placement.test.ts', 'src/actions/collect-block', 'src/world/landing.test.ts', 'src/navigation/processes/building/build-process.test.ts', 'src/actions/build-structure', 'src/navigation/mineflayer/movement-policy.test.ts']) {
+  for (const t of ['src/world/block-classification.test.ts', 'src/world/nearby-placement.test.ts', 'src/actions/collect-block', 'src/world/landing.test.ts', 'src/navigation/processes/building/build-process.test.ts', 'src/actions/build-structure', 'src/navigation/mineflayer/movement-policy.test.ts', 'src/survival/reflexes/hunger.test.ts']) {
     assert.ok(fetch.includes(t), `the build runs ${t}`);
   }
 });

@@ -11,6 +11,12 @@
 //   node mineai/bench/survive.mjs <agent URL> --label <name> [--games 8] [--stagger-ms 4000] [--quiet-s 150-240]
 //        [--agent-log <run-serve-*.jsonl>] [--server-log <logs/latest.log>] [--out <dir>] [--minutes 40] [--seed 1]
 //
+// Advise mode (MINEAI_CARE=advise): --follow-advice A-B makes the player follow the body's advice the way a model would:
+// it looks at the state every --check-s seconds (default 45) during its silences and after each step, and when a reply
+// carries advice with a hint it thinks A to B seconds (default 10-30), reads the state again and sends the hinted skill
+// as it is (the most urgent one; the same kind is not sent again within 90 s). Its own tasks stay the same. The summary
+// adds what it followed and the share of actions by the player (get_state's attribution).
+//
 // A game passes when the lease ended it (not a crash, the idle rule or the harness) and its bot never died. Every quiet
 // stretch stays under the 5-minute idle rule (get_state ends one). Writes <out>/<label>.json and prints a line per game
 // and a SUMMARY line.
@@ -26,6 +32,7 @@ const { values, positionals } = parseArgs({
     label: { type: 'string' }, games: { type: 'string', default: '8' }, 'stagger-ms': { type: 'string', default: '4000' },
     'quiet-s': { type: 'string', default: '150-240' }, 'agent-log': { type: 'string' }, 'server-log': { type: 'string' },
     out: { type: 'string', default: '.' }, minutes: { type: 'string', default: '40' }, seed: { type: 'string', default: '1' },
+    'follow-advice': { type: 'string' }, 'check-s': { type: 'string', default: '45' },
   },
 });
 const url = String(positionals[0] ?? '').replace(/\/+$/, '');
@@ -36,6 +43,9 @@ if (!url || !values.label) {
 const [quietMin, quietMax] = String(values['quiet-s']).split('-').map(Number);
 if (!(quietMin > 0 && quietMax >= quietMin && quietMax < 280)) { console.error('--quiet-s A-B, both under the 5-minute idle rule (at most 279)'); process.exit(64); }
 const games = Number(values.games);
+const follow = values['follow-advice'] ? String(values['follow-advice']).split('-').map(Number) : null;
+if (follow && !(follow[0] >= 0 && follow[1] >= follow[0])) { console.error('--follow-advice A-B seconds'); process.exit(64); }
+const checkS = Number(values['check-s']);
 const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 const pct = (xs, p) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1)]; };
 const median = (xs) => pct(xs, 50);
@@ -64,14 +74,17 @@ const ENDED = /your game ended: ([^;\n]*)|no game running/i;
 async function playGame(i) {
   const name = `${values.label}-${i + 1}`;
   const r0 = rng(Number(values.seed) * 1000 + i + 1);
-  const g = { i: i + 1, name, game: null, started: iso(), startedMs: Date.now(), endedWhy: null, livedS: null, calls: 0, steps: [], died: [], onItsOwn: [], samples: [], error: null };
+  const g = { i: i + 1, name, game: null, started: iso(), startedMs: Date.now(), endedWhy: null, livedS: null, calls: 0, steps: [], died: [], onItsOwn: [], samples: [], error: null, followed: [], attribution: null };
   const sec = () => Math.round((Date.now() - g.startedMs) / 100) / 10;
   const say = (line) => console.log(`[${name} ${sec()} s] ${line}`);
   const deadline = Date.now() + Number(values.minutes) * 60_000;
   let c;
   let s = '';
   const seenOwn = new Set();
+  let advice = [];
   const absorb = (r) => {
+    if (r.data && !r.isError) advice = Array.isArray(r.data.advice) ? r.data.advice : [];
+    if (r.data?.attribution) g.attribution = r.data.attribution;
     const v = vitals(r.text);
     if (v.health !== null) g.samples.push({ at: sec(), ...v });
     for (const e of r.data?.onItsOwn ?? []) {
@@ -127,14 +140,43 @@ async function playGame(i) {
       take(r.data?.earlier);
       if (seen.size < plan.length && !r.data?.queue?.running && !r.data?.queue?.waiting) break;
     }
-    return seen.size === plan.length && [...seen.values()].every((st) => st.status === 'confirmed');
+    const ok = seen.size === plan.length && [...seen.values()].every((st) => st.status === 'confirmed');
+    if (!label.startsWith('advice:')) await followAdvice();
+    return ok;
+  }
+  /** --follow-advice: the most urgent hinted advice, after a moment's thought, as it is (one kind at most every 90 s). */
+  const tried = new Map();
+  async function followAdvice() {
+    if (!follow) return;
+    for (let k = 0; k < 4 && !g.endedWhy && Date.now() < deadline; k++) {
+      const pick = () => advice.find((x) => x.hint && !(Date.now() - (tried.get(x.kind) ?? 0) < 90_000));
+      if (!pick()) return;
+      await sleep(1000 * (follow[0] + r0() * (follow[1] - follow[0])));
+      await call('get_state');
+      const a = pick();
+      if (!a || g.endedWhy) return;
+      tried.set(a.kind, Date.now());
+      g.followed.push({ at: sec(), kind: a.kind, skill: a.hint.skill, text: String(a.text).slice(0, 160) });
+      say(`follows advice: ${String(a.text).slice(0, 120)} -> ${a.hint.skill} ${JSON.stringify(a.hint.args ?? {})}`);
+      await run(`advice:${a.kind}`, [{ skill: a.hint.skill, args: a.hint.args ?? {} }]);
+    }
   }
   /** A quiet stretch: no calls for a while (under the idle rule), then get_state as a returning player would. */
   async function quiet(seconds) {
     if (g.endedWhy) return;
-    const left = deadline - Date.now();
-    await sleep(Math.max(0, Math.min(seconds * 1000, left)));
-    if (Date.now() < deadline) await call('get_state');
+    const until = Math.min(Date.now() + seconds * 1000, deadline);
+    if (!follow) {
+      await sleep(Math.max(0, until - Date.now()));
+      if (Date.now() < deadline) await call('get_state');
+      return;
+    }
+    // a player that follows the advice looks in now and then
+    while (!g.endedWhy && Date.now() < until) {
+      await sleep(Math.max(0, Math.min(checkS * 1000, until - Date.now())));
+      if (Date.now() >= deadline) break;
+      await call('get_state');
+      await followAdvice();
+    }
   }
   try {
     c = await connect(url, name);
@@ -215,7 +257,7 @@ for (const g of results) {
   // (a line said again within 2 minutes is logged with repeat and on purpose not told again; what came after the game's
   // last reply that carried a state could not be told)
   const lastReply = g.samples.length ? g.startedMs + g.samples.at(-1).at * 1000 : 0;
-  const told = agentRows.filter((r) => r.kind === 'care' && r.game === g.game && r.source !== 'step' && !r.repeat);
+  const told = agentRows.filter((r) => r.kind === 'care' && r.game === g.game && !['step', 'muse'].includes(r.source) && !r.repeat);
   g.careLogged = told.length;
   g.careLoggedBeforeLastReply = told.filter((r) => Date.parse(r.time) < lastReply - 500).length;
   g.careReported = g.onItsOwn.length;
@@ -246,8 +288,8 @@ for (const g of results) {
     if (!firsts.has(night)) firsts.set(night, Math.round((t - 12_300) / 20));
   }
   g.shelterAfterDuskS = [...firsts.values()];
-  g.careMs = agentRows.filter((r) => r.kind === 'care' && r.game === g.game && r.source === 'care' && r.ms != null).map((r) => ({ kind: r.kind, ms: r.ms, text: r.text }));
-  console.log(`game ${g.i} (${g.game}): ${g.pass ? 'PASS' : 'FAIL'} lived ${g.livedS} s, ended: ${g.endedWhy}; deaths ${g.deaths}${g.serverDeaths.length ? ` (${g.serverDeaths.join('; ')})` : ''}; nights entered ${nights}, lived through ${fullNights}; health min ${g.healthMin}, food min ${g.foodMin}; on its own ${JSON.stringify(byKind)}; steps ${g.steps.filter((x) => x.ok).length}/${g.steps.length} ok`);
+  g.careMs = agentRows.filter((r) => r.kind === 'care' && r.game === g.game && ['care', 'care-full'].includes(r.source) && r.ms != null).map((r) => ({ kind: r.kind, ms: r.ms, text: r.text }));
+  console.log(`game ${g.i} (${g.game}): ${g.pass ? 'PASS' : 'FAIL'} lived ${g.livedS} s, ended: ${g.endedWhy}; deaths ${g.deaths}${g.serverDeaths.length ? ` (${g.serverDeaths.join('; ')})` : ''}; nights entered ${nights}, lived through ${fullNights}; health min ${g.healthMin}, food min ${g.foodMin}; on its own ${JSON.stringify(byKind)}${follow ? `; followed ${g.followed.length} advice (${[...new Set(g.followed.map((x) => x.kind))].join(', ')}); ${g.attribution ? `${g.attribution.musePct}% by the player` : 'no attribution'}` : ''}; steps ${g.steps.filter((x) => x.ok).length}/${g.steps.length} ok`);
 }
 const lived = results.map((g) => g.livedS);
 const stepTimes = results.flatMap((g) => g.steps.filter((x) => x.s != null).map((x) => x.s));
@@ -269,7 +311,12 @@ const summary = {
   careLogged: results.reduce((a, g) => a + g.careLogged, 0),
   careReported: results.reduce((a, g) => a + g.careReported, 0),
   careLoggedBeforeLastReply: results.reduce((a, g) => a + g.careLoggedBeforeLastReply, 0),
+  ...(follow ? {
+    followed: results.reduce((a, g) => { for (const x of g.followed) a[x.kind] = (a[x.kind] ?? 0) + 1; return a; }, {}),
+    attribution: results.reduce((a, g) => { for (const k of ['muse', 'reflex', 'care']) a[k] += g.attribution?.[k] ?? 0; return a; }, { muse: 0, reflex: 0, care: 0 }),
+  } : {}),
 };
+if (summary.attribution) { const t = summary.attribution.muse + summary.attribution.reflex + summary.attribution.care; summary.attribution.musePct = t ? Math.round((100 * summary.attribution.muse) / t) : null; }
 console.log(`SUMMARY ${JSON.stringify(summary)}`);
 fs.mkdirSync(values.out, { recursive: true });
 fs.writeFileSync(path.join(values.out, `${values.label}.json`), `${JSON.stringify({ summary, games: results }, null, 1)}\n`);

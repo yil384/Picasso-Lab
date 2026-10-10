@@ -421,7 +421,7 @@ export async function startAgent(opts = {}) {
    */
   function joinMineAi(sessionId, username, viewId) {
     const body = createMineAiBody({
-      config, log, hosts, gameId: sessionId, username, viewId, care: config.mineai?.care !== false,
+      config, log, hosts, gameId: sessionId, username, viewId, care: config.mineai?.care ?? 'advise',
       onEyes: (port, eyesPath) => streamFrom(body, sessionId)?.(port, eyesPath),
     });
     if (consolePath) {
@@ -483,7 +483,7 @@ export async function startAgent(opts = {}) {
 
   const web = createWeb({
     config, log, meter, makeBrain, askNotice, liveVideo, liveView, mcpCallMs: opts.mcpCallMs,
-    ...(mineai ? { skills: MINEAI_SKILLS, startTimeoutMs: config.mineai.startMs + 30_000 } : {}),
+    ...(mineai ? { skills: MINEAI_SKILLS, careMode: config.mineai.care ?? 'advise', startTimeoutMs: config.mineai.startMs + 30_000 } : {}),
     makeBody: (sessionId, o) => (sessionId === 'house' ? houseBody() : newBody(sessionId, o)),
   });
   const { url, publicUrl } = await web.start();

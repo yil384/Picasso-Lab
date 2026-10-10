@@ -15,6 +15,7 @@
     "patches/0008-collect-retries-once-after-landing.patch",
     "patches/0009-placement-around-a-mob.patch",
     "patches/0010-build-never-stalls-the-event-loop.patch",
-    "patches/0011-build-on-rough-ground.patch"
+    "patches/0011-build-on-rough-ground.patch",
+    "patches/0012-reflex-toggles.patch"
   ]
 }

@@ -847,7 +847,7 @@ in to Facebook in the same browser, may still see it in the muse.ai panel (UNVER
 | `MINEAI_START_MS`, `MINEAI_HEARTBEAT_MS`, `MINEAI_HEARTBEAT_MISSES` | `90000`, `5000`, `3` | time to be ready; our `/health` heartbeat and how many may go unanswered before a restart |
 | `MINEAI_UNRESPONSIVE_MS` | `5000` | their own event-loop watchdog (patch 0003), up to 120000 for a loaded machine |
 | `MINEAI_DATA_DIR`, `MINEAI_VIEWS` | (none: temporary), `true` | their per-bot SQLite (made mode 700); the live views from inside the host |
-| `MINEAI_CARE` | `true` | the body looks after itself between the player's calls (src/mineai/care.js); `false`: only the runtime's reflexes (measurements) |
+| `MINEAI_CARE` | `advise` | advise: the player plans its survival from the "Body advice" in every reply, the body acts by itself only through its reflexes; `full`: the body also shelters, makes a shield, eats, hunts, crafts armor and spare tools and goes back after a death between the player's calls (casual guests); `off`: only the runtime's reflexes (measurements). `true` and `false` still mean full and off (src/mineai/care.js) |
 | `PAPER_DIFFICULTY`, `PAPER_DAYLIGHT` | `easy`, `locked` | read by the compose files from the stack's `deploy/.env` and handed to Paper: the difficulty, and `locked` (the clock stopped at morning) or `cycle` (real days and nights); both set again at every Paper start |
 | `MINEAI_KEEP_FAILED`, `MINEAI_DATA_DAYS` | `10`, `3` | a game's bot data and incidents are deleted when it ends, except the last N games that crashed or failed to join; at agent start, game folders older than this many days go |
 | `STEP_CAP`, `COST_CAP_RUN`, `COST_CAP_HOUR` | `300`, `1.00`, `3.00` | per run, per run in US$, rolling hour in US$ |
@@ -1834,6 +1834,92 @@ once, the slow scripted player of `survive.mjs`, each game its whole 30-minute l
 | told in a reply / done before the game's last reply | 42 / 42 | 49 / 49 | 91 / 91 |
 
 **Against the gate (at most 1 death in 16): passed** (round 1: 1 in 8 and 3 in 8; the care off: 2 in 8).
+
+### Muse holds the decisions: advise mode (2026-10-10)
+
+For "Muse plays Minecraft" to be honest, the survival plans above are Muse's by default (`MINEAI_CARE=advise`). The
+body's care computes the same needs on every tick, but as advice instead of actions (`advise()` in
+`src/mineai/care.js`).
+
+**Body advice.** Every MCP reply carries a "Body advice (the body will not do these by itself; your call)" block, most
+urgent first, at most 5 items, and the same list in `structuredContent.advice` (`kind`, `text`, `hint`). Each item
+gives the facts and, where one skill would do it, that skill with its arguments. The kinds:
+
+- a death's items: where, how far, and when they despawn (`pick_up {"death_items":true}`);
+- food: food and health, what is carried, or the nearest animal (`eat {}`, `hunt {...}`);
+- low health with hostile mobs near (`shelter {}`);
+- nightfall in the last 2:15 of daylight: what is missing, such as a bed, a shield or blocks (`collect {...}` or
+  `shelter {}`);
+- night in the open (`shelter {}`, or `sleep {}` with a bed);
+- a shield it could make (`shield {}`);
+- armor carried and not worn (`equip {...}`);
+- a tool with 6% left (`craft {...}` when a spare can be made);
+- armor it could craft (`armor {}`).
+
+**New skills.** Two skills run the care's routines when Muse asks for them, as Muse's actions:
+
+- `shelter {}`: walls of carried blocks, else dug in, else dirt collected.
+- `shield {}`: from iron carried, raw iron smelted, or one ore mined and smelted.
+
+**What the body still does by itself.** Only its reflexes act, each one a knob of the `policy` skill:
+
+- `defend` on/off: it fights back or flees; off means it never strikes (combat melee and bow off) but still flees.
+- `eat` starving/hungry/off: their hunger reflex through runtime patch 0012's `food.reflex`. In advise mode it eats
+  only at food 4 or less.
+- `escape` on/off: their breath, fire and footing reflexes, through patch 0012's `navigation.escape_reflexes`.
+
+The care sets these, together with `hide: when_exposed` and `critical_health` 10, after every policy reset. In advise
+mode the spare pickaxe before a long `collect`, and its replacement during one, are not made either.
+
+**Attribution.**
+
+- The game log tags each action by source:
+  - `viewer_action` rows are `source: muse`;
+  - `care` rows are `reflex`, or `care-full` for the body's own plans in full mode;
+  - the shelter and shield skills are `muse`;
+  - deaths are `event`.
+- get_state and end_game end with "This game: N actions by Muse, M reflexes (P% Muse)" and carry
+  `structuredContent.attribution` (`muse`, `reflex`, `care`, `musePct`).
+- `session_end` logs the same counts.
+- Muse's actions are its skills, except get_state and policy. A death is never counted.
+- The log also has `dimension` and `death` rows, and `scripts/long-run-report.mjs` reads a game's ending, deaths, time
+  to each milestone and who acted (`docs/MUSE-LONG-RUN.md`, the prompt for a long Muse run).
+
+`MINEAI_CARE=full` restores the behavior above for casual guests, and is the rollback.
+
+**Bench.** The scripted player of `mineai/bench/survive.mjs --follow-advice A-B`:
+
+- looks at the state every `--check-s` seconds during its silences;
+- sends the most urgent hinted advice as it is, after A to B seconds of "thought".
+
+**Measured on staging (2026-10-10, Normal, real day and night).** Three rounds of 8 natural games, each a 30-minute
+lease from a morning start, at fresh spots on rings of 18000, 21000 and 24000 blocks. The scripted player is the
+same in all three: wood, wooden and stone tools and a furnace, then silences of 150-240 s with small tasks. In the
+advise rounds it also follows the hinted advice after 10-30 s, looking in every 45 s.
+
+| | advise, first build | full care, same build | advise, with the recovery fix |
+| --- | --- | --- | --- |
+| games passed (the lease ended, no death) | 7 of 8 | 8 of 8 | 8 of 8 |
+| deaths (games with one) | 4 (1) | 0 | 0 |
+| lived, median / p90 | 1804 / 1823 s | 1930 / 2007 s | 1808 / 1839 s |
+| nights entered / lived through | 13 / 8 | 10 / 8 | 12 / 8 |
+| health at its lowest, median (min) | 20 (2) | 20 (12.5) | 20 (7.7) |
+| steps ok; step time p50 / p90 | 143 of 158; 9.3 / 36.6 s | 106 of 116; 13.6 / 35.1 s | 143 of 162; 9.9 / 39.0 s |
+| advice followed | shield 7, dusk 16, night 22, recover 6 | - | shield 7, dusk 16, night 26, hunt 1 |
+| done by the body itself | 12 reflexes (fight 7, hide 4, flee 1) | 31 plans (shelter 21, shield 7, gather 2, tool 1) | 9 reflexes (fight 9) |
+| actions by the player | 92% | - | 93% (156 of 167; 2 tool warnings counted then, not since) |
+
+The one game with deaths (first build, game 7) started badly. A creeper's evade broke off its first wood, so the
+strict harness had no tools all game. Its first night then killed it (a skeleton): the dirt it was told to collect at
+dusk timed out, and so did the shelter dug by hand. After that, the advice to go back for its items sent it three
+times into the drowned around a death spot in water, and each trip ended in another death.
+
+Since then, a death's advice names its cause and gives no hint to go back when the spot is too far to reach in time,
+or when the death came on the way back for the items of the death before. With that fix: 8 of 8 passed, no deaths.
+
+Against the gate (at most 1 death in 16): advise mode holds. Across the two advise rounds that is 15 of 16 games, 4
+deaths in one game, all before the fix; the fixed build passed 8 of 8 with no deaths. Full care, on the same build,
+passed 8 of 8.
 
 ## What is mocked
 

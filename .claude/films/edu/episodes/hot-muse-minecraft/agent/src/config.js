@@ -253,8 +253,16 @@ export function loadConfig(env = process.env) {
     keepFailed: r.int('MINEAI_KEEP_FAILED', 10, 0, 1_000),
     dataDays: r.num('MINEAI_DATA_DAYS', 3, 0.01, 365),
     views: r.bool('MINEAI_VIEWS', true), // the live views (/eyes, /watch) from a viewer inside the host's bot process
-    // the body looks after itself between the player's calls (src/mineai/care.js, ROADMAP M4); off: only their reflexes
-    care: r.bool('MINEAI_CARE', true),
+    // the body and the player (src/mineai/care.js): advise (the default: the player plans its survival from the advice
+    // in every reply; the body acts by itself only through its reflexes), full (it also shelters, eats, hunts, crafts
+    // a shield, armor and spare tools and goes back after a death by itself, between the player's calls: for casual
+    // guests), off (only their reflexes, as they come). true and false, the old values, are full and off.
+    care: (() => {
+      const v = String(r.str('MINEAI_CARE', '')).trim();
+      if (/^(1|true|yes|on)$/i.test(v)) return 'full';
+      if (/^(0|false|no)$/i.test(v)) return 'off';
+      return r.oneOf('MINEAI_CARE', 'advise', ['advise', 'full', 'off']);
+    })(),
   };
   if (body.kind === 'mineai' && !mineai.dir) problems.push('BODY=mineai needs MINEAI_DIR, the folder with the Mine AI MCP runtime (mineai/fetch-and-patch.sh <dir>)');
   if (mineai.portBase + 3 * mineai.ports > 65_535) problems.push('MINEAI_PORT_BASE + 3 x MINEAI_PORTS must stay under 65536 (each host takes a port and its two live views two more)');

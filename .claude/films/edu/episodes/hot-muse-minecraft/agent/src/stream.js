@@ -78,7 +78,7 @@ export const isRtmpOutput = (output) => /^rtmps?:\/\//i.test(String(output));
 export const encoderTarget = (output) => (isRtmpOutput(output) ? 'pipe:3' : String(output));
 
 /** A text for drawtext's textfile: fixed characters only (the caption is never viewer text, and this keeps it so). */
-export const cleanCaption = (text) => String(text ?? '').replace(/[^A-Za-z0-9 ,.()'-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+export const cleanCaption = (text) => String(text ?? '').replace(/[^A-Za-z0-9 ,.:()'-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
 
 /** A pose {x, y, z, yaw, pitch} of finite numbers, or null. */
 export function cleanPose(p) {
@@ -788,8 +788,41 @@ export function captionFor(evt) {
     case 'attack': return `Fighting a ${name(a.target)}`;
     case 'eat': return 'Eating';
     case 'say': return 'Chatting';
+    case 'hunt': return `Hunting a ${name(a.mob)}`;
+    case 'shelter': return 'Building a shelter';
+    case 'shield': return 'Making a shield';
+    case 'sleep': return 'Sleeping';
+    case 'armor': return 'Crafting armor';
+    case 'equip': return `Equipping ${name(a.item)}`;
+    case 'explore': return 'Exploring';
+    case 'pick_up': return a.death_items ? 'Going back for its items' : 'Picking up items';
+    case 'portal': return a.action === 'light' ? 'Lighting a portal' : 'Entering a portal';
     default: return '';
   }
+}
+
+/** Their reflexes in caption words (the runtime's reflex names, from the body's 'reflex' events). */
+export const REFLEX_CAPTIONS = Object.freeze({
+  hostile_reflex: 'defending itself', hunger_reflex: 'eating', breath_reflex: 'swimming up for air',
+  fire_reflex: 'getting out of fire', recover_footing: 'getting its footing back', dragon_reflex: 'dodging the dragon',
+});
+
+/** A caption with who acts: "Muse: collecting iron ore", "Reflex: defending itself"; '' stays ''. */
+export const sourced = (who, words) => (words ? `${who}: ${words.charAt(0).toLowerCase()}${words.slice(1)}` : '');
+
+/**
+ * The live caption of a game from its body's events, with who acts: the player's skills (Muse), and while one of the
+ * runtime's reflexes has the body (BODY=mineai 'reflex' events), that reflex, then the skill again. put(text) shows
+ * it. Returns the listeners' offs.
+ */
+export function captionsOf(body, put) {
+  let skill = '';
+  let reflex = '';
+  const show = () => put(reflex || skill);
+  return [
+    body.on('skill', (evt) => { skill = sourced('Muse', captionFor(evt)); show(); }),
+    body.on('reflex', (evt) => { reflex = sourced('Reflex', REFLEX_CAPTIONS[evt?.name] ?? (evt?.name ? 'acting on its own' : '')); show(); }),
+  ];
 }
 
 /** The manager's configuration from config.stream (STREAM_*). */
@@ -851,7 +884,7 @@ export function createStreamManager({ config, log, create = createStream } = {})
       streams.set(id, entry);
       if (typeof body?.on === 'function') {
         try {
-          entry.offs.push(body.on('skill', (evt) => stream.caption(captionFor(evt))));
+          entry.offs.push(...captionsOf(body, (text) => stream.caption(text)));
           entry.offs.push(body.on('end', () => { api.stop(id, 'the game ended'); }));
         } catch { /* a body without these events: no caption */ }
       }
@@ -1025,7 +1058,7 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000, refresh
       }, (err) => { event('stream_error', { session: id, message: `stream service: ${clip(err?.message ?? err)}` }); api.forget(id); });
       if (typeof body?.on === 'function') {
         try {
-          offs.push(body.on('skill', (evt) => { api.caption(id, captionFor(evt), poseOf(body)); }));
+          offs.push(...captionsOf(body, (text) => { api.caption(id, text, poseOf(body)); }));
           offs.push(body.on('end', () => { api.stop(id); }));
         } catch { /* no captions */ }
       }

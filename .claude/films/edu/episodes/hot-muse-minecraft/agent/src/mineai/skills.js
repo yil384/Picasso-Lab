@@ -40,9 +40,12 @@ export const PLAYER_GUARD = 4;
 export const CONTAINER_BLOCKS = new Set(['chest', 'trapped_chest', 'barrel']);
 const RAW_FOOD = ['never', 'emergency_only', 'always'];
 /** What the body looks after by itself between the player's calls (src/mineai/care.js), and the policy skill's knobs. */
-export const CARE_DEFAULTS = Object.freeze({ night: 'shelter', armor: 'craft', food: 'hunt', tools: 'spare' });
+export const CARE_DEFAULTS = Object.freeze({ night: 'shelter', armor: 'craft', food: 'hunt', tools: 'spare', defend: 'on', eat: 'auto', escape: 'on' });
+/** night, armor, food and tools: what the body sees to by itself in full mode (MINEAI_CARE=full); defend, eat and escape:
+ * its reflexes, in both modes (eat auto: starving in advise mode, hungry in full mode). */
 export const CARE_KNOBS = Object.freeze({
   night: Object.freeze(['shelter', 'off']), armor: Object.freeze(['craft', 'wear', 'off']), food: Object.freeze(['hunt', 'eat', 'off']), tools: Object.freeze(['spare', 'off']),
+  defend: Object.freeze(['on', 'off']), eat: Object.freeze(['hungry', 'starving', 'off']), escape: Object.freeze(['on', 'off']),
 });
 
 /**
@@ -73,11 +76,21 @@ export const EXTRA_DEFS = Object.freeze([
     'Walk into unexplored land in a compass heading (0 north, 90 east, 180 south, 270 west) for 1 to 8 chunks; with biome, stop as soon as you stand in it.',
     obj({ heading: int('compass heading in degrees, 0 to 359', 0, 359), chunks: int('how far, in chunks of 16 blocks (default 1)', 1, 8), biome: NAME('a biome to look for, e.g. plains, desert, badlands') }, ['heading'])],
   ['policy',
-    'How the body looks after itself for the rest of the game: retreat_health, raw_food and fight in fights; night (shelter, or sleep with a bed), armor (craft or wear), food (hunt or eat) and tools (spare) between your calls; off stops one. No arguments: the defaults.',
+    'What the body does on its own for the rest of the game. You make the plans; the body acts by itself only through its reflexes, and each can be switched here: defend (on: fights back or flees when a hostile mob comes for it; off: never strikes, still flees), eat (starving: eats only at food 4 or less, the default; hungry: at food 14 or less; off: never on its own), escape (on: surfaces for air, leaves fire and lava, gets its footing back; off: leaves that to you). In fights: retreat_health, raw_food and fight (respond_to_threats or defend_only). Everything else (shelter at night, a shield, armor, food, spare tools, going back for its items after a death) is yours: each reply\'s "Body advice" says what needs doing and which skill would do it. No arguments: the defaults.',
     obj({
-      retreat_health: int('health 1 to 19 (default 8)', 1, 19), raw_food: pick('raw meat on its own', RAW_FOOD), fight: pick('fight or only defend', ['respond_to_threats', 'defend_only']),
-      night: pick('night', CARE_KNOBS.night), armor: pick('armor', CARE_KNOBS.armor), food: pick('food', CARE_KNOBS.food), tools: pick('tools', CARE_KNOBS.tools),
+      defend: pick('reflex: fight back or flee when attacked', CARE_KNOBS.defend), eat: pick('reflex: when it eats on its own', CARE_KNOBS.eat), escape: pick('reflex: air, fire, lava, footing', CARE_KNOBS.escape),
+      retreat_health: int('health 1 to 19 (default 10)', 1, 19), raw_food: pick('raw meat on its own', RAW_FOOD), fight: pick('fight or only defend', ['respond_to_threats', 'defend_only']),
+      night: pick('full mode only: night', CARE_KNOBS.night), armor: pick('full mode only: armor', CARE_KNOBS.armor), food: pick('full mode only: food', CARE_KNOBS.food), tools: pick('full mode only: tools', CARE_KNOBS.tools),
     }, [])],
+  ['shelter',
+    'Close yourself in for the night where you stand: walls and a roof of the blocks you carry (13 make one), else dug two blocks into the ground, else with dirt collected around. Stays closed until your next step.',
+    obj({}, [])],
+  ['shield',
+    'Make a shield and put it in your off-hand: from 1 iron ingot you carry, else raw iron smelted, else 1 iron ore mined (stone pickaxe) and smelted; planks from your wood. Your fight reflex raises it against arrows.',
+    obj({}, [])],
+  ['portal',
+    'A Nether portal. light: light the obsidian frame one of whose blocks (or an inside cell) is at pos, with flint_and_steel you carry (build the frame first with place: obsidian, 4 wide and 5 tall, corners optional). enter: step into the active portal block at pos and wait to arrive (to the Nether, or back to the Overworld); entering the Nether asks for 16 food carried unless low_supplies is true.',
+    obj({ action: pick('light or enter', ['light', 'enter']), pos: POS, low_supplies: { type: 'boolean', description: 'true: enter with less than 16 food' } }, ['action', 'pos'])],
   ['armor',
     'Craft the best armor you can pay for (iron ingots, leather, gold or diamonds) and put it on, with any better piece or shield you carry.',
     obj({}, [])],
@@ -111,7 +124,7 @@ export const MINEAI_TIMEOUTS = Object.freeze({
   ...TOOL_TIMEOUTS_MS,
   smelt: 300_000, // their smelt waits for the whole load: about 10 s an item, 24 at most
   equip: 20_000, hunt: 300_000, sleep: 60_000, bucket: 120_000, chest: 60_000, explore: 300_000, policy: 15_000,
-  pick_up: 90_000, drop: 30_000, armor: 150_000,
+  pick_up: 90_000, drop: 30_000, armor: 150_000, shelter: 240_000, shield: 300_000, portal: 120_000,
 });
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -301,6 +314,11 @@ export function toTheirs(skill, args, ctx) {
     }
     case 'explore': return { calls: [{ tool: 'explore_frontier', args: { heading: args.heading, chunks: args.chunks ?? 1, ...(args.biome ? { biome: args.biome } : {}) } }] };
     case 'armor': return { local: 'armor', calls: [] };
+    case 'shelter': return { local: 'care', kind: 'shelter', calls: [] };
+    case 'portal': return args.action === 'light'
+      ? { calls: [{ tool: 'activate_portal', args: { x: args.pos.x, y: args.pos.y, z: args.pos.z } }] }
+      : { calls: [{ tool: 'enter_nether_portal', args: { x: args.pos.x, y: args.pos.y, z: args.pos.z, ...(args.low_supplies ? { allow_low_supplies: true } : {}) } }] };
+    case 'shield': return { local: 'care', kind: 'shield', calls: [] };
     case 'policy': {
       // the care's knobs stay in the gateway (src/mineai/care.js); the rest goes to the runtime's survival policy
       const knobs = Object.fromEntries(Object.keys(CARE_KNOBS).filter((k) => args[k] !== undefined).map((k) => [k, args[k]]));
