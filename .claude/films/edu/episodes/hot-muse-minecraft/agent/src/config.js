@@ -324,6 +324,8 @@ export function loadConfig(env = process.env) {
       idleMs: r.int('CAMERA_IDLE_MS', 600_000, 0, 86_400_000),
       // client mods from the image (deploy/camera/mods.json), comma-separated; 'off' runs the vanilla client
       mods: r.str('CAMERA_MODS', 'sodium'),
+      // over the bot's shoulder (third, the default: its body, held tool and swing in view) or in its head (first)
+      view: r.oneOf('CAMERA_VIEW', 'third', ['third', 'first']),
       chunkThreads: r.int('CAMERA_CHUNK_THREADS', 0, 0, 32),
       jvmArgs: r.str('CAMERA_JVM_ARGS', '').split(/\s+/).filter(Boolean),
       console: r.str('MC_CONSOLE', ''),
@@ -348,6 +350,9 @@ export function loadConfig(env = process.env) {
     target: fbTarget,
     privacy: r.oneOf('FB_PRIVACY', 'EVERYONE', ['EVERYONE', 'ALL_FRIENDS', 'SELF']),
     deleteAfter: r.bool('FB_DELETE_AFTER', fbTarget === 'me'),
+    deleteDelayS: r.int('FB_DELETE_DELAY_S', 600, 0, 86_400),
+    maxPerHour: r.int('FB_MAX_PER_HOUR', 6, 1, 60),
+    maxPerDay: r.int('FB_MAX_PER_DAY', 20, 1, 500),
     pageId: r.str('FB_PAGE_ID', ''),
     tokenFile: r.str('FB_TOKEN_FILE', '') ? path.resolve(r.str('FB_TOKEN_FILE', '')) : '',
     graphVersion: r.str('FB_GRAPH_VERSION', 'v23.0'),

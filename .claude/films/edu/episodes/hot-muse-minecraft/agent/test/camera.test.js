@@ -83,13 +83,17 @@ test('console: validated lines; a FIFO nobody reads fails at once instead of han
   await assert.rejects(consoleCommand(fifo, 'list'), /ENXIO/);
   assert.ok(Date.now() - t0 < 1_000);
 
+  // the console only tags; the Paper datapack (deploy/paper-datapack/muse_cam) rides the eye or the head every tick
   assert.deepEqual(followCommands('MuseCam', 'Muse_g1'), [
-    ['gamemode spectator MuseCam', 'execute as MuseCam run spectate', 'tp MuseCam Muse_g1'], ['spectate Muse_g1 MuseCam'],
+    ['gamemode spectator MuseCam', 'execute as MuseCam run spectate', 'tag @a remove muse_cam_target', 'tag MuseCam add muse_cam', 'tag MuseCam add muse_cam_third',
+      'tag MuseCam remove muse_cam_ineye', 'tag MuseCam remove muse_cam_inhead', 'effect give MuseCam minecraft:night_vision infinite 0 true', 'tp MuseCam Muse_g1'],
+    ['tag Muse_g1 add muse_cam_target'],
   ]);
+  assert.ok(followCommands('MuseCam', 'Muse_g1', 'first')[0].includes('tag MuseCam remove muse_cam_third'), 'CAMERA_VIEW=first: the bot\'s head');
   const keep = keepFollowingCommands('MuseCam', 'Muse_g1').flat();
-  assert.match(keep[0], /^execute as MuseCam at @s unless entity @a\[name=Muse_g1,distance=\.\.3\] run tag @s add muse_cam_lost$/);
-  assert.ok(keep.slice(1).every((l) => l.startsWith('execute as @a[name=MuseCam,tag=muse_cam_lost] run ')), 'only a lost camera is moved');
-  assert.deepEqual(parkCommands('MuseCam'), ['execute as MuseCam run spectate', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
+  assert.deepEqual(keep, ['tag Muse_g1 add muse_cam_target']);
+  assert.deepEqual(parkCommands('MuseCam'), ['tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', 'tag MuseCam remove muse_cam_ineye',
+    'tag MuseCam remove muse_cam_inhead', 'execute as MuseCam run spectate', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
   for (const l of [...followCommands('MuseCam', 'Muse_g1').flat(), ...keep, ...parkCommands('MuseCam')]) await consoleCommand(file, l);
 });
 
@@ -163,16 +167,17 @@ test('rig on stand-in programs: joins, spectator and park on the console, F1 onc
     await until(() => fs.existsSync(path.join(out, 'keys')));
     assert.equal(fs.readFileSync(path.join(out, 'keys'), 'utf8'), 'key F1\n');
     const lines = () => fs.readFileSync(consoleFile, 'utf8').trim().split('\n');
-    await until(() => lines().length >= 3);
-    // on the server's whitelist before it joins (the Paper container lets in only listed players)
-    assert.deepEqual(lines(), ['whitelist add MuseCam', 'gamemode spectator MuseCam', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
+    await until(() => lines().length >= 11);
+    // on the server's whitelist before it joins (the Paper container lets in only listed players); then a spectator
+    // with night vision, tagged as the camera, parked
+    assert.deepEqual(lines(), ['whitelist add MuseCam', 'gamemode spectator MuseCam', 'tag MuseCam add muse_cam', 'effect give MuseCam minecraft:night_vision infinite 0 true', ...parkCommands('MuseCam')]);
     assert.equal(fs.readFileSync(path.join(out, 'token0'), 'utf8'), 'yes\n', 'the client got its token');
     assert.equal(fs.readFileSync(path.join(out, 'args0'), 'utf8').includes(TOKEN), false, 'and not on its command line');
     assert.match(fs.readFileSync(path.join(dir, 'home', 'game', 'options.txt'), 'utf8'), /renderDistance:5\n/);
     assert.equal(JSON.stringify(rows).includes(TOKEN), false, 'nor in the log rows');
 
     await rig.follow('Muse_g1');
-    assert.deepEqual(lines().slice(-4), ['gamemode spectator MuseCam', 'execute as MuseCam run spectate', 'tp MuseCam Muse_g1', 'spectate Muse_g1 MuseCam']);
+    assert.deepEqual(lines().slice(-10), followCommands('MuseCam', 'Muse_g1').flat());
     assert.equal(await rig.follow('bad name; op'), false, 'never a console line from a bad name');
 
     const pid = (await rig.stats()).clientPid;

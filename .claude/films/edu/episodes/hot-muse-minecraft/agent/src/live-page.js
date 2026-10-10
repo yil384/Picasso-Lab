@@ -25,6 +25,7 @@ export function statusLine(v) {
   if (v.state === 'live' && v.ownerOnly) return `Live${g ? `: game ${g}` : ''}, but Facebook shows this video to its owner only.`;
   if (v.state === 'live') return `Live${g ? `: game ${g}` : ''}. One camera films the game that asked for the live view last.`;
   if (v.state === 'retrying') return 'Not live yet: the live video could not start; it is tried again by itself.';
+  if (v.state === 'capped') return 'Not live: the limit of live videos for now is reached.';
   if (['connecting', 'starting'].includes(v.state)) return `Joining: the live video${g ? ` of game ${g}` : ''} starts in a few seconds.`;
   if (v.state === 'ending' || v.state === 'waiting') return 'Waiting for the next game.';
   return v.fb === false ? 'Live video is off on this server.' : 'Waiting for the next game.';

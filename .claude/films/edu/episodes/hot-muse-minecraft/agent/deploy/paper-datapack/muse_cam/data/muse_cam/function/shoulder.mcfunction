@@ -1,0 +1,10 @@
+# over the right shoulder, looking where the bot looks (at a point 12 blocks ahead, 20 degrees down; an absolute aim, because a relative
+# rotation in tp is relative to the entity's own since 1.21.2). Each line overwrites the one before
+# when its spots are open air, so the last that fits wins, most preferred last: the bot's own eyes (never inside a
+# block), straight above its head looking down (the middle of a shaft it digs), then 2.3 and 3.2 blocks behind (nothing closer: the bot's face would fill the picture when it turns). A wall pulls the camera
+# in instead of hiding the bot.
+execute as @a[tag=muse_cam_target,limit=1] at @s anchored eyes positioned ^ ^ ^ rotated as @e[type=minecraft:marker,tag=muse_cam_yaw,limit=1] rotated ~ 20 run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ~ ~ ~ facing ^ ^ ^12
+execute as @a[tag=muse_cam_target,limit=1] at @s anchored eyes positioned ^ ^ ^ rotated as @s rotated ~ 20 positioned ^ ^ ^0.3 if block ~ ~ ~ #muse_cam:open run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ~ ~ ~ facing ^ ^ ^12
+execute as @a[tag=muse_cam_target,limit=1] at @s anchored eyes positioned ^ ^ ^ if block ~ ~0.8 ~ #muse_cam:open if block ~ ~1.6 ~ #muse_cam:open run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ~ ~1.5 ~ facing entity @s feet
+execute as @a[tag=muse_cam_target,limit=1] at @s anchored eyes positioned ^ ^ ^ rotated as @e[type=minecraft:marker,tag=muse_cam_yaw,limit=1] rotated ~ 20 if block ^-0.3 ^0.2 ^-0.8 #muse_cam:open if block ^-0.4 ^0.3 ^-1.5 #muse_cam:open if block ^-0.5 ^0.45 ^-2.3 #muse_cam:open run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ^-0.5 ^0.45 ^-2.3 facing ^ ^ ^12
+execute as @a[tag=muse_cam_target,limit=1] at @s anchored eyes positioned ^ ^ ^ rotated as @e[type=minecraft:marker,tag=muse_cam_yaw,limit=1] rotated ~ 20 if block ^-0.3 ^0.2 ^-0.8 #muse_cam:open if block ^-0.4 ^0.3 ^-1.5 #muse_cam:open if block ^-0.5 ^0.45 ^-2.3 #muse_cam:open if block ^-0.6 ^0.55 ^-2.8 #muse_cam:open if block ^-0.7 ^0.6 ^-3.2 #muse_cam:open run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ^-0.7 ^0.6 ^-3.2 facing ^ ^ ^12

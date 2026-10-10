@@ -355,7 +355,7 @@ export async function startAgent(opts = {}) {
         while (Date.now() + 1_000 < t0 + waitMs && !signal?.aborted) {
           if (st.state === 'live' && st.game === gameId) break;
           if (st.state === 'live' && st.game !== gameId) { elsewhere ||= Date.now(); if (Date.now() - elsewhere > 5_000) break; } else elsewhere = 0;
-          if (st.state === 'retrying' && (st.retryInS ?? 0) * 1_000 > t0 + waitMs - Date.now()) break;
+          if ((st.state === 'retrying' || st.state === 'capped') && (st.retryInS ?? 0) * 1_000 > t0 + waitMs - Date.now()) break;
           await pause(1_000);
           st = (await Promise.resolve(streams.live?.()).catch(() => null)) ?? st;
         }

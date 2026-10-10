@@ -5,6 +5,9 @@ LABEL org.picasso-lab.app="muse-minecraft"
 COPY paper.jar /opt/paper/paper.jar
 COPY plugins /opt/paper/plugins
 COPY deploy/paper-entry.sh /opt/paper/entry.sh
+# the live camera's datapack (night vision, the over-the-shoulder view, the shelter seen from outside), installed into
+# the world at every start by paper-entry.sh
+COPY deploy/paper-datapack /opt/paper/datapacks
 RUN chmod +x /opt/paper/entry.sh
 WORKDIR /data
 CMD ["/opt/paper/entry.sh"]
