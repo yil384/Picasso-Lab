@@ -49,12 +49,14 @@
   },
   "L02-02": {
    "status": "delivered",
-   "updated": "2026-10-09 20:32",
+   "updated": "2026-10-10 02:36",
    "episode_dir": "episodes/l02-02",
    "morning": "2026-10-10",
-   "run": "2026-10-09_190005",
+   "run": "2026-10-10_020005",
    "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-10_L02-02/L02-02_the_gate_en.mp4",
-   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-10_L02-02"
+   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-10_L02-02",
+   "note": "run.sh: no checked mp4 after 4 round(s), exit 0; exit 0; session 5c0cef73-6fda-42ad-ae37-97773e7c1b00 | success: Still nothing to do: no tasks are running, there is no operator note, and all five files are in the deli",
+   "attempts": 1
   }
  },
  "about": "Daily-episode state, read and written by next.py (mark). guest_policy: 'skip' (default) or 'narration-only' for guest lectures whose speaker has not said yes; speaker_ok: {'L09': {'voice_clips': true, 'slides_on_screen': true, 'date': 'YYYY-MM-DD', 'note': '...'}}; skip: episode ids the user dropped."
