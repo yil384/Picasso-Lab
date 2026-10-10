@@ -524,7 +524,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         own = {};
         const calls = [...plan.calls];
         // a collect that would wear its pickaxe out gets a spare first (crafted from what is carried)
-        const spare = tool === 'collect' ? spareFirst(calls[0]?.args) : null;
+        // (full mode only: in advise mode a tool running low is advice, and a broken one the step's failure)
+        const spare = tool === 'collect' && careMode === 'full' ? spareFirst(calls[0]?.args) : null;
         if (spare) { calls.unshift(...spare.calls.map((c) => ({ ...c, quiet: true }))); parts.push({ ok: true, result: `on its own first: ${spare.text}`, code: null }); }
         let replaced = 0;
         for (let i = 0; i < calls.length; i++) {
@@ -544,7 +545,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           if (o === null) own = null;
           else if (own) for (const [k, n] of Object.entries(o)) own[k] = (own[k] ?? 0) + n;
           // the pickaxe broke in the middle of a collect: a new one from what is carried, then the rest of the collect
-          if (!res.ok && res.theirs === 'TOOL_TIER_LOST' && call.tool === 'collect_block' && replaced < 2 && !ctl.stopped && deadline - Date.now() > 10_000) {
+          if (!res.ok && careMode === 'full' && res.theirs === 'TOOL_TIER_LOST' && call.tool === 'collect_block' && replaced < 2 && !ctl.stopped && deadline - Date.now() > 10_000) {
             const again = await replaceTool(call, out.output);
             if (again) {
               replaced += 1;
