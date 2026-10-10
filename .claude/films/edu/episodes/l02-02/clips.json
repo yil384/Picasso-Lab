@@ -1,0 +1,58 @@
+[
+ {
+  "id": "C17",
+  "lecture": "L02",
+  "rec_start": 1867.05,
+  "rec_end": 1872.37,
+  "dur": 5.32,
+  "text": "The first layer is a matrix multiplication. Right. The other one is also a matrix multiplication."
+ },
+ {
+  "id": "C12",
+  "lecture": "L02",
+  "rec_start": 1749.11,
+  "rec_end": 1753.93,
+  "dur": 4.82,
+  "text": "Instead of having two layers, you can have three or five or six, it doesn't really converge at all."
+ },
+ {
+  "id": "C15",
+  "lecture": "L02",
+  "rec_start": 2219.05,
+  "rec_end": 2221.15,
+  "dur": 2.1,
+  "text": "Sigmoid function itself is not good."
+ },
+ {
+  "id": "C6",
+  "lecture": "L02",
+  "rec_start": 2409.79,
+  "rec_end": 2418.23,
+  "dur": 8.44,
+  "text": "Instead of using the value for the gate and the value for the value itself, they are using two parts. One is just for the gating and the other one is just for the value."
+ },
+ {
+  "id": "C7",
+  "lecture": "L02",
+  "rec_start": 2495.37,
+  "rec_end": 2501.91,
+  "dur": 6.54,
+  "text": "A lot of research is experimental research. If you get better results, you can get good explanation."
+ },
+ {
+  "id": "C8",
+  "lecture": "L02",
+  "rec_start": 2532.47,
+  "rec_end": 2535.53,
+  "dur": 3.06,
+  "text": "No one will know which one is better until you test it."
+ },
+ {
+  "id": "C20",
+  "lecture": "L03",
+  "rec_start": 471.21,
+  "rec_end": 474.77,
+  "dur": 3.56,
+  "text": "Instead of having four times, maybe we need to have a different dimension."
+ }
+]
