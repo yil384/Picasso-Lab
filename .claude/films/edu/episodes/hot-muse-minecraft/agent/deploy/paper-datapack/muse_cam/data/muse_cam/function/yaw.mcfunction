@@ -1,5 +1,5 @@
-# the camera turns after the bot instead of with it: each tick its yaw closes 15 % of the gap to the bot's (the short
-# way round), so a snapped 180 degree turn becomes a half-second swing around the bot, never a cut through it
+# the camera turns after the bot instead of with it: each tick its yaw closes 30 % of the gap to the bot's (the short
+# way round), so a snapped 180 degree turn becomes a quarter-second swing around the bot, never a cut through it
 execute store result score #b muse_cam_y run data get entity @a[tag=muse_cam_target,limit=1] Rotation[0] 10
 scoreboard players operation #d muse_cam_y = #b muse_cam_y
 scoreboard players operation #d muse_cam_y -= #c muse_cam_y
