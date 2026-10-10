@@ -166,11 +166,15 @@ test('graph: the token only in the Authorization header; transient errors tried 
   }
 });
 
-test('channel: a game goes live by itself; the embed is Facebook\'s player for the video; the game\'s end ends the live video', async (t) => {
+test('channel: a game goes live when live_view asks for it (never because it started); the embed is Facebook\'s player for the video; the game\'s end ends the live video', async (t) => {
   const { fake, rows, streams, ch, dir } = await channelOn(t);
   assert.deepEqual(ch.live(), { fb: true, state: 'off', game: null, videoUrl: null, embedUrl: null, liveSince: null, warning: null, games: 0, error: null, retryInS: null });
   assert.deepEqual(ch.start('g1', { player: 'Muse_aaaa' }), { id: 'g1' });
   assert.equal(ch.start('g2', { player: 'not a name' }), null, 'a bad player name');
+  await ch.settled();
+  assert.equal(ch.live().state, 'off', 'a game that only started never goes live');
+  assert.equal(fake.calls.some((c) => c.method === 'POST'), false, 'no live video created');
+  ch.focus('g1');
   assert.equal(ch.live().state, 'starting');
   await until(() => ch.live().state === 'live');
   const [id] = [...fake.videos.keys()];
@@ -207,6 +211,7 @@ test('channel: a game goes live by itself; the embed is Facebook\'s player for t
 test('channel: several games, one camera: it films the game whose live_view came last and moves on when that game ends; one live video throughout', async (t) => {
   const { fake, rows, streams, ch } = await channelOn(t);
   ch.start('g1', { player: 'Muse_aaaa' });
+  ch.focus('g1');
   await until(() => ch.live().state === 'live');
   ch.start('g2', { player: 'Muse_bbbb' });
   await ch.settled();
@@ -225,18 +230,19 @@ test('channel: several games, one camera: it films the game whose live_view came
   await ch.settled();
   assert.equal(ch.live().game, 'g2');
   await ch.stop('g2');
-  await until(() => ch.live().game === 'g3');
-  assert.equal(s.calls.at(-1), 'follow Muse_cccc', 'the newest game, with no other request');
-  ch.focus('g1');
-  await until(() => s.calls.at(-1) === 'follow Muse_aaaa');
-  await ch.stop('g1');
+  await until(() => ch.live().game === 'g1');
+  assert.equal(s.calls.at(-1), 'follow Muse_aaaa', 'back to the game that asked before; g3 never asked');
+  ch.focus('g3');
   await until(() => s.calls.at(-1) === 'follow Muse_cccc');
+  await ch.stop('g3');
+  await until(() => s.calls.at(-1) === 'follow Muse_aaaa');
   // live_view asked for a game the channel does not have yet: it gets the camera when it arrives
   ch.focus('g4');
   ch.start('g4', { player: 'Muse_dddd' });
   await until(() => s.calls.at(-1) === 'follow Muse_dddd');
   await ch.stop('g4');
-  await ch.stop('g3');
+  await until(() => s.calls.at(-1) === 'follow Muse_aaaa');
+  await ch.stop('g1');
   await until(() => ch.live().state === 'off');
   assert.equal(fake.videos.size, 1, 'one live video for all of it');
   assert.equal(streams.made.length, 1);
@@ -248,6 +254,7 @@ test('channel: a failed create is tried again with a backoff; a failed stream or
   const { fake, rows, streams, ch } = await channelOn(t);
   fake.fault((c) => c.method === 'POST' && c.path.endsWith('/live_videos'), 500, { message: 'An unexpected error has occurred', code: 2, is_transient: true });
   ch.start('g1', { player: 'Muse_aaaa' });
+  ch.focus('g1');
   await until(() => rows.some((r) => r.k === 'fb_live_failed'));
   assert.equal(ch.live().state, 'retrying');
   assert.match(ch.live().error, /Graph API 500/);
@@ -277,6 +284,7 @@ test('channel: a refusal only a person can fix (the Page not eligible to go live
   const { fake, rows, ch } = await channelOn(t, { permanentRetryMs: 400 });
   fake.fault((c) => c.method === 'POST' && c.path.endsWith('/live_videos'), 400, { message: 'Permissions error', type: 'OAuthException', code: 200, error_subcode: 1363120 }, 2);
   ch.start('g1', { player: 'Muse_aaaa' });
+  ch.focus('g1');
   await until(() => rows.some((r) => r.k === 'fb_live_failed'));
   const st = ch.live();
   assert.equal(st.state, 'retrying');
@@ -290,21 +298,28 @@ test('channel: a refusal only a person can fix (the Page not eligible to go live
 });
 
 test('profile target (FB_TARGET=me): /me/live_videos in public, each live video ended then deleted with its recording, a failed delete tried again, crash leftovers of ours deleted, nothing else on the profile touched', async (t) => {
-  const { fake, rows, ch, dir } = await channelOn(t, { deleteAfter: true, graphOpts: { pageId: 'me', privacy: { value: 'EVERYONE' }, sleep: async () => {} } });
+  const { fake, rows, ch, dir } = await channelOn(t, { deleteAfter: true, deleteDelayMs: 400, graphOpts: { pageId: 'me', privacy: { value: 'EVERYONE' }, sleep: async () => {} } });
   // on the profile before we start: the owner's own live video and an old video, and one of ours a crash left ended
   const own = fake.add({ owner: USER_ID, description: 'the owner streaming by hand' });
   const old = fake.add({ owner: USER_ID, description: 'an old video', status: 'VOD' });
   const ours = fake.add({ owner: USER_ID, description: DESCRIPTION, status: 'VOD' });
   ch.start('g1', { player: 'Muse_aaaa' });
+  ch.focus('g1');
   await until(() => ch.live().state === 'live');
-  assert.equal(fake.videos.has(ours), false, 'the leftover of ours was deleted at start');
+  await until(() => !fake.videos.has(ours)); // the leftover of ours: deleted after the delay too
   const id = [...fake.videos.values()].find((v) => v.title?.includes('game g1')).id;
   const v = fake.videos.get(id);
   const create = fake.calls.find((c) => c.method === 'POST' && c.path === '/v23.0/me/live_videos');
   assert.equal(create.body.privacy, '{"value":"EVERYONE"}', 'public: the embed plays only public videos');
   assert.equal(ch.live().videoUrl, `https://www.facebook.com/${USER_ID}/videos/${v.videoId}/`);
   await ch.stop('g1');
-  await until(() => ch.live().state === 'off' && fake.deleted.includes(id));
+  await until(() => ch.live().state === 'off');
+  // ended at once, deleted only after the delay (a viewer whose panel opens late still sees the end)
+  assert.equal(fake.videos.get(id)?.status, 'VOD');
+  const waiting = JSON.parse(fs.readFileSync(path.join(dir, 'fb-live-state.json'), 'utf8')).delete;
+  assert.equal(waiting.length, 1);
+  assert.ok(waiting[0].live === id && waiting[0].due > Date.now(), 'the due time is kept in the state file');
+  await until(() => fake.deleted.includes(id));
   assert.equal(fake.videos.has(id), false);
   const after = fake.calls.filter((c) => c.path === `/v23.0/${id}` && c.method !== 'GET').map((c) => `${c.method} ${c.body.end_live_video ?? ''}`.trim());
   assert.deepEqual(after.slice(-2), ['POST true', 'DELETE'], 'ended, then deleted (the live video object: its recording goes with it)');
@@ -312,6 +327,7 @@ test('profile target (FB_TARGET=me): /me/live_videos in public, each live video 
   assert.ok(rows.some((r) => r.k === 'fb_live_deleted' && r.broadcast === id && r.deletedId === id));
   // a delete that fails (Facebook busy) is kept in the state file and done later
   ch.start('g2', { player: 'Muse_bbbb' });
+  ch.focus('g2');
   await until(() => ch.live().state === 'live');
   const id2 = [...fake.videos.values()].find((x) => x.title?.includes('game g2')).id;
   fake.fault((c) => c.method === 'DELETE' && c.path === `/v23.0/${id2}`, 503, { message: 'Service temporarily unavailable', code: 2, is_transient: true }, 4);
@@ -347,6 +363,49 @@ test('profile target: a live video Facebook stored with a narrower privacy than 
   assert.match(r.structuredContent.html, /<p>Live: game g\w+, but Facebook shows this video to its owner only\.<\/p>/);
   assert.ok(rows.some((x) => x.k === 'fb_privacy' && x.asked === 'EVERYONE' && x.got === 'SELF'));
   await ch.stop(game);
+});
+
+test('caps: at most maxPerHour live videos in any hour and maxPerDay in 24 hours, kept across restarts; live_view says so plainly', async (t) => {
+  let jump = 0; // a running clock that the test can move an hour ahead
+  const clock = () => Date.now() + jump;
+  const { fake, rows, ch, dir, graph } = await channelOn(t, { now: clock, maxPerHour: 2, maxPerDay: 3 });
+  const once = async (g) => {
+    ch.start(g, { player: 'Muse_aaaa' });
+    ch.focus(g);
+    await until(() => ch.live().state === 'live');
+    await ch.stop(g);
+    await until(() => ch.live().state === 'off');
+  };
+  await once('g1');
+  await once('g2');
+  ch.start('g3', { player: 'Muse_aaaa' });
+  ch.focus('g3');
+  await until(() => ch.live().state === 'capped');
+  assert.equal(fake.videos.size, 2, 'no third live video in the hour');
+  assert.match(ch.live().error, /the limit of 2 live videos in the last hour is reached/);
+  assert.ok(ch.live().retryInS > 3_500 && ch.live().retryInS <= 3_600);
+  assert.ok(rows.some((r) => r.k === 'fb_capped'));
+  const state = JSON.parse(fs.readFileSync(path.join(dir, 'fb-live-state.json'), 'utf8'));
+  assert.equal(state.created.length, 2, 'the creates are kept in the state file');
+  // a restart keeps counting
+  const again = createLiveChannel({ graph, createStream: stubStreams(fake).create, stateFile: path.join(dir, 'fb-live-state.json'), now: clock, maxPerHour: 2, maxPerDay: 3, pollMs: 25, settleMs: 20 });
+  t.after(() => again.stopAll());
+  again.start('g4', { player: 'Muse_bbbb' });
+  again.focus('g4');
+  await until(() => again.live().state === 'capped');
+  await again.stop('g4');
+  // an hour later the hourly cap is free again; the day's cap of 3 then holds
+  jump += 3_601_000;
+  ch.focus('g3');
+  await until(() => ch.live().state === 'live');
+  assert.equal(fake.videos.size, 3);
+  await ch.stop('g3');
+  await until(() => ch.live().state === 'off');
+  ch.start('g5', { player: 'Muse_aaaa' });
+  ch.focus('g5');
+  await until(() => ch.live().state === 'capped');
+  assert.match(ch.live().error, /3 live videos in the last 24 hours/);
+  await ch.stop('g5');
 });
 
 test('channel: at start, live videos a crash left open are ended (the state file, and open ones of the Page with the marker); others are left alone', async (t) => {
@@ -391,6 +450,8 @@ test('channel: a game the agent stops reporting leaves after gameTtlMs; one it r
   const { fake, ch } = await channelOn(t, { gameTtlMs: 200 });
   ch.start('g1', { player: 'Muse_aaaa' });
   ch.start('g2', { player: 'Muse_bbbb' });
+  ch.focus('g1');
+  ch.focus('g2');
   await until(() => ch.live().state === 'live');
   for (let i = 0; i < 8; i++) { ch.start('g2', { player: 'Muse_bbbb' }); await sleep(50); }
   assert.equal(ch.has('g1'), false, 'not reported: gone');
@@ -528,6 +589,7 @@ test('MCP live_view: a refusal the channel waits out is said at once, with the r
   await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
   const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
   ch.start(game, { player: 'Muse_test3' });
+  ch.focus(game);
   await until(() => ch.live().state === 'retrying');
   const t0 = Date.now();
   const r = await c.callTool({ name: 'live_view', arguments: {} });
@@ -592,6 +654,7 @@ test('end to end: a game on the channel -> the fake Graph API -> the camera stre
   });
   try {
     ch.start('g1', { player: 'Muse_e2e1' });
+    ch.focus('g1');
     await until(() => rows.some((r) => r.k === 'stream_publishing'), 20_000);
     const [id] = [...fake.videos.keys()];
     fake.golive(id); // the fake has no ingest of its own: Facebook would show LIVE once the stream arrives

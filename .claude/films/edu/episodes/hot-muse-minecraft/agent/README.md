@@ -51,7 +51,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/live-view-fx.js` | runs in the live-view pages: eased first-person camera, crack overlay on the block being broken |
 | `src/stream.js`, `src/stream-page.js` | live video of a guest game (off unless `STREAM_ENABLED`): headless Chromium on the bot's first-person view, a smoothed camera, ffmpeg to RTMPS (Facebook Live) or an MP4; the stream service and its client for the container (section "Live video") |
 | `src/rtmp.js` | the RTMP(S) publisher: ffmpeg writes FLV to its fd 3 and this sends it to the ingest, so a stream key is never on a command line (picasso has no hidepid), in a file or in a child's environment |
-| `src/fb-live.js`, `src/live-page.js` | `FB_LIVE=on`: the Graph API (Page token from a 600 file, spaced, retried, rate-limit aware, scrubbed) and the one live channel on the Facebook Page (each guest game goes live by itself; one camera follows the last `live_view` request; the live video ends with the last game; a crash's leftovers ended at start); the static page `live_view` returns for muse.ai's artifact panel (section "Live on a Facebook Page") |
+| `src/fb-live.js`, `src/live-page.js` | `FB_LIVE=on`: the Graph API (Page token from a 600 file, spaced, retried, rate-limit aware, scrubbed) and the one live channel on the Facebook Page (a game goes live only when `live_view` asks for it; one camera follows the last `live_view` request; the live video ends with the last game that asked; a crash's leftovers ended at start); the static page `live_view` returns for muse.ai's artifact panel (section "Live on a Facebook Page") |
 | `scripts/fb-token.mjs`, `scripts/fb-probe.mjs` | the Page token from the App ID, the App Secret and a short-lived user token (written 600; prints only the Page's name and id); one real test live video from this machine (a test pattern with a clock, checked live, ended, deleted) |
 | `src/camera.js` | the real-client camera (`STREAM_SOURCE=client`): Xvfb + the vanilla Minecraft client as a spectator in the bot's head, ffmpeg x11grab, the same stream interface (section "Real-client camera") |
 | `scripts/stream.mjs` | one stream on demand (to a file or an RTMP(S) URL, with its CPU, RAM and frame numbers), a side-by-side camera comparison, `--camera` (one real-client stream of a player), or `--serve` (the stream or camera container) |
@@ -527,6 +527,28 @@ profile `camera`, `deploy/Dockerfile.camera`).
   that restarted mid-game is put back at once. ffmpeg grabs the display (x11grab, no cursor) and encodes it like the
   viewer streams: 1280x720 H.264 High, CBR, keyframe every 2 s, no B-frames, silent 48 kHz AAC, the caption, FLV to
   RTMPS or MP4 to a file. At the end the camera stops riding and floats 250 blocks up looking at the sky.
+- The view (`CAMERA_VIEW`, 2026-10-09): `third` (the default) films over the bot's right shoulder, about 4 blocks
+  behind and 1 above, looking where it looks, so the bot's body, its held tool and its arm swing are in the picture
+  (a spectator in the bot's head draws none of them); `first` is the old view from its head. It is the Paper
+  datapack's work (`deploy/paper-datapack/muse_cam`, installed into the world by `deploy/paper-entry.sh` at every
+  start), every tick: the camera rides an invisible display entity (`item_display`, tag `muse_cam_eye`) teleported
+  to the spot behind the bot, and the client interpolates each teleport over `teleport_duration` (6 ticks), so the
+  follow is a smooth, damped one and the bot's sudden turns become short swings; the farthest of three spots with open
+  air on the way wins, so a wall pulls the camera in instead of hiding the bot. When a block that is not leaves sits
+  right above the bot's head for a second (its night shelter, a tunnel) the eye moves outside to look at it (behind and
+  above, else straight above, else close behind its head underground), in either view; a second without the roof and
+  the view goes back. The camera player has night vision all the time (given again whenever it is gone: a respawn, a
+  dimension change), so a night or a cave is never black. The camera service only tags through the console:
+  `muse_cam` on the camera, `muse_cam_third` for the view, `muse_cam_target` on the bot.
+  The camera's yaw follows the bot's damped (it closes 30 % of the gap each tick, held on a server-only `marker`), so a
+  snapped turn is a quarter-second swing around the bot; the aim is absolute (`facing` a point ahead), because a
+  relative rotation in `tp` is the entity's own since 1.21.2. Spots, last that fits wins: 0.3 blocks in front of the
+  bot's face (inside its head the model's face is drawn from within), straight above its head looking down, 2.3 and
+  3.2 blocks behind. Seen on staging (2026-10-10, five games, `~/Downloads/muse-camera-third-person.mp4` and the whole
+  game `-full.mp4`): over the shoulder in open ground and along slopes, the shaft it digs from above; among dense trees
+  mostly from above; a grey picture for a few seconds deep in a narrow shaft (the camera inside stone); while it
+  shelters, the eye stays where it was and turns to it (no high spot fit under the trees there), so the picture is the
+  ground over the shelter.
 - Between games: the client stays in the world (a game goes live 3.5 s after it starts). After `CAMERA_IDLE_MS`
   (10 min) without a game it quits and Xvfb stays (0 % CPU, 46 MB); the next game starts it again (live after 15 s).
 - Supervision: a client that exits, is disconnected ("Client disconnected with reason", "Couldn't connect to server")
@@ -624,19 +646,21 @@ server is offline-mode; that is the operator's call, not a default).
 
 muse.ai's artifact panel blocks `fetch` and WebSocket (CSP `connect-src 'none'`) but plays an iframe of
 `https://www.facebook.com/plugins/video.php?href=<video URL>&show_text=false&width=1280` (the owner's test, 2026-10-08;
-YouTube embeds fail). So with `FB_LIVE=on` every guest game goes live on a Facebook Page by itself, and `live_view`
-returns a static page with that player. The owner's personal profile cannot be driven by the API; a Page can.
+YouTube embeds fail). So with `FB_LIVE=on` a guest game goes live on Facebook when `live_view` asks for it, and
+`live_view` returns a static page with that player. Only on demand: a game that merely starts, a staging check or a
+bench never creates a live video.
 
 - **One channel, one camera** (`src/fb-live.js`, `createLiveChannel`; there is one camera account). A game whose
-  first-person view comes up is put on the channel. With no live video running, the channel creates one
+  first-person view comes up is put on the channel; once `live_view` has asked for it (before or after), and no live
+  video runs, the channel creates one
   (`POST /{page}/live_videos`, `status=LIVE_NOW`, title "Picasso Lab demo: an AI plays Minecraft (game g...)",
   a description naming the demo and the marker sentence), then starts the camera stream to its `secure_stream_url`
   (Facebook shows a stream only if it connects after the live video exists), reads the video's permalink for the
   embed, and reads the status until Facebook says `LIVE` while our publisher has had `NetStream.Publish.Start`. The
-  camera films one game: the one whose `live_view` call came last, else the one it films, else the newest. When the
-  filmed game ends, the camera moves to another game on the channel and the title follows; when no game is left
-  (game end, lease end, idle end, all reach the channel as the game's end), ffmpeg stops and the live video is ended
-  (`end_live_video=true`). The `live_view` reply says this plainly.
+  camera films one game: the one whose `live_view` call came last. When the filmed game ends, the camera moves to the
+  game whose request came before (a game that never asked is never filmed) and the title follows; when no game that
+  asked is left (game end, lease end, idle end, all reach the channel as the game's end), ffmpeg stops and the live
+  video is ended (`end_live_video=true`). The `live_view` reply says this plainly.
 - **Failures**: a failed create is tried again after 5 s, 15 s, 30 s, 1 min, 2 min (never retried blindly: a create is
   not idempotent, so a sweep of our open live videos runs first); a refusal only a person can fix (the Page not
   eligible, a dead token, a missing permission) is said in plain words and tried again every 10 min. A stream that
@@ -668,7 +692,8 @@ returns a static page with that player. The owner's personal profile cannot be d
 **Where it goes live (`FB_TARGET`).** `page` (the default, and the long-term setup) posts to the Page with the Page
 token, which never expires, and keeps each video. `me` posts to the token owner's own profile with a long-lived user
 token: `POST /me/live_videos` with `privacy={"value":"EVERYONE"}` (`FB_PRIVACY`; the video plugin plays only public
-videos), and with `FB_DELETE_AFTER` (on by default for `me`) every live video is deleted once it is ended, so the
+videos), and with `FB_DELETE_AFTER` (on by default for `me`) every live video is deleted `FB_DELETE_DELAY_S` (10 min)
+after it is ended, so the
 owner's timeline stays clean. The delete is of the live video object, which takes its recording with it; deleting the
 recording's own id is refused on a profile ("publish_actions ... deprecated"). A delete that fails is kept in
 `FB_STATE_FILE` and tried again every 30 s and at the next start; the start sweep also ends and deletes our own
@@ -832,8 +857,10 @@ in to Facebook in the same browser, may still see it in the muse.ai panel (UNVER
 | `STREAM_ENABLED` | `false` | live video of every guest game (section "Live video"); off: nothing is started and nothing changes |
 | `STREAM_RTMP_URL` | (none) | `rtmps://...` ingest URLs with their stream keys, comma-separated, one per stream that may run at once; never printed or logged |
 | `STREAM_VIDEO_URL` | (none) | the public URLs of the Facebook live videos those ingests feed (same order; one URL serves all): MCP `live_view` returns Facebook's player for it while a game's stream runs (without `FB_LIVE`) |
-| `FB_LIVE` | `off` | `on`: every guest game goes live on the Facebook Page by itself, one camera, one live channel (section "Live on a Facebook Page"); read by the process that runs the camera |
+| `FB_LIVE` | `off` | `on`: a guest game goes live on Facebook when `live_view` asks for it, one camera, one live channel (section "Live on a Facebook Page"); read by the process that runs the camera |
 | `FB_PAGE_ID`, `FB_TOKEN_FILE` | (none) | the Page's numeric id; the file (600) holding the Page token alone (or, with `FB_TARGET=me`, the long-lived user token; `scripts/fb-token.mjs` writes either); the token is never an environment variable and never logged |
+| `FB_DELETE_DELAY_S` | `600` | with `FB_DELETE_AFTER`, an ended live video is deleted this long after its game (a viewer whose panel opens late still sees the end); the due time is kept in `FB_STATE_FILE` |
+| `FB_MAX_PER_HOUR`, `FB_MAX_PER_DAY` | `6`, `20` | live videos created at most in any hour and any 24 hours (kept in `FB_STATE_FILE` across restarts); at the cap `live_view` says so and when the next one can start (Facebook asked for an identity check after many automatic public lives, 2026-10-09) |
 | `FB_TARGET`, `FB_PRIVACY`, `FB_DELETE_AFTER` | `page`, `EVERYONE`, `true` for `me` (`false` for `page`) | where the live videos go: the Page (long-term) or `me`, the token owner's profile; a profile video's privacy (the embed plays only `EVERYONE`); delete each live video after it is ended |
 | `FB_GRAPH_VERSION`, `FB_GRAPH_URL`, `FB_STATE_FILE`, `FB_TITLE` | `v23.0`, `https://graph.facebook.com`, `<LOG_DIR>/fb-live-state.json`, `Picasso Lab demo: an AI plays Minecraft` | the Graph API (another URL only on this machine, for tests); where the ids of open live videos are kept; the live video's title before " (game g...)" |
 | `STREAM_OUT_DIR` | (none) | without an RTMP URL: every stream is an MP4 file here (local tests) |
@@ -846,6 +873,7 @@ in to Facebook in the same browser, may still see it in the muse.ai panel (UNVER
 | `CAMERA_AUTH`, `CAMERA_AUTH_DIR`, `CAMERA_NAME` | `msa`, (none), (none) | the camera account: `msa` (the login in the auth folder) or `offline` (tests on our own server only, as `CAMERA_NAME`, default MuseCam) |
 | `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
 | `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `5`, `30`, `fast`, `0.75` | the client's video settings (the tuned ones); it draws at 1280x720 times the scale and ffmpeg scales up |
+| `CAMERA_VIEW` | `third` | `third`: over the bot's shoulder (its arm, tool and swing in view), outside its shelter while it is enclosed; `first`: in its head (outside too while enclosed). The Paper datapack does it (section "Real-client camera") |
 | `CAMERA_MODS`, `CAMERA_CHUNK_THREADS`, `CAMERA_JVM_ARGS` | `sodium`, `0`, (none) | client mods from the image (`deploy/camera/mods.json`; `off` = vanilla); Sodium's chunk builder threads (0: its own choice); extra JVM flags (a collector given here replaces G1) |
 | `STREAM_CLOCK`, `STREAM_CLOCK_TZ` | `false`, `America/Los_Angeles` | test only: the wall clock burned into the video |
 | `CAMERA_IDLE_MS`, `CAMERA_NICE`, `CAMERA_HEAP_MB` | `600000`, `5`, `2048` | quit the client after this long without a game (0: never); its niceness; its heap |

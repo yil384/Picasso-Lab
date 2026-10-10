@@ -29,6 +29,8 @@ P
 # every bot (and the camera, compose profile "camera") joins from the agent's one address: Paper's per-address
 # connection throttle (4 s) would refuse the second of two joins within 4 s. The server is private: no throttle.
 if [ -f bukkit.yml ]; then sed -i 's/^\( *connection-throttle:\).*/\1 -1/' bukkit.yml; else printf 'settings:\n  connection-throttle: -1\n' > bukkit.yml; fi
+# the live camera's datapack (deploy/paper-datapack/muse_cam), fresh at every start; Paper enables a new one by itself
+mkdir -p world/datapacks && rm -rf world/datapacks/muse_cam && cp -r /opt/paper/datapacks/muse_cam world/datapacks/
 rm -f /console/console.in && mkfifo /console/console.in && chmod 666 /console/console.in
 # the world keeps its game rules and difficulty in level.dat, so both are set again at every start, either way:
 # DAYLIGHT=locked stops the clock at morning, cycle starts it again (a world that was locked stays locked otherwise)

@@ -1,0 +1,247 @@
+[
+ {
+  "id": "n0",
+  "en": "Llama, Mistral and OLMo all run the same three-matrix trick.",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "And Llama and OLMo pay for it by shrinking that layer to about two-thirds. Why would anyone do that?",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "From Professor Yufei Ding's CSE 291P at UC San Diego: the gate.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "A matrix multiply turns a list of numbers into a new list of weighted sums.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "Layers like that are linear. Stack as many as you like: together they are still one matrix multiply.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "One straight-line map, like straight rulers on a wavy curve. Her class demo:",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "So between them goes a bend: a non-linearity, also called an activation function.",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "In 1991, Kurt Hornik proved that one hidden layer, with a bounded non-linear activation and enough units,",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "can get as close as you like to any continuous function on a bounded region. A 1993 follow-up covered ReLU too.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "It promises that such a network exists, not that training will find it.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "Inside a transformer, the design behind these models, the activation sits in one place: the feed-forward layer. In her words:",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "In letters: FFN of x equals act of x W1, times W2.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "Each token, a word or a piece of one, arrives as h numbers, the model width. The first matrix widens it to 4h, the hidden width.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "Picture the activation as a kitchen tap. The water is the content. The hand on the tap is the gate.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "The 2017 Transformer used ReLU: positive numbers pass as they are, negative numbers become zero.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "Shut or fully open: a switch. Minus one goes in, zero comes out.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "Training nudges each weight using slopes, called gradients. ReLU's slope is one for positives, zero for negatives.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "But if a unit outputs zero for every input, its slope is zero everywhere.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "No learning signal ever reaches it, so it never grows: a dead ReLU.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "So, a dimmer instead of a switch. GELU multiplies x by Phi of x.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "Phi of x is the chance a bell-curve sample falls below x: near one for big x, near zero for very negative x.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "The water sets the tap by itself: a strong flow opens it, a negative trickle mostly shuts it.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "Her slide 17, with our own curves. Minus one now comes out as minus 0.16: a trickle, so it still gets a gradient.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "BERT and the first GPT used GELU. It costs more than ReLU, but beside the matrix multiplies it is small change.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "A sigmoid squeezes any number into an S-curve between zero and one. Its slope never tops one quarter.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "But as a hand on the tap, it works. x times sigmoid of x: SiLU, the Sigmoid Linear Unit.",
+  "zh": ""
+ },
+ {
+  "id": "n27",
+  "en": "Cheaper than GELU: minus one comes out as minus 0.27. And it was already in the 2016 GELU paper.",
+  "zh": ""
+ },
+ {
+  "id": "n28",
+  "en": "In 2017, a Google Brain team let a computer search through combinations of simple functions.",
+  "zh": ""
+ },
+ {
+  "id": "n29",
+  "en": "Swish came out on top: x times sigmoid of beta x. With beta at one, it is exactly SiLU.",
+  "zh": ""
+ },
+ {
+  "id": "n31",
+  "en": "So far, the water turns its own tap: the same x is both the water and the hand.",
+  "zh": ""
+ },
+ {
+  "id": "n32",
+  "en": "A gated linear unit gives the tap to a second person: two separate matrix multiplies of the same input.",
+  "zh": ""
+ },
+ {
+  "id": "n33",
+  "en": "One makes the water. A sigmoid of the other decides, number by number, how much of that water gets through.",
+  "zh": ""
+ },
+ {
+  "id": "n34",
+  "en": "SwiGLU, Swish plus GLU, gives that hand a SiLU: SiLU of x W, times x V, then W2.",
+  "zh": ""
+ },
+ {
+  "id": "n35",
+  "en": "Three matrices: one makes the gate, one makes the content, one brings the result back down.",
+  "zh": ""
+ },
+ {
+  "id": "n36",
+  "en": "On her slide 20, the pen fixes one word: SwiGLU's gate is SiLU, as the figure on her own slide says.",
+  "zh": ""
+ },
+ {
+  "id": "n37",
+  "en": "Llama, Mistral and OLMo all use SwiGLU. Gemma uses a GELU-gated cousin, GeGLU.",
+  "zh": ""
+ },
+ {
+  "id": "n38",
+  "en": "Her slide 21 keeps score. Cheap forward? Cheap gradient? ReLU: yes, yes. GELU: no, no. SiLU: so-so.",
+  "zh": ""
+ },
+ {
+  "id": "n39",
+  "en": "Healthy gradients? Not ReLU. And her last row: today's winners run SiLU, mostly as SwiGLU, like Llama, Mistral and OLMo.",
+  "zh": ""
+ },
+ {
+  "id": "n40",
+  "en": "Better, but only a little: about 1.68 against 1.64 on the paper's score, lower is better.",
+  "zh": ""
+ },
+ {
+  "id": "n41",
+  "en": "And why does it work? The paper ends:",
+  "zh": ""
+ },
+ {
+  "id": "n42",
+  "en": "“We offer no explanation as to why these architectures seem to work; we attribute their success, as all else, to divine benevolence.”",
+  "zh": ""
+ },
+ {
+  "id": "n43",
+  "en": "Now the bill. Each matrix entry is a weight the model learns, a parameter.",
+  "zh": ""
+ },
+ {
+  "id": "n44",
+  "en": "A plain layer: two matrices of h by 4h, 8 h-squared weights. A third one at the same width makes 12 h-squared.",
+  "zh": ""
+ },
+ {
+  "id": "n45",
+  "en": "Each weight costs about two operations per token, a multiply and an add. More weights, more compute.",
+  "zh": ""
+ },
+ {
+  "id": "n46",
+  "en": "Three matrices of h by the new width hold 3 times h times that width. Set that equal to 8 h-squared.",
+  "zh": ""
+ },
+ {
+  "id": "n47",
+  "en": "The new width comes out at 8 thirds of h: two-thirds of 4h, about 2.67 h. Same weights, same compute.",
+  "zh": ""
+ },
+ {
+  "id": "n48",
+  "en": "In Llama's 7B model, 4h would be 16,384. Two-thirds is about 10,923; the code rounds up to 11,008. OLMo's 7B lands on the same 11,008.",
+  "zh": ""
+ },
+ {
+  "id": "n49",
+  "en": "Back to the puzzle: one matrix for the water, one for the hand, one for the way back.",
+  "zh": ""
+ },
+ {
+  "id": "n50",
+  "en": "A switch, then a dimmer, then a second pair of hands.",
+  "zh": ""
+ }
+]

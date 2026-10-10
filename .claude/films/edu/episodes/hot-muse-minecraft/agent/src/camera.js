@@ -55,6 +55,7 @@ export const CAMERA_DEFAULTS = Object.freeze({
   joinTimeoutMs: 150_000, // a client that has not joined by then is restarted
   followMs: 5_000, // how often the camera checks it still rides the bot
   idleMs: 600_000, // a camera with no game for this long quits its client (Xvfb stays); the next game starts it again
+  view: 'third', // 'third': over the bot's shoulder (its arm, tool and swing in view); 'first': in its head
   maxRestarts: 6, // client restarts within restartWindowMs before the rig rests for coolOffMs
   restartWindowMs: 600_000,
   coolOffMs: 120_000,
@@ -200,27 +201,28 @@ export function consoleCommand(file, line) {
 }
 
 /**
- * The console lines that put a camera on a bot, in two steps: first next to it (spectator mode, any old ride ended),
- * then, once the client has the bot in its world, into its head. A client told to spectate an entity it has not loaded
- * yet ignores it, while the server still moves it along: it would film from inside the bot's head with its own view.
+ * The console lines that put a camera on a bot, in two steps: first next to it (spectator mode, any old ride ended,
+ * tagged as the camera, night vision), then, once the client has the bot in its world, the bot tagged as the target.
+ * The rest is the Paper datapack's (deploy/paper-datapack/muse_cam), every tick: in the third-person view (CAMERA_VIEW
+ * third, the default) the camera rides an invisible display entity kept over the bot's right shoulder, pulled in when
+ * a wall is in the way, and moved outside to look at the bot's shelter while it is enclosed; in first person it rides
+ * the bot's head, except while the bot is enclosed. Night vision is given again whenever it is gone.
  */
-export const followCommands = (camera, player) => [
-  [`gamemode spectator ${camera}`, `execute as ${camera} run spectate`, `tp ${camera} ${player}`],
-  [`spectate ${player} ${camera}`],
+export const followCommands = (camera, player, view = 'third') => [
+  [
+    `gamemode spectator ${camera}`, `execute as ${camera} run spectate`, 'tag @a remove muse_cam_target', `tag ${camera} add muse_cam`,
+    `tag ${camera} ${view === 'first' ? 'remove' : 'add'} muse_cam_third`, `tag ${camera} remove muse_cam_ineye`, `tag ${camera} remove muse_cam_inhead`,
+    `effect give ${camera} minecraft:night_vision infinite 0 true`, `tp ${camera} ${player}`,
+  ],
+  [`tag ${player} add muse_cam_target`],
 ];
-/**
- * The same, only when the camera is not at the bot any more (a respawn, a long teleport): a tag marks a lost camera,
- * so the lines say nothing on the console while it rides along.
- */
-export const keepFollowingCommands = (camera, player) => {
-  const lost = `@a[name=${camera},tag=muse_cam_lost]`;
-  return [
-    [`execute as ${camera} at @s unless entity @a[name=${player},distance=..3] run tag @s add muse_cam_lost`, `execute as ${lost} run tp @s ${player}`],
-    [`execute as ${lost} run spectate ${player} @s`, `execute as ${lost} run tag @s remove muse_cam_lost`],
-  ];
-};
-/** Between games: stop riding and float high above the spot looking at the sky (cheap to draw). */
-export const parkCommands = (camera) => [`execute as ${camera} run spectate`, `execute as ${camera} at @s run tp @s ~ 250 ~ ~ -90`];
+/** Every few seconds: the target tag again (the datapack asks for the ride again by itself every 5 s). */
+export const keepFollowingCommands = (camera, player) => [[`tag ${player} add muse_cam_target`]];
+/** Between games: no target, the eye removed, stop riding and float high above the spot looking at the sky (cheap). */
+export const parkCommands = (camera) => [
+  'tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', `tag ${camera} remove muse_cam_ineye`,
+  `tag ${camera} remove muse_cam_inhead`, `execute as ${camera} run spectate`, `execute as ${camera} at @s run tp @s ~ 250 ~ ~ -90`,
+];
 
 // ----- the account
 
@@ -515,7 +517,7 @@ export function createCameraRig(o = {}) {
     state = 'ready';
     event('camera_joined', { afterMs: Date.now() - me.startedAt, name: profile.name });
     // in order: a camera parked in the sky before it is a spectator would fall as a survival player
-    for (const line of [`gamemode spectator ${profile.name}`, ...parkCommands(profile.name).slice(1)]) await command(line);
+    for (const line of [`gamemode spectator ${profile.name}`, `tag ${profile.name} add muse_cam`, `effect give ${profile.name} minecraft:night_vision infinite 0 true`, ...parkCommands(profile.name)]) await command(line);
     emitter.emit('joined');
     // the HUD off (F1) once the loading screen has closed; spectators show almost none anyway
     await sleep(c.hideGuiDelayMs ?? 3_000);
@@ -621,7 +623,7 @@ export function createCameraRig(o = {}) {
     /** Ride along in a player's head (console: spectator mode, next to it, then /spectate). */
     follow(player) {
       if (!validName(player) || !profile) return Promise.resolve(false);
-      return steps(followCommands(profile.name, player));
+      return steps(followCommands(profile.name, player, c.view));
     },
     /** Re-attach if the camera is not at the player any more (a respawn, a long teleport). Quiet when it is. */
     keepFollowing(player) {
@@ -933,7 +935,8 @@ export function createCameraManager({ config, log, createRig, graph = null, game
       }),
       createStream: (opts) => pool.create(opts), streamOptions: managerConfig(config.stream).options, log,
       title: config.fb.title, stateFile: config.fb.stateFile, gameTtlMs, deleteAfter: config.fb.deleteAfter,
-      privacy: config.fb.target === 'me' ? config.fb.privacy : null,
+      privacy: config.fb.target === 'me' ? config.fb.privacy : null, maxPerHour: config.fb.maxPerHour, maxPerDay: config.fb.maxPerDay,
+      deleteDelayMs: config.fb.deleteDelayS * 1000,
     });
     pool.start();
     const stopAll = channel.stopAll;

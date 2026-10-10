@@ -781,7 +781,10 @@ export function createMcp(hooks) {
       const since = v.liveSince ? ` since ${String(v.liveSince).slice(11, 19)} UTC` : '';
       if (live) lines.push(`Live view of game ${s.id}: live on Facebook${since}.`);
       else if (v.state === 'live') lines.push(`Live view: the camera is on game ${camera} now, not on ${s.id}: that game asked for the live view after this one. A new live_view call points the camera back at ${s.id}.`);
-      else if (v.state === 'retrying') {
+      else if (v.state === 'capped') {
+        const mins = Math.max(1, Math.ceil((v.retryInS ?? 60) / 60));
+        lines.push(`Live view of game ${s.id}: not live: ${v.error ?? 'the limit of live videos is reached'} (at most a few an hour and a day, so Facebook does not block the account). The next one can start in about ${mins} min; call live_view again then.`);
+      } else if (v.state === 'retrying') {
         const why = v.error ? ` (${String(v.error).slice(0, 200)})` : '';
         const when = v.retryInS ? ` in ${v.retryInS} s` : '';
         lines.push(`Live view of game ${s.id}: not live: the live video could not start${why}. It is tried again by itself${when}; call live_view again after that.`);
