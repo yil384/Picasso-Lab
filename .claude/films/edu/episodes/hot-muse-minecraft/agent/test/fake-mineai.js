@@ -326,7 +326,8 @@ export async function startFakeMineAi(opts = {}) {
         }
         box = { center: { x: a.box.x, y: a.box.y, z: a.box.z }, halfWidth: hw, halfHeight: hh, layers };
       }
-      return { action: 'view_blocks', durationMs: 1, result: { status: 'succeeded', blocks: { find: find ?? world.blocks, box } } };
+      const cells = (a.cells ?? []).map((c) => ({ ...c, name: world.unloadedUntil && Date.now() < world.unloadedUntil ? 'unloaded' : world.boxAt?.(c.x, c.y, c.z) ?? 'obsidian', shape: 'full' }));
+      return { action: 'view_blocks', durationMs: 1, result: { status: 'succeeded', blocks: { find: find ?? world.blocks, box, cells } } };
     });
     reg('set_survival_policy', (a) => {
       if (a.expected_revision !== world.revision) return { action: 'set_survival_policy', durationMs: 1, result: { status: 'failed', error: '[POLICY_REVISION_STALE] stale' } };

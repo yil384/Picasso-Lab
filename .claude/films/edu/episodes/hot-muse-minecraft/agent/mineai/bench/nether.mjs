@@ -161,10 +161,13 @@ try {
   await phase('flint and steel', 3, async () => (await step('craft', { item: 'flint_and_steel', n: 1 })).ok || n('flint_and_steel') > 0);
   // the frame on open ground: back up where the game began first when deep underground (a frame in rock keeps cells
   // its dig cannot clear), else beside that
-  if ((positionOf(s)?.y ?? 99) < 40 && start) await step('go_to', { x: start.x, y: start.y, z: start.z });
+  if ((positionOf(s)?.y ?? 99) < 40 && start) {
+    // the start's height was where the bot landed; the ground may be a few blocks off it
+    for (const dy of [0, -4, 4, -8]) if ((await step('go_to', { x: start.x, y: start.y + dy, z: start.z })).ok) break;
+  }
   await phase('portal frame', 3, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async (i) => {
-    // a frame that did not work out: its obsidian back first (collect mines the nearest), then where the game began
-    if (n('obsidian') < 14) await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
+    // a frame that did not work out: its obsidian back first (portal dismantle: its own frame, block by block)
+    if (n('obsidian') < 14) await step('portal', { action: 'dismantle' });
     const p = positionOf(s);
     if (p) await step('go_to', { x: p.x + 6, y: p.y, z: p.z + (i % 2 ? 6 : 0) });
   });

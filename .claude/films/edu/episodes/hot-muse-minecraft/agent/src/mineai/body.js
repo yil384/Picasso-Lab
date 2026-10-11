@@ -578,6 +578,19 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     return [{ kind: 'portal', text: `the portal back at ${a.pos.x} ${a.pos.y} ${a.pos.z} is not lit any more${flint ? '' : ': flint_and_steel lights it again (1 iron_ingot and 1 flint)'}`, ...(flint ? { hint: { skill: 'portal', args: { action: 'light', pos: a.pos } } } : {}) }];
   }
 
+  /** Wait (up to ms) until their view of these cells (at most 32) holds no unloaded one. */
+  async function loadedCells(cells, ms) {
+    const end = Date.now() + ms;
+    const list = cells.slice(0, 32).map((c) => ({ x: c.x, y: c.y, z: c.z }));
+    while (Date.now() < end) {
+      const data = await rpc('view_blocks', { cells: list }, 10_000).catch(() => null);
+      const seen = data?.result?.blocks?.cells;
+      if (Array.isArray(seen) && seen.length && !seen.some((c) => c.name === 'unloaded')) return true;
+      await new Promise((r) => { setTimeout(r, 1_000); });
+    }
+    return false;
+  }
+
   async function run(tool, args) {
     let t0 = Date.now();
     if (ended) return { ok: false, result: 'not connected to the game', delta: {}, ms: 0, code: 'NOT_STARTED' };
@@ -605,6 +618,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     let deathBefore = lastDeath;
     let built = null; // a build's structure (toTheirs), remembered below while it is incomplete
     let dismantling = false; // portal dismantle: its own frame's obsidian back
+    let skipped = null; // the last optional call that did not work, in words
     const crashesBefore = crashes;
     // the runtime stopped during this step: the host starts it again once per game, and a second stop ends the game
     // (src/mineai/host.js). The step may be what stopped it (2026-10-08, before patch 0010: a build around the bot in a pocket in stone
@@ -624,6 +638,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       })() : '';
       if (!plan.refused && tool === 'build' && v.args.blueprint === 'nether_portal' && plan.build) plan.refused = await portalSite(plan.build.cells);
       if (!plan.refused && tool === 'collect' && v.args.block === 'obsidian') plan.refused = await obsidianGuard();
+      // its frame's cells loaded first: just back through the portal, the chunks around are still coming in (the
+      // staging checks, 2026-10-11: every cell "unloaded", no obsidian back)
+      if (!plan.refused && plan.dismantle) await loadedCells(plan.calls.map((c) => c.args), 15_000);
       if (plan.refused) built = null; // a build refused before it began leaves nothing to continue
       if (plan.local === 'armor') { const a = armorCalls(); if (a.refused) plan.refused = a.refused; else { plan.calls = a.calls; plan.note = a.note; } }
       if (plan.local === 'state') r = { ok: true, result: renderState(snapshot()), code: null };
@@ -696,7 +713,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           }
           if (res.ok && call.tool === 'place_block' && CONTAINER_BLOCKS.has(call.args.block_name)) containers.set(keyOf(call.args), gameId);
           // a craft the body added on its own (a spare tool, a new one) is told by its own line, not again
-          if (!res.ok && call.optional) continue; // a try that may fail (a way out of a portal): the next call goes on
+          if (!res.ok && call.optional) { skipped = res.result; continue; } // a try that may fail (a way out of a portal): the next call goes on
           if (!(res.ok && call.quiet)) parts.push(res);
           if (!res.ok) break;
         }
@@ -738,7 +755,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // its own frame taken back: no more a frame of its own, and the cells free for anyone
     if (dismantling) {
       const got = Number(delta.obsidian) || 0;
-      if (got <= 0 && r.ok) r = { ok: false, result: 'took back no obsidian: none of the cells of your last frame still holds it', code: 'FAILED' };
+      if (got <= 0 && r.ok) r = { ok: false, result: `took back no obsidian from your last frame${skipped ? ` (${skipped})` : ': none of its cells still holds it'}`, code: 'FAILED' };
+      if (got > 0 && r.ok) r = { ...r, result: `took back ${got} obsidian from your last frame${skipped ? ` (not every cell: ${skipped.slice(0, 160)})` : ''}` };
       if (got > 0 && lastPortal) {
         for (const c of lastPortal.cells) frames.delete(frameKey(lastPortal.dimension, c));
         lastPortal = null;

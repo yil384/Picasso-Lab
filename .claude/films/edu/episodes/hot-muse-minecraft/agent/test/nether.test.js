@@ -67,8 +67,12 @@ test('nether: a frame that kept rock fails, is never continued at that site, and
     let r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
     assert.equal(r.ok, false);
     assert.match(r.result, /not a portal frame: 2 frame cells kept deepslate instead of obsidian\. Take the obsidian back \(portal dismantle\)/);
+    // just back through a portal: the cells unloaded for a moment; dismantle waits for them
+    fake.world.unloadedUntil = Date.now() + 1_500;
     r = await body.run('portal', { action: 'dismantle' });
     assert.equal(r.ok, true, r.result);
+    assert.ok(fake.tools('view_blocks').filter((c) => c.args.cells).length >= 2, 'read again until loaded');
+    assert.equal(r.result, 'took back 12 obsidian from your last frame');
     const collects = fake.tools('collect_block');
     assert.equal(collects.length, 12, 'one exact collect a frame cell');
     assert.ok(collects.every((c) => Number.isInteger(c.args.x) && c.args.block_name === 'obsidian' && !c.args.count));
