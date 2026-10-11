@@ -535,6 +535,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         return `; its reflexes: ${describeReflexes(knobs, careMode)}${careMode === 'full' ? `; on its own between your calls: ${describeCare(knobs)}` : ''}`;
       })() : '';
       if (!plan.refused && tool === 'build' && v.args.blueprint === 'nether_portal' && plan.build) plan.refused = await portalSite(plan.build.cells);
+      if (plan.refused) built = null; // a build refused before it began leaves nothing to continue
       if (plan.local === 'armor') { const a = armorCalls(); if (a.refused) plan.refused = a.refused; else { plan.calls = a.calls; plan.note = a.note; } }
       if (plan.local === 'state') r = { ok: true, result: renderState(snapshot()), code: null };
       else if (plan.local === 'care') {
