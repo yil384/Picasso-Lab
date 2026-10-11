@@ -56,10 +56,11 @@ async function step(skill, args = {}, { quiet = false } = {}) {
   if (Date.now() > deadline) throw new Error('out of time');
   const t1 = Date.now();
   let r = await call('play', { skill, args, request_id: `${values.label}-${++rid}` });
-  let st = r.data?.steps?.[0] ?? null;
+  // the caller's step is the last of the call (the check may add crafts before it); its result can come in a later reply
+  let st = r.data?.steps?.at(-1) ?? null;
   for (let w = 0; st && !FINAL.includes(st.status) && w < 40; w++) {
     r = await call('get_state');
-    st = r.data?.earlier?.find((e) => e.skill === skill) ?? st;
+    st = r.data?.earlier?.find((e) => e.n === st.n && e.skill === skill) ?? st;
   }
   const ok = st?.status === 'confirmed';
   const line = `${skill} ${JSON.stringify(args)}: ${ok ? 'ok' : st?.status ?? 'refused'}: ${String(st?.result ?? st?.why ?? r.text.split('\n')[0]).slice(0, 300)}`;
@@ -75,7 +76,7 @@ async function heed() {
     const p = positionOf(s);
     const surface = p && p.y > 55 && dimension() === 'overworld';
     const take = (a.kind === 'eat' && food() <= 12) || (a.kind === 'hunt' && food() <= 8) || a.kind === 'recover' || a.kind === 'tools'
-      || (a.kind === 'night' && surface) || a.kind === 'danger' || a.kind === 'inventory';
+      || ((a.kind === 'night' || a.kind === 'dusk') && surface) || a.kind === 'danger' || a.kind === 'inventory' || a.kind === 'shield';
     if (!take) continue;
     run.advice.push({ at: sec(), kind: a.kind, text: a.text, skill: a.hint.skill });
     say(`advice taken: ${a.text.slice(0, 140)} -> ${a.hint.skill}`);
@@ -141,6 +142,10 @@ try {
   }, async (i) => { const p = positionOf(s); if (p && p.y > -50) await down(p.y + 54); else await along(i); });
   await phase('diamond pickaxe', 2, async () => (await step('craft', { item: 'diamond_pickaxe', n: 1 })).ok || n('diamond_pickaxe') > 0);
   // obsidian: blocks to close off lava first, then their collect makes it from lava and the water
+  // lava near first (the state's nearby blocks): their collect walks to the nearest lava it knows of, which can be on
+  // the surface at night
+  const lavaNear = () => /^nearby blocks[^\n]*\blava \d/m.test(stateOf(s));
+  await phase('lava in sight', 4, async () => { await call('get_state'); return lavaNear(); }, async (i) => { const p = positionOf(s); if (p && p.y > -50) await down(p.y + 54); else await along(i); });
   await phase('obsidian', 6, async () => {
     if (n('cobblestone') + n('cobbled_deepslate') < 16) await step('collect', { block: positionOf(s)?.y < 0 ? 'deepslate' : 'stone', n: 20 });
     if (!n('water_bucket')) await step('bucket', { action: 'fill', liquid: 'water' });

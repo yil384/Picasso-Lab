@@ -44,10 +44,15 @@ for a Minecraft server to this URL, or build a new one). Use only this MCP serve
 Call start_game with adult: true. The game lasts up to 2 hours. Then, without asking me anything, play toward these
 goals in order:
   1. an iron pickaxe;
-  2. diamonds, then a diamond pickaxe;
-  3. the Nether: obsidian (pour water from a bucket onto lava, then mine the obsidian with the diamond pickaxe),
-     flint and steel, a portal frame (place obsidian, 4 wide and 5 tall, corners optional), then the portal skill to
-     light it and enter.
+  2. diamonds (collect deepslate_diamond_ore or diamond_ore with the iron pickaxe; they lie deep, most near
+     y -59), then a diamond pickaxe;
+  3. the Nether:
+     - 12 obsidian: carry a water bucket (craft a bucket, then bucket fill water) and some cobblestone, then
+       collect obsidian with the diamond pickaxe; the body pours the water onto lava itself and mines what forms;
+     - flint (collect gravel; it drops flint now and then) and flint_and_steel;
+     - the frame: build nether_portal from obsidian, on open dry ground;
+     - the portal skill to light it and to enter; in the Nether, look around, then enter the portal again to come
+       back.
 
 You make every plan. The body does not look after itself: it only fights back or flees when attacked, eats when
 starving, and gets itself out of water, fire, lava or a fall. Every reply has a "Body advice" block, for example
