@@ -625,3 +625,13 @@ test('advise: a full inventory names the cheapest stack to drop', () => {
   assert.deepEqual(a.hint, { skill: 'drop', args: { item: 'gravel', n: 84 } });
   assert.equal(advise(situation(), { ...base, stacks: stacks.slice(0, 20), inventory: {} }).find((x) => x.kind === 'inventory'), undefined);
 });
+
+test('advise: a pickaxe gone (broken or lost) gets the best one what is carried makes', () => {
+  const base = { now: NOW, memory: { cool: {}, night: 0 } };
+  const shield = stack('shield', 1, 'off-hand');
+  assert.equal(advise(situation(), { ...base, stacks: [shield], canCraft: () => true }).find((x) => x.kind === 'tools'), undefined, 'a new bot: no pickaxe yet is no news');
+  const a = advise(situation(), { ...base, memory: { hadPickaxe: true }, stacks: [shield], inventory: { cobblestone: 5 }, canCraft: (i) => i === 'stone_pickaxe' || i === 'wooden_pickaxe' }).find((x) => x.kind === 'tools');
+  assert.equal(a.text, 'you carry no pickaxe');
+  assert.deepEqual(a.hint, { skill: 'craft', args: { item: 'stone_pickaxe', n: 1 } });
+  assert.equal(advise(situation(), { ...base, stacks: [shield, stack('wooden_pickaxe', 1, 'hand')], canCraft: () => true }).find((x) => x.kind === 'tools'), undefined);
+});

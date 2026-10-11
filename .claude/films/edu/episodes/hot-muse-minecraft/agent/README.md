@@ -1967,6 +1967,51 @@ Against the gate (at most 1 death in 16): advise mode holds. Across the two advi
 deaths in one game, all before the fix; the fixed build passed 8 of 8 with no deaths. Full care, on the same build,
 passed 8 of 8.
 
+### The way to the Nether (ROADMAP M8, 2026-10-11)
+
+The owner's first long Muse run on production (game gb1cfe3) reached the iron pickaxe in about 4.5 minutes. Then
+collect refused `diamond_ore` and `obsidian`, and craft refused `diamond_pickaxe` and `flint_and_steel`. The whole path
+from a fresh spawn to the Nether and back now works from the MCP surface. Everything here is from the runtime's own
+actions, with no runtime patch.
+
+- **collect**:
+  - `diamond_ore` and `deepslate_diamond_ore` (an iron pickaxe; diamonds lie deep, most near y -59).
+  - `obsidian`: a diamond pickaxe, cobblestone to close off lava, and a water bucket. With no obsidian loaded, their
+    collect walks to the nearest lava it knows of, pours the water, scoops it back and mines what formed. That lava
+    can be far away or on the surface, so the description says to go near lava first.
+  - `gravel`, for flint by chance.
+  - Lava next to a target is closed off with a carried block before the dig. A target it cannot make safe is refused
+    with the new code `LAVA`, which also covers pouring lava.
+  - Obsidian and diamond collects get 3 minutes plus 30 s a block. A long `go_to`, such as a climb out of the deep,
+    gets 2 s a block past 60 blocks.
+- **craft**: diamond tools and armor, `flint_and_steel` (`bucket` was already allowed).
+- **place and build**: obsidian. The new blueprint `nether_portal` is 4 wide and 5 high across the bot's view, its
+  bottom row in the ground, 12 obsidian (2 more go under the frame on uneven ground).
+  - The build is refused (`LAVA`) when lava or water lies within 3 blocks of the frame.
+  - A frame that kept a cell of rock, or has water inside, fails with what to do: take the obsidian back with
+    collect, then build on open dry ground. Frames built in rock kept a cell of deepslate or tuff in two of the first
+    staging runs.
+- **portal**:
+  - `light` lights the frame with carried `flint_and_steel` ("lit the Nether portal (6 portal blocks)").
+  - `enter` goes through ("went through the portal at x y z"). It never stops at their check for 16 food and 32
+    arrows, since no skill here gives arrows.
+  - A bot standing in the portal it came through steps out first (one side, else another), so the way back is the
+    same skill.
+  - Without pos, both use the frame the last `build nether_portal` made.
+- **The state**: "in the Nether". `obsidian` and `nether_portal` are among the nearby blocks, scanned again after a
+  change of dimension.
+- **Body advice** on the way:
+  - what the frame still needs ("you carry 4 obsidian; a portal frame (build nether_portal) takes 12, and up to 2
+    more on uneven ground; collecting more needs a water bucket"), then flint and steel, then the build;
+  - a full inventory, with the cheapest stack to drop (gravel filled one in a local run and blocked
+    `flint_and_steel`; code `INVENTORY_FULL`);
+  - a death in lava ("the items that fell into the lava or fire burned", no hint to go back);
+  - a death in the Nether (the items lie behind the portal);
+  - in the Nether: beds explode, water boils away, and where the portal back is.
+- **The bench**: `mineai/bench/nether.mjs` plays that path as a careful player would. It retries each phase a few
+  times with a change, and follows the advice for food, a surface night, a shield, a death's items, a worn tool and a
+  full inventory.
+
 ## What is mocked
 
 - The model: `test/mock-llm.js` speaks Chat Completions and the Responses API (streamed and not), replays scripted tool

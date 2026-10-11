@@ -523,6 +523,13 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
   // armor and a shield carried but not worn
   const wear = wearPlan(stacks);
   if (wear.length) say('wear', `you carry ${wear.map((w) => w.item).join(', ')} and do not wear ${wear.length > 1 ? 'them' : 'it'}`, { skill: 'equip', args: { item: wear[0].item } });
+  // no pickaxe any more (it broke, or was lost at a death; memory.hadPickaxe: one was carried this game): the best one what is carried makes (the body makes no
+  // replacement by itself in advise mode; staging, 2026-10-11: a wooden pickaxe wore out at the start and every later
+  // step was refused)
+  if (!pickaxe && memory.hadPickaxe) {
+    const item = ['diamond', 'iron', 'stone', 'wooden'].map((t) => `${t}_pickaxe`).find((i) => canCraft(i));
+    say('tools', `you carry no pickaxe${item ? '' : ': planks and sticks make a wooden one, 3 cobblestone a stone one'}`, item ? { skill: 'craft', args: { item, n: 1 } } : null);
+  }
   // a tool about to break
   for (const t of toolsCarried(stacks)) {
     if (!TOOL_CLASSES.includes(t.cls) || !Number.isFinite(t.left) || t.left > TOOL_LOW(t.max ?? 60)) continue;
@@ -1128,7 +1135,11 @@ export function createCare(deps) {
     /** Advise mode: what needs doing, as advice for the player ([] in full mode: the body sees to it). */
     advice() {
       if (mode !== 'advise') return [];
-      try { return advise(deps.situation(), inputs()); } catch { return []; }
+      try {
+        const i = inputs();
+        if (toolsCarried(i.stacks).some((t) => t.cls === 'pickaxe')) memory.hadPickaxe = true;
+        return advise(deps.situation(), i);
+      } catch { return []; }
     },
     /** What the body did by itself this game: {reflex, care}. */
     counts() { return { ...counts }; },
