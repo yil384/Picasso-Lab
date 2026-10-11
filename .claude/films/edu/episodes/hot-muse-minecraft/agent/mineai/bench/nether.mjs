@@ -149,8 +149,8 @@ try {
   await phase('obsidian', 6, async () => {
     if (n('cobblestone') + n('cobbled_deepslate') < 16) await step('collect', { block: positionOf(s)?.y < 0 ? 'deepslate' : 'stone', n: 20 });
     if (!n('water_bucket')) await step('bucket', { action: 'fill', liquid: 'water' });
-    if (n('obsidian') < 12) await step('collect', { block: 'obsidian', n: 12 - n('obsidian') });
-    return n('obsidian') >= 12;
+    if (n('obsidian') < 14) await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
+    return n('obsidian') >= 14;
   }, async (i) => { if (i % 2) await along(i); });
   await phase('flint', 6, async () => {
     if (!n('flint')) await step('collect', { block: 'gravel', n: 10 });
@@ -161,6 +161,8 @@ try {
   await phase('flint and steel', 3, async () => (await step('craft', { item: 'flint_and_steel', n: 1 })).ok || n('flint_and_steel') > 0);
   // the frame where it stands, else back up where the game began (open ground), else beside that
   await phase('portal frame', 3, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async (i) => {
+    // a frame that did not work out: its obsidian back first (collect mines the nearest), then where the game began
+    if (n('obsidian') < 14) await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
     const p = i === 0 ? start : positionOf(s);
     if (p) await step('go_to', { x: p.x + (i === 0 ? 0 : 6), y: p.y, z: p.z });
   });

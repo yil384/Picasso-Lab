@@ -478,6 +478,20 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     return { calls: [...craft, ...(left ? [{ tool: 'collect_block', args: { block_name: block, count: left } }] : [])], before: `your ${lost ?? 'pickaxe'} broke after ${got} of ${call.args.count} ${block}`, text };
   }
 
+  /**
+   * A Nether portal frame next to lava or water does not get built (their build keeps a frame cell whose dig would open
+   * into liquid, and water inside puts a portal out): the nearest lava and water within 3 blocks of the frame's cells
+   * refuse the build before anything is placed (staging, 2026-10-11: a frame beside a lava pool at y 9 kept 2 cells
+   * of deepslate and held 10 obsidian). Null when the site is dry, or when it cannot be read.
+   */
+  async function portalSite(cells) {
+    const data = await rpc('view_blocks', { find: { block_names: ['lava', 'water'], limit: 8 } }, 10_000).catch(() => null);
+    const found = (data?.result?.blocks?.find ?? []).flatMap((f) => (f.listed ?? []).map((p) => ({ name: f.name, ...floorPos(p) })));
+    const near = found.find((b) => cells.some((c) => Math.abs(c.x - b.x) <= 3 && Math.abs(c.y - b.y) <= 3 && Math.abs(c.z - b.z) <= 3));
+    if (!near) return null;
+    return { ok: false, result: `${near.name} at ${near.x} ${near.y} ${near.z} is next to where the portal frame would stand: build it on dry ground away from lava and water (go_to a spot with flat ground and open sky first)`, code: near.name === 'lava' ? 'LAVA' : 'FAILED', delta: {} };
+  }
+
   async function run(tool, args) {
     let t0 = Date.now();
     if (ended) return { ok: false, result: 'not connected to the game', delta: {}, ms: 0, code: 'NOT_STARTED' };
@@ -520,6 +534,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         const knobs = care?.setPolicy(plan.care === 'reset' ? null : plan.care);
         return `; its reflexes: ${describeReflexes(knobs, careMode)}${careMode === 'full' ? `; on its own between your calls: ${describeCare(knobs)}` : ''}`;
       })() : '';
+      if (!plan.refused && tool === 'build' && v.args.blueprint === 'nether_portal' && plan.build) plan.refused = await portalSite(plan.build.cells);
       if (plan.local === 'armor') { const a = armorCalls(); if (a.refused) plan.refused = a.refused; else { plan.calls = a.calls; plan.note = a.note; } }
       if (plan.local === 'state') r = { ok: true, result: renderState(snapshot()), code: null };
       else if (plan.local === 'care') {
@@ -531,6 +546,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       else {
         const deadline = t0 + (plan.timeoutMs ?? timeouts[tool] ?? 60_000);
         ctl.attack = plan.attack ?? null;
+        if (plan.timeoutMs) ctl.limitMs = plan.timeoutMs; // what a time-out says
         const parts = [];
         let rescued = false;
         own = {};
@@ -585,7 +601,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             const st = out.output?.result?.structure ?? {};
             const kept = (st.kept ?? []).reduce((k, x) => k + (Number(x.count) || 0), 0);
             const wet = Number(st.water) || 0;
-            if (kept || wet) res = { ok: false, code: 'FAILED', result: `${res.result}; not a portal frame: ${[kept ? `${plural(kept, 'frame cell')} kept ${(st.kept ?? []).map((x) => x.block).join(' and ')} instead of obsidian` : null, wet ? `${plural(wet, 'inside cell')} ${wet === 1 ? 'is' : 'are'} water` : null].filter(Boolean).join(', ')}. Build it on open, dry ground (go_to a spot with flat ground and open sky), or place obsidian into those cells` };
+            if (kept || wet) res = { ok: false, code: 'FAILED', result: `${res.result}; not a portal frame: ${[kept ? `${plural(kept, 'frame cell')} kept ${(st.kept ?? []).map((x) => x.block).join(' and ')} instead of obsidian` : null, wet ? `${plural(wet, 'inside cell')} ${wet === 1 ? 'is' : 'are'} water` : null].filter(Boolean).join(', ')}. Take the obsidian back (collect obsidian ${Number(st.placed) || 'n'}: it mines the nearest first) and build it on open, dry ground away from lava and water (go_to a spot with flat ground and open sky)` };
           }
           if (res.ok && call.tool === 'place_block' && CONTAINER_BLOCKS.has(call.args.block_name)) containers.set(keyOf(call.args), gameId);
           // a craft the body added on its own (a spare tool, a new one) is told by its own line, not again

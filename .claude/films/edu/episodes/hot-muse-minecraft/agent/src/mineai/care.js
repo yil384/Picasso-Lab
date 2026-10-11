@@ -437,8 +437,8 @@ const JUNK = Object.freeze([
   { item: 'tuff', keep: 0 }, { item: 'rotten_flesh', keep: 0 }, { item: 'netherrack', keep: 16 }, { item: 'dirt', keep: 16 },
   { item: 'cobbled_deepslate', keep: 32 }, { item: 'cobblestone', keep: 32 },
 ]);
-/** Obsidian blocks the nether_portal blueprint takes. */
-export const PORTAL_OBSIDIAN = 12;
+/** Obsidian for a nether_portal build: its 12, and 2 more for the blocks it puts under a frame on uneven ground. */
+export const PORTAL_OBSIDIAN = 14;
 /** At most this many advice items a reply. */
 export const ADVICE_MAX = 5;
 
@@ -547,7 +547,7 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
     const diamondPick = stacks.some((x) => x?.name === 'diamond_pickaxe' || x?.name === 'netherite_pickaxe');
     if (obsidian < PORTAL_OBSIDIAN) {
       const lacks = [diamondPick ? null : 'a diamond pickaxe', (inventory.water_bucket ?? 0) > 0 ? null : 'a water bucket (bucket fill water)', (inventory.cobblestone ?? 0) + (inventory.cobbled_deepslate ?? 0) >= 8 ? null : 'cobblestone to close off lava'].filter(Boolean);
-      say('portal', `you carry ${obsidian} obsidian; a portal frame (build nether_portal) takes ${PORTAL_OBSIDIAN}${lacks.length ? `; collecting more needs ${lacks.join(', ')}` : ''}`, lacks.length ? null : { skill: 'collect', args: { block: 'obsidian', n: PORTAL_OBSIDIAN - obsidian } });
+      say('portal', `you carry ${obsidian} obsidian; a portal frame (build nether_portal) takes 12, and up to 2 more on uneven ground${lacks.length ? `; collecting more needs ${lacks.join(', ')}` : ''}`, lacks.length ? null : { skill: 'collect', args: { block: 'obsidian', n: PORTAL_OBSIDIAN - obsidian } });
     } else if (!(inventory.flint_and_steel > 0)) {
       say('portal', (inventory.flint ?? 0) > 0 && (inventory.iron_ingot ?? 0) > 0 ? `${obsidian} obsidian for the frame; flint_and_steel lights it` : `${obsidian} obsidian for the frame; flint_and_steel lights it: 1 iron_ingot and 1 flint (gravel drops flint now and then)`,
         (inventory.flint ?? 0) > 0 && (inventory.iron_ingot ?? 0) > 0 ? { skill: 'craft', args: { item: 'flint_and_steel', n: 1 } } : (inventory.flint ?? 0) > 0 ? null : { skill: 'collect', args: { block: 'gravel', n: 10 } });

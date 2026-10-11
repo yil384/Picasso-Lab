@@ -595,12 +595,12 @@ test('advise on the way to the Nether: what the frame still needs, a death in la
   const shield = stack('shield', 1, 'off-hand');
   const portal = (inventory, stacks = [shield]) => advise(situation(), { ...base, inventory, stacks }).find((a) => a.kind === 'portal');
   assert.equal(portal({}), undefined, 'no obsidian: nothing about portals');
-  assert.equal(portal({ obsidian: 4 }).text, 'you carry 4 obsidian; a portal frame (build nether_portal) takes 12; collecting more needs a diamond pickaxe, a water bucket (bucket fill water), cobblestone to close off lava');
+  assert.equal(portal({ obsidian: 4 }).text, 'you carry 4 obsidian; a portal frame (build nether_portal) takes 12, and up to 2 more on uneven ground; collecting more needs a diamond pickaxe, a water bucket (bucket fill water), cobblestone to close off lava');
   assert.equal(portal({ obsidian: 4 }).hint, undefined);
-  assert.deepEqual(portal({ obsidian: 4, water_bucket: 1, cobblestone: 20 }, [shield, stack('diamond_pickaxe', 1, 'hand')]).hint, { skill: 'collect', args: { block: 'obsidian', n: 8 } });
-  assert.deepEqual(portal({ obsidian: 12 }).hint, { skill: 'collect', args: { block: 'gravel', n: 10 } });
-  assert.deepEqual(portal({ obsidian: 12, flint: 1, iron_ingot: 2 }).hint, { skill: 'craft', args: { item: 'flint_and_steel', n: 1 } });
-  assert.deepEqual(portal({ obsidian: 12, flint_and_steel: 1 }).hint, { skill: 'build', args: { blueprint: 'nether_portal', material: 'obsidian' } });
+  assert.deepEqual(portal({ obsidian: 4, water_bucket: 1, cobblestone: 20 }, [shield, stack('diamond_pickaxe', 1, 'hand')]).hint, { skill: 'collect', args: { block: 'obsidian', n: 10 } });
+  assert.deepEqual(portal({ obsidian: 14 }).hint, { skill: 'collect', args: { block: 'gravel', n: 10 } });
+  assert.deepEqual(portal({ obsidian: 14, flint: 1, iron_ingot: 2 }).hint, { skill: 'craft', args: { item: 'flint_and_steel', n: 1 } });
+  assert.deepEqual(portal({ obsidian: 14, flint_and_steel: 1 }).hint, { skill: 'build', args: { blueprint: 'nether_portal', material: 'obsidian' } });
   assert.equal(advise(situation(), { ...base, memory: { portalBuilt: true }, inventory: { obsidian: 2 }, stacks: [shield] }).find((a) => a.kind === 'portal'), undefined, 'the frame stands');
   // a death in lava: the items burned, no hint to walk back into it
   const lava = { position: { x: 5, y: -40, z: 7 }, dimension: 'overworld', observedAt: new Date(NOW - 20_000).toISOString(), cause: 'Tst_x tried to swim in lava' };

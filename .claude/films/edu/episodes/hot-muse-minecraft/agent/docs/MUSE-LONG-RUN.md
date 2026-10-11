@@ -47,7 +47,7 @@ goals in order:
   2. diamonds (collect deepslate_diamond_ore or diamond_ore with the iron pickaxe; they lie deep, most near
      y -59), then a diamond pickaxe;
   3. the Nether:
-     - 12 obsidian: carry a water bucket (craft a bucket, then bucket fill water) and some cobblestone, then
+     - 14 obsidian (12 for the frame, 2 for uneven ground): carry a water bucket (craft a bucket, then bucket fill water) and some cobblestone, then
        collect obsidian with the diamond pickaxe; the body pours the water onto lava itself and mines what forms;
      - flint (collect gravel; it drops flint now and then) and flint_and_steel;
      - the frame: build nether_portal from obsidian, on open dry ground;
