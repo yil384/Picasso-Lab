@@ -15,6 +15,9 @@ export const COLLECTABLE_BLOCKS = freeze([
   'dirt', 'grass_block', 'sand', 'gravel', 'clay', 'short_grass', 'oak_leaves',
   'coal_ore', 'deepslate_coal_ore', 'iron_ore', 'deepslate_iron_ore', 'copper_ore', 'deepslate_copper_ore',
   'crafting_table', 'furnace',
+  // the Nether path (ROADMAP M8): diamonds (an iron pickaxe), obsidian (a diamond pickaxe; BODY=mineai makes it from
+  // lava and a carried water bucket where none is loaded), gravel for flint (by chance)
+  'diamond_ore', 'deepslate_diamond_ore', 'obsidian',
 ]);
 
 /**
@@ -23,7 +26,7 @@ export const COLLECTABLE_BLOCKS = freeze([
  */
 export const MAX_DROPS = freeze({ clay: 4, copper_ore: 5, deepslate_copper_ore: 5 });
 
-/** Items craft() may make (the iron-pickaxe tech tree, a hut, simple tools and food). */
+/** Items craft() may make (the tech tree to diamonds and a Nether portal, a hut, simple tools and food). */
 export const CRAFTABLE_ITEMS = freeze([
   ...PLANKS,
   'stick', 'crafting_table', 'chest', 'furnace', 'torch', 'ladder', 'bowl', 'bread', 'bucket', 'shield',
@@ -31,6 +34,8 @@ export const CRAFTABLE_ITEMS = freeze([
   'stone_pickaxe', 'stone_axe', 'stone_shovel', 'stone_sword',
   'iron_pickaxe', 'iron_axe', 'iron_shovel', 'iron_sword',
   'iron_helmet', 'iron_chestplate', 'iron_leggings', 'iron_boots',
+  'diamond_pickaxe', 'diamond_axe', 'diamond_shovel', 'diamond_sword',
+  'diamond_helmet', 'diamond_chestplate', 'diamond_leggings', 'diamond_boots', 'flint_and_steel',
   'oak_door', 'spruce_door', 'birch_door', 'oak_slab', 'oak_stairs', 'oak_fence',
   'cobblestone_slab', 'cobblestone_stairs', 'stone_bricks',
 ]);
@@ -100,11 +105,11 @@ export function fuelPlan(have, input, want, order = FUEL_ORDER) {
 export const PLACEABLE_BLOCKS = freeze([
   'crafting_table', 'furnace', 'chest', 'torch', 'ladder', 'oak_door',
   'cobblestone', 'stone', 'cobbled_deepslate', 'stone_bricks', 'dirt', 'sand', 'gravel', 'glass',
-  ...PLANKS, 'oak_log', 'oak_slab', 'cobblestone_slab',
+  ...PLANKS, 'oak_log', 'oak_slab', 'cobblestone_slab', 'obsidian',
 ]);
 
 /** Materials build() accepts. */
-export const BUILD_MATERIALS = freeze([...PLANKS, 'cobblestone', 'stone', 'stone_bricks', 'cobbled_deepslate', 'dirt', 'oak_log']);
+export const BUILD_MATERIALS = freeze([...PLANKS, 'cobblestone', 'stone', 'stone_bricks', 'cobbled_deepslate', 'dirt', 'oak_log', 'obsidian']);
 
 /**
  * Build blueprints as layers from the ground up. Each layer is rows of z (row 0 faces the bot), columns of x.
@@ -129,6 +134,15 @@ export const BLUEPRINTS = freeze({
   platform_3x3: freeze({
     description: 'flat 3x3 floor (9 blocks)',
     layers: freeze([['###', '###', '###']]),
+  }),
+  // A Nether portal frame (build it from obsidian): 4 wide and 5 high across the bot's view, its bottom row set into
+  // the ground (base -1: the ground beside it holds the side columns up, so the bottom corners stay ground), the inside
+  // 2 wide and 3 high at the bot's feet, the top corners obsidian (the top row is placed against them). The portal
+  // skill then lights it and enters it.
+  nether_portal: freeze({
+    description: 'Nether portal frame, 4 wide and 5 high, its bottom row in the ground (12 blocks: build it from obsidian, then portal light)',
+    base: -1,
+    layers: freeze([[' ## '], ['#..#'], ['#..#'], ['#..#'], ['####']]),
   }),
 });
 export const BLUEPRINT_NAMES = freeze(Object.keys(BLUEPRINTS));

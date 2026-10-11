@@ -60,7 +60,8 @@ test('staging compose: production settings, its own project, port, hostname, net
   const { MC_HOST: ph, WEB_PUBLIC_URL: pu, ...prodAgent } = prod.agent.env;
   const { MC_HOST: sh, WEB_PUBLIC_URL: su, ...stgAgent } = stg.agent.env;
   // the lease is production's unless deploy/.env sets STAGING_LEASE_MS for a long Muse run (docs/MUSE-LONG-RUN.md)
-  assert.equal(stgAgent.WEB_LEASE_MS, `\${STAGING_LEASE_MS:-${prodAgent.WEB_LEASE_MS}}`);
+  assert.equal(stgAgent.WEB_LEASE_MS, '${STAGING_LEASE_MS:-1800000}');
+  assert.equal(prodAgent.WEB_LEASE_MS, '${PROD_LEASE_MS:-1800000}', 'production: 30 minutes unless PROD_LEASE_MS is set');
   assert.deepEqual({ ...stgAgent, WEB_LEASE_MS: prodAgent.WEB_LEASE_MS }, prodAgent, 'the agent: the same settings apart from its Paper, its public URL and a long run\'s lease');
   assert.equal(pu, 'https://play.picasso-lab.com');
   assert.equal(su, STAGING_URL);

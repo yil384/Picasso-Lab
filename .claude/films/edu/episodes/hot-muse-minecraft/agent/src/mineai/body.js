@@ -141,6 +141,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   // the structure this game's last build left incomplete (its blueprint, material, cells, facing and where the bot
   // stood): a build of the same blueprint and material near it continues it (src/mineai/skills.js continuesLast)
   let lastBuild = null;
+  let lastPortal = null; // the frame the last build nether_portal made: {frame, inside}
   let current = null; // the action running now: {actionId, stop}
   let stacks = []; // their status stacks (carried, worn, the off-hand; with durability)
   let idleSince = Date.now(); // when the last step of the player's ended (the care waits a moment after it)
@@ -354,6 +355,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     gameId,
     containerOwner: (pos) => containers.get(keyOf(pos)) ?? null,
     lastBuild,
+    portal: lastPortal,
   });
 
   /**
@@ -589,6 +591,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // a complete structure is done with; an incomplete one is continued by the next build of it nearby; one whose step
     // stopped the runtime is not (the reply says to build somewhere else)
     if (built) lastBuild = r.ok || r.code === 'BODY_RESTARTED' ? null : built;
+    // a Nether portal frame built: the portal skill lights and enters it without a pos
+    if (built?.blueprint === 'nether_portal' && r.ok) {
+      const frame = built.cells.find((c) => c.block_name !== 'air');
+      const inside = built.cells.find((c) => c.block_name === 'air');
+      if (frame && inside) lastPortal = { frame: { x: frame.x, y: frame.y, z: frame.z }, inside: { x: inside.x, y: inside.y, z: inside.z } };
+    }
     if (yielded === 'recover') r = { ...r, result: `${r.result} (before it the body finished going back for the items it dropped when it died)` };
     const ms = Date.now() - t0;
     if (!['get_state', 'policy'].includes(tool)) museActions += 1;

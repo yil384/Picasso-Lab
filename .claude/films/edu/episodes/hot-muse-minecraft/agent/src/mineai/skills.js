@@ -89,8 +89,8 @@ export const EXTRA_DEFS = Object.freeze([
     'Make a shield and put it in your off-hand: from 1 iron ingot you carry, else raw iron smelted, else 1 iron ore mined (stone pickaxe) and smelted; planks from your wood. Your fight reflex raises it against arrows.',
     obj({}, [])],
   ['portal',
-    'A Nether portal. light: light the obsidian frame one of whose blocks (or an inside cell) is at pos, with flint_and_steel you carry (build the frame first with place: obsidian, 4 wide and 5 tall, corners optional). enter: step into the active portal block at pos and wait to arrive (to the Nether, or back to the Overworld); entering the Nether asks for 16 food carried unless low_supplies is true.',
-    obj({ action: pick('light or enter', ['light', 'enter']), pos: POS, low_supplies: { type: 'boolean', description: 'true: enter with less than 16 food' } }, ['action', 'pos'])],
+    'A Nether portal. Build the frame first: build nether_portal from 12 obsidian (or place obsidian yourself, 4 wide and 5 tall, corners optional). light: light the frame with flint_and_steel you carry; enter: step into the lit portal and wait to arrive (in the Nether, enter again to come back). pos: a frame block or an inside cell; without pos, the frame your last build nether_portal made. Entering the Nether asks for 16 food carried unless low_supplies is true.',
+    obj({ action: pick('light or enter', ['light', 'enter']), pos: POS, low_supplies: { type: 'boolean', description: 'true: enter with less than 16 food' } }, ['action'])],
   ['armor',
     'Craft the best armor you can pay for (iron ingots, leather, gold or diamonds) and put it on, with any better piece or shield you carry.',
     obj({}, [])],
@@ -109,7 +109,7 @@ export const EXTRA_DEFS = Object.freeze([
  */
 export const MINEAI_DESCRIPTIONS = Object.freeze({
   go_to: 'Walk to a block position; the body finds its own way (it may dig, bridge, pillar or swim). The target must be within 256 blocks. Seconds to two minutes; a walk that finds no way ends and says why.',
-  collect: 'Mine n blocks of one type and pick up the drops: the body searches every loaded chunk around you (not only the nearest 32 blocks), walks there and uses the best tool you carry. stone drops cobblestone (collect cobblestone mines stone for it); iron_ore drops raw_iron and needs a stone pickaxe or better. The reply says what the step mined and picked up, and apart from that what changed on the way (blocks dug through, scaffolding placed).',
+  collect: 'Mine n blocks of one type and pick up the drops: the body searches every loaded chunk around you (not only the nearest 32 blocks), walks there and uses the best tool you carry. stone drops cobblestone (collect cobblestone mines stone for it); iron_ore drops raw_iron and needs a stone pickaxe or better; diamond_ore (deepslate_diamond_ore below y 0) drops diamond and needs an iron pickaxe: diamonds lie at y 16 and below, most near y -59. obsidian needs a diamond pickaxe, cobblestone to close off lava and a water bucket: with no obsidian loaded the body pours the water onto still lava, scoops it back and mines what formed. gravel drops flint now and then (about 1 in 10). Lava next to a target is closed off with a carried block before the dig; a target it cannot make safe is refused (code LAVA). The reply says what the step mined and picked up, and apart from that what changed on the way (blocks dug through, scaffolding placed).',
   craft: 'Craft n of an item from your inventory (rounded up to whole recipe batches; planks and sticks it lacks are made from what you carry). When the recipe needs a crafting table, the one you carry is put down for the craft and picked up again; carrying none, a table within reach is used, else one is made from 4 planks and left standing.',
   craft_batch: `Craft several items in order in ONE skill, one after another, each as craft: later items use what the earlier ones made, and a crafting table you carry (or one made earlier in the list) is put down for each item that needs it and picked up again. Up to ${CRAFT_BATCH_MAX} items; stops at the first item that cannot be made and says what is missing.`,
   build: `Build a blueprint from blocks in your inventory in front of you, facing your way (shelter: around you). Blueprints: ${BLUEPRINT_NAMES.map((b) => `${b} = ${BLUEPRINTS[b].description}`).join('; ')}. Build again with the same blueprint and material within ${CONTINUE_RADIUS} blocks of one your last build left incomplete to continue that one, at its place and facing; else a new one. It digs cells clear, puts dirt under walls over a drop or water, keeps stone it cannot dig out and leaves water.`,
@@ -190,7 +190,7 @@ export function blueprintCells(blueprint, material, feet, headingDegrees) {
     if (ch !== '#' && ch !== '.') return;
     const a = i + rowShift;
     const b = j + colShift;
-    cells.push({ x: feet.x + f.dx * a + right.dx * b, y: feet.y + k, z: feet.z + f.dz * a + right.dz * b, block_name: ch === '#' ? material : 'air' });
+    cells.push({ x: feet.x + f.dx * a + right.dx * b, y: feet.y + k + (bp.base ?? 0), z: feet.z + f.dz * a + right.dz * b, block_name: ch === '#' ? material : 'air' });
   })));
   return { cells, facing: f.name };
 }
@@ -300,7 +300,7 @@ export function toTheirs(skill, args, ctx) {
       if (args.action === 'pour') {
         // the world is shared: no lava for anyone, nothing where new players land, nothing onto another player
         if (!args.pos) return refuse('pour needs pos: the cell to pour into', 'BAD_ARGS');
-        if (args.liquid === 'lava') return refuse('lava is never poured on this shared server (filling a bucket with lava is fine); pour water', 'BAD_ARGS');
+        if (args.liquid === 'lava') return refuse('lava is never poured on this shared server (filling a bucket with lava is fine); pour water', 'LAVA');
         if (ctx.spawn && Math.hypot(args.pos.x - ctx.spawn.x, args.pos.z - ctx.spawn.z) <= SPAWN_GUARD) return refuse(`nothing is poured within ${SPAWN_GUARD} blocks of the world spawn (about ${Math.round(ctx.spawn.x)} ${Math.round(ctx.spawn.z)}), where new players arrive`, 'BAD_ARGS');
         if ((ctx.players ?? []).some((p) => p?.position && dist(p.position, args.pos) <= PLAYER_GUARD)) return refuse(`another player is within ${PLAYER_GUARD} blocks of ${at(args.pos)}: pour somewhere else`);
       }
@@ -315,9 +315,16 @@ export function toTheirs(skill, args, ctx) {
     case 'explore': return { calls: [{ tool: 'explore_frontier', args: { heading: args.heading, chunks: args.chunks ?? 1, ...(args.biome ? { biome: args.biome } : {}) } }] };
     case 'armor': return { local: 'armor', calls: [] };
     case 'shelter': return { local: 'care', kind: 'shelter', calls: [] };
-    case 'portal': return args.action === 'light'
-      ? { calls: [{ tool: 'activate_portal', args: { x: args.pos.x, y: args.pos.y, z: args.pos.z } }] }
-      : { calls: [{ tool: 'enter_nether_portal', args: { x: args.pos.x, y: args.pos.y, z: args.pos.z, ...(args.low_supplies ? { allow_low_supplies: true } : {}) } }] };
+    case 'portal': {
+      // without pos: the frame the last build nether_portal made (a frame block to light, an inside cell to enter)
+      const p = args.pos ?? (args.action === 'light' ? ctx.portal?.frame : ctx.portal?.inside) ?? null;
+      if (!p) return refuse('portal needs pos (a frame block or an inside cell), or build nether_portal from obsidian first', 'BAD_ARGS');
+      if (args.action === 'light') {
+        if (!carries('flint_and_steel')) return refuse('lighting a portal needs flint_and_steel (craft it from 1 iron_ingot and 1 flint; gravel drops flint now and then)', 'NEED_ITEMS');
+        return { calls: [{ tool: 'activate_portal', args: { x: p.x, y: p.y, z: p.z } }] };
+      }
+      return { calls: [{ tool: 'enter_nether_portal', args: { x: p.x, y: p.y, z: p.z, ...(args.low_supplies ? { allow_low_supplies: true } : {}) } }] };
+    }
     case 'shield': return { local: 'care', kind: 'shield', calls: [] };
     case 'policy': {
       // the care's knobs stay in the gateway (src/mineai/care.js); the rest goes to the runtime's survival policy
@@ -564,6 +571,8 @@ export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   // a failure their code does not type, but whose words say something is not carried, is NEED_ITEMS
   let code = codeFor(theirs) ?? 'FAILED';
   if (code === 'FAILED' && /\b(does not carry|not carried|no \w+ carried|short of \d+)\b/i.test(why)) code = 'NEED_ITEMS';
+  // lava in the way (a target next to lava it cannot close off, a route through it): a plain code of its own
+  if (code === 'FAILED' && /\blava\b/i.test(why)) code = 'LAVA';
   // partial counts as failed: the steps queued after it were planned on all of it
   return { ok: false, result: `${status === 'partial' ? 'only partly done' : 'failed'}: ${why}${said ? ` (${said})` : ''}${extra}`, code, theirs };
 }

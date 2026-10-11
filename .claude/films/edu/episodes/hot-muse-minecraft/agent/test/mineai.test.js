@@ -80,7 +80,13 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   assert.deepEqual(toTheirs('eat', {}, ctx).calls[0].args, { food_name: 'cooked_beef' });
   assert.match(toTheirs('eat', {}, { ...ctx, food: 20 }).refused.result, /not hungry/);
   assert.deepEqual(toTheirs('say', { text: 'hi' }, ctx).calls[0], { tool: 'send_message', args: { message: 'hi' } });
-  assert.deepEqual(toTheirs('portal', { action: 'light', pos: { x: 1, y: 60, z: 2 } }, ctx).calls[0], { tool: 'activate_portal', args: { x: 1, y: 60, z: 2 } });
+  assert.equal(toTheirs('portal', { action: 'light', pos: { x: 1, y: 60, z: 2 } }, ctx).refused.code, 'NEED_ITEMS', 'no flint_and_steel');
+  assert.deepEqual(toTheirs('portal', { action: 'light', pos: { x: 1, y: 60, z: 2 } }, { ...ctx, inventory: { flint_and_steel: 1 } }).calls[0], { tool: 'activate_portal', args: { x: 1, y: 60, z: 2 } });
+  // without pos: the frame the last build nether_portal made
+  const portal = { frame: { x: 5, y: 63, z: 9 }, inside: { x: 6, y: 64, z: 9 } };
+  assert.deepEqual(toTheirs('portal', { action: 'light' }, { ...ctx, inventory: { flint_and_steel: 1 }, portal }).calls[0].args, portal.frame);
+  assert.deepEqual(toTheirs('portal', { action: 'enter' }, { ...ctx, portal }).calls[0].args, portal.inside);
+  assert.equal(toTheirs('portal', { action: 'enter' }, ctx).refused.code, 'BAD_ARGS');
   assert.deepEqual(toTheirs('portal', { action: 'enter', pos: { x: 1, y: 61, z: 2 }, low_supplies: true }, ctx).calls[0], { tool: 'enter_nether_portal', args: { x: 1, y: 61, z: 2, allow_low_supplies: true } });
 });
 
@@ -160,6 +166,15 @@ test('mineai skills: their results become our text and typed codes', () => {
   const shelter = blueprintCells('shelter', 'dirt', { x: 0, y: 64, z: 0 }, 0);
   assert.equal(shelter.facing, 'north');
   assert.equal(shelter.cells.filter((c) => c.block_name === 'dirt').length, blueprintBlockCount('shelter'));
+  // the Nether portal frame: 12 obsidian across the bot's view one block ahead, the bottom row in the ground, the
+  // inside 2 wide and 3 high at the bot's feet
+  const portal = blueprintCells('nether_portal', 'obsidian', { x: 0, y: 64, z: 0 }, 0);
+  const obs = portal.cells.filter((c) => c.block_name === 'obsidian');
+  assert.equal(obs.length, 12);
+  assert.equal(blueprintBlockCount('nether_portal'), 12);
+  assert.ok(portal.cells.every((c) => c.z === -1), 'one plane, one block north of the bot');
+  assert.deepEqual([...new Set(obs.map((c) => c.y))].sort(), [63, 64, 65, 66, 67]);
+  assert.deepEqual(portal.cells.filter((c) => c.block_name === 'air').map((c) => c.y).sort(), [64, 64, 65, 65, 66, 66]);
   assert.deepEqual(inventoryOfStacks([{ name: 'dirt', count: 3, location: 'main' }, { name: 'dirt', count: 2, location: 'hotbar' }, { name: 'iron_helmet', count: 1, location: 'head' }]), { dirt: 5 });
 });
 
@@ -408,7 +423,7 @@ test('mineai through MCP: the queue, request_id, typed codes and the extra skill
     const size = JSON.stringify(listed).length;
     // 39,994 bytes before M4; the armor skill, the policy's care knobs and onItsOwn in the reply schema add about 2 KB;
     // advise mode (the reflex knobs, the shelter and shield skills, advice and attribution in the schema) about 4 KB
-    assert.ok(size < 48_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
+    assert.ok(size < 50_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
     assert.doesNotMatch(JSON.stringify(listed), /rationale|submission_id|wait_for_action|response_format/);
     const play = listed.tools.find((t) => t.name === 'play');
     assert.match(play.description, /- hunt \{mob: one of cow\|pig[^}]*, drop: text \(1 to 48 characters\), n: integer 1 to 64, without_shield: true\|false \(optional\)\}/);
@@ -809,7 +824,7 @@ test('mineai body: what is worn or in the off-hand stays in the state, and an eq
 test('mineai skills: no lava poured, nothing poured at spawn or onto a player, no chest of another game opened', () => {
   const ctx = { inventory: {}, spawn: { x: 0, y: 64, z: 0 }, players: [{ position: { x: 200, y: 64, z: 200 } }], gameId: 'gA', containerOwner: (p) => (p.x === 7 ? 'gB' : p.x === 8 ? 'gA' : null) };
   const pour = (liquid, pos) => toTheirs('bucket', { action: 'pour', liquid, pos }, ctx);
-  assert.equal(pour('lava', { x: 500, y: 64, z: 500 }).refused.code, 'BAD_ARGS');
+  assert.equal(pour('lava', { x: 500, y: 64, z: 500 }).refused.code, 'LAVA');
   assert.match(pour('water', { x: 10, y: 64, z: 10 }).refused.result, new RegExp(`within ${SPAWN_GUARD} blocks of the world spawn`));
   assert.match(pour('water', { x: 201, y: 64, z: 201 }).refused.result, /another player is within 4 blocks/);
   assert.doesNotMatch(pour('water', { x: 201, y: 64, z: 201 }).refused.result, /Tst_|gB/, 'no player names');
