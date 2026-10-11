@@ -42,7 +42,8 @@ services:
       WEB_PUBLIC_URL: https://play.picasso-lab.com
       WEB_TRUST_PROXY: "1"
       WEB_MAX_SESSIONS: "8"
-      WEB_LEASE_MS: "1800000"
+      # 30 minutes; a long Muse run sets PROD_LEASE_MS in deploy/.env (docs/MUSE-LONG-RUN.md) and removes it after
+      WEB_LEASE_MS: "${PROD_LEASE_MS:-1800000}"
     volumes: [ "../logs:/logs", "console:/console", "../mineai-data:/mineai-data" ]
     ports: [ "172.24.0.1:7850:8787" ]
     networks: { mc: { ipv4_address: 10.77.77.11 } }
