@@ -146,14 +146,24 @@ test('nether: get_state lists lava and portals; a scan that could not be read ke
   } finally { await body.close(); }
 });
 
-test('nether: the portal back went out: the advice says so, with portal light when flint and steel is carried', async () => {
-  const { body, fake } = await netherBody({ flint_and_steel: 1 });
+test('nether: the portal back went out: said only away from it and after a settled scan, with portal light when flint and steel is carried', async () => {
+  const hosts = fakeHosts(() => ({ inventory: { flint_and_steel: 1 } }));
+  const body = createMineAiBody({ config, log, hosts, gameId: 'gnether_adv', username: 'Tst_rv_gnether_adv', careTickMs: 30, careIdleMs: 50, portalSettleMs: 300 });
+  await until(() => hosts.started[0]);
+  const fake = hosts.started[0].fake;
+  await body.ready;
   try {
     fake.world.dimension = 'the_nether';
     fake.world.position = { x: 3.5, y: 70, z: 4.5 };
     await body.refresh();
-    fake.world.blocks = [];
-    await sleep(10);
+    fake.world.blocks = []; // the chunks around not in yet: no portal block found
+    await body.rescan();
+    assert.equal(body.advice().find((x) => x.kind === 'portal'), undefined, 'standing in the portal it came out of: lit');
+    // a few blocks off, before the scan settled: nothing said yet
+    fake.world.position = { x: 9.5, y: 70, z: 4.5 };
+    await body.refresh();
+    assert.equal(body.advice().find((x) => x.kind === 'portal'), undefined, 'an early scan says nothing');
+    await sleep(350);
     await body.rescan();
     const a = body.advice().find((x) => x.kind === 'portal');
     assert.equal(a.text, 'the portal back at 3 70 4 is not lit any more');
@@ -161,5 +171,10 @@ test('nether: the portal back went out: the advice says so, with portal light wh
     fake.world.blocks = [{ name: 'nether_portal', found: 6, listed: [{ x: 3, y: 70, z: 4 }] }];
     await body.rescan();
     assert.equal(body.advice().find((x) => x.kind === 'portal'), undefined, 'lit: nothing to say');
+    // a scan with a batch unreadable: not trusted
+    fake.world.blocks = [];
+    fake.world.viewFailEvery = 2;
+    await body.rescan();
+    assert.equal(body.advice().find((x) => x.kind === 'portal'), undefined, 'a partly unreadable scan says nothing');
   } finally { await body.close(); }
 });

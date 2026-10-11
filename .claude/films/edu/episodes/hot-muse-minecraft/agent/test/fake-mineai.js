@@ -79,6 +79,8 @@ export async function startFakeMineAi(opts = {}) {
     navigateFail: null,
     buildKept: 0,
     viewFail: false,
+    viewFailEvery: 0,
+    viewReads: 0,
     boxAt: null,
     netherAt: { x: 3.5, y: 70, z: 4.5 },
   };
@@ -313,6 +315,8 @@ export async function startFakeMineAi(opts = {}) {
     reg('read_recent_events', () => ({ action: 'read_recent_events', durationMs: 1, result: { status: 'succeeded', events: world.events.splice(0), remainingEventCount: 0 } }));
     reg('view_blocks', (a) => {
       if (world.viewFail) return { state: 'error', error: 'view_blocks failed' };
+      // every n-th read fails (a scan partly unreadable)
+      if (world.viewFailEvery && ++world.viewReads % world.viewFailEvery === 0) return { state: 'error', error: 'view_blocks failed' };
       // find: world.blocks for the names asked (every name of theirs answered, nearest listed); box: world.boxAt or air
       const find = a.find ? world.blocks.filter((b) => a.find.block_names.includes(b.name)) : null;
       let box = null;

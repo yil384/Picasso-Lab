@@ -91,6 +91,10 @@ const keyOf = (p) => `${Math.floor(p.x)},${Math.floor(p.y)},${Math.floor(p.z)}`;
 const FRAMES = new Map();
 /** How far (blocks, flat) another game's obsidian keeps a collect obsidian from running: about what is loaded. */
 export const FRAME_GUARD = 160;
+/** After coming out of a portal, the blocks around are trusted to say whether it is still lit only once a whole scan
+ * has been read this long after the arrival (the chunks come in over seconds; an early scan missed the portal it
+ * stood in: production, 2026-10-11, every camera trip). */
+export const PORTAL_SETTLE_MS = 10_000;
 /** collect obsidian makes it from lava within this many blocks of the bot, else it is refused. */
 export const LAVA_NEAR = 16;
 
@@ -128,7 +132,7 @@ export function attributionOf(muse, { reflex = 0, care = 0 } = {}) {
   return { muse, reflex, care, musePct, text };
 }
 
-export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs }) {
+export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs, portalSettleMs = PORTAL_SETTLE_MS }) {
   const emitter = new EventEmitter();
   emitter.setMaxListeners(50);
   let host = null;
@@ -329,6 +333,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       }
       if (!read) return; // nothing could be read: the blocks known stay as they were
       scan = {
+        complete: read === SCAN_NAMES.length,
         at: Date.now(),
         from: latest.position,
         blocks: found.filter((f) => f.listed?.[0]).map((f) => ({ name: f.name, count: Math.min(64, f.found ?? 1), capped: (f.found ?? 0) > 64 || undefined, nearest: floorPos(f.listed[0]) })),
@@ -572,6 +577,11 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const dim = dimension ?? 'overworld';
     const a = arrivals[dim];
     if (dim === 'overworld' || !a || scan.at <= a.at) return []; // the blocks read since it came out there
+    // standing in or right next to the portal it came out of: lit (their entry puts the bot inside the portal blocks)
+    const p = latest.position;
+    if (p && Math.hypot(p.x - (a.pos.x + 0.5), p.z - (a.pos.z + 0.5)) <= 3 && Math.abs(p.y - a.pos.y) <= 3) return [];
+    // only a whole scan read well after the arrival says anything (an early or partly unreadable one may miss it)
+    if (!scan.complete || scan.at < a.at + portalSettleMs) return [];
     const lit = scan.blocks.some((b) => b.name === 'nether_portal' && Math.hypot(b.nearest.x - a.pos.x, b.nearest.y - a.pos.y, b.nearest.z - a.pos.z) <= 4);
     if (lit) return [];
     const flint = (latest.inventory?.flint_and_steel ?? 0) > 0;
