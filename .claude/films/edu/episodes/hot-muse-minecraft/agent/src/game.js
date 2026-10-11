@@ -140,7 +140,7 @@ export const BLUEPRINTS = freeze({
   // 2 wide and 3 high at the bot's feet, the top corners obsidian (the top row is placed against them). The portal
   // skill then lights it and enters it.
   nether_portal: freeze({
-    description: 'Nether portal frame, 4 wide and 5 high, its bottom row in the ground (12 blocks, and up to 2 under it on uneven ground: build it from obsidian on dry ground, then portal light)',
+    description: 'Nether portal frame, 4 wide and 5 high, its bottom row in the ground (12 blocks, and 2 more under it on uneven ground: build it from obsidian on dry ground, then portal light)',
     base: -1,
     layers: freeze([[' ## '], ['#..#'], ['#..#'], ['#..#'], ['####']]),
   }),

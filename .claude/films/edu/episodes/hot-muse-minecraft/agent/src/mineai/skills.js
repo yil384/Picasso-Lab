@@ -89,7 +89,7 @@ export const EXTRA_DEFS = Object.freeze([
     'Make a shield and put it in your off-hand: from 1 iron ingot you carry, else raw iron smelted, else 1 iron ore mined (stone pickaxe) and smelted; planks from your wood. Your fight reflex raises it against arrows.',
     obj({}, [])],
   ['portal',
-    'A Nether portal. Build the frame first: build nether_portal from 12 obsidian, and up to 2 more on uneven ground (or place obsidian yourself, 4 wide and 5 tall, corners optional). light: light the frame with flint_and_steel you carry; enter: step into the lit portal and wait to arrive (in the Nether, enter again to come back). pos: a frame block or an inside cell; without pos, the frame your last build nether_portal made. Take food along (the Nether has little); it enters with whatever it carries.',
+    'A Nether portal. Build the frame first: build nether_portal from 12 obsidian, and 2 more on uneven ground (or place obsidian yourself, 4 wide and 5 tall, corners optional). light: light the frame with flint_and_steel you carry; enter: step into the lit portal and wait to arrive (in the Nether, enter again to come back). pos: a frame block or an inside cell; without pos, the frame your last build nether_portal made. Take food along (the Nether has little); it enters with whatever it carries.',
     obj({ action: pick('light or enter', ['light', 'enter']), pos: POS, low_supplies: { type: 'boolean', description: 'kept for old clients; the body always enters' } }, ['action'])],
   ['armor',
     'Craft the best armor you can pay for (iron ingots, leather, gold or diamonds) and put it on, with any better piece or shield you carry.',
