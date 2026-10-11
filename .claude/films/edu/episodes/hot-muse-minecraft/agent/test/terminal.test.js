@@ -134,10 +134,11 @@ test('panel: a PNG of its size, long lines wrapped and indented, the newest at t
 test('ffmpeg: the vertical layout puts the game on top and overlays the panel image under it; the landscape one is as before', () => {
   const a = ffmpegArgs({ output: 'rtmps://h/rtmp/KEY', width: 1080, height: 1920, panel: { file: '/w/panel.png', top: 608 }, x11: { display: ':99.0+0,0', width: 960, height: 540 }, font: '/f.ttf', captionFile: '/w/c.txt' });
   const i = a.indexOf('image2');
-  assert.deepEqual(a.slice(i - 4, i + 6), ['-thread_queue_size', '8', '-re', '-f', 'image2', '-loop', '1', '-framerate', '4', '-i']);
+  assert.deepEqual(a.slice(i - 5, i + 6), ['-thread_queue_size', '2', '-reinit_filter', '0', '-f', 'image2', '-loop', '1', '-framerate', '4', '-i']);
+  assert.notEqual(a[i - 6], '-re', 'the panel is not paced with -re (it held the picture back on ffmpeg 5.1)');
   assert.equal(a[i + 6], '/w/panel.png');
   const fc = a[a.indexOf('-filter_complex') + 1];
-  assert.match(fc, /^\[0:v\]setpts=PTS-STARTPTS,scale=1080:608:flags=bicubic,drawtext=.*:y=h-th-34,pad=1080:1920:0:0:color=0x0B0D0F\[top\];\[1:v\]setpts=PTS-STARTPTS,scale=1080:1312\[pan\];\[top\]\[pan\]overlay=0:608,format=yuv420p\[v\]$/);
+  assert.match(fc, /^\[0:v\]setpts=PTS-STARTPTS,scale=1080:608:flags=bicubic,drawtext=.*:y=h-th-34,format=yuv420p\[top\];\[1:v\]setpts=PTS-STARTPTS,scale=1080:1312,format=yuv420p\[pan\];\[top\]\[pan\]vstack=inputs=2\[v\]$/);
   assert.deepEqual(a.slice(a.indexOf('-filter_complex') + 2, a.indexOf('-filter_complex') + 6), ['-map', '[v]', '-map', '2:a']);
   assert.equal(a.includes('-vf'), false);
   const l = ffmpegArgs({ output: '/tmp/x.mp4', x11: { display: ':99.0+0,0', width: 960, height: 540 } });
@@ -218,11 +219,15 @@ test('end to end: a camera stream in the vertical layout, fed terminal lines, to
   const em = new EventEmitter();
   const rig = { state: 'ready', name: 'MuseCam', options: { display: 4243, width: 960, height: 540, followMs: 60_000 }, start() {}, waitReady: async () => true, follow: async () => true, keepFollowing: async () => true, park: async () => {}, stats: async () => ({}), on: (e, fn) => { em.on(e, fn); return () => em.off(e, fn); } };
   const out = path.join(dir, 'v.mp4');
-  const s = createCameraStream({ rig, player: 'Muse_e2e1', output: out, ffmpeg, font: null, settleMs: 10, testSource: '320x180', fps: 15, bitrateK: 800, layout: 'terminal' });
+  const rows = [];
+  const keepAlive = setInterval(() => {}, 1_000); // the stream's own timers do not hold the test open
+  t.after(() => clearInterval(keepAlive));
+  const s = createCameraStream({ rig, player: 'Muse_e2e1', output: out, ffmpeg, font: null, settleMs: 10, testSource: '320x180', fps: 15, bitrateK: 800, layout: 'terminal', event: (k, d) => rows.push({ k, ...d }) });
   assert.equal(s.aspect, '1080/1920');
   await s.start();
   for (let i = 0; i < 6; i++) { s.term({ lines: [{ k: i % 2 ? 'ok' : 'call', t: `line ${i}` }], status: `HP ${20 - i}/20` }); await sleep(400); }
   await s.stop('done');
+  assert.deepEqual(rows.filter((r) => /ffmpeg_exit|failed|error/.test(r.k)), [], 'ffmpeg never restarted while the panel changed');
   const probe = JSON.parse(execFileSync(ffmpeg.replace(/ffmpeg$/, 'ffprobe'), ['-v', 'error', '-show_entries', 'stream=codec_name,width,height:format=duration', '-of', 'json', out], { encoding: 'utf8' }));
   const v = probe.streams.find((x) => x.codec_name === 'h264');
   assert.deepEqual([v.width, v.height], [1080, 1920]);
