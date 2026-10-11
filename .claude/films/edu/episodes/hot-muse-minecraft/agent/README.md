@@ -56,6 +56,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/stream.js`, `src/stream-page.js` | live video of a guest game (off unless `STREAM_ENABLED`): headless Chromium on the bot's first-person view, a smoothed camera, ffmpeg to RTMPS (Facebook Live) or an MP4; the stream service and its client for the container (section "Live video") |
 | `src/rtmp.js` | the RTMP(S) publisher: ffmpeg writes FLV to its fd 3 and this sends it to the ingest, so a stream key is never on a command line (picasso has no hidepid), in a file or in a child's environment |
 | `src/fb-live.js`, `src/live-page.js` | `FB_LIVE=on`: the Graph API (Page token from a 600 file, spaced, retried, rate-limit aware, scrubbed) and the one live channel on the Facebook Page (a game goes live only when `live_view` asks for it; one camera follows the last `live_view` request; the live video ends with the last game that asked; a crash's leftovers ended at start); the static page `live_view` returns for muse.ai's artifact panel (section "Live on a Facebook Page") |
+| `src/terminal.js`, `src/terminal-panel.js`, `scripts/terminal-sample.mjs` | the terminal under the vertical live video: the agent's lines of each MCP call and its results, advice, reflexes, deaths, milestones and portals, plus a status line (ASCII only, no tokens, addresses or other players' names); the camera's panel drawn with node-canvas into a PNG that ffmpeg overlays under the game; a sample made on this machine from a recorded clip and a scripted session (section "The terminal under the video") |
 | `scripts/fb-token.mjs`, `scripts/fb-probe.mjs` | the Page token from the App ID, the App Secret and a short-lived user token (written 600; prints only the Page's name and id); one real test live video from this machine (a test pattern with a clock, checked live, ended, deleted) |
 | `src/camera.js` | the real-client camera (`STREAM_SOURCE=client`): Xvfb + the vanilla Minecraft client as a spectator in the bot's head, ffmpeg x11grab, the same stream interface (section "Real-client camera") |
 | `scripts/stream.mjs` | one stream on demand (to a file or an RTMP(S) URL, with its CPU, RAM and frame numbers), a side-by-side camera comparison, `--camera` (one real-client stream of a player), or `--serve` (the stream or camera container) |
@@ -553,6 +554,14 @@ profile `camera`, `deploy/Dockerfile.camera`).
   mostly from above; a grey picture for a few seconds deep in a narrow shaft (the camera inside stone); while it
   shelters, the eye stays where it was and turns to it (no high spot fit under the trees there), so the picture is the
   ground over the shelter.
+- Across dimensions (2026-10-11, for the Nether): when the camera player is not within 48 blocks of the bot (it went
+  through a portal, respawned far away or was teleported), the datapack's `regroup` removes the eye and the yaw marker
+  in every dimension, stops the ride, teleports the camera player to the bot (a teleport crosses dimensions) and the
+  next lines of the tick make a new eye there and ride it again, at most once every 2 s. Checked on a local Paper with
+  two stand-in players: the camera followed the bot into the Nether by a teleport (riding the new eye under a
+  netherrack ceiling 5 blocks up) and back to the Overworld through a lit portal, its tags and night vision kept.
+  While the client loads the other dimension, ffmpeg goes on grabbing the screen (its loading screen for a moment);
+  how long that shows with the real client is checked on staging.
 - Between games: the client stays in the world (a game goes live 3.5 s after it starts). After `CAMERA_IDLE_MS`
   (10 min) without a game it quits and Xvfb stays (0 % CPU, 46 MB); the next game starts it again (live after 15 s).
 - Supervision: a client that exits, is disconnected ("Client disconnected with reason", "Couldn't connect to server")
@@ -818,6 +827,51 @@ sh recreate.sh production all
 Remove the `pre-live` tags once this has held for a week (`docker rmi muse-minecraft-agent:pre-live
 muse-minecraft-paper:pre-live`).
 
+## The terminal under the video (STREAM_LAYOUT=terminal)
+
+muse.ai's panel is tall and narrow, and showed the 16:9 player at the top with black below it. So the camera's video
+is vertical (`STREAM_TERMINAL_SIZE`, 1080x1920 by default, or 1080x1350): the game on top, 16:9 (1080x608, the
+caption on it), a status bar under it, and under that a terminal of what Muse does, newest line at the bottom:
+
+```
+HP 17/20  FOOD 18/20  DAY 07:12                Muse 7 | Reflex 1 | 88% Muse
+> play_sequence: collect oak_log 5
+ok  mined 5 oak log (14 s)
+milestone: a wooden pickaxe at 0:22
+FAIL collect iron ore 3: no iron ore within 64 blocks (1.2 s)
+reflex: defending itself (zombie), then back to collecting
+advice: night in 45 s, no shelter, no shield; 10 cobblestone carried
+entered the Nether at 41:06
+```
+
+- The agent (`src/terminal.js`) wraps every MCP tool: the call goes out as it comes in ("> tool: steps, abbreviated";
+  start_game with its reply, when the game exists), and its reply as lines: each finished step once ("ok  what it
+  did (time)", "FAIL step CODE: why", "skip ..."), what the body did by itself once ("reflex: ...", "death: ...",
+  "body: ..." in full care), the Body advice when it changes (at most 3 lines), milestones the first time (a wooden,
+  stone, iron or diamond pickaxe, the first iron, a shield, a bed, obsidian, blaze rods, pearls...), a change of
+  dimension ("entered the Nether", "back in the Overworld"), "game over after m:ss"; and the status line (health,
+  food, the day clock or NETHER/END, "Muse N | Reflex N | P% Muse" from the game's attribution, the last state kept).
+  Every line is ASCII, without a token or key (20+ letters and digits), an address, a link or another player's name
+  (a bot's private name becomes "a player").
+- The lines go to the camera service on the caption endpoint (`POST /streams/<id>/caption {term: {lines, status}}`,
+  checked and cleaned again there), for the game on camera only; another game on camera starts an empty terminal.
+- The camera (`src/terminal-panel.js`) draws the status bar and the lines with node-canvas in a monospace font
+  (DejaVu Sans Mono in the image; about 50 columns and 27 rows at 1080x1312), coloured by kind, long lines wrapped and
+  indented, into a PNG at most 4 times a second, written to a temporary file and renamed. ffmpeg reads that PNG again
+  4 times a second (`-re -loop 1 -f image2`), both pictures start at time 0, and an overlay puts it under the game
+  (`STREAM_LAYOUT=landscape`: the game alone at 1280x720, as before). One image instead of a drawtext per colour:
+  ffmpeg 5.1's line height follows the glyphs each layer happens to draw, so coloured layers would not line up.
+- live_view's page sizes the player to the video's shape (`aspect` from the channel: 1080/1920), as tall as the panel
+  allows (`width: min(100%, (100vh - 40px) * 0.5625)`), still under 1 KB. Whether Facebook's player keeps a vertical
+  live video's shape inside our frame is UNVERIFIED until the first vertical broadcast (production was in use).
+- Cost (this Mac, x264 veryfast, 2 threads, 3.5 Mb/s): 12.6 CPU-seconds per 30 s of video at 1080x1920 against 10.4
+  at 1280x720, decoding included; plus one PNG of 1080x1312 decoded 4 times a second.
+
+A sample without Minecraft or Facebook: `node scripts/terminal-sample.mjs --clip game.mp4 --out sample.mp4
+[--from 30] [--seconds 45]` films a recorded clip through the camera stream (a stand-in rig, the clip in place of the
+X display) and feeds the terminal a scripted session through the real formatter
+(`~/Downloads/muse-stream-terminal.mp4`, 2026-10-11).
+
 ## Deploy on picasso
 
 `deploy/push.sh` copies the code and runs `docker compose up -d --build` in `~/workspace/muse-minecraft/app/deploy`
@@ -919,6 +973,7 @@ muse-minecraft-paper:pre-live`).
 | `CAMERA_AUTH`, `CAMERA_AUTH_DIR`, `CAMERA_NAME` | `msa`, (none), (none) | the camera account: `msa` (the login in the auth folder) or `offline` (tests on our own server only, as `CAMERA_NAME`, default MuseCam) |
 | `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
 | `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `5`, `30`, `fast`, `0.75` | the client's video settings (the tuned ones); it draws at 1280x720 times the scale and ffmpeg scales up |
+| `STREAM_LAYOUT`, `STREAM_TERMINAL_SIZE` | `terminal`, `1080x1920` | the camera's video: vertical with the terminal of Muse's calls under the game (or `1080x1350`), or `landscape`, the game alone at 1280x720 (section "The terminal under the video") |
 | `CAMERA_VIEW` | `third` | `third`: over the bot's shoulder (its arm, tool and swing in view), outside its shelter while it is enclosed; `first`: in its head (outside too while enclosed). The Paper datapack does it (section "Real-client camera") |
 | `CAMERA_MODS`, `CAMERA_CHUNK_THREADS`, `CAMERA_JVM_ARGS` | `sodium`, `0`, (none) | client mods from the image (`deploy/camera/mods.json`; `off` = vanilla); Sodium's chunk builder threads (0: its own choice); extra JVM flags (a collector given here replaces G1) |
 | `STREAM_CLOCK`, `STREAM_CLOCK_TZ` | `false`, `America/Los_Angeles` | test only: the wall clock burned into the video |

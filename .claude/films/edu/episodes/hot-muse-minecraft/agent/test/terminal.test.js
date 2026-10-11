@@ -88,7 +88,7 @@ test('feed: a call, then its results once; advice when it changes; reflexes and 
   // a portal: the line, and NETHER in the status bar
   dimension = 'minecraft:the_nether';
   feed.reply(game, 'get_state', {}, reply({ steps: [], advice: [], onItsOwn: [{ seq: 5, source: 'reflex', kind: 'death', text: 'old' }], state: { health: 20, food: 20, time: 13_200 } }));
-  assert.deepEqual(sent.at(-1).lines, [{ k: 'call', t: '> get_state' }, { k: 'milestone', t: 'entered the Nether at 0:41' }]);
+  assert.deepEqual(sent.at(-1).lines, [{ k: 'milestone', t: 'entered the Nether at 0:41' }], 'a reply adds no call line (only start_game\'s)');
   assert.match(sent.at(-1).status, /  NETHER  \|/);
   // a refused call, and the end
   feed.call(game, 'play', { skill: 'craft', args: { item: 'iron_pickaxe' } });

@@ -117,7 +117,7 @@ export function createTermFeed(o) {
   const games = new Map(); // id -> {seen: Set, own: number, advice: string, got: Set, startedAt, state, dim}
   const of = (s) => {
     let g = games.get(s.id);
-    if (!g) { g = { seen: new Set(), own: -1, advice: '', got: new Set(), startedAt: now(), called: false, state: null, dim: null }; games.set(s.id, g); }
+    if (!g) { g = { seen: new Set(), own: -1, advice: '', got: new Set(), startedAt: now(), state: null, dim: null }; games.set(s.id, g); }
     return g;
   };
   /** The bot's dimension: Mine AI's status (its snapshot), else mineflayer's. */
@@ -144,15 +144,15 @@ export function createTermFeed(o) {
   return {
     call(s, tool, args) {
       if (!s?.id) return;
-      of(s).called = true;
       emit(s, [callLine(tool, args)], null);
     },
     reply(s, tool, args, out) {
       if (!s?.id) return;
       const g = of(s);
       const lines = [];
-      if (!g.called) lines.push(callLine(tool, args)); // start_game: the game exists only once it has answered
-      g.called = false;
+      // start_game's call is shown with its reply (the game exists only once it has answered); every other call was shown
+      // as it came in, also when calls overlap
+      if (tool === 'start_game') lines.push(callLine(tool, args));
       const st = out?.structuredContent ?? {};
       for (const step of [...(st.earlier ?? []), ...(st.steps ?? [])]) {
         const key = `${step.call ?? ''}:${step.n}`;

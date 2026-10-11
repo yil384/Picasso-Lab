@@ -49,7 +49,8 @@ const reply = (structured, isError = false) => ({ content: [{ type: 'text', text
 const script = [
   [0.5, () => feed.reply(game, 'start_game', { adult: true }, reply({ steps: [], state: state(20, 20, 23_400) }))],
   [2, () => { feed.call(game, 'play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 5 } }] }); att = { muse: 1, reflex: 0, musePct: 100 }; }],
-  [6, () => feed.reply(game, 'get_state', {}, reply({ steps: [], state: state(20, 20, 23_700), advice: [{ kind: 'food', text: 'food 20, nothing to eat carried; cows 18 blocks east', hint: { skill: 'hunt', args: { target: 'cow' } } }] }))],
+  [6, () => feed.call(game, 'get_state', {})],
+  [6.3, () => feed.reply(game, 'get_state', {}, reply({ steps: [], state: state(20, 20, 23_700), advice: [{ kind: 'food', text: 'food 20, nothing to eat carried; cows 18 blocks east', hint: { skill: 'hunt', args: { target: 'cow' } } }] }))],
   [16, () => feed.reply(game, 'play_sequence', {}, reply({ steps: [step(1, 1, 'collect', { block: 'oak_log', n: 5 }, 'confirmed', 'mined 5 oak_log and picked up 5 oak_log (5 of 5 wanted)', 13_800, { oak_log: 5 })], state: state(20, 19, 23_950) }))],
   [17.5, () => { feed.call(game, 'play_sequence', { steps: [{ skill: 'craft', args: { item: 'oak_planks', n: 12 } }, { skill: 'craft', args: { item: 'stick', n: 4 } }, { skill: 'craft', args: { item: 'crafting_table', n: 1 } }, { skill: 'craft', args: { item: 'wooden_pickaxe', n: 1 } }] }); att = { muse: 5, reflex: 0, musePct: 100 }; }],
   [23, () => feed.reply(game, 'play_sequence', {}, reply({
@@ -64,6 +65,7 @@ const script = [
   [24.5, () => { feed.call(game, 'play', { skill: 'collect', args: { block: 'iron_ore', n: 3 } }); att = { muse: 6, reflex: 0, musePct: 100 }; }],
   [26, () => feed.reply(game, 'play', {}, reply({ code: 'NOT_FOUND', steps: [step(3, 1, 'collect', { block: 'iron_ore', n: 3 }, 'failed', 'no iron_ore within 64 blocks; stone is 3 blocks down', 1_200)], state: state(20, 19, 400) }))],
   [27.5, () => { feed.call(game, 'play_sequence', { steps: [{ skill: 'collect', args: { block: 'stone', n: 10 } }] }); att = { muse: 7, reflex: 0, musePct: 100 }; }],
+  [32.7, () => feed.call(game, 'get_state', {})],
   [33, () => feed.reply(game, 'get_state', {}, reply({
     steps: [], state: state(16, 18, 900),
     onItsOwn: [{ seq: 1, agoS: 2, source: 'reflex', kind: 'defend', ok: true, text: 'defending itself (zombie), then back to collecting' }],
