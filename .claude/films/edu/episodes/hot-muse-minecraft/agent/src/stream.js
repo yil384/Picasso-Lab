@@ -18,6 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pageScript, patchedBundle, patchedWorkerBase64, PAGE_DEFAULTS } from './stream-page.js';
 import { createRtmpPublisher } from './rtmp.js';
+import { cleanTerm } from './terminal.js';
 
 export const STREAM_DEFAULTS = Object.freeze({
   width: 1280, // the video (Facebook Live: H.264 + AAC, up to 1280x720 at 30 fps, keyframe every 2 s, CBR)
@@ -112,28 +113,38 @@ export function ffmpegArgs(o) {
   const width = o.width ?? STREAM_DEFAULTS.width;
   const height = o.height ?? STREAM_DEFAULTS.height;
   const net = isNetworkOutput(o.output);
-  const size = Math.round(height / 26);
+  // with a panel (o.panel = {file, top, fps}: the vertical layout, src/terminal-panel.js) the game is width x top at
+  // the top and the panel image below it; the caption and the clock belong to the game's part
+  const gameH = o.panel ? o.panel.top : height;
+  const size = Math.round(gameH / 26);
   const caption = o.font && o.captionFile
     ? `,drawtext=fontfile=${filterPath(o.font)}:textfile=${filterPath(o.captionFile)}:reload=1:fontsize=${size}:fontcolor=0xF4F1EA`
-      + `:box=1:boxcolor=0x0C0E10@0.62:boxborderw=${Math.round(size / 2)}:x=${Math.round(height / 20)}:y=h-th-${Math.round(height / 18)}`
+      + `:box=1:boxcolor=0x0C0E10@0.62:boxborderw=${Math.round(size / 2)}:x=${Math.round(gameH / 20)}:y=h-th-${Math.round(gameH / 18)}`
     : '';
   // test only (STREAM_CLOCK): the wall clock, large, top right; its time zone is ffmpeg's TZ (encoderEnv)
-  const big = Math.round(height / 11);
+  const big = Math.round(gameH / 11);
   const clock = o.clock && o.font
     ? `,drawtext=fontfile=${filterPath(o.font)}:text='%{localtime\\:%T}':fontsize=${big}:fontcolor=white`
-      + `:box=1:boxcolor=0x000000@0.7:boxborderw=${Math.round(big / 4)}:x=w-tw-${Math.round(height / 24)}:y=${Math.round(height / 24)}`
+      + `:box=1:boxcolor=0x000000@0.7:boxborderw=${Math.round(big / 4)}:x=w-tw-${Math.round(gameH / 24)}:y=${Math.round(gameH / 24)}`
     : '';
   const video = o.testSource // tests only: a moving test pattern instead of a picture source
     ? ['-re', '-f', 'lavfi', '-i', `testsrc2=size=${o.testSource}:rate=${fps}`]
-    : o.x11
+    : o.fileSource // samples only: a recorded video as the picture source, played in real time
+      ? ['-re', '-i', String(o.fileSource)]
+      : o.x11
       ? ['-thread_queue_size', '64', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', String(fps), '-video_size', `${o.x11.width ?? width}x${o.x11.height ?? height}`, '-i', String(o.x11.display)]
       : ['-thread_queue_size', '64', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', 'pipe:0'];
   return [
     '-hide_banner', '-nostdin', '-loglevel', 'warning', '-nostats', ...(o.progress ? ['-progress', 'pipe:1', '-stats_period', '5'] : []),
     ...video,
+    // the panel image, read again a few times a second in real time (it is replaced by renaming, never half written)
+    ...(o.panel ? ['-thread_queue_size', '8', '-re', '-f', 'image2', '-loop', '1', '-framerate', String(o.panel.fps ?? 4), '-i', String(o.panel.file)] : []),
     '-re', '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
-    '-map', '0:v', '-map', '1:a',
-    '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p`,
+    ...(o.panel
+      // both pictures start at time 0 (x11grab counts from the wall clock), so the overlay never waits on the panel
+      ? ['-filter_complex', `[0:v]setpts=PTS-STARTPTS,scale=${width}:${gameH}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},pad=${width}:${height}:0:0:color=0x0B0D0F[top];`
+        + `[1:v]setpts=PTS-STARTPTS,scale=${width}:${height - gameH}[pan];[top][pan]overlay=0:${gameH},format=yuv420p[v]`, '-map', '[v]', '-map', '2:a']
+      : ['-map', '0:v', '-map', '1:a', '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p`]),
     '-c:v', 'libx264', '-preset', o.preset ?? STREAM_DEFAULTS.preset, '-tune', 'zerolatency', '-profile:v', 'high',
     '-threads', String(o.threads ?? STREAM_DEFAULTS.threads),
     '-r', String(fps), '-g', String(gop), '-keyint_min', String(gop), '-sc_threshold', '0', '-bf', '0',
@@ -829,7 +840,10 @@ export function captionsOf(body, put) {
 export function managerConfig(c) {
   return {
     enabled: Boolean(c?.enabled), outputs: c?.outputs ?? [], outDir: c?.outDir || '', max: c?.max ?? 0,
-    options: { fps: c?.fps, scale: c?.scale, bitrateK: c?.bitrateK, far: c?.far, maxRssMB: c?.maxRssMB, noSandbox: c?.noSandbox, clock: c?.clock || undefined, clockTz: c?.clockTz },
+    options: {
+      fps: c?.fps, scale: c?.scale, bitrateK: c?.bitrateK, far: c?.far, maxRssMB: c?.maxRssMB, noSandbox: c?.noSandbox, clock: c?.clock || undefined, clockTz: c?.clockTz,
+      layout: c?.layout, terminalSize: c?.terminalSize,
+    },
   };
 }
 
@@ -912,6 +926,11 @@ export function createStreamManager({ config, log, create = createStream } = {})
       if (pose) e.stream.pose(pose);
       e.stream.caption(text);
     },
+    /** The terminal under a game's video (the vertical layout): new lines and the status line. */
+    term(id, u) {
+      const e = streams.get(id);
+      if (e && !e.stopping) e.stream.term?.(u);
+    },
     has: (id) => Boolean(streams.get(id) && !streams.get(id).stopping),
     /** Which output URL (its index in STREAM_RTMP_URL) a game's running stream holds; null for files or no stream. */
     slot(id) {
@@ -968,11 +987,11 @@ export function createStreamService({ manager, log } = {}) {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(text) });
     res.end(text);
   };
-  const readJson = (req) => new Promise((resolve) => {
+  const readJson = (req, max = 4_096) => new Promise((resolve) => {
     let size = 0;
     const chunks = [];
-    req.on('data', (c) => { size += c.length; if (size <= 4_096) chunks.push(c); });
-    req.on('end', () => { try { resolve(size > 4_096 ? null : JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { resolve(null); } });
+    req.on('data', (c) => { size += c.length; if (size <= max) chunks.push(c); });
+    req.on('end', () => { try { resolve(size > max ? null : JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { resolve(null); } });
     req.on('error', () => resolve(null));
   });
   return http.createServer(async (req, res) => {
@@ -1000,7 +1019,9 @@ export function createStreamService({ manager, log } = {}) {
       if (!id) return req.method === 'GET' ? json(res, 200, { enabled: manager.enabled, streams: manager.list() }) : json(res, 405, { error: 'use GET' });
       if (caption) {
         if (req.method !== 'POST') return json(res, 405, { error: 'use POST' });
-        const body = await readJson(req);
+        const body = await readJson(req, 32_768);
+        // the terminal under the video (src/terminal.js): its lines, cleaned again here
+        if (body?.term) { manager.term?.(id, cleanTerm(body.term)); return json(res, 200, { ok: true }); }
         manager.caption(id, cleanCaption(body?.text), cleanPose(body?.pose));
         return json(res, 200, { ok: true });
       }
@@ -1088,6 +1109,10 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000, refresh
     },
     caption(id, text, pose = null) {
       if (live.has(id)) call('POST', `/streams/${encodeURIComponent(id)}/caption`, { text: cleanCaption(text), pose }).catch(() => {});
+    },
+    /** The terminal under the video: the service draws it for the game on camera only. */
+    term(id, u) {
+      if (live.has(id)) call('POST', `/streams/${encodeURIComponent(id)}/caption`, { term: u }).catch(() => {});
     },
     has: (id) => live.has(id),
     slot: (id) => (live.has(id) ? slots.get(id) ?? null : null),

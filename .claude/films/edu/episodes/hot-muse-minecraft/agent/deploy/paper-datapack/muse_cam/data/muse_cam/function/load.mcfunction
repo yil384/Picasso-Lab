@@ -8,3 +8,5 @@ scoreboard objectives add muse_cam_y dummy
 scoreboard players set #3600 muse_cam_y 3600
 scoreboard players set #15 muse_cam_y 30
 scoreboard players set #100 muse_cam_y 100
+# the cool-down of a regroup (a dimension change, a respawn far away)
+scoreboard objectives add muse_cam_cd dummy

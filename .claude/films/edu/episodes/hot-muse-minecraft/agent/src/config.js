@@ -313,6 +313,10 @@ export function loadConfig(env = process.env) {
     // 'viewer': prismarine-viewer in headless Chromium (src/stream.js); 'client': the real Minecraft client as a
     // spectator in the bot's head (src/camera.js, the camera container)
     source: r.oneOf('STREAM_SOURCE', 'viewer', ['viewer', 'client']),
+    // the real-client camera's picture: 'terminal', vertical, the game on top and the terminal of Muse's calls under it
+    // (it fills muse.ai's tall panel), or 'landscape', the game alone at 1280x720
+    layout: r.oneOf('STREAM_LAYOUT', 'terminal', ['terminal', 'landscape']),
+    terminalSize: r.oneOf('STREAM_TERMINAL_SIZE', '1080x1920', ['1080x1920', '1080x1350']),
     camera: {
       mcDir: r.str('CAMERA_MC_DIR', '/opt/mc'),
       home: path.resolve(r.str('CAMERA_HOME', path.join(os.tmpdir(), 'muse-camera'))),

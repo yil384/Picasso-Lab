@@ -483,6 +483,8 @@ export async function startAgent(opts = {}) {
 
   const web = createWeb({
     config, log, meter, makeBrain, askNotice, liveVideo, liveView, mcpCallMs: opts.mcpCallMs,
+    // the terminal under the live video (the vertical layout): the lines go to the stream of the game, if it has one
+    term: typeof streams?.term === 'function' ? (id, u) => streams.term(id, u) : null,
     ...(mineai ? { skills: MINEAI_SKILLS, careMode: config.mineai.care ?? 'advise', startTimeoutMs: config.mineai.startMs + 30_000 } : {}),
     makeBody: (sessionId, o) => (sessionId === 'house' ? houseBody() : newBody(sessionId, o)),
   });

@@ -616,10 +616,15 @@ export function createLiveChannel(o) {
         embedUrl: b?.embedUrl ?? null,
         liveSince: b?.liveAt ? new Date(b.liveAt).toISOString() : null,
         warning: b?.warning ?? null,
+        aspect: b?.stream?.aspect ?? o.aspect ?? '16/9',
         games: games.size,
         error: capNow ? `the limit of ${capNow.why} is reached` : lastError,
         retryInS: resting ? Math.ceil((restingUntil - now()) / 1000) : capNow ? Math.ceil((capNow.until - now()) / 1000) : null,
       };
+    },
+    /** The terminal under the video, for the game on camera only. */
+    term(id, u) {
+      if (id === b?.game && b?.stream) b.stream.term?.(u);
     },
     caption(id, text, pose) {
       if (id !== b?.game || !b?.stream) return;

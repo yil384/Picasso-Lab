@@ -36,11 +36,15 @@ export function statusLine(v) {
  * @param {{state: string, game?: string, camera?: string, embedUrl?: string|null, fb?: boolean}} v
  */
 export function liveViewHtml(v) {
+  // the player at the video's own shape (vertical with the terminal, 9/16 or 4/5), as tall as the panel allows
+  const [aw, ah] = /^\d{1,4}\/\d{1,4}$/.test(String(v.aspect ?? '')) ? String(v.aspect).split('/').map(Number) : [16, 9];
+  const ratio = Math.round((aw / ah) * 10_000) / 10_000;
   const player = v.embedUrl && isPlayerUrl(v.embedUrl) && v.state !== 'off' && v.state !== 'waiting'
     ? `<div><iframe src="${esc(v.embedUrl)}" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe></div>`
     : '';
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
     + '<title>Minecraft live</title><style>html,body{margin:0;background:#0c0e10;color:#e8e4dc;font:14px/1.4 system-ui,sans-serif}'
-    + 'div{position:relative;aspect-ratio:16/9;background:#000}iframe{position:absolute;inset:0;width:100%;height:100%;border:0}'
+    + `div{position:relative;aspect-ratio:${aw}/${ah};width:min(100%,calc((100vh - 40px)*${ratio}));margin:0 auto;background:#000}`
+    + 'iframe{position:absolute;inset:0;width:100%;height:100%;border:0}'
     + `p{margin:0;padding:8px 12px}</style></head><body>${player}<p>${esc(statusLine(v))}</p></body></html>`;
 }
