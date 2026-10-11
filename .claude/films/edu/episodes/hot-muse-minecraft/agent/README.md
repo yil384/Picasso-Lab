@@ -2012,6 +2012,27 @@ actions, with no runtime patch.
   times with a change, and follows the advice for food, a surface night, a shield, a death's items, a worn tool and a
   full inventory.
 
+**Measured on staging (2026-10-11, Normal, real day and night, natural).** Each run is `mineai/bench/nether.mjs` at a
+fresh spot of the 27000 and 30000 rings, a 2-hour lease, no console help, three games at once. Times are from
+`start_game`. Each round ran the build with the fixes from the round before.
+
+| round (build) | reached the Nether | back in the Overworld | what stopped the others |
+| --- | --- | --- | --- |
+| 1 (062985c) | 1 of 3 (13:51) | 0 (the bot stood in the portal it came through; fixed) | 2 frames built in rock kept a cell of deepslate or tuff (fixed: the site check and the advice to build on dry ground) |
+| 2 (0d8cd7e) | 1 of 3 (21:46) | 1 | a wooden pickaxe wore out at the start (fixed: advice when the pickaxe is gone); 2 deaths to zombies at depth |
+| 3 (c551787) | 3 of 3 (13:29, 16:49, 18:55) | 3 of 3 | - |
+
+In all: 9 natural runs, 5 reached the Nether, and the 4 on builds with the way back came back. Round 3, median of
+the three:
+
+- diamonds at 6:25, the diamond pickaxe at 6:30;
+- 14 obsidian at 13:39;
+- the Nether at 16:49, back 5 s later.
+
+Players' share: 100%. One round-3 bot fell off vines 7 s after it landed and played on from the world spawn. In the
+Nether, the state and the advice say where the portal back is (and that food is short when it is). A prepared check
+on the Mac (items given on the console, labelled prepared) ran the frame, light, enter and back three times.
+
 ## What is mocked
 
 - The model: `test/mock-llm.js` speaks Chat Completions and the Responses API (streamed and not), replays scripted tool
