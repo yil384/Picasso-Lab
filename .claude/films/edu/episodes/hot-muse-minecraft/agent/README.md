@@ -560,8 +560,17 @@ profile `camera`, `deploy/Dockerfile.camera`).
   next lines of the tick make a new eye there and ride it again, at most once every 2 s. Checked on a local Paper with
   two stand-in players: the camera followed the bot into the Nether by a teleport (riding the new eye under a
   netherrack ceiling 5 blocks up) and back to the Overworld through a lit portal, its tags and night vision kept.
-  While the client loads the other dimension, ffmpeg goes on grabbing the screen (its loading screen for a moment);
-  how long that shows with the real client is checked on staging.
+  While the client loads the other dimension, ffmpeg goes on grabbing the screen. The real client drops the first ride
+  on the new eye (it does not have that entity yet, and the server sends a ride only when it changes), so the picture
+  stood still where the camera was put for the whole stay; `reride` now stops the ride and asks for it again 1, 2.5 and
+  5 s after each regroup. Seen on staging (2026-10-11, a prepared portal round trip with the real client, vertical
+  terminal layout, `~/Downloads/muse-camera-nether.mp4`): the loading screen 0.1-0.5 s, then about 0.9 s of the camera
+  player's own view (full red in the Nether, the sky in the Overworld) before the ride; over the shoulder under the
+  Nether ceiling with piglins and lava, night vision kept (the fog stays dark red while the camera rides the eye; it is
+  full red only for that moment the camera player itself is the camera), no ffmpeg restart, and the terminal shows
+  "entered the Nether" and "back in the Overworld". While the bot stands in a portal (its 4 s wait, the moment it
+  arrives) the portal block over its head counts as a roof, so the eye looks from outside; among trees that picture
+  is leaves.
 - Between games: the client stays in the world (a game goes live 3.5 s after it starts). After `CAMERA_IDLE_MS`
   (10 min) without a game it quits and Xvfb stays (0 % CPU, 46 MB); the next game starts it again (live after 15 s).
 - Supervision: a client that exits, is disconnected ("Client disconnected with reason", "Couldn't connect to server")
