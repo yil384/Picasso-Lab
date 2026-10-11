@@ -434,3 +434,51 @@ sh recreate.sh production all
 Paper starts again with easy and locked daylight at morning (the old entry script locks the clock and the server
 properties say easy), the agent without the care. Only the care, keeping the world as it is: `MINEAI_CARE=off` in
 `.env` and `sh recreate.sh production`. Remove the `pre-m4` tags once the update has held for a week.
+
+## 9. The way to the Nether (ROADMAP M8a)
+
+The skills, guards and advice for the Nether (README, "The way to the Nether") change the gateway only: no runtime
+patch, and the runtime stays `2fe1306 with 12 patches`. Paper's start script (`deploy/paper-entry.sh`) changes too.
+It writes `allow-nether` from `PAPER_NETHER` (default true), and at every start it sets the world borders from
+`PAPER_BORDER`: the Overworld 64000 blocks wide, the Nether 8000. Production gets this only idle, with the running
+images tagged first for the undo (picasso):
+
+```sh
+docker tag muse-minecraft-agent:latest muse-minecraft-agent:pre-m8a && docker tag muse-minecraft-paper:latest muse-minecraft-paper:pre-m8a
+```
+
+Then the code (Mac, this folder). `push.sh` first checks that picasso has at least 10 GB free (`MIN_FREE_GB`), then
+deploys staging and its checks, then production:
+
+```sh
+deploy/push.sh --prod
+```
+
+Checks:
+
+- `docker logs --since 5m muse-minecraft-paper-1 2>&1 | grep -i 'world border'` prints the two borders.
+- `grep allow-nether ~/workspace/muse-minecraft/data/server.properties` says `allow-nether=true`.
+- `node scripts/staging-check.mjs https://play.picasso-lab.com --production` passes.
+- In one game through the public `/mcp`, the play tool lists `portal`. A `collect {"block":"obsidian","n":1}` near
+  the spawn is refused with code `LAVA` ("no lava within 16 blocks ...") or by the spawn guard.
+
+The Nether's kill switch is one line plus a recreate (picasso). With it, no portal leads anywhere, and everything
+else keeps working:
+
+```sh
+cd ~/workspace/muse-minecraft/app/deploy && printf 'PAPER_NETHER=false\n' >> .env && sh recreate.sh production all
+```
+
+To lift the kill switch: `sed -i '/^PAPER_NETHER=/d' .env && sh recreate.sh production all`.
+
+Undo, back to the images before (picasso; `recreate.sh` waits for production to be idle):
+
+```sh
+cd ~/workspace/muse-minecraft/app/deploy &&
+docker tag muse-minecraft-agent:pre-m8a muse-minecraft-agent:latest && docker tag muse-minecraft-paper:pre-m8a muse-minecraft-paper:latest &&
+sh recreate.sh production all
+```
+
+The border stays in the world as last set: a border the old images do not set again is harmless. A long Muse run sets
+`PROD_LEASE_MS` and removes it afterwards (`docs/MUSE-LONG-RUN.md`). Remove the `pre-m8a` tags once the update has held
+for a week.

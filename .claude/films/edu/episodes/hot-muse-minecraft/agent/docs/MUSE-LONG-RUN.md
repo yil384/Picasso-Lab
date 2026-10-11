@@ -29,7 +29,13 @@ The body runs in advise mode (`MINEAI_CARE=advise`, the default since the advise
    printf 'STAGING_LEASE_MS=7200000\n' >> .env
    sh recreate.sh staging        # idle check first; recreates the agent (and the camera with it)
    ```
-2. Check that `https://play-staging.picasso-lab.com/` shows `Bots in use: 0 of 8`. Note the clock time.
+   On production instead (the owner's run on play.picasso-lab.com): the same line as `PROD_LEASE_MS`, while production
+   is idle, and removed again afterwards (see "Afterwards"). Production's lease must never stay at 2 hours:
+   ```
+   cd ~/workspace/muse-minecraft/app/deploy && printf 'PROD_LEASE_MS=7200000\n' >> .env && sh recreate.sh production
+   ```
+2. Check that `https://play-staging.picasso-lab.com/` shows `Bots in use: 0 of 8` (production:
+   `https://play.picasso-lab.com/`). Note the clock time.
 3. A game ends after 5 minutes without a call. Answer any approval question from muse.ai within 5 minutes.
 
 ## The prompt (paste into a new muse.ai chat)
@@ -114,4 +120,8 @@ its own account. To set each decision against what happened, match it to the ste
 Put the lease back:
 ```
 cd ~/workspace/muse-staging/app/deploy && sed -i '/^STAGING_LEASE_MS=/d' .env && sh recreate.sh staging
+```
+On production, as soon as the run's game has ended (`recreate.sh` waits until production is idle):
+```
+cd ~/workspace/muse-minecraft/app/deploy && sed -i '/^PROD_LEASE_MS=/d' .env && sh recreate.sh production
 ```

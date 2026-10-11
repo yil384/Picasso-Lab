@@ -2008,6 +2008,20 @@ actions, with no runtime patch.
   - a death in lava ("the items that fell into the lava or fire burned", no hint to go back);
   - a death in the Nether (the items lie behind the portal);
   - in the Nether: beds explode, water boils away, and where the portal back is.
+- **Guards** (the safety review of M8a):
+  - collect obsidian runs only in the Overworld, only with lava within 16 blocks (else code `LAVA`), never where
+    that lava is near the world spawn or another player, and never while another game's obsidian (a process-wide
+    registry of every frame and placed obsidian, for the server's life) lies within 160 blocks, or a lit portal is
+    loaded near by;
+  - `portal dismantle` takes back the bot's own frame cell by cell;
+  - no obsidian placed or built, no nether_portal built or lit, within 32 blocks of the world spawn or 8 of another
+    player (players read again at each step);
+  - the portal's site is read as two boxes around the frame, and refused when it cannot be read;
+  - in the Nether, a portal skill without pos means the portal it came out of there (never the Overworld frame), and
+    it steps out only right after coming out of that portal.
+- **Paper**: `PAPER_NETHER=false` (allow-nether) is the Nether's kill switch, and `PAPER_BORDER` sets the world
+  borders at every start (the Overworld 64000 wide, the Nether 8000). `deploy/push.sh` refuses with less than 10 GB
+  free on picasso (`MIN_FREE_GB`). See `docs/SWITCH.md` section 9.
 - **The bench**: `mineai/bench/nether.mjs` plays that path as a careful player would. It retries each phase a few
   times with a change, and follows the advice for food, a surface night, a shield, a death's items, a worn tool and a
   full inventory.

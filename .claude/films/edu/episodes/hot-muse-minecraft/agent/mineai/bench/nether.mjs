@@ -174,8 +174,8 @@ try {
     await call('get_state');
     run.nether = { state: stateOf(s).split('\n').slice(0, 4).join(' | '), advice: (data?.advice ?? []).map((a) => a.text) };
     say(`in the Nether: ${run.nether.state.slice(0, 200)}; advice: ${JSON.stringify(run.nether.advice).slice(0, 300)}`);
-    const p = positionOf(s);
-    await phase('back in the Overworld', 2, async () => { await step('portal', { action: 'enter', pos: p }); await call('get_state'); return dimension() === 'overworld'; });
+    // the way back without a pos: the portal it came out of (the body steps out of it first)
+    await phase('back in the Overworld', 2, async () => { await step('portal', { action: 'enter' }); await call('get_state'); return dimension() === 'overworld'; });
   }
 } catch (err) {
   run.error = String(err?.message ?? err).slice(0, 300);
