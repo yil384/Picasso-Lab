@@ -568,9 +568,9 @@ profile `camera`, `deploy/Dockerfile.camera`).
   player's own view (full red in the Nether, the sky in the Overworld) before the ride; over the shoulder under the
   Nether ceiling with piglins and lava, night vision kept (the fog stays dark red while the camera rides the eye; it is
   full red only for that moment the camera player itself is the camera), no ffmpeg restart, and the terminal shows
-  "entered the Nether" and "back in the Overworld". While the bot stands in a portal (its 4 s wait, the moment it
-  arrives) the portal block over its head counts as a roof, so the eye looks from outside; among trees that picture
-  is leaves.
+  "entered the Nether" and "back in the Overworld". A portal block over the bot's head is not a roof: while it waits
+  in a portal (4 s) and as it arrives, the view stays over the shoulder (the outside view among trees had been a
+  picture of leaves).
 - Between games: the client stays in the world (a game goes live 3.5 s after it starts). After `CAMERA_IDLE_MS`
   (10 min) without a game it quits and Xvfb stays (0 % CPU, 46 MB); the next game starts it again (live after 15 s).
 - Supervision: a client that exits, is disconnected ("Client disconnected with reason", "Couldn't connect to server")
@@ -898,11 +898,16 @@ entered the Nether at 41:06
   "body: ..." in full care), the Body advice when it changes (at most 3 lines), milestones the first time (a wooden,
   stone, iron or diamond pickaxe, the first iron, a shield, a bed, obsidian, blaze rods, pearls...), a change of
   dimension ("entered the Nether", "back in the Overworld"), "game over after m:ss"; and the status line (health,
-  food, the day clock or NETHER/END, "Muse N | Reflex N | P% Muse" from the game's attribution, the last state kept).
+  food, the day clock or NETHER/END, "Muse N | Reflex N | P% Muse" from the game's attribution; from the body itself
+  when a reply carries no state, as start_game's does not, so the bar is never empty).
   Every line is ASCII, without a token or key (20+ letters and digits), an address, a link or another player's name
   (a bot's private name becomes "a player").
 - The lines go to the camera service on the caption endpoint (`POST /streams/<id>/caption {term: {lines, status}}`,
-  checked and cleaned again there), for the game on camera only; another game on camera starts an empty terminal.
+  checked and cleaned again there); updates from before the service took the game's stream wait in the agent and go
+  first. The live channel keeps every game's terminal (its first update, start_game's, and the last 20 lines, "..."
+  between when lines were dropped, and the last status) and draws it for the game on camera: a broadcast that starts
+  for a game (live_view comes after start_game) or a camera that moves to another game begins with that game's
+  terminal so far, then its new lines.
 - The camera (`src/terminal-panel.js`) draws the status bar and the lines with node-canvas in a monospace font
   (DejaVu Sans Mono in the image; about 50 columns and 27 rows at 1080x1312), coloured by kind, long lines wrapped and
   indented, into a PNG at most 4 times a second, written to a temporary file and renamed. ffmpeg reads that PNG again
@@ -911,7 +916,7 @@ entered the Nether at 41:06
   ffmpeg 5.1's line height follows the glyphs each layer happens to draw, so coloured layers would not line up.
 - live_view's page sizes the player to the video's shape (`aspect` from the channel: 1080/1920), as tall as the panel
   allows (`width: min(100%, (100vh - 40px) * 0.5625)`), still under 1 KB. Whether Facebook's player keeps a vertical
-  live video's shape inside our frame is UNVERIFIED until the first vertical broadcast (production was in use).
+  live video's shape inside our frame: checked on production (2026-10-11), the player 9:16 and filling the frame.
 - Cost (this Mac, x264 veryfast, 2 threads, 3.5 Mb/s): 12.6 CPU-seconds per 30 s of video at 1080x1920 against 10.4
   at 1280x720, decoding included; plus one PNG of 1080x1312 decoded 4 times a second.
 

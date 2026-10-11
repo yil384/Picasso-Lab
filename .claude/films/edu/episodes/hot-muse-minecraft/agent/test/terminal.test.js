@@ -143,6 +143,21 @@ test('ffmpeg: the vertical layout puts the game on top and overlays the panel im
   assert.deepEqual(l.slice(l.indexOf('-map'), l.indexOf('-map') + 4), ['-map', '0:v', '-map', '1:a']);
 });
 
+test('feed: start_game\'s reply carries no state: the status line has health, food and the clock from the body at once', () => {
+  const sent = [];
+  const feed = createTermFeed({ send: (id, u) => sent.push({ id, ...u }) });
+  const text = { content: [{ type: 'text', text: 'New game' }] };
+  const bot = { id: 'g7', status: 'ready', body: { bot: { entity: {}, health: 19.6, food: 18, time: { timeOfDay: 1000 } }, attribution: () => ({ muse: 0, reflex: 0 }) } };
+  feed.reply(bot, 'start_game', { adult: true }, text);
+  assert.deepEqual(sent.at(-1), { id: 'g7', lines: [{ k: 'call', t: '> start_game' }], status: 'HP 20/20  FOOD 18/20  DAY 07:00  |  Muse 0 | Reflex 0' });
+  const mineai = { id: 'g8', status: 'ready', body: { snapshot: () => ({ health: 20, food: 20, timeOfDay: 0, dimension: 'overworld' }) } };
+  feed.reply(mineai, 'start_game', { adult: true }, text);
+  assert.equal(sent.at(-1).status, 'HP 20/20  FOOD 20/20  DAY 06:00');
+  const joining = { id: 'g9', status: 'joining', body: { snapshot: () => ({ health: 0, food: 0 }) } };
+  feed.reply(joining, 'start_game', { adult: true }, text);
+  assert.equal(sent.at(-1).status, '', 'a bot still joining: no made-up numbers');
+});
+
 test('service, client, manager and channel: the term field of the caption endpoint, cleaned again, for the filmed game only', async (t) => {
   const got = [];
   const stream = { finished: new Promise(() => {}), async start() {}, async stop() {}, caption() {}, pose() {}, term: (u) => got.push(u), stats: async () => ({}) };
@@ -152,14 +167,17 @@ test('service, client, manager and channel: the term field of the caption endpoi
   const url = `http://127.0.0.1:${server.address().port}`;
   const remote = createRemoteStreamManager({ url, refreshMs: 0 });
   t.after(async () => { await remote.stopAll(); server.close(); });
+  // start_game's lines can come before the service has taken the game's stream: held, then sent first
+  remote.term('g1', { lines: [{ k: 'call', t: '> start_game' }], status: 'HP 20/20  FOOD 20/20' });
   remote.start('g1', { source: 'http://127.0.0.1:3201/eyes/AAAAAAAAAAAAAAAAAAAAAA/', player: 'Muse_aaaa' });
   await until(() => manager.has('g1'));
-  remote.term('g1', { lines: [{ k: 'call', t: '> start_game' }, { k: 'ok', t: 'token EAAPageTok3n0123456789abcdef' }, { k: 'nope', t: 'x' }], status: 'HP 20/20' });
-  await until(() => got.length === 1);
-  assert.deepEqual(got[0], { lines: [{ k: 'call', t: '> start_game' }, { k: 'ok', t: 'token ***' }], status: 'HP 20/20' });
+  remote.term('g1', { lines: [{ k: 'call', t: '> get_state' }, { k: 'ok', t: 'token EAAPageTok3n0123456789abcdef' }, { k: 'nope', t: 'x' }], status: 'HP 20/20' });
+  await until(() => got.length === 2);
+  assert.deepEqual(got[0], { lines: [{ k: 'call', t: '> start_game' }], status: 'HP 20/20  FOOD 20/20' });
+  assert.deepEqual(got[1], { lines: [{ k: 'call', t: '> get_state' }, { k: 'ok', t: 'token ***' }], status: 'HP 20/20' });
   remote.term('g2', { lines: [{ k: 'call', t: 'not ours' }] });
   await sleep(100);
-  assert.equal(got.length, 1, 'a game without a stream sends nothing');
+  assert.equal(got.length, 2, 'a game without a stream sends nothing');
   // the channel passes lines on for the game on camera only
   const { createLiveChannel } = await import('../src/fb-live.js');
   const seen = [];

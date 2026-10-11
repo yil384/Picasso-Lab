@@ -253,6 +253,33 @@ export function createLiveChannel(o) {
   const event = (kind, data = {}) => { try { o.log?.event(kind, data); } catch { /* best effort */ } };
 
   const games = new Map(); // id -> {id, player, startedAt, seenAt, requestedAt, offs}
+  // the terminal of every game, kept while it is off camera: a stream that starts for a game, or a camera that moves
+  // to it, begins with the game's start (start_game and what came with it), its last lines and its status
+  const terms = new Map(); // id -> {head: [{k, t}], tail: [{k, t}], cut: boolean, status: string, updates: number}
+  const TERM_HEAD = 4;
+  const TERM_TAIL = 20;
+  const keepTerm = (id, u) => {
+    let t = terms.get(id);
+    if (!t) {
+      if (terms.size >= 64) terms.delete(terms.keys().next().value);
+      t = { head: [], tail: [], cut: false, status: '', updates: 0 };
+      terms.set(id, t);
+    }
+    for (const l of Array.isArray(u?.lines) ? u.lines : []) {
+      if (t.updates === 0 && t.head.length < TERM_HEAD) t.head.push(l);
+      else t.tail.push(l);
+    }
+    if (t.tail.length > TERM_TAIL) { t.tail.splice(0, t.tail.length - TERM_TAIL); t.cut = true; }
+    if (typeof u?.status === 'string' && u.status) t.status = u.status;
+    t.updates += 1;
+  };
+  /** The game's terminal so far onto a stream that films it from now on. */
+  const backfill = (id, stream) => {
+    const t = terms.get(id);
+    if (!t || typeof stream?.term !== 'function') return;
+    const lines = [...t.head, ...(t.cut ? [{ k: 'info', t: '...' }] : []), ...t.tail];
+    try { stream.term({ lines, status: t.status }); } catch { /* the video goes on without it */ }
+  };
   const asked = new Map(); // id -> when live_view asked for a game the channel does not have yet
   let focus = null; // the game the camera films
   let b = null; // the broadcast: {id, game, state, videoUrl, embedUrl, createdAt, liveAt, publishing, stream, timer, status}
@@ -435,7 +462,12 @@ export function createLiveChannel(o) {
       const from = b.game;
       b.game = focus;
       event('fb_camera', { broadcast: b.id, from, to: focus });
-      try { await b.stream.follow(g.player); } catch (err) { event('fb_error', { what: 'move the camera', message: clip(err?.message ?? err) }); }
+      let moving;
+      try { moving = b.stream.follow(g.player); } catch (err) { moving = Promise.reject(err); }
+      // follow() empties the terminal before its first wait: what the new game has done so far goes in now, before
+      // any new line of it
+      backfill(focus, b.stream);
+      try { await moving; } catch (err) { event('fb_error', { what: 'move the camera', message: clip(err?.message ?? err) }); }
       graph.updateLive(b.id, { title: titleFor(title, focus) }).catch(() => {});
     }
   }
@@ -476,6 +508,7 @@ export function createLiveChannel(o) {
       me.state = 'connecting';
       const stream = o.createStream({ ...(o.streamOptions ?? {}), output: ingest, player: games.get(now0).player, event: (k, d) => event(k, { session: now0, broadcast: me.id, ...d }) });
       me.stream = stream;
+      backfill(now0, stream);
       stream.on?.('stream_publishing', () => { me.publishing = true; me.publishingAt = now(); poll(me, Math.min(settleMs + 100, pollMs)); });
       stream.finished.then((res) => { if (b === me && me.state !== 'ending') streamLost(me, res?.reason ?? 'the stream ended'); });
       Promise.resolve().then(() => stream.start()).catch((err) => { if (b === me && me.state !== 'ending') streamLost(me, `could not start: ${clip(err?.message ?? err)}`); });
@@ -586,6 +619,7 @@ export function createLiveChannel(o) {
     stop(id, why = 'the game ended') {
       const g = games.get(id);
       asked.delete(id);
+      terms.delete(id);
       if (!g) return running ?? Promise.resolve();
       games.delete(id);
       for (const off of g.offs) { try { off?.(); } catch { /* ignore */ } }
@@ -622,8 +656,10 @@ export function createLiveChannel(o) {
         retryInS: resting ? Math.ceil((restingUntil - now()) / 1000) : capNow ? Math.ceil((capNow.until - now()) / 1000) : null,
       };
     },
-    /** The terminal under the video, for the game on camera only. */
+    /** The terminal under the video: kept for every game, drawn for the game on camera. */
     term(id, u) {
+      if (!ID_RE.test(String(id)) || !u) return;
+      keepTerm(id, u);
       if (id === b?.game && b?.stream) b.stream.term?.(u);
     },
     caption(id, text, pose) {
