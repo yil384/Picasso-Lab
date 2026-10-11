@@ -9,6 +9,10 @@ operate from the accessibility tree. Plan and sources: `../../../research/muse-m
 
 Not affiliated with or endorsed by Meta or Mojang.
 
+**Production since 2026-10-11 00:41 UTC: the live view on Facebook (`FB_LIVE=on`, the owner's profile, on demand),
+the over-the-shoulder camera and advise mode (`MINEAI_CARE=advise`); section "Live on a Facebook Page", "On
+production", with its rollbacks.**
+
 **Status 2026-10-08: production (https://play.picasso-lab.com) plays with the Mine AI MCP body (`BODY=mineai`, the
 runtime at 2fe1306 with our 11 patches, builds on rough ground included); staging too.** Both stacks have the proxy secret and the Paper whitelist.
 Section "The switch" below; rollback `docs/SWITCH.md`, section 5. **Staging since 2026-10-09: Normal with real days
@@ -771,6 +775,48 @@ capped too (UNVERIFIED which): the owner sets the app's audience to Public (Face
 if that is not enough, switches the app to Live mode. `live_view` reports it ("Warning: Facebook stored this live
 video as \"Only me\" ...") and the page says "Live, but Facebook shows this video to its owner only." The owner, logged
 in to Facebook in the same browser, may still see it in the muse.ai panel (UNVERIFIED). A fresh worktree needs `server/paper.jar` and `server/plugins` (not in git) before `push.sh`.
+
+### On production (2026-10-11)
+
+Deployed with `deploy/push.sh --prod` from main 759867a (this work and advise mode, runtime patch 0012), production
+idle. Before it: `deploy/.env` backed up (`backups/env.bak-pre-live-20261011-003909`), the deployed files archived
+(`backups/app-pre-live.tgz`), the images tagged `muse-minecraft-agent:pre-live` and `muse-minecraft-paper:pre-live`.
+The staging camera stopped and its `camera.env` moved to `camera.env.stopped` (one camera account; staging keeps its
+settings). Production: the owner's long-lived user token in `~/workspace/muse-minecraft/fb/user-token` (600, copied
+over ssh standard input), `deploy/camera.env` (600: `FB_LIVE=on`, `FB_TARGET=me`, `FB_TOKEN_FILE=/fb/user-token`,
+`CAMERA_VIEW=third`), and `STREAM_ENABLED=1`, `STREAM_SERVICE_URL=http://127.0.0.1:7862` in `deploy/.env`.
+
+Found on the way: production's `app/logs` belonged to root (Docker made it), so the camera (uid 1014) could write
+neither its log nor `fb-live-state.json` (the caps, the deletes still due). Fixed with
+`docker exec muse-minecraft-agent-1 chown 1014:1014 /logs`, then `sh deploy/recreate.sh production`. A new stack that
+turns the camera on needs the same.
+
+Checks (all passed): the body line, a scripted game through `https://play.picasso-lab.com/mcp` (wooden pickaxe in 22.4 s,
+host ready then closed with its data deleted), 0 heartbeat misses, restarts or downs, the page 200, the datapack
+enabled in production's Paper. One natural game with `live_view` (game ged8874): "live" after 13.1 s, the caption
+"Muse: collecting oak log (4)", the recording public (`EVERYONE`), the plugin to a viewer who is not logged in 200 with
+the playable live player (`dash_manifest`, `hd_src`, `is_live`), Facebook's own thumbnail the bot from behind among
+trees (night, lit by night vision), "Body advice" in 3 of 5 replies and the attribution "by Muse, 0 reflexes (100%
+Muse)", the live video ended with the game (00:44:07 UTC) and deleted at 00:54:19 (`fb_live_deleted`, the state file
+empty after it, nothing else on the profile). The other sites behind the
+FRAS Caddy answer as before (`poker` 404 and `yichen` 502 are not ours; no Caddy change).
+
+Rollbacks, on picasso in `~/workspace/muse-minecraft/app/deploy` (each `recreate.sh` stops when a game runs; `MUSE_NOW=1`
+goes on anyway):
+
+```sh
+# the live video off (the camera stays, idle; live_view then says live video is off)
+sed -i 's/^FB_LIVE=.*/FB_LIVE=off/' camera.env && sh recreate.sh production
+# the body looks after itself again between calls (casual guests)
+sed -i '/^MINEAI_CARE=/d' .env && echo MINEAI_CARE=full >> .env && sh recreate.sh production
+# everything as before this deploy: the old .env, no camera, the pre-live images, Paper too
+cp -p ../../backups/env.bak-pre-live-20261011-003909 .env && mv camera.env camera.env.off && docker compose rm -sf camera &&
+docker tag muse-minecraft-agent:pre-live muse-minecraft-agent:latest && docker tag muse-minecraft-paper:pre-live muse-minecraft-paper:latest &&
+sh recreate.sh production all
+```
+
+Remove the `pre-live` tags once this has held for a week (`docker rmi muse-minecraft-agent:pre-live
+muse-minecraft-paper:pre-live`).
 
 ## Deploy on picasso
 
