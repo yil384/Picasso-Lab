@@ -231,7 +231,10 @@ export function toTheirs(skill, args, ctx) {
     case 'get_state': return { local: 'state' };
     case 'go_to': {
       if (ctx.position && ctx.maxTravel && dist(ctx.position, args) > ctx.maxTravel) return refuse(`${args.x} ${args.y} ${args.z} is more than ${ctx.maxTravel} blocks away; go there in shorter walks`);
-      return { calls: [{ tool: 'navigate', args: { x: args.x, y: args.y, z: args.z } }] };
+      // a long walk, or a climb out of the deep (digging a way up through 140 blocks of rock), gets longer than the
+      // skill's 2 minutes (staging, 2026-10-11: a climb from y -29 to the surface stopped at 120 s)
+      const far = ctx.position ? dist(ctx.position, args) : 0;
+      return { calls: [{ tool: 'navigate', args: { x: args.x, y: args.y, z: args.z } }], ...(far > 60 ? { timeoutMs: Math.min(600_000, 120_000 + 2_000 * Math.round(far - 60)) } : {}) };
     }
     case 'collect': {
       // cobblestone is what stone drops: their collect would look for cobblestone BLOCKS (dungeon walls, other

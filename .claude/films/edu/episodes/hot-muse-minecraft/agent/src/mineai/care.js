@@ -551,7 +551,7 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
     } else if (!(inventory.flint_and_steel > 0)) {
       say('portal', (inventory.flint ?? 0) > 0 && (inventory.iron_ingot ?? 0) > 0 ? `${obsidian} obsidian for the frame; flint_and_steel lights it` : `${obsidian} obsidian for the frame; flint_and_steel lights it: 1 iron_ingot and 1 flint (gravel drops flint now and then)`,
         (inventory.flint ?? 0) > 0 && (inventory.iron_ingot ?? 0) > 0 ? { skill: 'craft', args: { item: 'flint_and_steel', n: 1 } } : (inventory.flint ?? 0) > 0 ? null : { skill: 'collect', args: { block: 'gravel', n: 10 } });
-    } else say('portal', `${obsidian} obsidian and flint_and_steel: everything for a Nether portal`, { skill: 'build', args: { blueprint: 'nether_portal', material: 'obsidian' } });
+    } else say('portal', `${obsidian} obsidian and flint_and_steel: everything for a Nether portal (build it on open, dry ground)`, { skill: 'build', args: { blueprint: 'nether_portal', material: 'obsidian' } });
   }
   // in the Nether: what differs, and the way back
   if (dim(s.dimension) === 'the_nether') {

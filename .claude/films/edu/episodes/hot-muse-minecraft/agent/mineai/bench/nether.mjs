@@ -159,12 +159,14 @@ try {
     return n('flint') > 0;
   }, async (i) => { if (i % 2) await along(i); });
   await phase('flint and steel', 3, async () => (await step('craft', { item: 'flint_and_steel', n: 1 })).ok || n('flint_and_steel') > 0);
-  // the frame where it stands, else back up where the game began (open ground), else beside that
+  // the frame on open ground: back up where the game began first when deep underground (a frame in rock keeps cells
+  // its dig cannot clear), else beside that
+  if ((positionOf(s)?.y ?? 99) < 40 && start) await step('go_to', { x: start.x, y: start.y, z: start.z });
   await phase('portal frame', 3, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async (i) => {
     // a frame that did not work out: its obsidian back first (collect mines the nearest), then where the game began
     if (n('obsidian') < 14) await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
-    const p = i === 0 ? start : positionOf(s);
-    if (p) await step('go_to', { x: p.x + (i === 0 ? 0 : 6), y: p.y, z: p.z });
+    const p = positionOf(s);
+    if (p) await step('go_to', { x: p.x + 6, y: p.y, z: p.z + (i % 2 ? 6 : 0) });
   });
   await phase('portal lit', 2, async () => (await step('portal', { action: 'light' })).ok);
   await phase('in the Nether', 2, async () => { await step('portal', { action: 'enter', low_supplies: true }); await call('get_state'); return dimension() === 'the_nether'; });

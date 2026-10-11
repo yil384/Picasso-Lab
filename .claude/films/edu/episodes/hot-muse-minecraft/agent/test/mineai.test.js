@@ -99,6 +99,8 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   assert.equal(toTheirs('collect', { block: 'obsidian', n: 12 }, ctx).timeoutMs, 540_000);
   assert.equal(toTheirs('collect', { block: 'deepslate_diamond_ore', n: 3 }, ctx).timeoutMs, 330_000);
   assert.equal(toTheirs('collect', { block: 'stone', n: 12 }, ctx).timeoutMs, undefined);
+  assert.equal(toTheirs('go_to', { x: 0, y: 70, z: 0 }, { ...ctx, position: { x: 0, y: -50, z: 0 } }).timeoutMs, 240_000, 'a climb of 120 blocks: 2 minutes and 2 s a block past 60');
+  assert.equal(toTheirs('go_to', { x: 10, y: 70, z: 0 }, { ...ctx, position: { x: 0, y: 70, z: 0 } }).timeoutMs, undefined);
   // their failures in our codes: lava in the way, no room in the inventory
   assert.equal(fromTheirs('collect_block', { result: { status: 'failed', error: '[MINE_TARGET_PROHIBITED] 2 lava faces, 0 blocks available for placement' } }).code, 'LAVA');
   assert.equal(fromTheirs('craft_item', { result: { status: 'failed', error: 'Mineflayer stopped while executing the selected recipe batch: This crafting execution needs inventory room to store 1 flint_and_steel' } }).code, 'INVENTORY_FULL');
