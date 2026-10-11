@@ -133,14 +133,11 @@ test('panel: a PNG of its size, long lines wrapped and indented, the newest at t
 
 test('ffmpeg: the vertical layout puts the game on top and overlays the panel image under it; the landscape one is as before', () => {
   const a = ffmpegArgs({ output: 'rtmps://h/rtmp/KEY', width: 1080, height: 1920, panel: { file: '/w/panel.png', top: 608 }, x11: { display: ':99.0+0,0', width: 960, height: 540 }, font: '/f.ttf', captionFile: '/w/c.txt' });
-  const i = a.indexOf('image2');
-  assert.deepEqual(a.slice(i - 5, i + 6), ['-thread_queue_size', '2', '-reinit_filter', '0', '-f', 'image2', '-loop', '1', '-framerate', '4', '-i']);
-  assert.notEqual(a[i - 6], '-re', 'the panel is not paced with -re (it held the picture back on ffmpeg 5.1)');
-  assert.equal(a[i + 6], '/w/panel.png');
-  const fc = a[a.indexOf('-filter_complex') + 1];
-  assert.match(fc, /^\[0:v\]setpts=PTS-STARTPTS,scale=1080:608:flags=bicubic,drawtext=.*:y=h-th-34,format=yuv420p\[top\];\[1:v\]setpts=PTS-STARTPTS,scale=1080:1312,format=yuv420p\[pan\];\[top\]\[pan\]vstack=inputs=2\[v\]$/);
-  assert.deepEqual(a.slice(a.indexOf('-filter_complex') + 2, a.indexOf('-filter_complex') + 6), ['-map', '[v]', '-map', '2:a']);
-  assert.equal(a.includes('-vf'), false);
+  assert.equal(a.includes('image2'), false, 'the panel is no input of its own');
+  assert.equal(a.includes('-filter_complex'), false);
+  assert.deepEqual(a.slice(a.indexOf('-map'), a.indexOf('-map') + 4), ['-map', '0:v', '-map', '1:a']);
+  const vf = a[a.indexOf('-vf') + 1];
+  assert.match(vf, /^\[in\]setpts=PTS-STARTPTS,scale=1080:608:flags=bicubic,drawtext=.*:y=h-th-34,pad=1080:1920:0:0:color=0x0B0D0F,format=yuv420p\[top\];movie='\/w\/panel\.png':f=image2:loop=0,setpts=N\/\(4\*TB\),scale=1080:1312,format=yuv420p\[pan\];\[top\]\[pan\]overlay=0:608:format=yuv420\[out\]$/);
   const l = ffmpegArgs({ output: '/tmp/x.mp4', x11: { display: ':99.0+0,0', width: 960, height: 540 } });
   assert.equal(l.includes('-filter_complex'), false);
   assert.deepEqual(l.slice(l.indexOf('-map'), l.indexOf('-map') + 4), ['-map', '0:v', '-map', '1:a']);
