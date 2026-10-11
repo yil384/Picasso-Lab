@@ -47,7 +47,7 @@ async function player(label) {
 const a = await player('checks-a');
 const b = await player('checks-b');
 try {
-  for (const p of [a, b]) for (const g of ['obsidian 28', 'flint_and_steel 1', 'cooked_beef 16', 'cobblestone 32']) con(`give ${p.name} ${g}`);
+  for (const p of [a, b]) for (const g of ['obsidian 28', 'flint_and_steel 1', 'cooked_beef 16', 'cobblestone 32', 'diamond_pickaxe 1', 'water_bucket 1']) con(`give ${p.name} ${g}`);
   con('time set day');
   await sleep(3000);
   // 1. at the world spawn
@@ -57,23 +57,30 @@ try {
   let r = await a.play('build', { blueprint: 'nether_portal', material: 'obsidian' });
   check('spawn guard: build nether_portal at the world spawn is refused', !r.ok && /world spawn/.test(r.line), r.line);
   // 2. another bot beside it, far from the spawn
-  con(`spreadplayers 3000 3000 0 1 false ${a.name} ${b.name}`);
+  // one at a time (two players cannot share a range-1 spread)
+  con(`spreadplayers -9184 22173 0 8 false ${a.name}`); // a dry spot the probe found (24000 ring)
   await sleep(4000);
   con(`tp ${b.name} ${a.name}`);
   await sleep(3000);
   r = await a.play('build', { blueprint: 'nether_portal', material: 'obsidian' });
   check('player guard: build nether_portal with another bot beside it is refused', !r.ok && /another player/.test(r.line), r.line);
   // 3. b leaves; water at the site; then a new site
-  con(`spreadplayers 3600 3600 0 1 false ${b.name}`);
+  con(`spreadplayers -16971 16971 0 8 false ${b.name}`);
   await sleep(3000);
-  con(`execute at ${a.name} run fill ~-3 ~-1 ~-3 ~3 ~-1 ~3 water replace grass_block`);
+  // water in the ground two blocks off each corner: within 3 blocks of the frame whichever way the bot faces
+  for (const [dx, dz] of [[2, 2], [-2, 2], [2, -2], [-2, -2]]) con(`execute at ${a.name} run setblock ~${dx} ~-1 ~${dz} water`);
   await sleep(1500);
   r = await a.play('build', { blueprint: 'nether_portal', material: 'obsidian' });
   check('site check: water next to the frame refuses the build', !r.ok && /water at .* is next to where the portal frame would stand/.test(r.line), r.line);
   const p = positionOf((await a.t('get_state')).text);
-  r = await a.play('go_to', { x: p.x + 30, y: p.y, z: p.z });
+  // 30 blocks on, on whatever ground is there (a few headings and heights, as a player would try)
+  let walk = { ok: false, line: 'no walk' };
+  for (const [dx, dz] of [[30, 0], [0, 30], [-30, 0], [0, -30]]) {
+    for (const dy of [0, 3, -3, 6, -6]) { walk = await a.play('go_to', { x: p.x + dx, y: p.y + dy, z: p.z + dz }); if (walk.ok) break; }
+    if (walk.ok) break;
+  }
   r = await a.play('build', { blueprint: 'nether_portal', material: 'obsidian' });
-  check('a new site 30 blocks on: the frame is built, not the refused one continued', r.ok && !/continued/.test(r.line), r.line);
+  check('a new site 30 blocks on: the frame is built there, not the refused one continued', walk.ok && r.ok && !/continued/.test(r.line) && Number(/placed (\d+) obsidian/.exec(r.line)?.[1]) > 0, `${walk.line}; ${r.line}`);
   // 4. no lava near
   const lava = /\blava \d+\+? \(nearest ([\d.]+) away/.exec(stateOf((await a.t('get_state')).text));
   r = await a.play('collect', { block: 'obsidian', n: 2 });
