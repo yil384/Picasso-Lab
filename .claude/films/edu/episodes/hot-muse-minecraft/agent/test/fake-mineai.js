@@ -18,7 +18,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
 const FOREGROUND = ['navigate', 'collect_block', 'craft_item', 'smelt_item', 'place_block', 'eat_food', 'send_message', 'equip',
-  'collect_mob_drop', 'sleep', 'use_bucket', 'use_container', 'explore_frontier', 'pick_up_items', 'drop_item', 'build_structure'];
+  'collect_mob_drop', 'sleep', 'use_bucket', 'use_container', 'explore_frontier', 'pick_up_items', 'drop_item', 'build_structure',
+  'activate_portal', 'enter_nether_portal'];
 const WOODS = ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'mangrove', 'cherry'];
 const RECIPES = {
   stick: { out: 4, need: { $planks: 2 } },
@@ -72,6 +73,14 @@ export async function startFakeMineAi(opts = {}) {
     foodReflex: 'full', // patch 0012: food.reflex and navigation.escape_reflexes
     escape: true,
     melee: true,
+    // the way to the Nether (M8a): the dimension, walks that fail (args -> true), a build's kept cells, view_blocks
+    // failing, a box's blocks ((x, y, z) -> name), where a portal leads
+    dimension: 'overworld',
+    navigateFail: null,
+    buildKept: 0,
+    viewFail: false,
+    boxAt: null,
+    netherAt: { x: 3.5, y: 70, z: 4.5 },
   };
   const calls = [];
   const actions = new Map();
@@ -124,7 +133,8 @@ export async function startFakeMineAi(opts = {}) {
     if (world.fail[tool]) return { status: 'failed', error: world.fail[tool], ...(tool === 'smelt_item' ? unloaded() : {}) };
     if (cancelled()) return { status: 'cancelled', error: 'cancelled on request' };
     switch (tool) {
-      case 'navigate': world.position = { x: a.x + 0.5, y: a.y ?? 64, z: a.z + 0.5 }; return { status: 'succeeded', navigation: { end: world.position, target: { x: a.x, y: a.y ?? null, z: a.z }, remainingDistance: 0 } };
+      case 'navigate': if (world.navigateFail?.(a)) return { status: 'failed', error: `[NAVIGATION_NO_PATH] No usable footing at ${a.x}, ${a.y}, ${a.z}.` };
+        world.position = { x: a.x + 0.5, y: a.y ?? 64, z: a.z + 0.5 }; return { status: 'succeeded', navigation: { end: world.position, target: { x: a.x, y: a.y ?? null, z: a.z }, remainingDistance: 0 } };
       case 'collect_block': {
         const drop = DROPS[a.block_name] ?? a.block_name;
         if (a.block_name === 'iron_ore' && !have('stone_pickaxe')) return { status: 'failed', error: '[TARGET_UNMINEABLE] iron_ore needs a stone pickaxe' };
@@ -186,12 +196,23 @@ export async function startFakeMineAi(opts = {}) {
         // world.buildLeft cells could not be reached (the first ones listed), as their audit names them
         const left = Math.min(world.buildLeft, solid.length);
         if (material) add(material, -(solid.length - left));
-        const audit = { dimension: 'overworld', cells: cells.length, correct: cells.length - left, placed: solid.length - left, dug: world.buildDug, wrong: left, kept: [], water: 0, supports: [], missing: [], passes: left ? 3 : 1, complete: !left };
+        const kept = world.buildKept ? [{ block: 'deepslate', count: world.buildKept }] : [];
+        const audit = { dimension: world.dimension, cells: cells.length, correct: cells.length - left, placed: solid.length - left - world.buildKept, dug: world.buildDug, wrong: left, kept, water: 0, supports: [], missing: [], passes: left ? 3 : 1, complete: !left };
         if (left) {
           const named = solid.slice(0, 4).slice(0, left).map((c) => ({ x: c.x, y: c.y, z: c.z, detail: '3 places to stand tried: path search gave up after 5 s' }));
           return { status: 'failed', error: `[BUILD_INCOMPLETE] ${left} cells still wrong: ${left} could not be reached.`, structure: { ...audit, left: [{ reason: 'unreachable', count: left, named }] } };
         }
         return { status: 'succeeded', structure: { ...audit, left: [] } };
+      }
+      case 'activate_portal': return { status: 'succeeded', dimension: world.dimension, target: { x: a.x, y: a.y, z: a.z }, portal: { kind: 'nether', frame: { axis: 'x', width: 2, height: 3 }, portalBefore: 0, portalAfter: 6, activated: true } };
+      case 'enter_nether_portal': {
+        // their entry refuses a bot still standing in the portal it came out of
+        if (world.inPortal && Math.hypot(world.position.x - world.inPortal.x - 0.5, world.position.z - world.inPortal.z - 0.5) < 1.5) return { status: 'failed', error: '[PORTAL_ALREADY_INSIDE] The bot already occupies this nether_portal after a recent arrival.' };
+        const back = world.dimension !== 'overworld';
+        world.dimension = back ? 'overworld' : 'the_nether';
+        world.position = back ? { x: a.x + 0.5, y: a.y, z: a.z + 0.5 } : { ...world.netherAt };
+        world.inPortal = { x: Math.floor(world.position.x), y: Math.floor(world.position.y), z: Math.floor(world.position.z) };
+        return { status: 'succeeded', navigation: { end: { ...world.position } } };
       }
       case 'collect_mob_drop': add(a.drop_name, a.count ?? 1); return { status: 'succeeded', hunt: { mob: a.mob_name, drop: a.drop_name, requested: a.count ?? 1, gained: a.count ?? 1, targetDeathsObserved: a.count ?? 1 } };
       case 'drop_item': for (const i of a.items) add(i.item_name, -Math.min(have(i.item_name), i.count ?? have(i.item_name))); return { status: 'succeeded' };
@@ -282,7 +303,7 @@ export async function startFakeMineAi(opts = {}) {
     reg('view_status', () => ({
       action: 'view_status', durationMs: 1,
       result: { status: 'succeeded', situation: {
-        dimension: 'overworld', lastDeath: world.lastDeath, vitals: { health: world.health, food: world.food, airSupplyTicks: null },
+        dimension: world.dimension, lastDeath: world.lastDeath, vitals: { health: world.health, food: world.food, airSupplyTicks: null },
         clock: { timeOfDay: world.timeOfDay, phase: world.timeOfDay >= 12542 && world.timeOfDay <= 23458 ? 'night' : 'day' }, position: { ...world.position, headingDegrees: world.heading },
         inventory: { stacks: stacks() }, nearby: { players: world.players, hostiles: world.hostiles, mobs: world.mobs },
         activity: { owner: world.owner, activeAction: active },
@@ -290,7 +311,24 @@ export async function startFakeMineAi(opts = {}) {
       survivalPolicy: { revision: world.revision, effective: { combat: { hide: world.hide, critical_health: world.critical, melee: world.melee, bow: world.melee }, food: { reflex: world.foodReflex }, navigation: { escape_reflexes: world.escape } } },
     }));
     reg('read_recent_events', () => ({ action: 'read_recent_events', durationMs: 1, result: { status: 'succeeded', events: world.events.splice(0), remainingEventCount: 0 } }));
-    reg('view_blocks', () => ({ action: 'view_blocks', durationMs: 1, result: { status: 'succeeded', blocks: { find: world.blocks } } }));
+    reg('view_blocks', (a) => {
+      if (world.viewFail) return { state: 'error', error: 'view_blocks failed' };
+      // find: world.blocks for the names asked (every name of theirs answered, nearest listed); box: world.boxAt or air
+      const find = a.find ? world.blocks.filter((b) => a.find.block_names.includes(b.name)) : null;
+      let box = null;
+      if (a.box) {
+        const hw = a.box.half_width ?? 2; const hh = a.box.half_height ?? 1;
+        const layers = [];
+        for (let y = a.box.y + hh; y >= a.box.y - hh; y--) {
+          const rows = [];
+          for (let z = a.box.z - hw; z <= a.box.z + hw; z++) rows.push({ z, blocks: Array.from({ length: 2 * hw + 1 }, (_, i) => world.boxAt?.(a.box.x - hw + i, y, z) ?? 'air') });
+          layers.push({ y, rows });
+        }
+        box = { center: { x: a.box.x, y: a.box.y, z: a.box.z }, halfWidth: hw, halfHeight: hh, layers };
+      }
+      const cells = (a.cells ?? []).map((c) => ({ ...c, name: world.unloadedUntil && Date.now() < world.unloadedUntil ? 'unloaded' : world.boxAt?.(c.x, c.y, c.z) ?? 'obsidian', shape: 'full' }));
+      return { action: 'view_blocks', durationMs: 1, result: { status: 'succeeded', blocks: { find: find ?? world.blocks, box, cells } } };
+    });
     reg('set_survival_policy', (a) => {
       if (a.expected_revision !== world.revision) return { action: 'set_survival_policy', durationMs: 1, result: { status: 'failed', error: '[POLICY_REVISION_STALE] stale' } };
       world.revision = `rev-${Number(world.revision.split('-')[1]) + 1}`;

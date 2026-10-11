@@ -57,10 +57,17 @@ test('staging compose: production settings, its own project, port, hostname, net
 
   assert.deepEqual(stg.paper.env, prod.paper.env, 'Paper: the same difficulty, daylight, seed and memory');
   assert.equal(stg.paper.env.SEED, '71811045');
+  // the Nether's kill switch and the world border (docs/SWITCH.md section 9), from deploy/.env, set at every start
+  assert.equal(prod.paper.env.NETHER, '${PAPER_NETHER:-true}');
+  assert.equal(prod.paper.env.BORDER, '${PAPER_BORDER:-64000}');
+  const entry = read('deploy/paper-entry.sh');
+  assert.match(entry, /^allow-nether=\$\{NETHER:-true\}$/m);
+  assert.match(entry, /worldborder set %s\\nexecute in minecraft:the_nether run worldborder center 0 0\\nexecute in minecraft:the_nether run worldborder set %s\\n' "\$B" "\$\(\(B \/ 8\)\)"/);
   const { MC_HOST: ph, WEB_PUBLIC_URL: pu, ...prodAgent } = prod.agent.env;
   const { MC_HOST: sh, WEB_PUBLIC_URL: su, ...stgAgent } = stg.agent.env;
   // the lease is production's unless deploy/.env sets STAGING_LEASE_MS for a long Muse run (docs/MUSE-LONG-RUN.md)
-  assert.equal(stgAgent.WEB_LEASE_MS, `\${STAGING_LEASE_MS:-${prodAgent.WEB_LEASE_MS}}`);
+  assert.equal(stgAgent.WEB_LEASE_MS, '${STAGING_LEASE_MS:-1800000}');
+  assert.equal(prodAgent.WEB_LEASE_MS, '${PROD_LEASE_MS:-1800000}', 'production: 30 minutes unless PROD_LEASE_MS is set');
   assert.deepEqual({ ...stgAgent, WEB_LEASE_MS: prodAgent.WEB_LEASE_MS }, prodAgent, 'the agent: the same settings apart from its Paper, its public URL and a long run\'s lease');
   assert.equal(pu, 'https://play.picasso-lab.com');
   assert.equal(su, STAGING_URL);
@@ -119,13 +126,14 @@ test('BODY=mineai: both images carry the Mine AI MCP runtime, run under an init 
 // files that could put the real tools first) and checks that the stand-ins are what the script will find.
 const ZSH = ['/bin/zsh', '/usr/bin/zsh'].find((p) => fs.existsSync(p));
 
-function push(args, { nodeExit = 0 } = {}) {
+function push(args, { nodeExit = 0, freeGb = 100 } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'push-'));
   const bin = path.join(dir, 'bin');
   fs.mkdirSync(bin);
   const calls = path.join(dir, 'calls.txt');
   for (const tool of ['ssh', 'rsync', 'node']) {
-    fs.writeFileSync(path.join(bin, tool), `#!/bin/sh\nprintf '%s\\n' "[$PWD] ${tool} $*" >> '${calls}'\n${tool === 'node' ? `exit ${nodeExit}` : 'exit 0'}\n`, { mode: 0o755 });
+    // ssh answers push.sh's free-disk question (df on picasso, in whole GB) with freeGb
+    fs.writeFileSync(path.join(bin, tool), `#!/bin/sh\nprintf '%s\\n' "[$PWD] ${tool} $*" >> '${calls}'\n${tool === 'ssh' ? `case "$*" in *"df -Pk"*) echo ${freeGb};; esac\n` : ''}${tool === 'node' ? `exit ${nodeExit}` : 'exit 0'}\n`, { mode: 0o755 });
   }
   const env = { PATH: `${bin}:/usr/bin:/bin:/usr/sbin:/sbin`, HOME: dir, ZDOTDIR: dir, LANG: 'C' };
   const found = spawnSync(ZSH, ['-f', '-c', 'whence -p ssh rsync node'], { env, encoding: 'utf8' }).stdout.trim().split('\n');
@@ -180,6 +188,13 @@ test('push.sh: staging by default; production only with --prod and only after th
   assert.equal(failed.code, 1);
   assert.match(failed.err, /staging checks failed; production was not touched/);
   assert.ok(failed.calls.length > 0 && failed.calls.every((l) => !/workspace\/muse-minecraft/.test(l)), 'a failed check stops before production');
+
+  // too little free disk on picasso: nothing is copied or built, staging nor production
+  const full = push(['--prod'], { freeGb: 3 });
+  assert.equal(full.code, 1);
+  assert.match(full.err, /only 3 GB free on picasso's ~\/workspace \(at least 10 GB, MIN_FREE_GB\): nothing was deployed/);
+  assert.equal(full.calls.length, 1, 'only the disk question');
+  assert.match(full.calls[0], /ssh picasso df -Pk ~\/workspace/);
 
   const only = push(['--check']);
   assert.equal(only.code, 0, only.err);

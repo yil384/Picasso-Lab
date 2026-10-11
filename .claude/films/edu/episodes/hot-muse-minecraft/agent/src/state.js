@@ -12,7 +12,7 @@ export const NOTABLE_BLOCKS = Object.freeze([
   'coal_ore', 'deepslate_coal_ore', 'iron_ore', 'deepslate_iron_ore', 'copper_ore', 'deepslate_copper_ore',
   'gold_ore', 'deepslate_gold_ore', 'diamond_ore', 'deepslate_diamond_ore',
   'stone', 'deepslate', 'sand', 'gravel', 'clay',
-  'crafting_table', 'furnace', 'chest', 'water', 'lava',
+  'crafting_table', 'furnace', 'chest', 'water', 'lava', 'obsidian', 'nether_portal',
 ]);
 
 const RADIUS = Number(process.env.SCAN_RADIUS) || 32;
@@ -192,7 +192,9 @@ export function describeDelta(delta = {}) {
 export function renderState(s) {
   const lines = [];
   lines.push(`health ${s.health}/20, food ${s.food}/20${s.oxygen < 20 ? `, oxygen ${s.oxygen}/20 (underwater)` : ''}`);
-  lines.push(`position ${xyz(s.position)} in the ${s.dimension}, facing ${s.facing}`);
+  // "in the overworld", "in the Nether", "in the End" (their names are the_nether and the_end)
+  const where = { the_nether: 'Nether', the_end: 'End' }[s.dimension] ?? s.dimension;
+  lines.push(`position ${xyz(s.position)} in the ${where}, facing ${s.facing}`);
   lines.push(`time ${s.timeOfDay}: ${describeTime(s.timeOfDay)}`);
   lines.push(`holding: ${s.held ?? 'nothing'}`);
   const inv = Object.entries(s.inventory).sort(([a], [b]) => a.localeCompare(b));

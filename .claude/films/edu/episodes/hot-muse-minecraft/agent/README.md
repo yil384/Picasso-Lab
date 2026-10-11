@@ -1967,6 +1967,86 @@ Against the gate (at most 1 death in 16): advise mode holds. Across the two advi
 deaths in one game, all before the fix; the fixed build passed 8 of 8 with no deaths. Full care, on the same build,
 passed 8 of 8.
 
+### The way to the Nether (ROADMAP M8, 2026-10-11)
+
+The owner's first long Muse run on production (game gb1cfe3) reached the iron pickaxe in about 4.5 minutes. Then
+collect refused `diamond_ore` and `obsidian`, and craft refused `diamond_pickaxe` and `flint_and_steel`. The whole path
+from a fresh spawn to the Nether and back now works from the MCP surface. Everything here is from the runtime's own
+actions, with no runtime patch.
+
+- **collect**:
+  - `diamond_ore` and `deepslate_diamond_ore` (an iron pickaxe; diamonds lie deep, most near y -59).
+  - `obsidian`: a diamond pickaxe, cobblestone to close off lava, and a water bucket. With no obsidian loaded, their
+    collect walks to the nearest lava it knows of, pours the water, scoops it back and mines what formed. That lava
+    can be far away or on the surface, so the description says to go near lava first.
+  - `gravel`, for flint by chance.
+  - Lava next to a target is closed off with a carried block before the dig. A target it cannot make safe is refused
+    with the new code `LAVA`, which also covers pouring lava.
+  - Obsidian and diamond collects get 3 minutes plus 30 s a block. A long `go_to`, such as a climb out of the deep,
+    gets 2 s a block past 60 blocks.
+- **craft**: diamond tools and armor, `flint_and_steel` (`bucket` was already allowed).
+- **place and build**: obsidian. The new blueprint `nether_portal` is 4 wide and 5 high across the bot's view, its
+  bottom row in the ground, 12 obsidian (2 more go under the frame on uneven ground).
+  - The build is refused (`LAVA`) when lava or water lies within 3 blocks of the frame.
+  - A frame that kept a cell of rock, or has water inside, fails with what to do: take the obsidian back with
+    collect, then build on open dry ground. Frames built in rock kept a cell of deepslate or tuff in two of the first
+    staging runs.
+- **portal**:
+  - `light` lights the frame with carried `flint_and_steel` ("lit the Nether portal (6 portal blocks)").
+  - `enter` goes through ("went through the portal at x y z"). It never stops at their check for 16 food and 32
+    arrows, since no skill here gives arrows.
+  - A bot standing in the portal it came through steps out first (one side, else another), so the way back is the
+    same skill.
+  - Without pos, both use the frame the last `build nether_portal` made.
+- **The state**: "in the Nether". `obsidian` and `nether_portal` are among the nearby blocks, scanned again after a
+  change of dimension.
+- **Body advice** on the way:
+  - what the frame still needs ("you carry 4 obsidian; a portal frame (build nether_portal) takes 12, and up to 2
+    more on uneven ground; collecting more needs a water bucket"), then flint and steel, then the build;
+  - a full inventory, with the cheapest stack to drop (gravel filled one in a local run and blocked
+    `flint_and_steel`; code `INVENTORY_FULL`);
+  - a death in lava ("the items that fell into the lava or fire burned", no hint to go back);
+  - a death in the Nether (the items lie behind the portal);
+  - in the Nether: beds explode, water boils away, and where the portal back is.
+- **Guards** (the safety review of M8a):
+  - collect obsidian runs only in the Overworld, only with lava within 16 blocks (else code `LAVA`), never where
+    that lava is near the world spawn or another player, and never while another game's obsidian (a process-wide
+    registry of every frame and placed obsidian, for the server's life) lies within 160 blocks, or a lit portal is
+    loaded near by;
+  - `portal dismantle` takes back the bot's own frame cell by cell;
+  - no obsidian placed or built, no nether_portal built or lit, within 32 blocks of the world spawn or 8 of another
+    player (players read again at each step);
+  - the portal's site is read as two boxes around the frame, and refused when it cannot be read;
+  - in the Nether, a portal skill without pos means the portal it came out of there (never the Overworld frame), and
+    it steps out only right after coming out of that portal.
+- **Paper**: `PAPER_NETHER=false` (allow-nether) is the Nether's kill switch, and `PAPER_BORDER` sets the world
+  borders at every start (the Overworld 64000 wide, the Nether 8000). `deploy/push.sh` refuses with less than 10 GB
+  free on picasso (`MIN_FREE_GB`). See `docs/SWITCH.md` section 9.
+- **The bench**: `mineai/bench/nether.mjs` plays that path as a careful player would. It retries each phase a few
+  times with a change, and follows the advice for food, a surface night, a shield, a death's items, a worn tool and a
+  full inventory.
+
+**Measured on staging (2026-10-11, Normal, real day and night, natural).** Each run is `mineai/bench/nether.mjs` at a
+fresh spot of the 27000 and 30000 rings, a 2-hour lease, no console help, three games at once. Times are from
+`start_game`. Each round ran the build with the fixes from the round before.
+
+| round (build) | reached the Nether | back in the Overworld | what stopped the others |
+| --- | --- | --- | --- |
+| 1 (062985c) | 1 of 3 (13:51) | 0 (the bot stood in the portal it came through; fixed) | 2 frames built in rock kept a cell of deepslate or tuff (fixed: the site check and the advice to build on dry ground) |
+| 2 (0d8cd7e) | 1 of 3 (21:46) | 1 | a wooden pickaxe wore out at the start (fixed: advice when the pickaxe is gone); 2 deaths to zombies at depth |
+| 3 (c551787) | 3 of 3 (13:29, 16:49, 18:55) | 3 of 3 | - |
+
+In all: 9 natural runs, 5 reached the Nether, and the 4 on builds with the way back came back. Round 3, median of
+the three:
+
+- diamonds at 6:25, the diamond pickaxe at 6:30;
+- 14 obsidian at 13:39;
+- the Nether at 16:49, back 5 s later.
+
+Players' share: 100%. One round-3 bot fell off vines 7 s after it landed and played on from the world spawn. In the
+Nether, the state and the advice say where the portal back is (and that food is short when it is). A prepared check
+on the Mac (items given on the console, labelled prepared) ran the frame, light, enter and back three times.
+
 ## What is mocked
 
 - The model: `test/mock-llm.js` speaks Chat Completions and the Responses API (streamed and not), replays scripted tool

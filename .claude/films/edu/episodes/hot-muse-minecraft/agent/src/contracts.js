@@ -312,6 +312,7 @@ export const RESULT_CODES = Object.freeze([
   'BODY_RESTARTED', // the bot's body stopped during the step and is being started again (BODY=mineai; once per game)
   'BAD_ARGS', // a step's skill or arguments are not valid: nothing was run
   'QUEUE_FULL', // too many steps waiting: nothing was run
+  'LAVA', // lava in the way: a block to mine next to lava it cannot close off, a route through lava, or lava poured
   'TIMED_OUT', // the skill ran into its time limit
   'STOPPED', // stopped on request (stop, or the game ended)
   'FAILED', // any other failure; the result text says why

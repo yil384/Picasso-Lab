@@ -1,7 +1,10 @@
 #!/bin/sh
 # Paper in the container: world and config live in /data (a bind mount), the console is the FIFO /console/console.in
 # (the agent writes spreadplayers there). DIFFICULTY, SEED, DAYLIGHT=locked|cycle, MEMORY come from the compose file
-# (DIFFICULTY and DAYLIGHT from PAPER_DIFFICULTY and PAPER_DAYLIGHT in the stack's deploy/.env: ROADMAP M4).
+# (DIFFICULTY and DAYLIGHT from PAPER_DIFFICULTY and PAPER_DAYLIGHT in the stack's deploy/.env: ROADMAP M4). NETHER
+# (PAPER_NETHER, default true; false: no portal leads to the Nether, the one-line kill switch of docs/SWITCH.md section
+# 9) and BORDER (PAPER_BORDER, the Overworld's world border as a width in blocks, default 64000: the farthest spread
+# ring of the measurements is 30000 from the centre; the Nether's border is an eighth of it, as its coordinates are).
 # Offline mode and no password: anyone who can open a connection could join under a bot's name and take it over. The
 # port is published nowhere, but every user and container on picasso can reach the compose network. So only listed
 # players get in (the agent lists each bot through the console just before it joins and takes it off when it leaves,
@@ -25,6 +28,7 @@ motd=Muse plays Minecraft
 white-list=true
 enforce-whitelist=true
 hide-online-players=true
+allow-nether=${NETHER:-true}
 P
 # every bot (and the camera, compose profile "camera") joins from the agent's one address: Paper's per-address
 # connection throttle (4 s) would refuse the second of two joins within 4 s. The server is private: no throttle.
@@ -37,5 +41,8 @@ rm -f /console/console.in && mkfifo /console/console.in && chmod 666 /console/co
 ( until grep -q 'Done (' logs/latest.log 2>/dev/null; do sleep 2; done
   if [ "${DAYLIGHT:-locked}" = locked ]; then printf 'gamerule doDaylightCycle false\ntime set day\n' > /console/console.in
   else printf 'gamerule doDaylightCycle true\n' > /console/console.in; fi
-  printf 'difficulty %s\n' "${DIFFICULTY:-easy}" > /console/console.in ) &
+  printf 'difficulty %s\n' "${DIFFICULTY:-easy}" > /console/console.in
+  # the world border, Overworld and Nether (Paper keeps one per world): the world on disk stays bounded
+  B=${BORDER:-64000}
+  printf 'worldborder center 0 0\nworldborder set %s\nexecute in minecraft:the_nether run worldborder center 0 0\nexecute in minecraft:the_nether run worldborder set %s\n' "$B" "$((B / 8))" > /console/console.in ) &
 exec java -Xms1G -Xmx${MEMORY:-4G} -jar /opt/paper/paper.jar --nogui <> /console/console.in

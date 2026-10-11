@@ -430,6 +430,15 @@ export function shieldPath(inventory = {}, stacks = [], furnace = false) {
 
 /** Night falls this long (ticks) ahead: the advice warns from here on. */
 export const WARN_BEFORE_NIGHT = 2_700;
+/** Inventory slots (main and hotbar) and what to drop first when they are full, keeping some of each. */
+export const INVENTORY_SLOTS = 36;
+const JUNK = Object.freeze([
+  { item: 'gravel', keep: 0 }, { item: 'andesite', keep: 0 }, { item: 'diorite', keep: 0 }, { item: 'granite', keep: 0 },
+  { item: 'tuff', keep: 0 }, { item: 'rotten_flesh', keep: 0 }, { item: 'netherrack', keep: 16 }, { item: 'dirt', keep: 16 },
+  { item: 'cobbled_deepslate', keep: 32 }, { item: 'cobblestone', keep: 32 },
+]);
+/** Obsidian for a nether_portal build: its 12, and 2 more for the blocks it puts under a frame on uneven ground. */
+export const PORTAL_OBSIDIAN = 14;
 /** At most this many advice items a reply. */
 export const ADVICE_MAX = 5;
 
@@ -458,6 +467,11 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
 
   // a death: its items despawn 5 minutes after it
   const death = s.lastDeath;
+  const deathAge = death?.observedAt ? now - Date.parse(death.observedAt) : -1;
+  if (death?.observedAt && death.observedAt !== memory.recovered && dim(death.dimension) !== dim(s.dimension) && deathAge >= 0 && deathAge < RECOVER_WITHIN_MS) {
+    // died in another dimension (the Nether): the items lie there, behind the portal
+    say('recover', `you died in the ${dim(death.dimension).replace(/^the_/, '')} at ${xyz(death.position)} ${Math.round(deathAge / 1000)} s ago; your items lie there (they despawn in about ${Math.max(0, Math.round((300_000 - deathAge) / 1000))} s), behind the portal`);
+  }
   if (death?.observedAt && death.observedAt !== memory.recovered && dim(death.dimension) === dim(s.dimension)) {
     const age = now - Date.parse(death.observedAt);
     if (age >= 0 && age < RECOVER_WITHIN_MS) {
@@ -466,7 +480,8 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
       const base = `you died${cause} at ${xyz(death.position)} ${Math.round(age / 1000)} s ago${far != null ? ` (${far} blocks away)` : ''}; your items there despawn in about ${Math.max(0, Math.round((300_000 - age) / 1000))} s`;
       // no hint where going back is not worth it: too far to walk in time, or this death came on the way back for the
       // items of the one before (staging, 2026-10-10: three deaths in a row to the drowned around a death spot in water)
-      if (far != null && far > RECOVER_RANGE) say('recover', `${base}; too far to walk back in time`);
+      if (/lava|burn|flames|fire/i.test(String(death.cause ?? ''))) say('recover', `${base.replace(/; your items there despawn.*$/, '')}; the items that fell into the lava or fire burned, and going back means the same lava`);
+      else if (far != null && far > RECOVER_RANGE) say('recover', `${base}; too far to walk back in time`);
       else if (memory.diedRecovering === death.observedAt) say('recover', `${base}; you died going back for the items of the death before: the mobs there may still be around`);
       else say('recover', base, { skill: 'pick_up', args: { death_items: true } });
     }
@@ -492,7 +507,7 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
     if (night) {
       const mobs = near.length ? `, ${near.length} hostile mob${near.length > 1 ? 's' : ''} within 16 blocks` : '';
       if (bed) say('night', `night (time ${time}) and you carry a ${bed}${mobs}`, { skill: 'sleep', args: {} });
-      else say('night', `night (time ${time}): you stand in the open${mobs}${shield ? '' : ', no shield'}; ${blocks} blocks for a shelter${pickaxe ? '' : ', no pickaxe to dig in'}`, { skill: 'shelter', args: {} });
+      else say('night', `night (time ${time}): no closed shelter around you${mobs}${shield ? '' : ', no shield'}; ${blocks} blocks for a shelter${pickaxe ? '' : ', no pickaxe to dig in'}`, { skill: 'shelter', args: {} });
     } else if (time >= NIGHT_FROM - WARN_BEFORE_NIGHT && time < NIGHT_FROM) {
       const left = Math.max(0, Math.round((NIGHT_FROM - time) / 20));
       const lack = [bed ? null : 'no bed', shield ? null : 'no shield', `${blocks} blocks for a shelter (${SHELTER_SIZE} make one)`].filter(Boolean).join(', ');
@@ -508,6 +523,13 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
   // armor and a shield carried but not worn
   const wear = wearPlan(stacks);
   if (wear.length) say('wear', `you carry ${wear.map((w) => w.item).join(', ')} and do not wear ${wear.length > 1 ? 'them' : 'it'}`, { skill: 'equip', args: { item: wear[0].item } });
+  // no pickaxe any more (it broke, or was lost at a death; memory.hadPickaxe: one was carried this game): the best one what is carried makes (the body makes no
+  // replacement by itself in advise mode; staging, 2026-10-11: a wooden pickaxe wore out at the start and every later
+  // step was refused)
+  if (!pickaxe && memory.hadPickaxe) {
+    const item = ['diamond', 'iron', 'stone', 'wooden'].map((t) => `${t}_pickaxe`).find((i) => canCraft(i));
+    say('tools', `you carry no pickaxe${item ? '' : ': planks and sticks make a wooden one, 3 cobblestone a stone one'}`, item ? { skill: 'craft', args: { item, n: 1 } } : null);
+  }
   // a tool about to break
   for (const t of toolsCarried(stacks)) {
     if (!TOOL_CLASSES.includes(t.cls) || !Number.isFinite(t.left) || t.left > TOOL_LOW(t.max ?? 60)) continue;
@@ -516,9 +538,32 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
     say('tools', `your ${t.name} has ${t.left} use${t.left === 1 ? '' : 's'} left (${Math.round((100 * t.left) / (t.max || 60))}%)${spare ? '' : '; you cannot craft another from what you carry'}`, spare ? { skill: 'craft', args: { item: spare.item, n: 1 } } : null);
     break;
   }
+  // a full inventory: a craft, smelt or pickup has nowhere to put what it makes (a local run: gravel filled it and
+  // flint_and_steel could not be crafted); the cheapest stack to drop
+  const slots = stacks.filter((x) => x?.name && (!x.location || x.location === 'main' || x.location === 'hotbar')).length;
+  if (slots >= INVENTORY_SLOTS - 1) {
+    const junk = JUNK.map((j) => ({ ...j, have: inventory[j.item] ?? 0 })).find((j) => j.have > j.keep);
+    say('inventory', `your inventory is ${slots >= INVENTORY_SLOTS ? 'full' : 'almost full'} (${slots} of ${INVENTORY_SLOTS} slots): a craft, smelt or pickup needs room`, junk ? { skill: 'drop', args: { item: junk.item, n: junk.have - junk.keep } } : null);
+  }
   // armor it could craft
   const pieces = armorPlan(inventory, stacks).filter((p) => canCraft(p.item));
   if (pieces.length) say('armor', `you could craft ${pieces.map((p) => p.item).join(', ')} from what you carry`, { skill: 'armor', args: {} });
+  // on the way to the Nether (ROADMAP M8): what the frame still needs, once it carries obsidian
+  const obsidian = inventory.obsidian ?? 0;
+  if (overworld && obsidian > 0 && !memory.portalBuilt) {
+    const diamondPick = stacks.some((x) => x?.name === 'diamond_pickaxe' || x?.name === 'netherite_pickaxe');
+    if (obsidian < PORTAL_OBSIDIAN) {
+      const lacks = [diamondPick ? null : 'a diamond pickaxe', (inventory.water_bucket ?? 0) > 0 ? null : 'a water bucket (bucket fill water)', (inventory.cobblestone ?? 0) + (inventory.cobbled_deepslate ?? 0) >= 8 ? null : 'cobblestone to close off lava'].filter(Boolean);
+      say('portal', `you carry ${obsidian} obsidian; a portal frame (build nether_portal) takes 12, and up to 2 more on uneven ground${lacks.length ? `; collecting more needs ${lacks.join(', ')}` : ''}`, lacks.length ? null : { skill: 'collect', args: { block: 'obsidian', n: PORTAL_OBSIDIAN - obsidian } });
+    } else if (!(inventory.flint_and_steel > 0)) {
+      say('portal', (inventory.flint ?? 0) > 0 && (inventory.iron_ingot ?? 0) > 0 ? `${obsidian} obsidian for the frame; flint_and_steel lights it` : `${obsidian} obsidian for the frame; flint_and_steel lights it: 1 iron_ingot and 1 flint (gravel drops flint now and then)`,
+        (inventory.flint ?? 0) > 0 && (inventory.iron_ingot ?? 0) > 0 ? { skill: 'craft', args: { item: 'flint_and_steel', n: 1 } } : (inventory.flint ?? 0) > 0 ? null : { skill: 'collect', args: { block: 'gravel', n: 10 } });
+    } else say('portal', `${obsidian} obsidian and flint_and_steel: everything for a Nether portal (build it on open, dry ground)`, { skill: 'build', args: { blueprint: 'nether_portal', material: 'obsidian' } });
+  }
+  // in the Nether: what differs, and the way back
+  if (dim(s.dimension) === 'the_nether') {
+    say('nether', `in the Nether: beds explode here and water boils away; ${memory.netherArrival ? `the portal back is at ${xyz(memory.netherArrival)} (portal enter with that pos)` : 'the portal back is where you arrived'}`);
+  }
   return out.slice(0, ADVICE_MAX);
 }
 
@@ -1090,12 +1135,19 @@ export function createCare(deps) {
     /** Advise mode: what needs doing, as advice for the player ([] in full mode: the body sees to it). */
     advice() {
       if (mode !== 'advise') return [];
-      try { return advise(deps.situation(), inputs()); } catch { return []; }
+      try {
+        const i = inputs();
+        if (toolsCarried(i.stacks).some((t) => t.cls === 'pickaxe')) memory.hadPickaxe = true;
+        return advise(deps.situation(), i);
+      } catch { return []; }
     },
     /** What the body did by itself this game: {reflex, care}. */
     counts() { return { ...counts }; },
     /** The player went back for a death's items (pick_up death_items): no more advice about that death. */
     recovered(key) { if (key) memory.recovered = key; },
+    /** A portal frame was built (no more portal advice), or the body arrived in the Nether at pos (the way back). */
+    portalBuilt() { memory.portalBuilt = true; },
+    arrived(dimension, pos) { if (dimension === 'the_nether') memory.netherArrival = pos ? { ...pos } : null; },
     /** The body died during a pick_up of a death's items: no hint to go back for this death's items. */
     diedRecovering(key) { if (key) memory.diedRecovering = key; },
     /**
