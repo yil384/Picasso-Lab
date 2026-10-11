@@ -836,6 +836,45 @@ sh recreate.sh production all
 Remove the `pre-live` tags once this has held for a week (`docker rmi muse-minecraft-agent:pre-live
 muse-minecraft-paper:pre-live`).
 
+### On production (2026-10-11, the terminal and the Nether)
+
+Deployed with `deploy/push.sh --prod` from main f53443b, production idle (0 of 8): the vertical video with the
+terminal under it, ROADMAP M8a (the way to the Nether, `PAPER_BORDER`, `PAPER_NETHER`; docs/SWITCH.md section 9) and
+the camera's ride asked for again after a dimension change. Before it: `deploy/.env` backed up
+(`backups/env.bak-pre-m8a-20261011-213040`), the deployed files archived (`backups/app-pre-m8a.tgz`, without the world
+in `app/data` and without `mineai-data`), the images tagged `pre-m8a` (agent, paper) and `pre-terminal` (agent, paper,
+camera). The production camera had been stopped for the staging portal round trip; the staging camera was stopped again
+and its `camera.env` moved to `~/workspace/muse-staging/backups/camera.env.portal-test` (a renamed file in `deploy/` is
+removed by the next `push.sh`, whose `rsync --delete` spares `camera.env` only). Production's `camera.env` unchanged
+(`FB_LIVE=on`, `FB_TARGET=me`, `CAMERA_VIEW=third`).
+
+Checks (all passed): Paper set the borders (64000 and 8000 blocks wide) and `allow-nether=true`; the scripted game
+through `https://play.picasso-lab.com/mcp` (wooden pickaxe in 20.2 s, host ready then closed with 0 restarts); `play`
+lists `portal`; `collect obsidian` on a new bot refused with `NEED_ITEMS` (no diamond pickaxe; with one, given on
+staging, the lava guard: "no lava within 16 blocks"); 0 heartbeat misses, loop delay p99 under 0.5 ms. One natural game
+with `live_view` (gbae2e0): live after 14.1 s, the caption "Muse: collecting oak log (4)", the terminal panel drawn,
+Facebook's stream 9:16 (360x640 in its player), the live page's player 9:16 filling the panel at desktop and phone
+width, the recording public (`EVERYONE`), the plugin 200 and playable for a viewer who is not logged in, the live video
+stopped with the game, no ffmpeg restart. The terminal starts with the stream: the calls before `live_view`
+(`start_game`) are not in it, and the status line shows health and food from the first reply after it. The other
+sites behind the FRAS Caddy answer as before (`poker` 404 and `yichen` 502 are not ours).
+
+Rollbacks, on picasso in `~/workspace/muse-minecraft/app/deploy` (each `recreate.sh` stops when a game runs):
+
+```sh
+# the live video off (the camera stays, idle)
+sed -i 's/^FB_LIVE=.*/FB_LIVE=off/' camera.env && sh recreate.sh production
+# the game alone at 1280x720 again, no terminal
+echo STREAM_LAYOUT=landscape >> camera.env && sh recreate.sh production
+# no portal leads anywhere (docs/SWITCH.md section 9)
+printf 'PAPER_NETHER=false\n' >> .env && sh recreate.sh production all
+# everything as before this deploy: the pre-m8a/pre-terminal images, Paper and the camera too
+docker tag muse-minecraft-agent:pre-terminal muse-minecraft-agent:latest && docker tag muse-minecraft-paper:pre-terminal muse-minecraft-paper:latest &&
+docker tag muse-minecraft-camera:pre-terminal muse-minecraft-camera:latest && sh recreate.sh production all
+```
+
+Remove the `pre-m8a` and `pre-terminal` tags once this has held for a week.
+
 ## The terminal under the video (STREAM_LAYOUT=terminal)
 
 muse.ai's panel is tall and narrow, and showed the 16:9 player at the top with black below it. So the camera's video

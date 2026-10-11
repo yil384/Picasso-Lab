@@ -457,7 +457,8 @@ deploy/push.sh --prod
 Checks:
 
 - `docker logs --since 5m muse-minecraft-paper-1 2>&1 | grep -i 'world border'` prints the two borders.
-- `grep allow-nether ~/workspace/muse-minecraft/data/server.properties` says `allow-nether=true`.
+- `docker exec muse-minecraft-paper-1 grep allow-nether /data/server.properties` says `allow-nether=true` (the world
+  is in `~/workspace/muse-minecraft/app/data`, owned by root).
 - `node scripts/staging-check.mjs https://play.picasso-lab.com --production` passes.
 - In one game through the public `/mcp`, the play tool lists `portal`. A `collect {"block":"obsidian","n":1}` near
   the spawn is refused with code `LAVA` ("no lava within 16 blocks ...") or by the spawn guard.
