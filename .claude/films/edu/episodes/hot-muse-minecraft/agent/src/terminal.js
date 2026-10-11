@@ -65,11 +65,18 @@ export function callLine(tool, args = {}) {
 
 const secs = (ms) => (Number.isFinite(ms) ? ` (${ms >= 10_000 ? Math.round(ms / 1000) : Math.round(ms / 100) / 10} s)` : '');
 
-/** A finished step: "ok  collect oak log: mined 8 oak log (12 s)" or "FAIL craft iron pickaxe: NEED_ITEMS ...". */
+/** The first clause of a step's result, shortened to `max` characters at a word: "mined 8 oak log". */
+function gist(result, max = 44) {
+  let t = word(String(result ?? '').split(/;|\. | \(|\[/)[0].replace(/ and picked up .*$/, '').replace(/ at a crafting table.*$/, '').trim());
+  if (t.length > max) t = `${t.slice(0, t.lastIndexOf(' ', max) > max / 2 ? t.lastIndexOf(' ', max) : max)}...`;
+  return t;
+}
+
+/** A finished step: "ok  mined 8 oak log (12 s)" (the result says what it did), "FAIL collect iron ore 3 NOT_FOUND: ...". */
 export function resultLine(st) {
   const what = word(stepSummary(st));
-  const first = String(st.result ?? '').split(/;|\. | \(|\[/)[0].replace(/ and picked up .*$/, '').trim();
-  if (st.status === 'confirmed') return { k: 'ok', t: clean(`ok  ${what}${first ? `: ${word(first)}` : ''}${secs(st.ms)}`) };
+  const first = gist(st.result);
+  if (st.status === 'confirmed') return { k: 'ok', t: clean(`ok  ${first || what}${secs(st.ms)}`) };
   if (st.status === 'failed') return { k: 'fail', t: clean(`FAIL ${what}${st.code ? ` ${st.code}` : ''}${first ? `: ${word(first)}` : ''}${secs(st.ms)}`) };
   if (st.status === 'cancelled') return { k: 'info', t: clean(`skip ${what}${st.why ? `: ${st.why}` : ''}`) };
   return null;
@@ -85,12 +92,13 @@ export function clockText(ticks) {
   return `${night ? 'NIGHT' : 'DAY'} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/** "HP 18/20  FOOD 17/20  DAY 08:15  |  Muse 47 | Reflex 4 | 92% Muse". */
+/** "HP 18/20  FOOD 17/20  DAY 08:15  |  Muse 47 | Reflex 4 | 92% Muse" ("NETHER" or "END" in place of the clock there). */
 export function statusText(state, attribution) {
   const parts = [];
   if (Number.isFinite(state?.health)) parts.push(`HP ${Math.round(state.health)}/20`);
   if (Number.isFinite(state?.food)) parts.push(`FOOD ${state.food}/20`);
-  const clock = clockText(state?.time);
+  const dim = String(state?.dimension ?? 'overworld').replace(/^minecraft:/, '');
+  const clock = dim === 'the_nether' ? 'NETHER' : dim === 'the_end' ? 'END' : clockText(state?.time);
   if (clock) parts.push(clock);
   const who = attribution && Number.isFinite(attribution.muse)
     ? `Muse ${attribution.muse} | Reflex ${attribution.reflex ?? 0}${attribution.musePct != null ? ` | ${attribution.musePct}% Muse` : ''}`
@@ -106,20 +114,29 @@ export function statusText(state, attribution) {
  */
 export function createTermFeed(o) {
   const now = o.now ?? Date.now;
-  const games = new Map(); // id -> {seen: Set, own: number, advice: string, got: Set, startedAt}
+  const games = new Map(); // id -> {seen: Set, own: number, advice: string, got: Set, startedAt, state, dim}
   const of = (s) => {
     let g = games.get(s.id);
-    if (!g) { g = { seen: new Set(), own: -1, advice: '', got: new Set(), startedAt: now(), called: false }; games.set(s.id, g); }
+    if (!g) { g = { seen: new Set(), own: -1, advice: '', got: new Set(), startedAt: now(), called: false, state: null, dim: null }; games.set(s.id, g); }
     return g;
   };
+  /** The bot's dimension: Mine AI's status (its snapshot), else mineflayer's. */
+  const dimOf = (s) => {
+    let d = null;
+    try { d = s.body?.snapshot?.()?.dimension ?? s.body?.bot?.game?.dimension ?? null; } catch { /* unknown */ }
+    return d ? String(d).replace(/^minecraft:/, '') : null;
+  };
   const statusOf = (s, structured) => {
+    const g = of(s);
+    if (structured?.state && !structured.state.joining) g.state = structured.state; // the last state a reply carried
     let attribution = null;
     try { attribution = typeof s.body?.attribution === 'function' ? s.body.attribution() : null; } catch { /* none */ }
-    return statusText(structured?.state ?? null, attribution);
+    return statusText(g.state ? { ...g.state, dimension: g.dim ?? undefined } : null, attribution);
   };
   const emit = (s, lines, structured) => {
     try { o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: statusOf(s, structured) }); } catch { /* the video goes on without it */ }
   };
+  const PLACES = { the_nether: 'entered the Nether', the_end: 'entered the End', overworld: 'back in the Overworld' };
   const elapsed = (g) => {
     const sec = Math.max(0, Math.round((now() - g.startedAt) / 1000));
     return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
@@ -165,7 +182,11 @@ export function createTermFeed(o) {
         g.advice = key;
         for (const a of advice.slice(0, 3)) lines.push({ k: 'advice', t: `advice: ${a}` });
       }
-      if (tool === 'end_game') { lines.push({ k: 'info', t: clean(`game over after ${elapsed(g)}`) }); games.delete(s.id); }
+      // a portal: the first line of the new world
+      const dim = dimOf(s);
+      if (dim && g.dim && dim !== g.dim) lines.push({ k: 'milestone', t: clean(`${PLACES[dim] ?? `entered ${word(dim)}`} at ${elapsed(g)}`) });
+      if (dim) g.dim = dim;
+      if (tool === 'end_game') { lines.push({ k: 'info', t: clean(`game over after ${elapsed(g)}`) }); emit(s, lines, st); games.delete(s.id); return; }
       emit(s, lines, st);
     },
     forget: (id) => games.delete(id),

@@ -87,7 +87,13 @@ export function createTerminalPanel(o) {
     // the status bar: health, food and the clock on the left, who acted on the right, a little smaller than the lines
     const [left, ...rest] = status.split('  |  ');
     const right = rest.join('  |  ');
-    ctx.font = `${Math.round(size * 0.86)}px ${fontName}`;
+    // as large as fits both parts with a gap (at most 0.86 of the lines' size)
+    let sz = Math.round(size * 0.86);
+    for (; sz > Math.round(size * 0.55); sz -= 1) {
+      ctx.font = `${sz}px ${fontName}`;
+      if (ctx.measureText(`${left ?? ''}${right ? `    ${right}` : ''}`).width <= width - 2 * pad) break;
+    }
+    ctx.font = `${sz}px ${fontName}`;
     ctx.fillStyle = PANEL_COLORS.call;
     ctx.fillText(left ?? '', pad, barH / 2);
     if (right) {
