@@ -875,6 +875,34 @@ docker tag muse-minecraft-camera:pre-terminal muse-minecraft-camera:latest && sh
 
 Remove the `pre-m8a` and `pre-terminal` tags once this has held for a week.
 
+### On production (2026-10-11, the terminal backfilled)
+
+Deployed with `deploy/push.sh --prod` from main c802d97, production idle: the terminal backfilled for the game on
+camera (start_game, the last lines, the status from the body), a portal block no roof for the camera, and the Nether
+advice fix (the portal back is not called out while the bot stands in it). Before it: `deploy/.env` backed up
+(`backups/env.bak-pre-backfill-20261011-215550`), the files archived (`backups/app-pre-backfill.tgz`), the images
+tagged `pre-backfill` (agent, paper, camera). On staging first, with the camera moved there while production was idle
+(then stopped again, its `camera.env` back in `~/workspace/muse-staging/backups/`): a portal round trip stays over
+the shoulder while the bot waits in the portal and as it arrives, both ways, no ffmpeg restart
+(`~/Downloads/muse-camera-nether.mp4`).
+
+Checks (all passed): the scripted game through `https://play.picasso-lab.com/mcp` (wooden pickaxe in 23.5 s, hosts
+closed with 0 restarts), 0 heartbeat misses, the datapack's new rule in production's Paper, the borders kept. One
+natural game with `live_view` (g241db0): live after 13.1 s, the terminal begins `> start_game`, `> live_view`, then the
+new call, the status bar "HP 20/20  FOOD 20/20  DAY 10:20 | Muse 0 | Reflex 0" from the first frame, the caption
+"Muse: collecting oak log (4)", the recording public, the plugin 200 and playable, no ffmpeg restart, the live video
+stopped with the game. The other Caddy sites as before.
+
+Rollback, on picasso in `~/workspace/muse-minecraft/app/deploy` (stops when a game runs):
+
+```sh
+docker tag muse-minecraft-agent:pre-backfill muse-minecraft-agent:latest && docker tag muse-minecraft-paper:pre-backfill muse-minecraft-paper:latest &&
+docker tag muse-minecraft-camera:pre-backfill muse-minecraft-camera:latest && sh recreate.sh production all
+```
+
+The earlier rollbacks (live video off, landscape, `PAPER_NETHER=false`, `pre-terminal`) still apply. Remove the
+`pre-backfill` tags once this has held for a week.
+
 ## The terminal under the video (STREAM_LAYOUT=terminal)
 
 muse.ai's panel is tall and narrow, and showed the 16:9 player at the top with black below it. So the camera's video
