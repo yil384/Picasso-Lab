@@ -88,13 +88,36 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   assert.deepEqual(toTheirs('portal', { action: 'enter' }, { ...ctx, portal }).calls[0].args, { ...portal.inside, allow_low_supplies: true });
   assert.equal(fromTheirs('activate_portal', { result: { status: 'succeeded', portal: { kind: 'nether', portalBefore: 0, portalAfter: 6, activated: true, frame: {} } } }).result, 'lit the Nether portal (6 portal blocks)');
   assert.equal(toTheirs('portal', { action: 'enter' }, ctx).refused.code, 'BAD_ARGS');
-  // standing in the portal it came through: out of the opening first (one side, else another), then in again
-  const back = toTheirs('portal', { action: 'enter', pos: { x: 10, y: 70, z: 20 } }, { ...ctx, position: { x: 10.5, y: 70, z: 20.5 } });
+  // just out of the portal it came through: out of the opening first (one side, else another), then in again; in front
+  // of a fresh frame (no arrival there) straight in (the review of M8a)
+  const arrival = { dimension: 'the_nether', pos: { x: 10, y: 70, z: 20 }, at: 1 };
+  const nether = { ...ctx, dimension: 'the_nether', arrival, position: { x: 10.5, y: 70, z: 20.5 }, portal: { ...portal, dimension: 'overworld' } };
+  const back = toTheirs('portal', { action: 'enter' }, nether);
   assert.deepEqual(back.calls.map((c) => c.tool), ['navigate', 'enter_nether_portal']);
   assert.deepEqual(back.calls[0].args, { x: 13, y: 70, z: 20 });
   assert.equal(back.calls[0].alts.length, 3);
   assert.equal(back.calls[0].optional, true);
-  assert.equal(toTheirs('portal', { action: 'enter', pos: { x: 10, y: 70, z: 20 } }, { ...ctx, position: { x: 30, y: 70, z: 20 } }).calls.length, 1);
+  assert.deepEqual(back.calls[1].args, { x: 10, y: 70, z: 20, allow_low_supplies: true }, 'in the Nether without pos: the portal it came out of, never the Overworld frame');
+  assert.equal(toTheirs('portal', { action: 'enter', pos: { x: 10, y: 70, z: 20 } }, { ...ctx, position: { x: 10.5, y: 70, z: 20.5 } }).calls.length, 1, 'no arrival here: in front of a fresh frame');
+  assert.match(toTheirs('portal', { action: 'enter' }, { ...ctx, dimension: 'the_nether', portal: { ...portal, dimension: 'overworld' } }).refused.result, /no portal of yours is known in the nether/);
+  // dismantle: its own frame's cells, one exact collect each (never any other obsidian)
+  const cells = [{ x: 5, y: 63, z: 9 }, { x: 6, y: 63, z: 9 }];
+  const dis = toTheirs('portal', { action: 'dismantle' }, { ...ctx, portal: { ...portal, dimension: 'overworld', cells } });
+  assert.deepEqual(dis.calls.map((c) => c.args), cells.map((c) => ({ block_name: 'obsidian', ...c })));
+  assert.ok(dis.calls.every((c) => c.optional) && dis.dismantle);
+  assert.equal(toTheirs('portal', { action: 'dismantle' }, ctx).refused.code, 'BAD_ARGS');
+  // no obsidian or portal near the world spawn or another player (players read again at light time)
+  const away = { ...ctx, spawn: { x: 0, y: 64, z: 0 }, position: { x: 500, y: 64, z: 500 }, heading: 0, players: [] };
+  assert.equal(toTheirs('build', { blueprint: 'nether_portal', material: 'obsidian' }, away).calls[0].tool, 'build_structure');
+  assert.match(toTheirs('build', { blueprint: 'nether_portal', material: 'obsidian' }, { ...away, position: { x: 10, y: 64, z: 10 } }).refused.result, /within 32 blocks of the world spawn/);
+  assert.match(toTheirs('build', { blueprint: 'nether_portal', material: 'obsidian' }, { ...away, players: [{ position: { x: 503, y: 64, z: 497 } }] }).refused.result, /another player is within 8 blocks/);
+  assert.match(toTheirs('place', { block: 'obsidian', pos: { x: 5, y: 64, z: 5 } }, away).refused.result, /world spawn/);
+  assert.equal(toTheirs('place', { block: 'cobblestone', pos: { x: 5, y: 64, z: 5 } }, away).calls[0].tool, 'place_block', 'other blocks: as before');
+  const lit = { ...away, inventory: { flint_and_steel: 1 }, portal: { dimension: 'overworld', frame: { x: 500, y: 63, z: 498 }, inside: { x: 501, y: 64, z: 498 }, cells: [{ x: 500, y: 63, z: 498 }] } };
+  assert.equal(toTheirs('portal', { action: 'light' }, lit).calls[0].tool, 'activate_portal');
+  assert.match(toTheirs('portal', { action: 'light' }, { ...lit, players: [{ position: { x: 502, y: 64, z: 499 } }] }).refused.result, /another player/);
+  // a failed portal action is never "went through"
+  assert.equal(fromTheirs('enter_nether_portal', { result: { status: 'failed', error: '[NAVIGATION_PORTAL_NO_EDGE] No supported entry.' } }).result, 'failed: No supported entry.');
   // obsidian and diamonds get longer than a collect's 3 minutes; other blocks keep it
   assert.equal(toTheirs('collect', { block: 'obsidian', n: 12 }, ctx).timeoutMs, 540_000);
   assert.equal(toTheirs('collect', { block: 'deepslate_diamond_ore', n: 3 }, ctx).timeoutMs, 330_000);

@@ -19,7 +19,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { inventoryDelta } from '../contracts.js';
 import { renderState, describeCall, describeDelta } from '../state.js';
 import { NOTABLE_BLOCKS } from '../state.js';
-import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, toTheirs, fromTheirs, ownChange, splitError } from './skills.js';
+import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, SPAWN_GUARD, toTheirs, fromTheirs, ownChange, splitError } from './skills.js';
 import { createCare, armorPlan, wearPlan, toolClassFor, toolOf, pickaxeTierFor, sparePlan, replacementFor, describeCare, describeReflexes, ARMOR_SLOTS, armorOf } from './care.js';
 
 /** Every call of ours says why in one sentence (their rationale is required and goes into their own log only). */
@@ -33,6 +33,8 @@ const STATUS_MS = 4_000;
 const SCAN_NAMES = [
   ['oak_log', 'spruce_log', 'birch_log', 'jungle_log', 'acacia_log', 'dark_oak_log', 'mangrove_log', 'cherry_log'],
   ['coal_ore', 'iron_ore', 'copper_ore', 'crafting_table', 'furnace', 'chest', 'gravel', 'sand'],
+  // the way to the Nether (ROADMAP M8): get_state lists them, and collect's description sends Muse near the lava listed
+  ['lava', 'water', 'obsidian', 'nether_portal', 'diamond_ore', 'deepslate_diamond_ore', 'deepslate_iron_ore', 'deepslate_coal_ore'],
 ];
 const BUSY_RETRY_MS = 500; // a body one of their reflexes holds (no action of ours runs): submit again this often
 const ATTACK_POLL_MS = 2_000; // an attack reads its fight this often, to end it once the mob died
@@ -80,6 +82,17 @@ export function allItems(inventory = {}, equipment = {}) {
 /** Chests, trapped chests and barrels a game's bot put down, per Minecraft server: no other game opens them. */
 const CONTAINERS = new Map(); // "host:port" -> Map("x,y,z" -> game id)
 const keyOf = (p) => `${Math.floor(p.x)},${Math.floor(p.y)},${Math.floor(p.z)}`;
+/**
+ * Obsidian a game's bot put down (a nether_portal build, or place), per Minecraft server and for the whole process:
+ * no other game's collect obsidian may take it (their collect mines any loaded obsidian), and portal dismantle takes
+ * back only the bot's own. "host:port" -> Map("dimension:x,y,z" -> game id). The blocks outlive the game, so do the
+ * entries (a frame stands in the shared world after its game ended).
+ */
+const FRAMES = new Map();
+/** How far (blocks, flat) another game's obsidian keeps a collect obsidian from running: about what is loaded. */
+export const FRAME_GUARD = 160;
+/** collect obsidian makes it from lava within this many blocks of the bot, else it is refused. */
+export const LAVA_NEAR = 16;
 
 /** The default way to reach a host: the MCP SDK's client over streamable HTTP, with the host's token. */
 async function connectSdk(host) {
@@ -129,6 +142,21 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   const server = `${config.mc.host}:${config.mc.port}`;
   if (!CONTAINERS.has(server)) CONTAINERS.set(server, new Map());
   const containers = CONTAINERS.get(server);
+  if (!FRAMES.has(server)) FRAMES.set(server, new Map());
+  const frames = FRAMES.get(server);
+  const frameKey = (dim, p) => `${dim}:${keyOf(p)}`;
+  /** Obsidian cells of other games in this dimension within r blocks (flat) of p. */
+  const othersObsidian = (p, r) => {
+    const out = [];
+    for (const [k, owner] of frames) {
+      if (owner === gameId) continue;
+      const [dim, xyzs] = k.split(':');
+      if (dim !== (dimension ?? 'overworld')) continue;
+      const [x, y, z] = xyzs.split(',').map(Number);
+      if (Math.hypot(x - p.x, z - p.z) <= r) out.push({ x, y, z });
+    }
+    return out;
+  };
   let lastDeath = null;
   let policyRevision = null;
   let dimension = null; // the last status's dimension (a change is logged)
@@ -142,7 +170,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   // the structure this game's last build left incomplete (its blueprint, material, cells, facing and where the bot
   // stood): a build of the same blueprint and material near it continues it (src/mineai/skills.js continuesLast)
   let lastBuild = null;
-  let lastPortal = null; // the frame the last build nether_portal made: {frame, inside}
+  let lastPortal = null; // the frame the last build nether_portal made: {dimension, frame, inside, cells}
+  const arrivals = {}; // dimension -> {pos, at}: where the bot last came out of a portal there
   let current = null; // the action running now: {actionId, stop}
   let stacks = []; // their status stacks (carried, worn, the off-hand; with durability)
   let idleSince = Date.now(); // when the last step of the player's ended (the care waits a moment after it)
@@ -192,7 +221,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     /** The care's knobs (policy skill). */
     carePolicy: () => (care ? care.policy : null),
     /** Advise mode: what needs doing that the body will not do by itself: [{kind, text, hint?: {skill, args}}]. */
-    advice: () => (care ? care.advice() : []),
+    advice: () => (care ? [...portalAdvice(), ...care.advice()] : []),
     /** Who acted this game: the player's skills, the body's reflexes and its own plans (full mode). */
     attribution: () => attributionOf(museActions, care ? care.counts() : { reflex: 0, care: 0 }),
     careMode: () => careMode,
@@ -275,6 +304,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (dimension && dim !== dimension) {
       event('dimension', { from: dimension, to: dim, pos: s.position ? floorPos(s.position) : null });
       care?.arrived(dim, s.position ? floorPos(s.position) : null);
+      if (s.position) arrivals[dim] = { pos: floorPos(s.position), at: Date.now() };
       // the blocks seen around belong to the dimension left: scanned again here (the portal back among them)
       scan = { blocks: [], at: 0, from: null };
       setTimeout(() => { scanBlocks(true); }, 2_000).unref?.();
@@ -292,10 +322,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (scanning || ended || (body.busy && !force)) return scanning;
     scanning = (async () => {
       const found = [];
+      let read = 0;
       for (const names of SCAN_NAMES) {
-        const data = await rpc('view_blocks', { find: { block_names: names, limit: 1 } }, 20_000);
-        if (Array.isArray(data?.result?.blocks?.find)) found.push(...data.result.blocks.find);
+        const data = await rpc('view_blocks', { find: { block_names: names, limit: 1 } }, 20_000).catch(() => null);
+        if (Array.isArray(data?.result?.blocks?.find)) { read += 1; found.push(...data.result.blocks.find); }
       }
+      if (!read) return; // nothing could be read: the blocks known stay as they were
       scan = {
         at: Date.now(),
         from: latest.position,
@@ -362,6 +394,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     containerOwner: (pos) => containers.get(keyOf(pos)) ?? null,
     lastBuild,
     portal: lastPortal,
+    dimension: dimension ?? 'overworld',
+    arrival: arrivals[dimension ?? 'overworld'] ? { dimension: dimension ?? 'overworld', ...arrivals[dimension ?? 'overworld'] } : null,
   });
 
   /**
@@ -485,11 +519,63 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
    * of deepslate and held 10 obsidian). Null when the site is dry, or when it cannot be read.
    */
   async function portalSite(cells) {
-    const data = await rpc('view_blocks', { find: { block_names: ['lava', 'water'], limit: 8 } }, 10_000).catch(() => null);
-    const found = (data?.result?.blocks?.find ?? []).flatMap((f) => (f.listed ?? []).map((p) => ({ name: f.name, ...floorPos(p) })));
-    const near = found.find((b) => cells.some((c) => Math.abs(c.x - b.x) <= 3 && Math.abs(c.y - b.y) <= 3 && Math.abs(c.z - b.z) <= 3));
+    // two boxes around the frame's middle (their box: 4 either side, 3 above and below), its lower and its upper half
+    const xs = cells.map((c) => c.x); const zs = cells.map((c) => c.z); const ys = cells.map((c) => c.y);
+    const mid = { x: Math.round((Math.min(...xs) + Math.max(...xs)) / 2), z: Math.round((Math.min(...zs) + Math.max(...zs)) / 2) };
+    const liquid = [];
+    for (const y of [Math.min(...ys), Math.max(...ys)]) {
+      const data = await rpc('view_blocks', { box: { x: mid.x, y, z: mid.z, half_width: 4, half_height: 3 } }, 10_000).catch(() => null);
+      const box = data?.result?.blocks?.box;
+      if (!box?.layers) return { ok: false, result: 'the blocks where the portal frame would stand could not be read; try again in a moment, or a little way off', code: 'FAILED', delta: {} };
+      for (const layer of box.layers) for (const row of layer.rows) row.blocks.forEach((name, i) => {
+        if (name === 'unloaded') liquid.push({ name, x: box.center.x - box.halfWidth + i, y: layer.y, z: row.z });
+        else if (name === 'lava' || name === 'water') liquid.push({ name, x: box.center.x - box.halfWidth + i, y: layer.y, z: row.z });
+      });
+    }
+    const unloaded = liquid.find((b) => b.name === 'unloaded');
+    if (unloaded) return { ok: false, result: `the ground around where the portal frame would stand is not loaded yet (${unloaded.x} ${unloaded.y} ${unloaded.z}); try again in a moment`, code: 'FAILED', delta: {} };
+    const near = liquid.sort((a, b) => (a.name === 'lava' ? -1 : 1) - (b.name === 'lava' ? -1 : 1))[0];
     if (!near) return null;
     return { ok: false, result: `${near.name} at ${near.x} ${near.y} ${near.z} is next to where the portal frame would stand: build it on dry ground away from lava and water (go_to a spot with flat ground and open sky first)`, code: near.name === 'lava' ? 'LAVA' : 'FAILED', delta: {} };
+  }
+
+  /**
+   * collect obsidian, before it runs (the safety review of M8a): only in the Overworld; never while another game's
+   * obsidian (a frame), or a lit portal, is loaded near by (their collect mines any loaded obsidian); and only with lava
+   * within LAVA_NEAR blocks to make it from, away from the world spawn and from other players (their collect pours
+   * water there, unguarded). Null when it may run.
+   */
+  async function obsidianGuard() {
+    const refuse = (result, code = 'FAILED') => ({ ok: false, result, code, delta: {} });
+    const p = latest.position;
+    if ((dimension ?? 'overworld') !== 'overworld') return refuse('obsidian is made and collected in the Overworld only (in the Nether it would take portal frames, yours included)');
+    if (!p) return refuse('the body does not know where it stands yet; try again in a moment');
+    const other = othersObsidian(p, FRAME_GUARD)[0];
+    if (other) return refuse(`another player's obsidian (a portal frame) is at ${other.x} ${other.y} ${other.z}, within ${FRAME_GUARD} blocks: collect obsidian could take it. Go farther away first`);
+    const lit = scan.blocks.find((b) => b.name === 'nether_portal');
+    if (lit) return refuse(`a lit portal is loaded near by (at ${lit.nearest.x} ${lit.nearest.y} ${lit.nearest.z}): collect obsidian could take its frame. Go farther away first (portal dismantle takes back your own frame)`);
+    const data = await rpc('view_blocks', { find: { block_names: ['lava'], limit: 8 } }, 10_000).catch(() => null);
+    const lava = (data?.result?.blocks?.find?.[0]?.listed ?? []).map(floorPos).filter((l) => Math.hypot(l.x - p.x, l.y - p.y, l.z - p.z) <= LAVA_NEAR);
+    if (!data?.result?.blocks) return refuse('the blocks around could not be read; try again in a moment');
+    if (!lava.length) return refuse(`no lava within ${LAVA_NEAR} blocks to make obsidian from: go near lava first (get_state lists it among the nearby blocks; deep caves below y -54 have plenty)`, 'LAVA');
+    if (spawnAt && lava.some((l) => Math.hypot(l.x - spawnAt.x, l.z - spawnAt.z) <= SPAWN_GUARD)) return refuse(`the lava near by is within ${SPAWN_GUARD} blocks of the world spawn, where new players arrive: make obsidian somewhere else`, 'LAVA');
+    const players = (status?.nearby?.players ?? []).map((x) => x?.position).filter(Boolean);
+    if (players.some((q) => lava.some((l) => Math.hypot(q.x - l.x, q.y - l.y, q.z - l.z) <= 8))) return refuse('another player is next to the lava near by: make obsidian somewhere else', 'LAVA');
+    return null;
+  }
+
+  /**
+   * The portal back from the Nether, put out (a ghast's fireball does that): when the blocks seen since the bot came
+   * out of it hold no lit portal block there, the advice says so, with portal light when it carries flint and steel.
+   */
+  function portalAdvice() {
+    const dim = dimension ?? 'overworld';
+    const a = arrivals[dim];
+    if (dim === 'overworld' || !a || scan.at <= a.at) return []; // the blocks read since it came out there
+    const lit = scan.blocks.some((b) => b.name === 'nether_portal' && Math.hypot(b.nearest.x - a.pos.x, b.nearest.y - a.pos.y, b.nearest.z - a.pos.z) <= 4);
+    if (lit) return [];
+    const flint = (latest.inventory?.flint_and_steel ?? 0) > 0;
+    return [{ kind: 'portal', text: `the portal back at ${a.pos.x} ${a.pos.y} ${a.pos.z} is not lit any more${flint ? '' : ': flint_and_steel lights it again (1 iron_ingot and 1 flint)'}`, ...(flint ? { hint: { skill: 'portal', args: { action: 'light', pos: a.pos } } } : {}) }];
   }
 
   async function run(tool, args) {
@@ -518,6 +604,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     let own = null;
     let deathBefore = lastDeath;
     let built = null; // a build's structure (toTheirs), remembered below while it is incomplete
+    let dismantling = false; // portal dismantle: its own frame's obsidian back
     const crashesBefore = crashes;
     // the runtime stopped during this step: the host starts it again once per game, and a second stop ends the game
     // (src/mineai/host.js). The step may be what stopped it (2026-10-08, before patch 0010: a build around the bot in a pocket in stone
@@ -529,12 +616,14 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       deathBefore = lastDeath;
       const plan = toTheirs(tool, v.args, context());
       built = plan.build ?? null;
+      dismantling = Boolean(plan.dismantle);
       // the body's own care knobs (policy skill): kept here, never sent to the runtime
       const careText = plan.care ? (() => {
         const knobs = care?.setPolicy(plan.care === 'reset' ? null : plan.care);
         return `; its reflexes: ${describeReflexes(knobs, careMode)}${careMode === 'full' ? `; on its own between your calls: ${describeCare(knobs)}` : ''}`;
       })() : '';
       if (!plan.refused && tool === 'build' && v.args.blueprint === 'nether_portal' && plan.build) plan.refused = await portalSite(plan.build.cells);
+      if (!plan.refused && tool === 'collect' && v.args.block === 'obsidian') plan.refused = await obsidianGuard();
       if (plan.refused) built = null; // a build refused before it began leaves nothing to continue
       if (plan.local === 'armor') { const a = armorCalls(); if (a.refused) plan.refused = a.refused; else { plan.calls = a.calls; plan.note = a.note; } }
       if (plan.local === 'state') r = { ok: true, result: renderState(snapshot()), code: null };
@@ -565,6 +654,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           // a call with alternatives (a way out of a portal: one side, else the other): the next when this one failed
           for (const alt of call.alts ?? []) {
             if (ctl.stopped || (!out.error && out.output?.result?.status === 'succeeded')) break;
+            ctl.actionId = null; // a new action: its own id (the review of M8a: the first one's id was waited on again)
             out = await act({ ...call, args: alt }, deadline, ctl);
           }
           if (out.error) {
@@ -602,7 +692,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             const st = out.output?.result?.structure ?? {};
             const kept = (st.kept ?? []).reduce((k, x) => k + (Number(x.count) || 0), 0);
             const wet = Number(st.water) || 0;
-            if (kept || wet) res = { ok: false, code: 'FAILED', result: `${res.result}; not a portal frame: ${[kept ? `${plural(kept, 'frame cell')} kept ${(st.kept ?? []).map((x) => x.block).join(' and ')} instead of obsidian` : null, wet ? `${plural(wet, 'inside cell')} ${wet === 1 ? 'is' : 'are'} water` : null].filter(Boolean).join(', ')}. Take the obsidian back (collect obsidian ${Number(st.placed) || 'n'}: it mines the nearest first) and build it on open, dry ground away from lava and water (go_to a spot with flat ground and open sky)` };
+            if (kept || wet) res = { ok: false, code: 'FAILED', result: `${res.result}; not a portal frame: ${[kept ? `${plural(kept, 'frame cell')} kept ${(st.kept ?? []).map((x) => x.block).join(' and ')} instead of obsidian` : null, wet ? `${plural(wet, 'inside cell')} ${wet === 1 ? 'is' : 'are'} water` : null].filter(Boolean).join(', ')}. Take the obsidian back (portal dismantle) and build it on open, dry ground away from lava and water (go_to a spot with flat ground and open sky)` };
           }
           if (res.ok && call.tool === 'place_block' && CONTAINER_BLOCKS.has(call.args.block_name)) containers.set(keyOf(call.args), gameId);
           // a craft the body added on its own (a spare tool, a new one) is told by its own line, not again
@@ -629,12 +719,30 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // a complete structure is done with; an incomplete one is continued by the next build of it nearby; one whose step
     // stopped the runtime is not (the reply says to build somewhere else)
     if (built) lastBuild = r.ok || r.code === 'BODY_RESTARTED' ? null : built;
-    // a Nether portal frame built: the portal skill lights and enters it without a pos
-    if (built?.blueprint === 'nether_portal' && r.ok) {
+    // a Nether portal frame that failed at its site (cells kept, water inside, lava): never continued there; one short of
+    // obsidian is (the review of M8a: a bad site was resumed within 12 blocks and refused again and again)
+    if (built?.blueprint === 'nether_portal' && !r.ok && r.code !== 'NEED_ITEMS') lastBuild = null;
+    if (built?.blueprint === 'nether_portal' || (tool === 'place' && v.args.block === 'obsidian' && r.ok)) {
+      // the obsidian this game put down (or may have): no other game's collect takes it, and dismantle takes it back
+      const cells = tool === 'place' ? [v.args.pos] : built.cells.filter((c) => c.block_name === 'obsidian');
+      for (const c of cells) frames.set(frameKey(dimension ?? 'overworld', c), gameId);
+    }
+    // a Nether portal frame built (or tried): the portal skill lights and enters it without a pos (in this dimension),
+    // and dismantle takes its obsidian back
+    if (built?.blueprint === 'nether_portal') {
       const frame = built.cells.find((c) => c.block_name !== 'air');
       const inside = built.cells.find((c) => c.block_name === 'air');
-      if (frame && inside) lastPortal = { frame: { x: frame.x, y: frame.y, z: frame.z }, inside: { x: inside.x, y: inside.y, z: inside.z } };
-      care?.portalBuilt();
+      if (frame && inside) lastPortal = { dimension: dimension ?? 'overworld', frame: { x: frame.x, y: frame.y, z: frame.z }, inside: { x: inside.x, y: inside.y, z: inside.z }, cells: built.cells.filter((c) => c.block_name === 'obsidian'), complete: r.ok };
+      if (r.ok) care?.portalBuilt();
+    }
+    // its own frame taken back: no more a frame of its own, and the cells free for anyone
+    if (dismantling) {
+      const got = Number(delta.obsidian) || 0;
+      if (got <= 0 && r.ok) r = { ok: false, result: 'took back no obsidian: none of the cells of your last frame still holds it', code: 'FAILED' };
+      if (got > 0 && lastPortal) {
+        for (const c of lastPortal.cells) frames.delete(frameKey(lastPortal.dimension, c));
+        lastPortal = null;
+      }
     }
     if (yielded === 'recover') r = { ...r, result: `${r.result} (before it the body finished going back for the items it dropped when it died)` };
     const ms = Date.now() - t0;

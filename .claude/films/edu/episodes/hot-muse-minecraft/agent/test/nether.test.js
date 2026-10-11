@@ -1,0 +1,161 @@
+// test/nether.test.js - the way to the Nether through the body (BODY=mineai, ROADMAP M8) against the fake runtime: a
+// frame built, lit, entered and the way back without a pos (stepping out of the portal it came through, one side else
+// another), a failed frame never continued and taken back by dismantle, the guards of collect obsidian (another game's
+// frame, no lava near, the Nether), the portal site's check, get_state's lava, a scan that could not be read, and the
+// advice for a portal back that went out (the reviews of M8a).
+
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createMineAiBody } from '../src/mineai/body.js';
+import { fakeHosts } from './fake-mineai.js';
+import { loadConfig } from '../src/config.js';
+import { createLogger } from '../src/log.js';
+
+const config = loadConfig({ MODEL_API_KEY: '', LOG_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'nether-log-')) });
+const log = createLogger({ dir: null, config });
+const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
+const until = async (fn, ms = 4000) => { const end = Date.now() + ms; while (Date.now() < end) { if (await fn()) return true; await sleep(25); } return false; };
+const lava = (x, y, z) => ({ name: 'lava', found: 1, listed: [{ x, y, z }] });
+
+/** A body on the fake runtime (advise mode), walked away from the world spawn (no obsidian within 32 blocks of it). */
+async function netherBody(inventory = {}, { gameId = 'gnether1', hosts = fakeHosts(() => ({ inventory })), at = { x: 150, z: 150 } } = {}) {
+  const body = createMineAiBody({ config, log, hosts, gameId, username: `Tst_rv_${gameId}`, careTickMs: 30, careIdleMs: 50 });
+  await until(() => hosts.started.find((h) => h.username === `Tst_rv_${gameId}`));
+  const fake = hosts.started.find((h) => h.username === `Tst_rv_${gameId}`).fake;
+  await body.ready;
+  const walk = await body.run('go_to', { x: at.x, y: 64, z: at.z });
+  assert.equal(walk.ok, true, walk.result);
+  return { body, fake, hosts };
+}
+
+test('nether: a frame built, lit and entered; back without a pos, out of the portal first (one side, else another)', async () => {
+  const { body, fake } = await netherBody({ obsidian: 14, flint_and_steel: 1, cooked_beef: 4 });
+  try {
+    let r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.equal(r.ok, true, r.result);
+    r = await body.run('portal', { action: 'light' });
+    assert.equal(r.ok, true, r.result);
+    assert.equal(r.result, 'lit the Nether portal (6 portal blocks)');
+    r = await body.run('portal', { action: 'enter' });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /^went through the portal at 3 70 4/);
+    assert.doesNotMatch(r.result, /stepped out/, 'in front of a fresh frame it goes straight in');
+    assert.match(body.state(), /^position 3 70 4 in the Nether/m);
+    // the way back: no pos (the portal it came out of here, never the Overworld frame), the first side blocked
+    fake.world.navigateFail = (a) => a.x === 6;
+    // walks longer than a submission's first wait, so each is waited on by its action id (the review's case)
+    fake.world.durations = { ...(fake.world.durations ?? {}), navigate: 1_800 };
+    r = await body.run('portal', { action: 'enter' });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /went through the portal at 3 70 4 \(stepped out of the portal first\)$/);
+    const walks = fake.tools('navigate').slice(-2).map((c) => c.args.x);
+    assert.deepEqual(walks, [6, 0], 'one side, then the other');
+    const ids = fake.calls.filter((c) => c.tool === 'wait_for_action').map((c) => c.args.action_id);
+    assert.equal(new Set(ids).size, ids.length, 'each walk waited on its own action, never the one before');
+    assert.equal(fake.tools('enter_nether_portal').at(-1).args.x, 3);
+    assert.match(body.state(), /in the overworld/);
+  } finally { await body.close(); }
+});
+
+test('nether: a frame that kept rock fails, is never continued at that site, and dismantle takes its obsidian back', async () => {
+  const { body, fake } = await netherBody({ obsidian: 14 });
+  try {
+    fake.world.buildKept = 2;
+    let r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.equal(r.ok, false);
+    assert.match(r.result, /not a portal frame: 2 frame cells kept deepslate instead of obsidian\. Take the obsidian back \(portal dismantle\)/);
+    r = await body.run('portal', { action: 'dismantle' });
+    assert.equal(r.ok, true, r.result);
+    const collects = fake.tools('collect_block');
+    assert.equal(collects.length, 12, 'one exact collect a frame cell');
+    assert.ok(collects.every((c) => Number.isInteger(c.args.x) && c.args.block_name === 'obsidian' && !c.args.count));
+    fake.world.buildKept = 0;
+    r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.equal(r.ok, true, r.result);
+    assert.doesNotMatch(r.result, /continued/, 'a new frame, never the failed one again');
+  } finally { await body.close(); }
+});
+
+test('nether: the portal site is read around the frame: water next to it, or nothing readable, refuses the build', async () => {
+  const { body, fake } = await netherBody({ obsidian: 14 });
+  try {
+    fake.world.boxAt = (x, y) => (y === 62 ? 'water' : 'air');
+    let r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.equal(r.ok, false);
+    assert.match(r.result, /^water at -?\d+ 62 -?\d+ is next to where the portal frame would stand/);
+    fake.world.boxAt = (x, y) => (y === 66 ? 'lava' : 'air');
+    r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.equal(r.code, 'LAVA');
+    fake.world.boxAt = null;
+    fake.world.viewFail = true;
+    r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.match(r.result, /could not be read/);
+    assert.equal(fake.tools('build_structure').length, 0, 'nothing placed');
+  } finally { await body.close(); }
+});
+
+test('nether: collect obsidian runs only near lava, in the Overworld, with no other game\'s frame near by', async () => {
+  const hosts = fakeHosts(() => ({ inventory: { obsidian: 14, water_bucket: 1, cobblestone: 20, diamond_pickaxe: 1 } }));
+  // away from the frames the tests above built (the registry is the process's, as the world is the server's)
+  const at = { x: -150, z: 150 };
+  const a = await netherBody({}, { gameId: 'gneth_a', hosts, at });
+  const b = await netherBody({}, { gameId: 'gneth_b', hosts, at });
+  try {
+    a.fake.world.blocks = [];
+    let r = await a.body.run('collect', { block: 'obsidian', n: 4 });
+    assert.equal(r.code, 'LAVA', r.result);
+    assert.match(r.result, /^no lava within 16 blocks to make obsidian from/);
+    a.fake.world.blocks = [lava(-148, 60, 150)];
+    r = await a.body.run('collect', { block: 'obsidian', n: 4 });
+    assert.equal(r.ok, true, r.result);
+    // another game builds a frame near by: a's collect obsidian could take it
+    const built = await b.body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.equal(built.ok, true, built.result);
+    r = await a.body.run('collect', { block: 'obsidian', n: 4 });
+    assert.equal(r.ok, false);
+    assert.match(r.result, /^another player's obsidian \(a portal frame\) is at .* within 160 blocks/);
+    // b's own: its collect obsidian is refused near its lit portal, but dismantle takes its frame back
+    b.fake.world.blocks = [lava(-148, 60, 150), { name: 'nether_portal', found: 6, listed: [{ x: -150, y: 64, z: 151 }] }];
+    await b.body.rescan();
+    r = await b.body.run('collect', { block: 'obsidian', n: 4 });
+    assert.match(r.result, /^a lit portal is loaded near by/);
+    // in the Nether: never
+    a.fake.world.dimension = 'the_nether';
+    await a.body.refresh();
+    r = await a.body.run('collect', { block: 'obsidian', n: 4 });
+    assert.match(r.result, /^obsidian is made and collected in the Overworld only/);
+  } finally { await a.body.close(); await b.body.close(); }
+});
+
+test('nether: get_state lists lava and portals; a scan that could not be read keeps the blocks known', async () => {
+  const { body, fake } = await netherBody({});
+  try {
+    fake.world.blocks = [lava(155, 60, 150)];
+    await body.rescan();
+    assert.match(body.state(), /nearby blocks \(within 32\):.*\blava 1 \(nearest/);
+    fake.world.viewFail = true;
+    await body.rescan();
+    assert.match(body.state(), /\blava 1 \(nearest/, 'kept');
+  } finally { await body.close(); }
+});
+
+test('nether: the portal back went out: the advice says so, with portal light when flint and steel is carried', async () => {
+  const { body, fake } = await netherBody({ flint_and_steel: 1 });
+  try {
+    fake.world.dimension = 'the_nether';
+    fake.world.position = { x: 3.5, y: 70, z: 4.5 };
+    await body.refresh();
+    fake.world.blocks = [];
+    await sleep(10);
+    await body.rescan();
+    const a = body.advice().find((x) => x.kind === 'portal');
+    assert.equal(a.text, 'the portal back at 3 70 4 is not lit any more');
+    assert.deepEqual(a.hint, { skill: 'portal', args: { action: 'light', pos: { x: 3, y: 70, z: 4 } } });
+    fake.world.blocks = [{ name: 'nether_portal', found: 6, listed: [{ x: 3, y: 70, z: 4 }] }];
+    await body.rescan();
+    assert.equal(body.advice().find((x) => x.kind === 'portal'), undefined, 'lit: nothing to say');
+  } finally { await body.close(); }
+});

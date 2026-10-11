@@ -89,8 +89,8 @@ export const EXTRA_DEFS = Object.freeze([
     'Make a shield and put it in your off-hand: from 1 iron ingot you carry, else raw iron smelted, else 1 iron ore mined (stone pickaxe) and smelted; planks from your wood. Your fight reflex raises it against arrows.',
     obj({}, [])],
   ['portal',
-    'A Nether portal. Build the frame first: build nether_portal from 12 obsidian, and 2 more on uneven ground (or place obsidian yourself, 4 wide and 5 tall, corners optional). light: light the frame with flint_and_steel you carry; enter: step into the lit portal and wait to arrive (in the Nether, enter again to come back). pos: a frame block or an inside cell; without pos, the frame your last build nether_portal made. Take food along (the Nether has little); it enters with whatever it carries.',
-    obj({ action: pick('light or enter', ['light', 'enter']), pos: POS, low_supplies: { type: 'boolean', description: 'kept for old clients; the body always enters' } }, ['action'])],
+    'A Nether portal. Build the frame first: build nether_portal from 12 obsidian, and 2 more on uneven ground (or place obsidian yourself, 4 wide and 5 tall, corners optional). light: light the frame with flint_and_steel you carry; enter: step into the lit portal and wait to arrive (in the Nether, enter again to come back). pos: a frame block or an inside cell; without pos, the frame your last build nether_portal made, or in the Nether the portal you came out of. dismantle: takes the obsidian of your last frame back, block by block (after a frame that failed). Never near the world spawn or another player. Take food along (the Nether has little); it enters with whatever it carries.',
+    obj({ action: pick('light, enter, or dismantle (your own last frame\'s obsidian back)', ['light', 'enter', 'dismantle']), pos: POS, low_supplies: { type: 'boolean', description: 'kept for old clients; the body always enters' } }, ['action'])],
   ['armor',
     'Craft the best armor you can pay for (iron ingots, leather, gold or diamonds) and put it on, with any better piece or shield you carry.',
     obj({}, [])],
@@ -195,6 +195,25 @@ export function blueprintCells(blueprint, material, feet, headingDegrees) {
   return { cells, facing: f.name };
 }
 
+/** How close (blocks) another player may be to an obsidian frame being placed, built or lit. */
+export const FRAME_PLAYER_GUARD = 8;
+
+/**
+ * Obsidian and portals are not made where new players arrive or next to another player (the safety review of M8a):
+ * a refusal when a cell is within SPAWN_GUARD blocks (flat) of the world spawn, or another player is within
+ * FRAME_PLAYER_GUARD blocks of a cell; else null. The players are read again at each step (a portal lit later checks
+ * again).
+ */
+export function frameGuard(cells, ctx) {
+  const list = (cells ?? []).filter(Boolean);
+  if (ctx.spawn && list.some((c) => Math.hypot(c.x - ctx.spawn.x, c.z - ctx.spawn.z) <= SPAWN_GUARD)) {
+    return refuse(`no obsidian or portal within ${SPAWN_GUARD} blocks of the world spawn (about ${Math.round(ctx.spawn.x)} ${Math.round(ctx.spawn.z)}), where new players arrive: go farther away first`, 'BAD_ARGS');
+  }
+  const other = (ctx.players ?? []).map((p) => p?.position).filter(Boolean).find((q) => list.some((c) => dist(q, c) <= FRAME_PLAYER_GUARD));
+  if (other) return refuse(`another player is within ${FRAME_PLAYER_GUARD} blocks of where the obsidian or portal would be: move away from them first`, 'BAD_ARGS');
+  return null;
+}
+
 /** Collects that take longer than the skill's limit: a base and a time per block (ms). */
 export const SLOW_COLLECT = Object.freeze({
   obsidian: { base: 180_000, each: 30_000 },
@@ -278,17 +297,22 @@ export function toTheirs(skill, args, ctx) {
       const note = n < args.n ? `smelts ${n} of the ${args.n} (at most ${SMELT_PER_CALL} a call, and what you carry); call again for the rest` : null;
       return { calls: fuels.map((f) => ({ tool: 'smelt_item', args: { item_name: args.item, count: f.covers, fuel_item_name: f.name, ...where } })), ...(note ? { note } : {}), expect: SMELT[args.item] };
     }
-    case 'place': return { calls: [{ tool: 'place_block', args: { block_name: args.block, x: args.pos.x, y: args.pos.y, z: args.pos.z } }] };
+    case 'place': {
+      if (args.block === 'obsidian') { const guard = frameGuard([args.pos], ctx); if (guard) return guard; }
+      return { calls: [{ tool: 'place_block', args: { block_name: args.block, x: args.pos.x, y: args.pos.y, z: args.pos.z } }] };
+    }
     case 'build': {
       if (!ctx.position) return refuse('the body does not know where it stands yet; try again in a moment');
       const feet = { x: Math.floor(ctx.position.x), y: Math.floor(ctx.position.y), z: Math.floor(ctx.position.z) };
       // the structure the last build left incomplete, when this call is the same build near it: the same cells again
       // (the runtime audits them and works only the ones still wrong), never a new one facing the bot's new heading
       const last = ctx.lastBuild ?? null;
+      if (continuesLast(last, args, feet) && (args.material === 'obsidian' || args.blueprint === 'nether_portal')) { const guard = frameGuard(last.cells, ctx); if (guard) return guard; }
       if (continuesLast(last, args, feet)) {
         return { calls: [{ tool: 'build_structure', args: { blocks: last.cells, remove_wrong_blocks: true } }], note: `continued the ${args.blueprint} begun facing ${last.facing} at ${at(last.feet)}`, build: last };
       }
       const { cells, facing } = blueprintCells(args.blueprint, args.material, feet, ctx.heading);
+      if (args.material === 'obsidian' || args.blueprint === 'nether_portal') { const guard = frameGuard(cells, ctx); if (guard) return guard; }
       return { calls: [{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: true } }], note: `built facing ${facing}`, build: { blueprint: args.blueprint, material: args.material, cells, facing, feet } };
     }
     case 'attack': {
@@ -330,19 +354,38 @@ export function toTheirs(skill, args, ctx) {
     case 'armor': return { local: 'armor', calls: [] };
     case 'shelter': return { local: 'care', kind: 'shelter', calls: [] };
     case 'portal': {
-      // without pos: the frame the last build nether_portal made (a frame block to light, an inside cell to enter)
-      const p = args.pos ?? (args.action === 'light' ? ctx.portal?.frame : ctx.portal?.inside) ?? null;
-      if (!p) return refuse('portal needs pos (a frame block or an inside cell), or build nether_portal from obsidian first', 'BAD_ARGS');
+      const here = ctx.dimension ?? 'overworld';
+      // the frame the last build nether_portal made, in this dimension only; the portal it came out of here (the way back)
+      const own = ctx.portal && (ctx.portal.dimension ?? 'overworld') === here ? ctx.portal : null;
+      const arrival = ctx.arrival && ctx.arrival.dimension === here ? ctx.arrival : null;
+      if (args.action === 'dismantle') {
+        // the obsidian of its own frame back, cell by cell at exact places (never anyone else's: the review of M8a)
+        if (!own?.cells?.length) return refuse('no frame of yours here to take back (portal dismantle takes back the obsidian of your last build nether_portal, in this dimension)', 'BAD_ARGS');
+        return {
+          calls: own.cells.map((c) => ({ tool: 'collect_block', args: { block_name: 'obsidian', x: c.x, y: c.y, z: c.z }, optional: true })),
+          timeoutMs: Math.min(900_000, 60_000 + 20_000 * own.cells.length), dismantle: true,
+        };
+      }
+      const p = args.pos ?? (args.action === 'light' ? own?.frame ?? arrival?.pos : own?.inside ?? arrival?.pos) ?? null;
+      if (!p) {
+        return refuse(here === 'overworld'
+          ? 'portal needs pos (a frame block or an inside cell), or build nether_portal from obsidian first'
+          : `portal needs pos here: no portal of yours is known in the ${here.replace(/^the_/, '')} (get_state lists nether_portal blocks near by)`, 'BAD_ARGS');
+      }
       if (args.action === 'light') {
         if (!carries('flint_and_steel')) return refuse('lighting a portal needs flint_and_steel (craft it from 1 iron_ingot and 1 flint; gravel drops flint now and then)', 'NEED_ITEMS');
+        const guard = frameGuard(own && dist(own.frame, p) <= 6 ? own.cells : [p], ctx);
+        if (guard) return guard;
         return { calls: [{ tool: 'activate_portal', args: { x: p.x, y: p.y, z: p.z } }] };
       }
       // their supply check asks for 16 food and 32 arrows, and no skill here gives arrows: the player decides what to
       // take along (the advice says what is carried), the body never stops at the portal for it
       const enter = { tool: 'enter_nether_portal', args: { x: p.x, y: p.y, z: p.z, allow_low_supplies: true } };
-      // standing in the portal it just came through: out of the opening first (their entry refuses a bot still inside,
-      // and waiting inside keeps the cooldown going; a local run, 2026-10-11), a few blocks to one side or the other
-      const inside = ctx.position && Math.hypot(ctx.position.x - (p.x + 0.5), ctx.position.z - (p.z + 0.5)) <= 2.5 && Math.abs(ctx.position.y - p.y) <= 3;
+      // just out of the portal it is entering again: out of the opening first (their entry refuses a bot still inside,
+      // and waiting inside keeps the cooldown going), a few blocks to one side, else the other; never in front of a
+      // fresh frame (the review of M8a)
+      const near = (a, b, r) => a && b && Math.hypot(a.x - (b.x + 0.5), a.z - (b.z + 0.5)) <= r && Math.abs(a.y - b.y) <= 3;
+      const inside = arrival && near(ctx.position, arrival.pos, 2.5) && dist(p, arrival.pos) <= 4;
       if (!inside) return { calls: [enter] };
       const [first, ...alts] = [[3, 0], [-3, 0], [0, 3], [0, -3]].map(([dx, dz]) => ({ x: p.x + dx, y: p.y, z: p.z + dz }));
       return { calls: [{ tool: 'navigate', args: first, alts, optional: true, quiet: true }, enter], note: 'stepped out of the portal first' };
@@ -518,6 +561,7 @@ const materialOf = (args) => (args?.blocks ?? []).find((b) => b.block_name && b.
 /** What a settled action did, in our words: one or two plain sentences. call: our call of theirs ({tool, args}). */
 function describe(tool, r, call) {
   // the portal: lit (how many portal blocks), entered (where it arrived)
+  if ((tool === 'activate_portal' || tool === 'enter_nether_portal') && r?.status !== 'succeeded') return null;
   if (tool === 'activate_portal' && r?.portal?.kind === 'nether') {
     const p = r.portal;
     return p.activated ? `lit the Nether portal (${p.portalAfter} portal blocks)` : p.portalBefore ? `the portal was already lit (${p.portalAfter} portal blocks)` : 'the portal did not light';
