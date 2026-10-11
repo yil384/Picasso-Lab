@@ -275,6 +275,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (dimension && dim !== dimension) {
       event('dimension', { from: dimension, to: dim, pos: s.position ? floorPos(s.position) : null });
       care?.arrived(dim, s.position ? floorPos(s.position) : null);
+      // the blocks seen around belong to the dimension left: scanned again here (the portal back among them)
+      scan = { blocks: [], at: 0, from: null };
+      setTimeout(() => { scanBlocks(true); }, 2_000).unref?.();
     }
     dimension = dim;
     const death = s.lastDeath ? JSON.stringify(s.lastDeath) : null;
@@ -293,7 +296,6 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         const data = await rpc('view_blocks', { find: { block_names: names, limit: 1 } }, 20_000);
         if (Array.isArray(data?.result?.blocks?.find)) found.push(...data.result.blocks.find);
       }
-      if (!found.length) return;
       scan = {
         at: Date.now(),
         from: latest.position,
@@ -542,7 +544,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           const call = calls[i];
           if (ctl.stopped) break;
           ctl.actionId = null;
-          const out = await act(call, deadline, ctl);
+          let out = await act(call, deadline, ctl);
+          // a call with alternatives (a way out of a portal: one side, else the other): the next when this one failed
+          for (const alt of call.alts ?? []) {
+            if (ctl.stopped || (!out.error && out.output?.result?.status === 'succeeded')) break;
+            out = await act({ ...call, args: alt }, deadline, ctl);
+          }
           if (out.error) {
             own = null;
             const down = /\[(RUNTIME_EXITED|RUNTIME_UNRESPONSIVE)\]/.exec(out.error)?.[1] ?? (crashes !== crashesBefore ? 'its host crashed' : null);
@@ -582,6 +589,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           }
           if (res.ok && call.tool === 'place_block' && CONTAINER_BLOCKS.has(call.args.block_name)) containers.set(keyOf(call.args), gameId);
           // a craft the body added on its own (a spare tool, a new one) is told by its own line, not again
+          if (!res.ok && call.optional) continue; // a try that may fail (a way out of a portal): the next call goes on
           if (!(res.ok && call.quiet)) parts.push(res);
           if (!res.ok) break;
         }

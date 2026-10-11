@@ -89,8 +89,8 @@ export const EXTRA_DEFS = Object.freeze([
     'Make a shield and put it in your off-hand: from 1 iron ingot you carry, else raw iron smelted, else 1 iron ore mined (stone pickaxe) and smelted; planks from your wood. Your fight reflex raises it against arrows.',
     obj({}, [])],
   ['portal',
-    'A Nether portal. Build the frame first: build nether_portal from 12 obsidian (or place obsidian yourself, 4 wide and 5 tall, corners optional). light: light the frame with flint_and_steel you carry; enter: step into the lit portal and wait to arrive (in the Nether, enter again to come back). pos: a frame block or an inside cell; without pos, the frame your last build nether_portal made. Entering the Nether asks for 16 food carried unless low_supplies is true.',
-    obj({ action: pick('light or enter', ['light', 'enter']), pos: POS, low_supplies: { type: 'boolean', description: 'true: enter with less than 16 food' } }, ['action'])],
+    'A Nether portal. Build the frame first: build nether_portal from 12 obsidian (or place obsidian yourself, 4 wide and 5 tall, corners optional). light: light the frame with flint_and_steel you carry; enter: step into the lit portal and wait to arrive (in the Nether, enter again to come back). pos: a frame block or an inside cell; without pos, the frame your last build nether_portal made. Take food along (the Nether has little); it enters with whatever it carries.',
+    obj({ action: pick('light or enter', ['light', 'enter']), pos: POS, low_supplies: { type: 'boolean', description: 'kept for old clients; the body always enters' } }, ['action'])],
   ['armor',
     'Craft the best armor you can pay for (iron ingots, leather, gold or diamonds) and put it on, with any better piece or shield you carry.',
     obj({}, [])],
@@ -334,7 +334,15 @@ export function toTheirs(skill, args, ctx) {
         if (!carries('flint_and_steel')) return refuse('lighting a portal needs flint_and_steel (craft it from 1 iron_ingot and 1 flint; gravel drops flint now and then)', 'NEED_ITEMS');
         return { calls: [{ tool: 'activate_portal', args: { x: p.x, y: p.y, z: p.z } }] };
       }
-      return { calls: [{ tool: 'enter_nether_portal', args: { x: p.x, y: p.y, z: p.z, ...(args.low_supplies ? { allow_low_supplies: true } : {}) } }] };
+      // their supply check asks for 16 food and 32 arrows, and no skill here gives arrows: the player decides what to
+      // take along (the advice says what is carried), the body never stops at the portal for it
+      const enter = { tool: 'enter_nether_portal', args: { x: p.x, y: p.y, z: p.z, allow_low_supplies: true } };
+      // standing in the portal it just came through: out of the opening first (their entry refuses a bot still inside,
+      // and waiting inside keeps the cooldown going; a local run, 2026-10-11), a few blocks to one side or the other
+      const inside = ctx.position && Math.hypot(ctx.position.x - (p.x + 0.5), ctx.position.z - (p.z + 0.5)) <= 2.5 && Math.abs(ctx.position.y - p.y) <= 3;
+      if (!inside) return { calls: [enter] };
+      const [first, ...alts] = [[3, 0], [-3, 0], [0, 3], [0, -3]].map(([dx, dz]) => ({ x: p.x + dx, y: p.y, z: p.z + dz }));
+      return { calls: [{ tool: 'navigate', args: first, alts, optional: true, quiet: true }, enter], note: 'stepped out of the portal first' };
     }
     case 'shield': return { local: 'care', kind: 'shield', calls: [] };
     case 'policy': {
@@ -506,6 +514,16 @@ const materialOf = (args) => (args?.blocks ?? []).find((b) => b.block_name && b.
 
 /** What a settled action did, in our words: one or two plain sentences. call: our call of theirs ({tool, args}). */
 function describe(tool, r, call) {
+  // the portal: lit (how many portal blocks), entered (where it arrived)
+  if (tool === 'activate_portal' && r?.portal?.kind === 'nether') {
+    const p = r.portal;
+    return p.activated ? `lit the Nether portal (${p.portalAfter} portal blocks)` : p.portalBefore ? `the portal was already lit (${p.portalAfter} portal blocks)` : 'the portal did not light';
+  }
+  if (tool === 'enter_nether_portal') {
+    const at = r?.navigation?.final ?? r?.navigation?.end ?? null;
+    const dim = String(r?.dimension ?? r?.navigation?.dimension ?? '').replace(/^minecraft:/, '');
+    return `went through the portal${dim ? ` into the ${dim.replace(/^the_/, '')}` : ''}${at && Number.isFinite(at.x) ? ` at ${xyz(at)}` : ''}`;
+  }
   const c = r?.collected;
   if (c) return describeCollect(c, call?.args?.block_name ?? 'blocks');
   if (r?.structure) {

@@ -47,6 +47,7 @@ test('state: snapshot of the forest scene', () => {
   const text = renderState(s);
   assert.match(text, /^health 20\/20, food 20\/20$/m);
   assert.match(text, /^position 0 64 0 in the overworld, facing north$/m);
+  assert.match(renderState({ ...s, dimension: 'the_nether' }), /^position 0 64 0 in the Nether, facing north$/m);
   assert.match(text, /^time 1000: day/m);
   assert.match(text, /^holding: oak_planks$/m);
   assert.match(text, /^inventory: oak_planks 3, stick 2$/m);

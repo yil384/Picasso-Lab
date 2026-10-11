@@ -37,7 +37,7 @@ let s = '';
 let data = null;
 const inv = () => inventoryOf(s);
 const n = (item) => inv()[item] ?? 0;
-const dimension = () => /^position -?\d+ -?\d+ -?\d+ in the (\S+?),/m.exec(stateOf(s))?.[1] ?? null;
+const dimension = () => ({ Nether: 'the_nether', End: 'the_end' })[/^position -?\d+ -?\d+ -?\d+ in the (\S+?),/m.exec(stateOf(s))?.[1]] ?? /^position -?\d+ -?\d+ -?\d+ in the (\S+?),/m.exec(stateOf(s))?.[1] ?? null;
 const food = () => Number(/food (\d+)\/20/.exec(stateOf(s))?.[1] ?? 20);
 const time = () => Number(/^time (\d+):/m.exec(stateOf(s))?.[1] ?? 0);
 

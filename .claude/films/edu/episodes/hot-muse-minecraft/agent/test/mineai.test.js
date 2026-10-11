@@ -85,8 +85,16 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   // without pos: the frame the last build nether_portal made
   const portal = { frame: { x: 5, y: 63, z: 9 }, inside: { x: 6, y: 64, z: 9 } };
   assert.deepEqual(toTheirs('portal', { action: 'light' }, { ...ctx, inventory: { flint_and_steel: 1 }, portal }).calls[0].args, portal.frame);
-  assert.deepEqual(toTheirs('portal', { action: 'enter' }, { ...ctx, portal }).calls[0].args, portal.inside);
+  assert.deepEqual(toTheirs('portal', { action: 'enter' }, { ...ctx, portal }).calls[0].args, { ...portal.inside, allow_low_supplies: true });
+  assert.equal(fromTheirs('activate_portal', { result: { status: 'succeeded', portal: { kind: 'nether', portalBefore: 0, portalAfter: 6, activated: true, frame: {} } } }).result, 'lit the Nether portal (6 portal blocks)');
   assert.equal(toTheirs('portal', { action: 'enter' }, ctx).refused.code, 'BAD_ARGS');
+  // standing in the portal it came through: out of the opening first (one side, else another), then in again
+  const back = toTheirs('portal', { action: 'enter', pos: { x: 10, y: 70, z: 20 } }, { ...ctx, position: { x: 10.5, y: 70, z: 20.5 } });
+  assert.deepEqual(back.calls.map((c) => c.tool), ['navigate', 'enter_nether_portal']);
+  assert.deepEqual(back.calls[0].args, { x: 13, y: 70, z: 20 });
+  assert.equal(back.calls[0].alts.length, 3);
+  assert.equal(back.calls[0].optional, true);
+  assert.equal(toTheirs('portal', { action: 'enter', pos: { x: 10, y: 70, z: 20 } }, { ...ctx, position: { x: 30, y: 70, z: 20 } }).calls.length, 1);
   // obsidian and diamonds get longer than a collect's 3 minutes; other blocks keep it
   assert.equal(toTheirs('collect', { block: 'obsidian', n: 12 }, ctx).timeoutMs, 540_000);
   assert.equal(toTheirs('collect', { block: 'deepslate_diamond_ore', n: 3 }, ctx).timeoutMs, 330_000);
