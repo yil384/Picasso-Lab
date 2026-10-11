@@ -75,7 +75,7 @@ async function heed() {
     const p = positionOf(s);
     const surface = p && p.y > 55 && dimension() === 'overworld';
     const take = (a.kind === 'eat' && food() <= 12) || (a.kind === 'hunt' && food() <= 8) || a.kind === 'recover' || a.kind === 'tools'
-      || (a.kind === 'night' && surface) || a.kind === 'danger';
+      || (a.kind === 'night' && surface) || a.kind === 'danger' || a.kind === 'inventory';
     if (!take) continue;
     run.advice.push({ at: sec(), kind: a.kind, text: a.text, skill: a.hint.skill });
     say(`advice taken: ${a.text.slice(0, 140)} -> ${a.hint.skill}`);
@@ -104,7 +104,8 @@ try {
   if (r.isError) throw new Error(`start_game: ${r.text.slice(0, 200)}`);
   run.game = /game (g\w+)/.exec(r.text)?.[1] ?? null;
   if (/still joining/.test(r.text)) await call('get_state');
-  say(`game ${run.game} at ${JSON.stringify(positionOf(s))}, time ${time()}`);
+  const start = positionOf(s);
+  say(`game ${run.game} at ${JSON.stringify(start)}, time ${time()}`);
   const wood = woodOf(s);
 
   await phase('wooden pickaxe', 3, async () => {
@@ -148,11 +149,17 @@ try {
   }, async (i) => { if (i % 2) await along(i); });
   await phase('flint', 6, async () => {
     if (!n('flint')) await step('collect', { block: 'gravel', n: 10 });
+    // gravel that gave no flint only fills the inventory
+    if (n('gravel') && !n('flint')) await step('drop', { item: 'gravel', n: n('gravel') }, { quiet: true });
     return n('flint') > 0;
   }, async (i) => { if (i % 2) await along(i); });
-  await phase('flint and steel', 2, async () => (await step('craft', { item: 'flint_and_steel', n: 1 })).ok || n('flint_and_steel') > 0);
-  await phase('portal frame', 3, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async () => { const p = positionOf(s); if (p) await step('go_to', { x: p.x + 6, y: p.y, z: p.z }); });
-  await phase('portal lit', 3, async () => (await step('portal', { action: 'light' })).ok, async () => { await step('build', { blueprint: 'nether_portal', material: 'obsidian' }); });
+  await phase('flint and steel', 3, async () => (await step('craft', { item: 'flint_and_steel', n: 1 })).ok || n('flint_and_steel') > 0);
+  // the frame where it stands, else back up where the game began (open ground), else beside that
+  await phase('portal frame', 3, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async (i) => {
+    const p = i === 0 ? start : positionOf(s);
+    if (p) await step('go_to', { x: p.x + (i === 0 ? 0 : 6), y: p.y, z: p.z });
+  });
+  await phase('portal lit', 2, async () => (await step('portal', { action: 'light' })).ok);
   await phase('in the Nether', 2, async () => { await step('portal', { action: 'enter', low_supplies: true }); await call('get_state'); return dimension() === 'the_nether'; });
   if (dimension() === 'the_nether') {
     await call('get_state');

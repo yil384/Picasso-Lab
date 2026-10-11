@@ -430,6 +430,13 @@ export function shieldPath(inventory = {}, stacks = [], furnace = false) {
 
 /** Night falls this long (ticks) ahead: the advice warns from here on. */
 export const WARN_BEFORE_NIGHT = 2_700;
+/** Inventory slots (main and hotbar) and what to drop first when they are full, keeping some of each. */
+export const INVENTORY_SLOTS = 36;
+const JUNK = Object.freeze([
+  { item: 'gravel', keep: 0 }, { item: 'andesite', keep: 0 }, { item: 'diorite', keep: 0 }, { item: 'granite', keep: 0 },
+  { item: 'tuff', keep: 0 }, { item: 'rotten_flesh', keep: 0 }, { item: 'netherrack', keep: 16 }, { item: 'dirt', keep: 16 },
+  { item: 'cobbled_deepslate', keep: 32 }, { item: 'cobblestone', keep: 32 },
+]);
 /** Obsidian blocks the nether_portal blueprint takes. */
 export const PORTAL_OBSIDIAN = 12;
 /** At most this many advice items a reply. */
@@ -523,6 +530,13 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
     const spare = sparePlan(stacks, t.cls, canCraft);
     say('tools', `your ${t.name} has ${t.left} use${t.left === 1 ? '' : 's'} left (${Math.round((100 * t.left) / (t.max || 60))}%)${spare ? '' : '; you cannot craft another from what you carry'}`, spare ? { skill: 'craft', args: { item: spare.item, n: 1 } } : null);
     break;
+  }
+  // a full inventory: a craft, smelt or pickup has nowhere to put what it makes (a local run: gravel filled it and
+  // flint_and_steel could not be crafted); the cheapest stack to drop
+  const slots = stacks.filter((x) => x?.name && (!x.location || x.location === 'main' || x.location === 'hotbar')).length;
+  if (slots >= INVENTORY_SLOTS - 1) {
+    const junk = JUNK.map((j) => ({ ...j, have: inventory[j.item] ?? 0 })).find((j) => j.have > j.keep);
+    say('inventory', `your inventory is ${slots >= INVENTORY_SLOTS ? 'full' : 'almost full'} (${slots} of ${INVENTORY_SLOTS} slots): a craft, smelt or pickup needs room`, junk ? { skill: 'drop', args: { item: junk.item, n: junk.have - junk.keep } } : null);
   }
   // armor it could craft
   const pieces = armorPlan(inventory, stacks).filter((p) => canCraft(p.item));

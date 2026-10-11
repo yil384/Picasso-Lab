@@ -87,6 +87,13 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   assert.deepEqual(toTheirs('portal', { action: 'light' }, { ...ctx, inventory: { flint_and_steel: 1 }, portal }).calls[0].args, portal.frame);
   assert.deepEqual(toTheirs('portal', { action: 'enter' }, { ...ctx, portal }).calls[0].args, portal.inside);
   assert.equal(toTheirs('portal', { action: 'enter' }, ctx).refused.code, 'BAD_ARGS');
+  // obsidian and diamonds get longer than a collect's 3 minutes; other blocks keep it
+  assert.equal(toTheirs('collect', { block: 'obsidian', n: 12 }, ctx).timeoutMs, 540_000);
+  assert.equal(toTheirs('collect', { block: 'deepslate_diamond_ore', n: 3 }, ctx).timeoutMs, 330_000);
+  assert.equal(toTheirs('collect', { block: 'stone', n: 12 }, ctx).timeoutMs, undefined);
+  // their failures in our codes: lava in the way, no room in the inventory
+  assert.equal(fromTheirs('collect_block', { result: { status: 'failed', error: '[MINE_TARGET_PROHIBITED] 2 lava faces, 0 blocks available for placement' } }).code, 'LAVA');
+  assert.equal(fromTheirs('craft_item', { result: { status: 'failed', error: 'Mineflayer stopped while executing the selected recipe batch: This crafting execution needs inventory room to store 1 flint_and_steel' } }).code, 'INVENTORY_FULL');
   assert.deepEqual(toTheirs('portal', { action: 'enter', pos: { x: 1, y: 61, z: 2 }, low_supplies: true }, ctx).calls[0], { tool: 'enter_nether_portal', args: { x: 1, y: 61, z: 2, allow_low_supplies: true } });
 });
 

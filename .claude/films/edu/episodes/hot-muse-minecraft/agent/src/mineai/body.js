@@ -49,6 +49,7 @@ const HEADINGS = ['north', 'east', 'south', 'west'];
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const floorPos = (p) => ({ x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) });
 
 /** {name: count} of the stacks carried in the main inventory and hotbar (not worn, not the off-hand). */
@@ -526,7 +527,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       else if (plan.refused) r = plan.refused;
       else if (!plan.calls?.length && plan.care) r = { ok: true, result: careText.replace(/^; /, ''), code: null };
       else {
-        const deadline = t0 + (timeouts[tool] ?? 60_000);
+        const deadline = t0 + (plan.timeoutMs ?? timeouts[tool] ?? 60_000);
         ctl.attack = plan.attack ?? null;
         const parts = [];
         let rescued = false;
@@ -569,6 +570,15 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             const got = Number(out.output?.result?.hunt?.gained) || 0;
             res = { ok: true, result: `fought the ${plan.attack} and killed it${got > 0 ? `; picked up ${got} ${out.output.result.hunt.drop ?? ''}`.trimEnd() : ''}`, code: null };
             rescued = true;
+          }
+          // a Nether portal frame is a frame only when every frame cell is obsidian and the inside is air: a build that kept
+          // solid ground in a frame cell or left water inside "succeeded" as a build, never as a portal (a local run in
+          // deepslate, 2026-10-11: 2 frame cells kept the deepslate, and the portal would not light)
+          if (res.ok && call.tool === 'build_structure' && plan.build?.blueprint === 'nether_portal') {
+            const st = out.output?.result?.structure ?? {};
+            const kept = (st.kept ?? []).reduce((k, x) => k + (Number(x.count) || 0), 0);
+            const wet = Number(st.water) || 0;
+            if (kept || wet) res = { ok: false, code: 'FAILED', result: `${res.result}; not a portal frame: ${[kept ? `${plural(kept, 'frame cell')} kept ${(st.kept ?? []).map((x) => x.block).join(' and ')} instead of obsidian` : null, wet ? `${plural(wet, 'inside cell')} ${wet === 1 ? 'is' : 'are'} water` : null].filter(Boolean).join(', ')}. Build it on open, dry ground (go_to a spot with flat ground and open sky), or place obsidian into those cells` };
           }
           if (res.ok && call.tool === 'place_block' && CONTAINER_BLOCKS.has(call.args.block_name)) containers.set(keyOf(call.args), gameId);
           // a craft the body added on its own (a spare tool, a new one) is told by its own line, not again

@@ -195,6 +195,13 @@ export function blueprintCells(blueprint, material, feet, headingDegrees) {
   return { cells, facing: f.name };
 }
 
+/** Collects that take longer than the skill's limit: a base and a time per block (ms). */
+export const SLOW_COLLECT = Object.freeze({
+  obsidian: { base: 180_000, each: 30_000 },
+  diamond_ore: { base: 240_000, each: 30_000 },
+  deepslate_diamond_ore: { base: 240_000, each: 30_000 },
+});
+
 /** The block collect mines for an item that is another block's drop: cobblestone comes from stone. */
 export const COLLECT_FROM = Object.freeze({ cobblestone: 'stone', cobbled_deepslate: 'deepslate' });
 
@@ -233,7 +240,11 @@ export function toTheirs(skill, args, ctx) {
       const block = COLLECT_FROM[args.block] ?? args.block;
       const calls = [];
       for (let left = args.n; left > 0; left -= 32) calls.push({ tool: 'collect_block', args: { block_name: block, count: Math.min(32, left) } });
-      return { calls };
+      // obsidian is made first (a walk to lava, a pour, the water scooped back) and takes about 9.4 s a block with a
+      // diamond pickaxe; diamonds lie deep: both get longer than a collect's 3 minutes (a local run, 2026-10-11: 12
+      // obsidian stopped twice at 180 s with 1 and 7 mined)
+      const slow = SLOW_COLLECT[block];
+      return { calls, ...(slow ? { timeoutMs: Math.min(900_000, slow.base + slow.each * args.n) } : {}) };
     }
     case 'craft':
     case 'craft_batch': {
@@ -573,6 +584,8 @@ export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   if (code === 'FAILED' && /\b(does not carry|not carried|no \w+ carried|short of \d+)\b/i.test(why)) code = 'NEED_ITEMS';
   // lava in the way (a target next to lava it cannot close off, a route through it): a plain code of its own
   if (code === 'FAILED' && /\blava\b/i.test(why)) code = 'LAVA';
+  // no room for what a craft, smelt or pickup makes (a local run: a full inventory of gravel stopped flint_and_steel)
+  if (code === 'FAILED' && /\binventory room\b|\binventory is full\b|\bno (free|empty) (inventory )?slot/i.test(why)) code = 'INVENTORY_FULL';
   // partial counts as failed: the steps queued after it were planned on all of it
   return { ok: false, result: `${status === 'partial' ? 'only partly done' : 'failed'}: ${why}${said ? ` (${said})` : ''}${extra}`, code, theirs };
 }
