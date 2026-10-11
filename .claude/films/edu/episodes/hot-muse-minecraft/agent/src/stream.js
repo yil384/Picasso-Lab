@@ -137,13 +137,17 @@ export function ffmpegArgs(o) {
   return [
     '-hide_banner', '-nostdin', '-loglevel', 'warning', '-nostats', ...(o.progress ? ['-progress', 'pipe:1', '-stats_period', '5'] : []),
     ...video,
-    // the panel image, read again a few times a second in real time (it is replaced by renaming, never half written)
-    ...(o.panel ? ['-thread_queue_size', '8', '-re', '-f', 'image2', '-loop', '1', '-framerate', String(o.panel.fps ?? 4), '-i', String(o.panel.file)] : []),
+    // the panel image, read again 4 times a second (it is replaced by renaming, never half written). Not paced with -re:
+    // ffmpeg 5.1 then held the whole picture back to the panel's pace (0.72x of real time on picasso, 2026-10-11); a
+    // queue of 2 frames lets it read at most about half a second ahead. -reinit_filter 0: ffmpeg 5.1 rebuilt the graph
+    // when a panel frame differed in any detail, and failed ("Error reinitializing filters!", staging 2026-10-11)
+    ...(o.panel ? ['-thread_queue_size', '2', '-reinit_filter', '0', '-f', 'image2', '-loop', '1', '-framerate', String(o.panel.fps ?? 4), '-i', String(o.panel.file)] : []),
     '-re', '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
     ...(o.panel
-      // both pictures start at time 0 (x11grab counts from the wall clock), so the overlay never waits on the panel
-      ? ['-filter_complex', `[0:v]setpts=PTS-STARTPTS,scale=${width}:${gameH}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},pad=${width}:${height}:0:0:color=0x0B0D0F[top];`
-        + `[1:v]setpts=PTS-STARTPTS,scale=${width}:${height - gameH}[pan];[top][pan]overlay=0:${gameH},format=yuv420p[v]`, '-map', '[v]', '-map', '2:a']
+      // both pictures start at time 0 (x11grab counts from the wall clock) and are stacked as plain YUV (a copy, no
+      // blending: the panel is opaque)
+      ? ['-filter_complex', `[0:v]setpts=PTS-STARTPTS,scale=${width}:${gameH}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p[top];`
+        + `[1:v]setpts=PTS-STARTPTS,scale=${width}:${height - gameH},format=yuv420p[pan];[top][pan]vstack=inputs=2[v]`, '-map', '[v]', '-map', '2:a']
       : ['-map', '0:v', '-map', '1:a', '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p`]),
     '-c:v', 'libx264', '-preset', o.preset ?? STREAM_DEFAULTS.preset, '-tune', 'zerolatency', '-profile:v', 'high',
     '-threads', String(o.threads ?? STREAM_DEFAULTS.threads),
