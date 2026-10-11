@@ -163,7 +163,7 @@ test('craft_batch: an MCP-only skill (not in the brain\'s tools), a list of 1 to
     [{ items: [] }, /needs at least 1 entries/],
     [{ items: Array(13).fill({ item: 'stick', n: 1 }) }, /more than 12 entries/],
     [{ items: [{ item: 'stick' }] }, /items\[0\]\.n is required/],
-    [{ items: [{ item: 'diamond_sword', n: 1 }] }, /items\[0\]\.item "diamond_sword" is not allowed/],
+    [{ items: [{ item: 'netherite_sword', n: 1 }] }, /items\[0\]\.item "netherite_sword" is not allowed/],
     [{ items: [{ item: 'stick', n: 1, fast: true }] }, /items\[0\]\.fast is not allowed/],
     [{ items: 'stick' }, /items must be a list/],
   ];

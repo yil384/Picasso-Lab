@@ -29,7 +29,13 @@ The body runs in advise mode (`MINEAI_CARE=advise`, the default since the advise
    printf 'STAGING_LEASE_MS=7200000\n' >> .env
    sh recreate.sh staging        # idle check first; recreates the agent (and the camera with it)
    ```
-2. Check that `https://play-staging.picasso-lab.com/` shows `Bots in use: 0 of 8`. Note the clock time.
+   On production instead (the owner's run on play.picasso-lab.com): the same line as `PROD_LEASE_MS`, while production
+   is idle, and removed again afterwards (see "Afterwards"). Production's lease must never stay at 2 hours:
+   ```
+   cd ~/workspace/muse-minecraft/app/deploy && printf 'PROD_LEASE_MS=7200000\n' >> .env && sh recreate.sh production
+   ```
+2. Check that `https://play-staging.picasso-lab.com/` shows `Bots in use: 0 of 8` (production:
+   `https://play.picasso-lab.com/`). Note the clock time.
 3. A game ends after 5 minutes without a call. Answer any approval question from muse.ai within 5 minutes.
 
 ## The prompt (paste into a new muse.ai chat)
@@ -44,10 +50,15 @@ for a Minecraft server to this URL, or build a new one). Use only this MCP serve
 Call start_game with adult: true. The game lasts up to 2 hours. Then, without asking me anything, play toward these
 goals in order:
   1. an iron pickaxe;
-  2. diamonds, then a diamond pickaxe;
-  3. the Nether: obsidian (pour water from a bucket onto lava, then mine the obsidian with the diamond pickaxe),
-     flint and steel, a portal frame (place obsidian, 4 wide and 5 tall, corners optional), then the portal skill to
-     light it and enter.
+  2. diamonds (collect deepslate_diamond_ore or diamond_ore with the iron pickaxe; they lie deep, most near
+     y -59), then a diamond pickaxe;
+  3. the Nether:
+     - 14 obsidian (12 for the frame, 2 for uneven ground): carry a water bucket (craft a bucket, then bucket fill water) and some cobblestone, then
+       collect obsidian with the diamond pickaxe; the body pours the water onto lava itself and mines what forms;
+     - flint (collect gravel; it drops flint now and then) and flint_and_steel;
+     - the frame: build nether_portal from obsidian, on open dry ground;
+     - the portal skill to light it and to enter; in the Nether, look around, then enter the portal again to come
+       back.
 
 You make every plan. The body does not look after itself: it only fights back or flees when attacked, eats when
 starving, and gets itself out of water, fire, lava or a fall. Every reply has a "Body advice" block, for example
@@ -109,4 +120,8 @@ its own account. To set each decision against what happened, match it to the ste
 Put the lease back:
 ```
 cd ~/workspace/muse-staging/app/deploy && sed -i '/^STAGING_LEASE_MS=/d' .env && sh recreate.sh staging
+```
+On production, as soon as the run's game has ended (`recreate.sh` waits until production is idle):
+```
+cd ~/workspace/muse-minecraft/app/deploy && sed -i '/^PROD_LEASE_MS=/d' .env && sh recreate.sh production
 ```

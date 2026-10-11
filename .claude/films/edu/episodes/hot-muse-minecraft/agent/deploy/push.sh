@@ -94,7 +94,19 @@ prod() {
   grep -q "^WEB_PROXY_SECRET=" .env || echo "note: deploy/.env has no WEB_PROXY_SECRET: forwarded headers are believed from any local peer on 7850 (README, Deploy on picasso)"'
 }
 
+# free disk on picasso before anything builds (the lab shares the disk; a world grows with every chunk explored):
+# at least MIN_FREE_GB (default 10) where the stacks live
+disk() {
+  local min=${MIN_FREE_GB:-10}
+  local free
+  free=$(x ssh picasso 'df -Pk ~/workspace | awk "NR==2 {print int(\$4 / 1048576)}"') || return 1
+  (( DRY )) && return 0
+  if (( free < min )); then print -u2 "push: only ${free} GB free on picasso's ~/workspace (at least ${min} GB, MIN_FREE_GB): nothing was deployed"; return 1; fi
+  print "push: ${free} GB free on picasso"
+}
+
 if (( CHECK_ONLY )); then check; exit; fi
+disk || exit 1
 before=$(fingerprint)
 staging
 if ! check; then print -u2 "push: the staging checks failed; production was not touched"; exit 1; fi
