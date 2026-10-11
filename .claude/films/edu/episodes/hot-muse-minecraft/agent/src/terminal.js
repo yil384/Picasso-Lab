@@ -120,6 +120,19 @@ export function createTermFeed(o) {
     if (!g) { g = { seen: new Set(), own: -1, advice: '', got: new Set(), startedAt: now(), state: null, dim: null }; games.set(s.id, g); }
     return g;
   };
+  /** Health, food and the clock as the body knows them now, without a reply: the bot's, else the body's snapshot. */
+  const liveState = (s) => {
+    if (s?.status && s.status !== 'ready') return null;
+    try {
+      const bot = s.body?.bot;
+      if (bot?.entity && Number.isFinite(bot.health)) return { health: bot.health, food: bot.food, ...(Number.isFinite(bot.time?.timeOfDay) ? { time: bot.time.timeOfDay } : {}) };
+    } catch { /* not known */ }
+    try {
+      const snap = s.body?.snapshot?.();
+      if (Number.isFinite(snap?.health) && snap.health > 0) return { health: snap.health, food: snap.food, ...(Number.isFinite(snap.timeOfDay) ? { time: snap.timeOfDay } : {}) };
+    } catch { /* not known */ }
+    return null;
+  };
   /** The bot's dimension: Mine AI's status (its snapshot), else mineflayer's. */
   const dimOf = (s) => {
     let d = null;
@@ -128,7 +141,9 @@ export function createTermFeed(o) {
   };
   const statusOf = (s, structured) => {
     const g = of(s);
-    if (structured?.state && !structured.state.joining) g.state = structured.state; // the last state a reply carried
+    // the state a reply carried, else the body's own now (start_game's reply carries none), else the last one known
+    if (structured?.state && !structured.state.joining) g.state = structured.state;
+    else g.state = liveState(s) ?? g.state;
     let attribution = null;
     try { attribution = typeof s.body?.attribution === 'function' ? s.body.attribution() : null; } catch { /* none */ }
     return statusText(g.state ? { ...g.state, dimension: g.dim ?? undefined } : null, attribution);

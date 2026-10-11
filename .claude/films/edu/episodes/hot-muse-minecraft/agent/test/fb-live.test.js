@@ -55,6 +55,8 @@ function stubStreams(fake, { publish = true } = {}) {
       async stop(why) { if (st.state === 'stopped') return; st.calls.push('stop'); st.state = 'stopped'; done({ ok: true, reason: why }); },
       async follow(p) { st.calls.push(`follow ${p}`); st.player = p; },
       caption(t) { st.captions.push(t); },
+      terms: [],
+      term(u) { st.terms.push(u); },
       pose() {},
       async stats() { return { state: st.state }; },
       fail(reason) { st.state = 'failed'; done({ ok: false, reason }); },
@@ -248,6 +250,36 @@ test('channel: several games, one camera: it films the game whose live_view came
   assert.equal(streams.made.length, 1);
   assert.ok(rows.filter((r) => r.k === 'fb_camera').length >= 5);
   noSecrets(fake, rows);
+});
+
+test('channel: the terminal of every game is kept; a stream that starts for a game, or a camera that moves to it, begins with its start_game, its last lines and its status', async (t) => {
+  const { streams, ch } = await channelOn(t);
+  ch.term('g1', { lines: [{ k: 'call', t: '> start_game' }], status: 'HP 20/20  FOOD 20/20  DAY 06:00' }); // before the channel has it
+  ch.start('g1', { player: 'Muse_aaaa' });
+  for (let i = 0; i < 30; i++) ch.term('g1', { lines: [{ k: 'ok', t: `line ${i}` }], status: i === 29 ? 'HP 18/20  FOOD 17/20  DAY 07:00' : '' });
+  ch.start('g2', { player: 'Muse_bbbb' });
+  ch.term('g2', { lines: [{ k: 'call', t: '> start_game' }, { k: 'advice', t: 'advice: night in 45 s' }], status: 'HP 20/20  FOOD 20/20  DAY 12:00' });
+  ch.term('g2', { lines: [{ k: 'call', t: '> live_view' }] });
+  ch.focus('g1');
+  await until(() => ch.live().state === 'live');
+  const s = streams.made[0];
+  assert.deepEqual(s.terms[0].lines.map((l) => l.t), ['> start_game', '...', ...Array.from({ length: 20 }, (_, i) => `line ${i + 10}`)]);
+  assert.equal(s.terms[0].status, 'HP 18/20  FOOD 17/20  DAY 07:00', 'never an empty status bar');
+  ch.term('g1', { lines: [{ k: 'ok', t: 'new' }] });
+  ch.term('g2', { lines: [{ k: 'ok', t: 'off camera' }] });
+  assert.deepEqual(s.terms.at(-1).lines, [{ k: 'ok', t: 'new' }], 'the game on camera: its new lines only');
+  const before = s.terms.length;
+  ch.focus('g2');
+  await until(() => s.calls.at(-1) === 'follow Muse_bbbb');
+  assert.equal(s.terms.length, before + 1);
+  assert.deepEqual(s.terms.at(-1).lines.map((l) => l.t), ['> start_game', 'advice: night in 45 s', '> live_view', 'off camera']);
+  assert.equal(s.terms.at(-1).status, 'HP 20/20  FOOD 20/20  DAY 12:00');
+  await ch.stop('g2');
+  await until(() => s.calls.at(-1) === 'follow Muse_aaaa');
+  assert.deepEqual(s.terms.at(-1).lines.map((l) => l.t).slice(-2), ['line 29', 'new'], 'back to g1: its terminal again');
+  ch.term('g9', { lines: [{ k: 'call', t: 'x' }] });
+  ch.term('bad id!', { lines: [{ k: 'call', t: 'x' }] });
+  await ch.stop('g1');
 });
 
 test('channel: a failed create is tried again with a backoff; a failed stream or a live video Facebook ended is replaced while a game remains', async (t) => {

@@ -1063,10 +1063,17 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000, refresh
   const slots = new Map(); // id -> the output slot the service gave its stream
   const asks = new Map(); // id -> the PUT body (source, view, player), for focus and the refresh
   const channel = new Set(); // ids the service keeps on its live channel
+  const accepted = new Set(); // ids whose stream the service took (its PUT answered 200)
+  const early = new Map(); // id -> terminal updates from before that (start_game's can come first), kept to send then
+  const termChain = new Map(); // id -> its last terminal POST: each waits for the one before, so lines stay in order
   const event = (kind, data) => { try { log?.event(kind, data); } catch { /* best effort */ } };
   const call = (method, p, body) => fetch(`${base}${p}`, {
     method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs),
   }).then(async (r) => ({ status: r.status, body: await r.json().catch(() => ({})) }));
+  const sendTerm = (id, u) => {
+    const next = (termChain.get(id) ?? Promise.resolve()).then(() => call('POST', `/streams/${encodeURIComponent(id)}/caption`, { term: u })).catch(() => {});
+    termChain.set(id, next);
+  };
   const api = {
     enabled: true,
     start(id, { source, body, player } = {}) {
@@ -1080,6 +1087,8 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000, refresh
         if (r.status !== 200) { event('stream_skipped', { session: id, reason: clip(r.body?.error ?? `HTTP ${r.status}`) }); api.forget(id); return; }
         if (live.has(id) && Number.isInteger(r.body?.slot)) slots.set(id, r.body.slot);
         if (live.has(id) && r.body?.channel) channel.add(id);
+        if (live.has(id)) { accepted.add(id); for (const u of early.get(id) ?? []) sendTerm(id, u); }
+        early.delete(id);
       }, (err) => { event('stream_error', { session: id, message: `stream service: ${clip(err?.message ?? err)}` }); api.forget(id); });
       if (typeof body?.on === 'function') {
         try {
@@ -1095,6 +1104,9 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000, refresh
       slots.delete(id);
       asks.delete(id);
       channel.delete(id);
+      accepted.delete(id);
+      early.delete(id);
+      termChain.delete(id);
     },
     /** live_view asked for this game: the channel's camera films it from now on. The channel's state, or null. */
     async focus(id) {
@@ -1114,9 +1126,19 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000, refresh
     caption(id, text, pose = null) {
       if (live.has(id)) call('POST', `/streams/${encodeURIComponent(id)}/caption`, { text: cleanCaption(text), pose }).catch(() => {});
     },
-    /** The terminal under the video: the service draws it for the game on camera only. */
+    /**
+     * The terminal under the video (the service keeps it per game and draws it for the game on camera). Before the
+     * service took the game's stream, the updates wait here (the first and the last 7 of at most 16 games).
+     */
     term(id, u) {
-      if (live.has(id)) call('POST', `/streams/${encodeURIComponent(id)}/caption`, { term: u }).catch(() => {});
+      if (accepted.has(id)) { sendTerm(id, u); return; }
+      if (!early.has(id)) {
+        if (early.size >= 16) early.delete(early.keys().next().value);
+        early.set(id, []);
+      }
+      const q = early.get(id);
+      q.push(u);
+      if (q.length > 8) q.splice(1, 1);
     },
     has: (id) => live.has(id),
     slot: (id) => (live.has(id) ? slots.get(id) ?? null : null),
