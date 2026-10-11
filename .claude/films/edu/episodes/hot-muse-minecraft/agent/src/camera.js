@@ -207,8 +207,7 @@ export function consoleCommand(file, line) {
  * The rest is the Paper datapack's (deploy/paper-datapack/muse_cam), every tick: in the third-person view (CAMERA_VIEW
  * third, the default) the camera rides an invisible display entity kept over the bot's right shoulder, pulled in when
  * a wall is in the way, and moved outside to look at the bot's shelter while it is enclosed; in first person it rides
- * the bot's head, except while the bot is enclosed. Night vision is given again whenever it is gone, and taken off
- * in the Nether (it turns the Nether's fog into a red wall).
+ * the bot's head, except while the bot is enclosed. Night vision is given again whenever it is gone.
  */
 export const followCommands = (camera, player, view = 'third') => [
   [

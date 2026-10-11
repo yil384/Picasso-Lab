@@ -9,3 +9,5 @@ tag @a[tag=muse_cam] remove muse_cam_ineye
 tag @a[tag=muse_cam] remove muse_cam_inhead
 execute as @a[tag=muse_cam] at @a[tag=muse_cam_target,limit=1] run tp @s ~ ~2 ~
 scoreboard players set #cd muse_cam_cd 40
+# the ride again from scratch a few times while the client loads the other dimension (muse_cam:reride)
+scoreboard players set #rr muse_cam_rr 0
