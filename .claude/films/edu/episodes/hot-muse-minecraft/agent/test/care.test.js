@@ -500,7 +500,7 @@ test('advise: the facts and the skill that would do it, most urgent first; nothi
   // night in the open: the shelter skill; with a bed: sleep; inside its shelter: nothing
   const night = situation({ clock: { timeOfDay: 14000 }, nearby: { mobs: [{ name: 'zombie', kind: 'hostile', nearest: { distance: 9 } }] } });
   const n = advise(night, { ...base, inventory: { cobblestone: 20 }, stacks: [stack('stone_pickaxe', 1, 'hand')] });
-  assert.equal(n[0].text, 'night (time 14000): you stand in the open, 1 hostile mob within 16 blocks, no shield; 20 blocks for a shelter');
+  assert.equal(n[0].text, 'night (time 14000): no closed shelter around you, 1 hostile mob within 16 blocks, no shield; 20 blocks for a shelter');
   assert.deepEqual(n[0].hint, { skill: 'shelter', args: {} });
   assert.deepEqual(advise(night, { ...base, inventory: { red_bed: 1 } })[0].hint, { skill: 'sleep', args: {} });
   const inside = { cool: {}, night: 1, shelter: { feet: { x: 10, y: 64, z: -4 }, night: 1 } };
@@ -566,7 +566,7 @@ test('advise in the body: the reflexes set as the knobs say (eat starving), attr
     r = await c.callTool({ name: 'play', arguments: { skill: 'say', args: { text: 'hi' } } });
     r = await c.callTool({ name: 'get_state', arguments: {} });
     const t = r.content.map((x) => x.text).join('\n');
-    assert.match(t, /Body advice \(the body will not do these by itself; your call\):\n- night \(time 15000\): you stand in the open.* \(to do it: shelter \{\}\)/);
+    assert.match(t, /Body advice \(the body will not do these by itself; your call\):\n- night \(time 15000\): no closed shelter around you.* \(to do it: shelter \{\}\)/);
     assert.equal(r.structuredContent.advice[0].hint.skill, 'shelter');
     assert.match(t, /This game: 1 action by Muse, 0 reflexes \(100% Muse\)\.$/);
     assert.deepEqual(r.structuredContent.attribution, { muse: 1, reflex: 0, care: 0, musePct: 100 });
@@ -588,4 +588,31 @@ test('advise in the body: the reflexes set as the knobs say (eat starving), attr
 test('advise: MINEAI_CARE is advise by default; full and off, and the old true and false, still work', () => {
   const care = (v) => loadConfig({ MODEL_API_KEY: '', ...(v === undefined ? {} : { MINEAI_CARE: v }) }).mineai.care;
   assert.deepEqual([care(undefined), care('advise'), care('full'), care('off'), care('true'), care('false')], ['advise', 'advise', 'full', 'off', 'full', 'off']);
+});
+
+test('advise on the way to the Nether: what the frame still needs, a death in lava or in the Nether, the way back', () => {
+  const base = { now: NOW, memory: { cool: {}, night: 0 }, canCraft: () => false };
+  const shield = stack('shield', 1, 'off-hand');
+  const portal = (inventory, stacks = [shield]) => advise(situation(), { ...base, inventory, stacks }).find((a) => a.kind === 'portal');
+  assert.equal(portal({}), undefined, 'no obsidian: nothing about portals');
+  assert.equal(portal({ obsidian: 4 }).text, 'you carry 4 obsidian; a portal frame (build nether_portal) takes 12; collecting more needs a diamond pickaxe, a water bucket (bucket fill water), cobblestone to close off lava');
+  assert.equal(portal({ obsidian: 4 }).hint, undefined);
+  assert.deepEqual(portal({ obsidian: 4, water_bucket: 1, cobblestone: 20 }, [shield, stack('diamond_pickaxe', 1, 'hand')]).hint, { skill: 'collect', args: { block: 'obsidian', n: 8 } });
+  assert.deepEqual(portal({ obsidian: 12 }).hint, { skill: 'collect', args: { block: 'gravel', n: 10 } });
+  assert.deepEqual(portal({ obsidian: 12, flint: 1, iron_ingot: 2 }).hint, { skill: 'craft', args: { item: 'flint_and_steel', n: 1 } });
+  assert.deepEqual(portal({ obsidian: 12, flint_and_steel: 1 }).hint, { skill: 'build', args: { blueprint: 'nether_portal', material: 'obsidian' } });
+  assert.equal(advise(situation(), { ...base, memory: { portalBuilt: true }, inventory: { obsidian: 2 }, stacks: [shield] }).find((a) => a.kind === 'portal'), undefined, 'the frame stands');
+  // a death in lava: the items burned, no hint to walk back into it
+  const lava = { position: { x: 5, y: -40, z: 7 }, dimension: 'overworld', observedAt: new Date(NOW - 20_000).toISOString(), cause: 'Tst_x tried to swim in lava' };
+  const l = advise(situation({ lastDeath: lava }), { ...base, stacks: [shield] })[0];
+  assert.match(l.text, /^you died \(tried to swim in lava\) at 5 -40 7 20 s ago .*; the items that fell into the lava or fire burned, and going back means the same lava$/);
+  assert.equal(l.hint, undefined);
+  // a death in the Nether, the bot back in the Overworld: the items lie behind the portal
+  const nether = { position: { x: 1, y: 70, z: 2 }, dimension: 'the_nether', observedAt: new Date(NOW - 20_000).toISOString(), cause: 'Tst_x was slain by Piglin' };
+  assert.match(advise(situation({ lastDeath: nether }), { ...base, stacks: [shield] })[0].text, /^you died in the nether at 1 70 2 20 s ago; your items lie there .*behind the portal$/);
+  // in the Nether: no night or bed advice, the way back
+  const inNether = { ...situation({ clock: { timeOfDay: 15000 } }), dimension: 'the_nether' };
+  const nl = advise(inNether, { ...base, memory: { netherArrival: { x: 3, y: 70, z: 4 } }, inventory: { red_bed: 1 }, stacks: [shield] });
+  assert.deepEqual(nl.map((a) => a.kind), ['nether']);
+  assert.equal(nl[0].text, 'in the Nether: beds explode here and water boils away; the portal back is at 3 70 4 (portal enter with that pos)');
 });

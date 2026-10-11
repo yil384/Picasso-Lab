@@ -12,7 +12,7 @@ export const NOTABLE_BLOCKS = Object.freeze([
   'coal_ore', 'deepslate_coal_ore', 'iron_ore', 'deepslate_iron_ore', 'copper_ore', 'deepslate_copper_ore',
   'gold_ore', 'deepslate_gold_ore', 'diamond_ore', 'deepslate_diamond_ore',
   'stone', 'deepslate', 'sand', 'gravel', 'clay',
-  'crafting_table', 'furnace', 'chest', 'water', 'lava',
+  'crafting_table', 'furnace', 'chest', 'water', 'lava', 'obsidian', 'nether_portal',
 ]);
 
 const RADIUS = Number(process.env.SCAN_RADIUS) || 32;

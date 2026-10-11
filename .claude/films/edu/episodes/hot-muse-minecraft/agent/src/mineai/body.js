@@ -271,7 +271,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (holder !== reflexNow) { reflexNow = holder; emit('reflex', { name: holder }); }
     // a change of dimension and a death, in the game's log (docs/MUSE-LONG-RUN.md reads its milestones from there)
     const dim = String(s.dimension ?? 'overworld').replace(/^minecraft:/, '');
-    if (dimension && dim !== dimension) event('dimension', { from: dimension, to: dim, pos: s.position ? floorPos(s.position) : null });
+    if (dimension && dim !== dimension) {
+      event('dimension', { from: dimension, to: dim, pos: s.position ? floorPos(s.position) : null });
+      care?.arrived(dim, s.position ? floorPos(s.position) : null);
+    }
     dimension = dim;
     const death = s.lastDeath ? JSON.stringify(s.lastDeath) : null;
     if (death && death !== lastDeath) {
@@ -596,6 +599,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       const frame = built.cells.find((c) => c.block_name !== 'air');
       const inside = built.cells.find((c) => c.block_name === 'air');
       if (frame && inside) lastPortal = { frame: { x: frame.x, y: frame.y, z: frame.z }, inside: { x: inside.x, y: inside.y, z: inside.z } };
+      care?.portalBuilt();
     }
     if (yielded === 'recover') r = { ...r, result: `${r.result} (before it the body finished going back for the items it dropped when it died)` };
     const ms = Date.now() - t0;
