@@ -137,17 +137,17 @@ export function ffmpegArgs(o) {
   return [
     '-hide_banner', '-nostdin', '-loglevel', 'warning', '-nostats', ...(o.progress ? ['-progress', 'pipe:1', '-stats_period', '5'] : []),
     ...video,
-    // the panel image, read again 4 times a second (it is replaced by renaming, never half written). Not paced with -re:
-    // ffmpeg 5.1 then held the whole picture back to the panel's pace (0.72x of real time on picasso, 2026-10-11); a
-    // queue of 2 frames lets it read at most about half a second ahead. -reinit_filter 0: ffmpeg 5.1 rebuilt the graph
-    // when a panel frame differed in any detail, and failed ("Error reinitializing filters!", staging 2026-10-11)
-    ...(o.panel ? ['-thread_queue_size', '2', '-reinit_filter', '0', '-f', 'image2', '-loop', '1', '-framerate', String(o.panel.fps ?? 4), '-i', String(o.panel.file)] : []),
     '-re', '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
     ...(o.panel
-      // both pictures start at time 0 (x11grab counts from the wall clock) and are stacked as plain YUV (a copy, no
-      // blending: the panel is opaque)
-      ? ['-filter_complex', `[0:v]setpts=PTS-STARTPTS,scale=${width}:${gameH}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p[top];`
-        + `[1:v]setpts=PTS-STARTPTS,scale=${width}:${height - gameH},format=yuv420p[pan];[top][pan]vstack=inputs=2[v]`, '-map', '[v]', '-map', '2:a']
+      // the vertical layout in the same single-input chain as the landscape one (-vf): the game padded to the full
+      // frame, and the panel a movie source overlaid under it. Not -filter_complex with the panel as an input of its
+      // own: on the real camera display ffmpeg 5.1 configured that graph again at the first frame and failed ("Error
+      // reinitializing filters!", "Failed to configure output pad", staging 2026-10-11), and paced with -re it held
+      // the picture back (0.72x of real time). The movie source re-reads the file on every loop (it is replaced by
+      // renaming, never half written) and its frames are counted at 4 a second (setpts), so it is read 4 times a
+      // second; this chain ran at real time (0.996x) on the real display on picasso.
+      ? ['-map', '0:v', '-map', '1:a', '-vf', `[in]setpts=PTS-STARTPTS,scale=${width}:${gameH}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},pad=${width}:${height}:0:0:color=0x0B0D0F,format=yuv420p[top];`
+        + `movie=${filterPath(o.panel.file)}:f=image2:loop=0,setpts=N/(${o.panel.fps ?? 4}*TB),scale=${width}:${height - gameH},format=yuv420p[pan];[top][pan]overlay=0:${gameH}:format=yuv420[out]`]
       : ['-map', '0:v', '-map', '1:a', '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p`]),
     '-c:v', 'libx264', '-preset', o.preset ?? STREAM_DEFAULTS.preset, '-tune', 'zerolatency', '-profile:v', 'high',
     '-threads', String(o.threads ?? STREAM_DEFAULTS.threads),
