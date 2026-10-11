@@ -168,7 +168,7 @@ test('graph: the token only in the Authorization header; transient errors tried 
 
 test('channel: a game goes live when live_view asks for it (never because it started); the embed is Facebook\'s player for the video; the game\'s end ends the live video', async (t) => {
   const { fake, rows, streams, ch, dir } = await channelOn(t);
-  assert.deepEqual(ch.live(), { fb: true, state: 'off', game: null, videoUrl: null, embedUrl: null, liveSince: null, warning: null, games: 0, error: null, retryInS: null });
+  assert.deepEqual(ch.live(), { fb: true, state: 'off', game: null, videoUrl: null, embedUrl: null, liveSince: null, warning: null, aspect: '16/9', games: 0, error: null, retryInS: null });
   assert.deepEqual(ch.start('g1', { player: 'Muse_aaaa' }), { id: 'g1' });
   assert.equal(ch.start('g2', { player: 'not a name' }), null, 'a bad player name');
   await ch.settled();

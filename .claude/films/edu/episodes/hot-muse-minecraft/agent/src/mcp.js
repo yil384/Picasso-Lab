@@ -28,6 +28,7 @@ import { createQueue, isFinal, statusOf, stepName, stepNumber, QUEUE_MAX, REPEAT
 import { createPlanner, describeMissing } from './plan.js';
 import { registryFor } from './mc.js';
 import { liveViewHtml } from './live-page.js';
+import { createTermFeed } from './terminal.js';
 
 const CALL_MS = 45_000; // every reply within 45 s: MCP clients commonly give up after 60 s (a long skill keeps going)
 /** Of a call's time, what building the reply may take (the state text scans the blocks around: ~850 ms on Paper). */
@@ -624,10 +625,26 @@ export function createMcp(hooks) {
   const requestIdShape = z.string().min(1).max(64).optional().describe(`any id of yours for this call (1 to 64 characters): if the call is sent again with the same request_id (a retry after a broken connection), nothing runs twice and the reply carries the first call's results. Without one, the same call within ${REPEAT_MS / 1000} s counts as a repeat; give a new request_id to repeat a call on purpose`);
   const queueText = `Steps run in order in a queue: what does not finish within ${Math.round(callMs / 1000)} s keeps running after the reply (a later reply, or get_state, reports it); a step that fails cancels the steps queued after it (except eat's NOT_HUNGRY, which changes nothing: the steps after it still run); stop clears the queue. Before anything runs, a check simulates your inventory through the steps: if an ingredient, fuel, tool or station is missing, the call is refused with the list (code NEED_ITEMS) and nothing runs; planks, sticks, a crafting table or a furnace that can be made from what you carry are added as crafts. Replies carry structuredContent: each step's status (pending, confirmed, failed, cancelled) and code (${RESULT_CODES.join(', ')}), what changed, and a short state.`;
 
+  // the terminal under the live video (src/terminal.js): each call and what its reply says, for the camera service
+  const feed = typeof hooks.term === 'function' ? createTermFeed({ send: (id, u) => hooks.term(id, u), now }) : null;
+
   function build(entry) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
       instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot. The skills this server offers (${skills.names.length}): ${SKILL_NAMES_TEXT}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.${CARE_TEXT}`,
     });
+    if (feed) {
+      // every tool: the call goes to the terminal as it comes in, its results as the reply goes out (the replies are
+      // not changed); end_game's game is gone after it, so the one from before the call is used
+      const register = server.registerTool.bind(server);
+      server.registerTool = (name, def, handler) => register(name, def, async (args, extra) => {
+        const before = safely(() => game(entry), null);
+        if (before) feed.call(before, name, args);
+        const out = await handler(args, extra);
+        const s = safely(() => game(entry), null) ?? before;
+        if (s) feed.reply(s, name, args, out);
+        return out;
+      });
+    }
     const sid8 = () => String(entry.transport.sessionId ?? '').slice(0, 8);
     // a call the SDK's own input check refuses (an unknown skill, too many steps, args that are not an object...) gets
     // the same reply as any refused call: BAD_ARGS in structuredContent with the state, nothing run
@@ -776,7 +793,7 @@ export function createMcp(hooks) {
       if (format === 'embed') {
         return text(JSON.stringify({ format, game: s.id, live, state: v.state, camera_game: camera, player: embedUrl ? 'facebook' : null, embed_url: embedUrl, video_url: videoUrl }));
       }
-      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb, ownerOnly: Boolean(v.warning) });
+      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb, ownerOnly: Boolean(v.warning), aspect: v.aspect });
       const lines = [];
       const since = v.liveSince ? ` since ${String(v.liveSince).slice(11, 19)} UTC` : '';
       if (live) lines.push(`Live view of game ${s.id}: live on Facebook${since}.`);
