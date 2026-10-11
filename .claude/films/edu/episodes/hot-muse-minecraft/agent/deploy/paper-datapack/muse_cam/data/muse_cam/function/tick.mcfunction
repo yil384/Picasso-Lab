@@ -1,7 +1,10 @@
 # every tick, only while a camera is in the world
 execute unless entity @a[tag=muse_cam] run return 0
-# night vision on the camera player, again whenever it is gone (a respawn, a dimension change): never a black picture
-execute as @a[tag=muse_cam] unless predicate muse_cam:night_vision run effect give @s minecraft:night_vision infinite 0 true
+# night vision on the camera player, again whenever it is gone (a respawn, a dimension change): never a black picture.
+# Not in the Nether: there night vision scales the dark red fog up to full red (253,40,39 measured), a red wall over
+# half the picture, and the Nether's own ambient light keeps it readable without it.
+execute as @a[tag=muse_cam] at @s unless dimension minecraft:the_nether unless predicate muse_cam:night_vision run effect give @s minecraft:night_vision infinite 0 true
+execute as @a[tag=muse_cam] at @s if dimension minecraft:the_nether if predicate muse_cam:night_vision run effect clear @s minecraft:night_vision
 execute unless entity @a[tag=muse_cam_target] run return 0
 function muse_cam:enclosure
 # a portal, a respawn far away: the camera player is not near the bot (only the bot's own dimension is searched)
