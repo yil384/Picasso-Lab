@@ -131,7 +131,8 @@ export async function startFakeMineAi(opts = {}) {
   function perform(tool, a, cancelled) {
     if (world.die === tool) {
       world.die = null;
-      world.lastDeath = { position: { ...world.position }, at: Date.now() };
+      // the death message as the game gives it ("<name> was shot by Skeleton"), when the test names one
+      world.lastDeath = { position: { ...world.position }, at: Date.now(), ...(world.dieCause ? { cause: world.dieCause } : {}) };
       world.inventory.clear();
       return { status: 'failed', error: '[HUNT_BOT_DIED] the bot died' };
     }

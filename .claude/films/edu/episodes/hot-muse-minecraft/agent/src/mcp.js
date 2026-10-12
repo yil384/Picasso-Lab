@@ -21,6 +21,8 @@
 import crypto from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { z } from 'zod';
+import { createTracker, goalOf, planText, GOAL_NAMES } from './report.js';
+import { tolerate } from './tolerant.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { RESULT_CODES, CRAFT_BATCH_MAX, skillSet } from './contracts.js';
@@ -67,6 +69,8 @@ function splitCall({ skill, args, ...rest }) {
   const stray = Object.keys(rest);
   if (!stray.length) return { skill, args: args ?? {} };
   if (args === undefined) return { skill, args: rest };
+  // some next to args, some inside: one set of arguments when no name is in both
+  if (args && typeof args === 'object' && !stray.some((k) => Object.hasOwn(args, k))) return { skill, args: { ...args, ...rest } };
   return { skill, args, error: `put every argument of ${skill} inside args (found ${stray.join(', ')} next to it)` };
 }
 
@@ -223,6 +227,34 @@ const REPLY_OUT = z.object({
  * @returns {(req, res) => Promise<void>} the /mcp handler
  */
 /**
+ * The server's instructions (the initialize result): the standing rules a long prompt used to carry, so one line from
+ * the user is enough ("I'm 18 or older. Play Minecraft on <url> and get to the Nether and back.").
+ */
+export function instructionsText({ callMs = 90_000, leaseMin = 30, idleMin = 5, skillNames = '', skillCount = 0, care = '', live = true } = {}) {
+  return [
+    'Muse plays Minecraft: you play your own bot in a survival Minecraft world, by yourself: once the game has started, play on without asking your user anything. Use only these tools, not the server\'s web pages.',
+    'Rules:',
+    '1. Adults (18+) only: start_game needs adult: true. Set it only when your user has said in this conversation that they are 18 or older; never assume it, and if they have not said it, ask them first.',
+    `2. Start: start_game, with goal when your user named one (${GOAL_NAMES.join(', ')}, or a short text); its reply has the plan, milestone by milestone, with how to do each${live ? '. Then call live_view and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, so your user sees the game' : ''}.`,
+    `3. Play: play_sequence for several steps in a row (play for one); each reply carries the results and the state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running.`,
+    '4. why: pass why on every play and play_sequence call, one short sentence in plain words, what you are doing and why; viewers of the live stream see it as your own words, and the report keeps it.',
+    `5. ${care ? care.trim() : 'You make every plan: the body runs the skills you send.'}`,
+    `6. Time: call at least every 4 minutes; a game with no calls for ${idleMin} minutes ends. A game lasts ${leaseMin} min.`,
+    '7. Deaths: after a death, either pick_up with death_items: true within 5 minutes (the items despawn) or start over where you respawned.',
+    '8. Failures: if the same step fails 3 times, change your plan instead of sending it again.',
+    '9. The end: when the goal is reached, the game ends or you stop, call end_game: its reply is the full report (the goal, milestones with times, deaths with causes, who acted, and a decision log from your why texts and the advice you followed or declined); show it to your user as it is. game_report gives the same during the game.',
+    `The skills this server offers (${skillCount}): ${skillNames}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.`,
+  ].join('\n');
+}
+
+/** The text of a ready prompt: what the user asks for, and that their age is theirs to state (never assumed). */
+export function promptText(goal = 'free') {
+  const g = String(goal).trim() || 'free';
+  const what = g === 'nether_and_back' ? 'get to the Nether and back' : g === 'free' ? 'play for as long as the game lasts' : `play toward this goal: ${g}`;
+  return `Play Minecraft yourself with this server's tools and ${what} (start_game with goal: "${g}"). Before start_game, ask me whether I am 18 or older unless I have already said so in this conversation; start only if I say yes. Then follow the server's rules: live view first, a why on every call, call end_game at the end and show me its report.`;
+}
+
+/**
  * One logged MCP call (F9 of the log hunt), scrubbed: never a resume handle, a token or free text longer than 80
  * characters; a skill's arguments as sent (they are names and numbers), the reply's code, each step's outcome and the
  * Body advice the reply showed.
@@ -308,6 +340,8 @@ export function createMcp(hooks) {
   };
   const busy = (s) => Boolean(queues.get(s)?.busy);
   const safely = (fn, fallback = null) => { try { return fn(); } catch { return fallback; } };
+  /** What the game's tracker (src/report.js) reads from the body: inventory, what it wears, the dimension. */
+  const observed = (s) => ({ inventory: safely(() => s.body?.inventory?.() ?? null), equipment: safely(() => s.body?.equipment?.() ?? null), dimension: safely(() => s.body?.snapshot?.()?.dimension ?? null) });
 
   /** ": ok: crafted 4 stick [+4 stick, -2 oak_planks]" for a skill result. */
   const outcome = (r, skill) => {
@@ -536,13 +570,20 @@ export function createMcp(hooks) {
     try { s = need(entry); } catch (e) { return refuse(null, extra, 'NOT_STARTED', e.message); }
 
     const bad = [];
+    // arguments read the way they were meant where that is unambiguous (src/tolerant.js): positions in any common
+    // shape, numbers as strings, names in any case or with a common name; logged, never a reason to refuse
+    const inventory = safely(() => s.body?.inventory?.() ?? null, null);
+    const read = [];
     const steps = raw.steps.map((call, i) => {
       const p = splitCall(call);
       if (p.error) { bad.push(`${i + 1}. ${p.skill}: not run: ${p.error}`); return null; }
-      const v = skills.validate(p.skill, p.args ?? {});
-      if (!v.ok) { bad.push(`${i + 1}. ${p.skill}: not run, bad arguments: ${v.error}`); return null; }
+      const t = skills.schemas?.[p.skill] ? tolerate(skills.schemas[p.skill], p.args ?? {}, { inventory, skill: p.skill }) : { args: p.args ?? {}, changes: [], unclear: [] };
+      if (t.changes.length) read.push(`${i + 1}. ${p.skill}: ${t.changes.join('; ')}`);
+      const v = skills.validate(p.skill, t.args);
+      if (!v.ok) { bad.push(`${i + 1}. ${p.skill}: not run, bad arguments: ${v.error}${t.unclear.length ? ` (${t.unclear.join('; ')})` : ''}`); return null; }
       return { skill: p.skill, args: v.args };
     });
+    if (read.length) hooks.log.event('mcp_args_read', { game: s.id, tool, read: read.slice(0, 16).map((x) => x.slice(0, 200)), ok: !bad.length });
     if (bad.length) {
       const one = tool === 'play';
       return refuse(s, extra, 'BAD_ARGS', `${one ? bad[0].replace(/^1\. /, '') : bad.join('\n')}\nNothing was run: fix ${bad.length > 1 ? 'these steps' : one ? 'it' : 'that step'} and send the call again.`);
@@ -650,7 +691,7 @@ export function createMcp(hooks) {
   const callShape = { skill: z.enum(skills.names), args: z.record(z.string(), z.any()).optional().describe("the skill's arguments, e.g. {\"block\": \"oak_log\", \"n\": 3} for collect") };
   // what Muse is doing and why, in its own words: shown live on the stream, ignored by the body, logged
   // (longer words are cut, never a reason to refuse the call)
-  const whyShape = z.string().optional().describe('optional: one short sentence, what you do and why; shown live to viewers as your own words');
+  const whyShape = z.string().optional().describe('give it on every call: one short sentence, what you do and why; shown live as your own words');
   const requestIdShape = z.string().min(1).max(64).optional().describe(`any id of yours for this call (1 to 64 characters): if the call is sent again with the same request_id (a retry after a broken connection), nothing runs twice and the reply carries the first call's results. Without one, the same call within ${REPEAT_MS / 1000} s counts as a repeat; give a new request_id to repeat a call on purpose`);
   const queueText = `Steps run in order in a queue: what does not finish within ${Math.round(callMs / 1000)} s keeps running after the reply (a later reply, or get_state, reports it); a step that fails cancels the steps queued after it (except eat's NOT_HUNGRY, which changes nothing: the steps after it still run); stop clears the queue. Before anything runs, a check simulates your inventory through the steps: if an ingredient, fuel, tool or station is missing, the call is refused with the list (code NEED_ITEMS) and nothing runs; planks, sticks, a crafting table or a furnace that can be made from what you carry are added as crafts. Replies carry structuredContent: each step's status (pending, confirmed, failed, cancelled) and code (${RESULT_CODES.join(', ')}), what changed, and a short state.`;
 
@@ -677,7 +718,7 @@ export function createMcp(hooks) {
 
   function build(entry) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
-      instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot. The skills this server offers (${skills.names.length}): ${SKILL_NAMES_TEXT}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server. Give play and play_sequence a why: one short sentence in plain words, what you are doing and why; viewers of the live stream see it as your own words.${CARE_TEXT}`,
+      instructions: instructionsText({ callMs, leaseMin, idleMin: IDLE_MS / 60_000, skillNames: SKILL_NAMES_TEXT, skillCount: skills.names.length, care: CARE_TEXT, live: true }),
     });
     {
       // every call in the log (F9 of the log hunt: refusals, calls and the advice shown were in no log): the game, the
@@ -689,6 +730,14 @@ export function createMcp(hooks) {
         let out = null;
         try {
           out = await handler(args, extra);
+          // the game's report: the call, its why, the advice before it, the milestones (src/report.js)
+          safely(() => {
+            const g = game(entry) ?? before;
+            if (!g?.tracker) return;
+            g.tracker.onCall(name, args, out);
+            for (const st of out?.structuredContent?.earlier ?? []) g.tracker.onStepDone(st);
+            g.tracker.observe(observed(g));
+          });
           return out;
         } finally {
           safely(() => hooks.log.event('mcp_call', callRow(name, args, out, (safely(() => game(entry), null) ?? before)?.id ?? null, Date.now() - t0, String(entry.transport.sessionId ?? '').slice(0, 8))));
@@ -744,10 +793,11 @@ export function createMcp(hooks) {
     server.registerTool('start_game', {
       description: `Adults (18+) only: set adult to true only after your user has confirmed they are 18 or older. Starts your own Minecraft bot in a survival world (a NEW bot at a fresh spot with an empty inventory), or resumes the game of this connection, or (game set to the handle an earlier start_game reply gave) that game from an earlier connection. A game lasts ${leaseMin} min and ends after ${IDLE_MS / 60_000} min without calls. When every bot is in use, the reply gives your place in the queue and an estimate. Returns the skills, the state and a handle to resume the game. Call this first.`,
       inputSchema: {
-        adult: z.boolean().describe('true only after your user has confirmed they are 18 or older'),
+        adult: z.boolean().describe('true only when your user has said in this conversation that they are 18 or older'),
         game: z.string().max(64).optional().describe('the handle of a game to resume (from an earlier start_game reply)'),
+        goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')} (default free), or a short text; the reply gives the plan`),
       },
-    }, async ({ adult, game: handle }, extra) => {
+    }, async ({ adult, game: handle, goal: goalRaw }, extra) => {
       if (adult !== true) return fail('This game is for adults (18+) only. Ask your user to confirm they are 18 or older, then call start_game with adult: true.');
       let s = game(entry);
       let resumed = Boolean(s);
@@ -777,17 +827,31 @@ export function createMcp(hooks) {
       if (!entry.handle) entry.handle = mintHandle(s.token);
       if (s.status !== 'ready') await wait(Promise.resolve(s.ready), JOIN_WAIT_MS, signalOf(extra));
       if (s.ended) { forget(null); return fail(`could not start: ${s.ended}; call start_game again in a moment`); }
-      return text(`${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\nTo resume this game from a new connection, call start_game with adult: true and game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
+      // the goal and its plan (src/report.js): a new game gets its tracker; a resumed one keeps it (a goal given on
+      // resume replaces the old goal)
+      if (!s.tracker) {
+        s.tracker = createTracker({ goal: goalOf(goalRaw) });
+        const tracker = s.tracker;
+        safely(() => s.body?.on?.('death', (d) => safely(() => tracker.death({ cause: d?.at?.cause ?? d?.cause ?? null, position: d?.at?.position ?? d?.position ?? null }))));
+        // a milestone counts when the step that made it ends, also between calls
+        safely(() => s.body?.on?.('skill', (e) => {
+          if (e?.phase !== 'end') return;
+          safely(() => tracker.onStepDone({ skill: e.tool, args: e.args, status: e.ok ? 'confirmed' : 'failed' }));
+          safely(() => tracker.observe(observed(s)));
+        }));
+      } else if (goalRaw) s.tracker.setGoal(goalOf(goalRaw));
+      const plan = planText(s.tracker.goal);
+      return text(`${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\n${plan}\nTo resume this game from a new connection, call start_game with adult: true and game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
     });
 
     server.registerTool('play', {
-      description: `Run ONE skill: {skill, args}, with that skill's arguments in args. Replies within ${Math.round(callMs / 1000)} s with the result and the new state; a skill still running then keeps going, and get_state waits for it and reports its result. ${queueText} Skills and their arguments:\n${SKILLS}`,
+      description: `Run ONE skill: {skill, args}, with that skill's arguments in args. Replies within ${Math.round(callMs / 1000)} s with the result and the new state; a skill still running then keeps going, and get_state waits for it and reports its result. ${queueText} Positions are block coordinates {"x": 10, "y": 64, "z": -3}: go_to takes x, y, z themselves, other skills a pos. Skills and their arguments:\n${SKILLS}`,
       inputSchema: z.object({ ...callShape, request_id: requestIdShape, why: whyShape }).loose(),
       outputSchema: REPLY_OUT,
     }, async ({ request_id: requestId, why, ...raw }, extra) => runCall(entry, 'play', { steps: [raw], request_id: requestId, why }, extra));
 
     server.registerTool('play_sequence', {
-      description: `Run up to ${MAX_STEPS} skills in order, sent in ONE call, e.g. steps [{"skill": "collect", "args": {"block": "oak_log", "n": 3}}, {"skill": "craft_batch", "args": {"items": [{"item": "oak_planks", "n": 12}, {"item": "crafting_table", "n": 1}, {"item": "wooden_pickaxe", "n": 1}]}}]. Same skills and arguments as play (its description gives each skill's arguments; craft_batch crafts a list in one step); the ${skills.names.length} skills: ${SKILL_NAMES_TEXT}. Replies within ${Math.round(callMs / 1000)} s with every step's result or status and the final state. ${queueText} dry_run: true only checks the steps and shows them as they would run. Saves many round trips.`,
+      description: `Run up to ${MAX_STEPS} skills in order, sent in ONE call, e.g. steps [{"skill": "collect", "args": {"block": "oak_log", "n": 3}}, {"skill": "craft_batch", "args": {"items": [{"item": "oak_planks", "n": 12}, {"item": "crafting_table", "n": 1}, {"item": "wooden_pickaxe", "n": 1}]}}]. Same skills and arguments as play (its description gives each skill's arguments; craft_batch crafts a list in one step); the ${skills.names.length} skills: ${SKILL_NAMES_TEXT}. Positions as in play. Replies within ${Math.round(callMs / 1000)} s with every step's result or status and the final state. ${queueText} dry_run: true only checks the steps and shows them as they would run. Saves many round trips.`,
       inputSchema: {
         steps: z.array(z.object(callShape).loose()).min(1).max(MAX_STEPS),
         request_id: requestIdShape,
@@ -885,17 +949,49 @@ export function createMcp(hooks) {
       };
     });
 
-    server.registerTool('end_game', { description: 'End the game and free the bot.', inputSchema: {} }, async () => {
+    server.registerTool('end_game', { description: 'End the game and free the bot. The reply is the full report of the game: show it to your user as it is.', inputSchema: {} }, async () => {
       const s = game(entry);
       const attribution = s && typeof s.body?.attribution === 'function' ? safely(() => s.body.attribution(), null) : null;
+      if (s) safely(() => s.tracker?.observe(observed(s)));
+      const report = s?.tracker ? safely(() => s.tracker.report({ gameId: s.id, attribution, ended: 'ended with end_game' }), null) : null;
       if (s) {
         queues.get(s)?.stop('the game ended');
         hooks.endSession(s, 'ended through MCP');
       }
       forget('you ended it with end_game');
-      const out = text(`Game ended.${attribution ? ` ${attribution.text}.` : ''} start_game gives you a new bot.`);
-      return attribution ? { ...out, structuredContent: { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } } : out;
+      const out = text(`Game ended.${report ? `\n\n${report.text}\n\n` : attribution ? ` ${attribution.text}. ` : ' '}start_game gives you a new bot.`);
+      const sc = {
+        ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } : {}),
+        ...(report ? { report: report.data } : {}),
+      };
+      return Object.keys(sc).length ? { ...out, structuredContent: sc } : out;
     });
+
+    server.registerTool('game_report', {
+      description: 'The report of your game so far: the goal, milestones with times, deaths, who acted, and the decision log from your why texts and the advice you followed or declined.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    }, async () => {
+      const s = game(entry);
+      if (!s?.tracker) return fail('no game to report on: start_game first');
+      safely(() => s.tracker.observe(observed(s)));
+      const attribution = typeof s.body?.attribution === 'function' ? safely(() => s.body.attribution(), null) : null;
+      const report = s.tracker.report({ gameId: s.id, attribution });
+      return { ...text(report.text), structuredContent: { report: report.data } };
+    });
+
+    // ready prompts a client can offer in one click (the one-line prompt): the user still states their age itself
+    if (typeof server.registerPrompt === 'function') {
+      server.registerPrompt('play_to_the_nether', {
+        title: 'Play Minecraft to the Nether and back',
+        description: 'Muse plays its own bot from a fresh start to the Nether and back, by itself, with a live view and a report at the end.',
+      }, () => ({ messages: [{ role: 'user', content: { type: 'text', text: promptText('nether_and_back') } }] }));
+      server.registerPrompt('free_play', {
+        title: 'Play Minecraft',
+        description: 'Muse plays its own bot by itself toward a goal you name (or just plays), with a live view and a report at the end.',
+        argsSchema: { goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')}, or a short text`) },
+      }, ({ goal } = {}) => ({ messages: [{ role: 'user', content: { type: 'text', text: promptText(goal || 'free') } }] }));
+    }
     return server;
   }
 

@@ -579,7 +579,9 @@ test('advise in the body: the reflexes set as the knobs say (eat starving), attr
     r = await c.callTool({ name: 'play', arguments: { skill: 'shelter', args: {} } });
     assert.ok(fake.tools('build_structure').length > 0, 'the shelter skill builds');
     r = await c.callTool({ name: 'end_game', arguments: {} });
-    assert.match(r.content[0].text, /^Game ended\. This game: 2 actions by Muse, 0 reflexes \(100% Muse\)\./);
+    // the report (the one-line prompt): who acted, and the advice declined, then followed with the shelter
+    assert.match(r.content[0].text, /^Game ended\.\n\nReport for game g\w+: goal free play;[\s\S]*\nThis game: 2 actions by Muse, 0 reflexes \(100% Muse\)\.\n/);
+    assert.match(r.content[0].text, /\n- \d+:\d\d \(no why given\) -> policy eat=off escape=off: ok\n- \d+:\d\d advice followed \(shelter\): night/);
   } finally {
     await c.close();
     await web.stop?.();

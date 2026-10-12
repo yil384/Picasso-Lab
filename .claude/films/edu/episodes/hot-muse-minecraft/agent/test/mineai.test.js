@@ -504,8 +504,9 @@ test('mineai through MCP: the queue, request_id, typed codes and the extra skill
     const listed = await c.listTools();
     const size = JSON.stringify(listed).length;
     // 39,994 bytes before M4; the armor skill, the policy's care knobs and onItsOwn in the reply schema add about 2 KB;
-    // advise mode (the reflex knobs, the shelter and shield skills, advice and attribution in the schema) about 4 KB
-    assert.ok(size < 50_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
+    // advise mode (the reflex knobs, the shelter and shield skills, advice and attribution in the schema) about 4 KB;
+    // the one-line prompt (game_report, start_game's goal, the position shape) about 0.8 KB
+    assert.ok(size < 52_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
     assert.doesNotMatch(JSON.stringify(listed), /rationale|submission_id|wait_for_action|response_format/);
     const play = listed.tools.find((t) => t.name === 'play');
     assert.match(play.description, /- hunt \{mob: one of cow\|pig[^}]*, drop: text \(1 to 48 characters\), n: integer 1 to 64, without_shield: true\|false \(optional\)\}/);
