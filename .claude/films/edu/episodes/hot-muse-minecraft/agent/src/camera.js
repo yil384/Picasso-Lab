@@ -26,10 +26,11 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import {
   STREAM_DEFAULTS, ffmpegArgs, findFfmpeg, findFont, maskOutput, scrubOutputs, cleanCaption, cleanPose, processTree,
-  spawnNiced, spawnEncoder, createStreamManager, managerConfig, encoderEnv, childEnv,
+  spawnNiced, spawnEncoder, createStreamManager, managerConfig, encoderEnv, childEnv, streamAspect,
 } from './stream.js';
 import { createGraph, createLiveChannel } from './fb-live.js';
 import { createTerminalPanel, findMonoFont } from './terminal-panel.js';
+import { createUiPanel, UI_ASSETS } from './ui-panel.js';
 
 const require = createRequire(import.meta.url);
 
@@ -57,6 +58,7 @@ export const CAMERA_DEFAULTS = Object.freeze({
   followMs: 5_000, // how often the camera checks it still rides the bot
   idleMs: 600_000, // a camera with no game for this long quits its client (Xvfb stays); the next game starts it again
   view: 'third', // 'third': over the bot's shoulder (its arm, tool and swing in view); 'first': in its head
+  sound: true, // the game's sound into a PulseAudio sink of the rig's own (when pulseaudio is installed), music at 0
   maxRestarts: 6, // client restarts within restartWindowMs before the rig rests for coolOffMs
   restartWindowMs: 600_000,
   coolOffMs: 120_000,
@@ -81,7 +83,8 @@ export function offlineUuid(name) {
 }
 
 /**
- * The client's options.txt: 1280x720-friendly video settings, the HUD and chat off, no sound, no first-run screens,
+ * The client's options.txt: 1280x720-friendly video settings, the HUD and chat off, the sound effects without music
+ * (or no sound), no first-run screens,
  * no pause when the window has no focus, never throttled for inactivity.
  */
 export function clientOptions(o = {}) {
@@ -95,7 +98,14 @@ export function clientOptions(o = {}) {
     graphicsMode: c.graphics === 'fast' ? 0 : 1, ao: true, renderClouds: c.graphics === 'fast' ? '"fast"' : '"true"',
     particles: 0, entityShadows: true, biomeBlendRadius: 2, mipmapLevels: 4, gamma: c.gamma, fov: '0.0', bobView: true,
     chatVisibility: 2, showAutosaveIndicator: false, darkMojangStudiosBackground: true, attackIndicator: 0,
-    showSubtitles: false, soundCategory_master: '0.0',
+    showSubtitles: false,
+    // with sound: the effects and ambience at full, Minecraft's music and records at 0 (soundtrack copyright on
+    // Facebook); without: all off
+    ...(c.sound ? {
+      soundCategory_master: '1.0', soundCategory_music: '0.0', soundCategory_record: '0.0', soundCategory_weather: '1.0',
+      soundCategory_block: '1.0', soundCategory_hostile: '1.0', soundCategory_neutral: '1.0', soundCategory_player: '1.0',
+      soundCategory_ambient: '1.0', soundCategory_voice: '1.0', soundDevice: '""',
+    } : { soundCategory_master: '0.0' }),
   };
   return `${Object.entries(v).map(([k, x]) => `${k}:${x}`).join('\n')}\n`;
 }
@@ -367,6 +377,32 @@ export async function launcherProfile(dir, { fetchFn = globalThis.fetch } = {}) 
   return { name: mc.name, uuid: mc.uuid, token: mc.token, auth: 'msa' };
 }
 
+// ----- the rig's sound: a PulseAudio server of its own with one null sink, nothing else
+
+/** The sink's monitor ffmpeg records from. */
+export const PULSE_SOURCE = 'muse.monitor';
+
+/**
+ * The PulseAudio script (pulseaudio -n --file=...): one null sink at 48 kHz stereo as the default, and the native
+ * protocol on a unix socket in the rig's own folder (mode 700). No hardware, no network, no discovery modules: only
+ * processes of this container that can reach the folder (the client and ffmpeg) play into it or record from it.
+ */
+export function pulseScript(socket) {
+  return [
+    'load-module module-null-sink sink_name=muse rate=48000 channels=2 sink_properties=device.description=muse',
+    'set-default-sink muse',
+    `set-default-source ${PULSE_SOURCE}`,
+    `load-module module-native-protocol-unix auth-anonymous=1 socket=${socket}`,
+    '',
+  ].join('\n');
+}
+
+/** The rig's PulseAudio files: the folder (700), the script, the socket, the runtime folder. */
+export const pulsePaths = (home) => {
+  const dir = path.join(home, 'pulse');
+  return { dir, script: path.join(dir, 'muse.pa'), socket: path.join(dir, 'native'), runtime: path.join(dir, 'run') };
+};
+
 // ----- the rig: Xvfb + the client, kept in the world
 
 /**
@@ -384,6 +420,8 @@ export function createCameraRig(o = {}) {
   };
   let state = 'off'; // off -> starting -> joining -> ready; resting (too many restarts); asleep; stopped
   let xvfb = null;
+  let pulse = null; // the rig's PulseAudio server (sound on, pulseaudio installed)
+  let pulseOn = false;
   let client = null; // {child, startedAt, joined, hidden}
   let profile = null;
   let fps = null; // the client's frames a second (Mesa's LIBGL_SHOW_FPS, or its HUD file)
@@ -425,6 +463,36 @@ export function createCameraRig(o = {}) {
     throw new Error(`Xvfb :${c.display} did not start: ${clip(err)}`);
   }
 
+  /** The sound server: started once, like Xvfb; without pulseaudio (or with sound off) the stream stays silent. */
+  async function startPulse() {
+    if (!c.sound || alive(pulse)) return;
+    const bin = c.pulseaudio ?? 'pulseaudio';
+    const p = pulsePaths(c.home);
+    fs.mkdirSync(p.runtime, { recursive: true, mode: 0o700 });
+    fs.chmodSync(p.dir, 0o700);
+    fs.writeFileSync(p.script, pulseScript(p.socket));
+    try { fs.rmSync(p.socket, { force: true }); } catch { /* none */ }
+    const env = { ...childEnv({ HOME: c.home }), XDG_RUNTIME_DIR: p.runtime, PULSE_RUNTIME_PATH: p.runtime };
+    const child = spawn(bin, ['-n', `--file=${p.script}`, '--daemonize=no', '--exit-idle-time=-1', '--use-pid-file=no', '--realtime=no', '--high-priority=no', '--disable-shm=yes', '--disallow-exit', '--log-target=stderr', '--log-level=error'], { env, stdio: ['ignore', 'ignore', 'pipe'] });
+    pulse = child;
+    let err = '';
+    child.stderr.on('data', (d) => { err = (err + d).slice(-2_000); });
+    child.on('error', (e) => { err += String(e?.message ?? e); });
+    child.on('exit', (code, signal) => {
+      if (pulse !== child) return;
+      pulse = null;
+      pulseOn = false;
+      if (!stopped) event('camera_sound_exit', { code, signal, detail: clip(err.split('\n').filter(Boolean).slice(-2).join(' | ')) });
+    });
+    const until = Date.now() + 5_000;
+    while (Date.now() < until && alive(child)) {
+      if (fs.existsSync(p.socket)) { pulseOn = true; event('camera_sound', { sink: 'muse' }); return; }
+      await sleep(100);
+    }
+    event('camera_sound_off', { detail: clip(err || 'no socket') });
+    if (alive(child)) child.kill('SIGTERM');
+  }
+
   function xReady() {
     return new Promise((resolve) => {
       execFile(c.xdpyinfo ?? 'xdpyinfo', ['-display', `:${c.display}`], { timeout: 3_000 }, (e) => resolve(!e));
@@ -445,7 +513,9 @@ export function createCameraRig(o = {}) {
       fs.mkdirSync(cmd.hudDir, { recursive: true });
       hudFile = path.join(cmd.hudDir, 'fps');
     }
-    fs.writeFileSync(path.join(cmd.gameDir, 'options.txt'), clientOptions(c));
+    fs.writeFileSync(path.join(cmd.gameDir, 'options.txt'), clientOptions({ ...c, sound: c.sound && pulseOn }));
+    // the client's OpenAL plays into the rig's sink and nowhere else
+    if (pulseOn) Object.assign(cmd.env, { PULSE_SERVER: `unix:${pulsePaths(c.home).socket}`, ALSOFT_DRIVERS: 'pulse' });
     if (modJars(c, launch).length) {
       fs.mkdirSync(path.join(cmd.gameDir, 'config'), { recursive: true });
       fs.writeFileSync(path.join(cmd.gameDir, 'config', 'sodium-options.json'), `${JSON.stringify(sodiumOptions(c), null, 2)}\n`);
@@ -584,6 +654,7 @@ export function createCameraRig(o = {}) {
         if (stopped) return;
         if (!client) state = 'starting';
         await startX();
+        await startPulse().catch((err) => event('camera_sound_off', { detail: clip(err?.message ?? err) }));
         if (!client && !stopped) await launchClient();
       } catch (err) {
         event('camera_error', { message: clip(err?.message ?? err) });
@@ -600,6 +671,8 @@ export function createCameraRig(o = {}) {
     get ready() { return state === 'ready'; },
     get name() { return profile?.name ?? null; },
     get fps() { return fps ?? hudFps(); },
+    /** The PulseAudio server and source the game's sound is recorded from, or null (silence). */
+    get sound() { return pulseOn && alive(pulse) ? { server: `unix:${pulsePaths(c.home).socket}`, source: PULSE_SOURCE } : null; },
     options: c,
     /** Start Xvfb and the client (idempotent; failures are retried in the background). Wakes a sleeping rig. */
     start() { stopped = false; return run(); },
@@ -656,6 +729,10 @@ export function createCameraRig(o = {}) {
       const x = xvfb;
       xvfb = null;
       if (alive(x)) { x.kill('SIGTERM'); await Promise.race([new Promise((r) => x.once('exit', r)), sleep(3_000)]); }
+      const a = pulse;
+      pulse = null;
+      pulseOn = false;
+      if (alive(a)) { a.kill('SIGTERM'); await Promise.race([new Promise((r) => a.once('exit', r)), sleep(3_000)]); }
     },
   };
   return rig;
@@ -688,8 +765,27 @@ export function createCameraStream(o) {
   // the vertical layout (STREAM_LAYOUT=terminal): the game on top, 16:9, and the terminal panel under it, the lines the
   // agent sends (term) drawn by src/terminal-panel.js; the landscape layout is the game alone
   let panel = null;
+  let shm = null; // the UI panel's frames go to memory (/dev/shm) when the container has it
   let size = { width: opt.width, height: opt.height };
-  if (opt.layout === 'terminal') {
+  if (opt.layout === 'ui') {
+    // the UI layout (STREAM_LAYOUT=ui, square by default): the game on top, cut to its shape, and Muse's panel under
+    // it, about a third of the height (src/ui-panel.js), redrawn 30 times a second
+    try {
+      const [uw, uh] = String(opt.uiSize ?? '1080x1080').split('x').map(Number);
+      const ph = Math.round(uh / 3 / 2) * 2;
+      try { shm = fs.mkdtempSync(path.join(opt.shmDir ?? '/dev/shm', 'muse-ui-')); } catch { shm = null; }
+      panel = createUiPanel({ width: uw, height: ph, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS });
+      panel.top = uh - ph;
+      panel.kind = 'ui';
+      panel.write(); // ffmpeg opens the file at its start
+      size = { width: uw, height: uh };
+    } catch (err) {
+      event('stream_error', { message: `the UI panel is off: ${clip(err?.message ?? err, 200)}` });
+      panel = null;
+      if (shm) fs.rm(shm, { recursive: true, force: true }, () => {});
+      shm = null;
+    }
+  } else if (opt.layout === 'terminal') {
     try {
       const [tw, th] = String(opt.terminalSize ?? '1080x1920').split('x').map(Number);
       const top = Math.round((tw * 9) / 16 / 2) * 2;
@@ -724,11 +820,19 @@ export function createCameraStream(o) {
 
   function startEncoder() {
     const ro = rig.options;
-    const args = ffmpegArgs({ ...opt, ...size, font, captionFile, x11: x11Input(ro), progress: true, ...(panel ? { panel: { file: panel.file, top: panel.top } } : {}) });
+    // the sound: the game's (the rig's PulseAudio monitor) unless off, and the music bed unless off
+    const sound = opt.gameAudio === false ? null : rig.sound ?? null;
+    const music = opt.music === false ? null : opt.musicFile || path.join(opt.uiAssets ?? UI_ASSETS, 'music', 'etirwer.m4a');
+    const audio = { pulse: sound?.source ?? null, music: music && fs.existsSync(music) ? music : null, musicDb: opt.musicDb, gameDb: opt.gameDb };
+    const args = ffmpegArgs({
+      ...opt, ...size, font, captionFile, x11: x11Input(ro), progress: true, audio,
+      ...(panel ? { panel: { file: panel.file, top: panel.top, kind: panel.kind ?? 'terminal', fps: panel.kind === 'ui' ? opt.fps : undefined } } : {}),
+    });
     const { child, failure } = spawnEncoder({
       ffmpeg, args, output: opt.output, nice: opt.encoderNice, stdio: ['ignore', 'pipe', 'pipe'],
-      env: encoderEnv(opt, { DISPLAY: `:${ro.display}` }), event: (k, d) => event(k, d), createPublisher: opt.createPublisher,
+      env: encoderEnv(opt, { DISPLAY: `:${ro.display}`, ...(sound ? { PULSE_SERVER: sound.server } : {}) }), event: (k, d) => event(k, d), createPublisher: opt.createPublisher,
     });
+    if (!enc) event('stream_audio', { game: Boolean(audio.pulse), music: Boolean(audio.music) });
     const me = { child, startedAt: Date.now(), err: '', progress: {} };
     enc = me;
     let out = '';
@@ -810,6 +914,7 @@ export function createCameraStream(o) {
     await stopEncoder();
     await rig.park().catch(() => {});
     fs.rm(work, { recursive: true, force: true, maxRetries: 3 }, () => {});
+    if (shm) fs.rm(shm, { recursive: true, force: true, maxRetries: 3 }, () => {});
   }
 
   return {
@@ -820,7 +925,7 @@ export function createCameraStream(o) {
       if (!ffmpeg) throw new Error('no ffmpeg found (set STREAM_FFMPEG)');
       if (!validName(opt.player)) throw new Error('the camera needs the bot\'s player name');
       state = 'starting';
-      event('stream_start', { output: maskOutput(opt.output), size: `${size.width}x${size.height}`, layout: panel ? 'terminal' : 'landscape', fps: opt.fps, bitrateK: opt.bitrateK, caption: Boolean(font), source: 'client', player: opt.player });
+      event('stream_start', { output: maskOutput(opt.output), size: `${size.width}x${size.height}`, layout: panel ? panel.kind ?? 'terminal' : 'landscape', fps: opt.fps, bitrateK: opt.bitrateK, caption: Boolean(font), source: 'client', player: opt.player });
       rig.start();
       const ready = await rig.waitReady(opt.readyWaitMs);
       if (!running()) return;
@@ -831,6 +936,7 @@ export function createCameraStream(o) {
       if (!running()) return;
       state = 'live';
       liveAt = Date.now();
+      panel?.start?.(); // the UI panel's frames, 30 a second, while the stream is live
       startEncoder();
       startWatchdog();
       event('stream_live', { afterMs: liveAt - startedAt, camera: rig.name });
@@ -873,11 +979,13 @@ export function createCameraStream(o) {
     /** The terminal under the game (the vertical layout): new lines ({k, t}) and the status line. */
     term(u) {
       if (!panel || !u) return;
+      if (typeof panel.term === 'function') { panel.term(u); return; } // the UI panel: lines, status numbers, advice
       if (Array.isArray(u.lines) && u.lines.length) panel.push(u.lines);
       if (typeof u.status === 'string' && u.status) panel.status(u.status);
     },
     get aspect() { return panel ? `${size.width}/${size.height}` : '16/9'; },
     caption(text) {
+      if (panel?.kind === 'ui') { panel.caption(cleanCaption(text)); return; } // said in Muse's panel, not on the game
       const tmp = `${captionFile}.tmp`;
       try { fs.writeFileSync(tmp, cleanCaption(text)); fs.renameSync(tmp, captionFile); } catch { /* the stream has ended */ }
     },
@@ -963,7 +1071,7 @@ export function createCameraManager({ config, log, createRig, graph = null, game
       createStream: (opts) => pool.create(opts), streamOptions: managerConfig(config.stream).options, log,
       title: config.fb.title, stateFile: config.fb.stateFile, gameTtlMs, deleteAfter: config.fb.deleteAfter,
       privacy: config.fb.target === 'me' ? config.fb.privacy : null, maxPerHour: config.fb.maxPerHour, maxPerDay: config.fb.maxPerDay,
-      aspect: config.stream.layout === 'terminal' ? config.stream.terminalSize.replace('x', '/') : '16/9',
+      aspect: streamAspect(config.stream),
       deleteDelayMs: config.fb.deleteDelayS * 1000,
     });
     pool.start();

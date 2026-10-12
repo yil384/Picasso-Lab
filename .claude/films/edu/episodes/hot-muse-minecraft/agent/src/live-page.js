@@ -1,7 +1,13 @@
 // src/live-page.js - the page live_view returns for muse.ai's artifact panel. That panel blocks fetch and WebSocket
-// (CSP connect-src 'none') but frames Facebook's video player (the owner's test, 2026-10-08), so the page is static:
-// Facebook's player in an iframe and one status line, no script, no request of its own, under 1 KB. It shows what was
-// true when live_view answered ("joining", "live", "waiting for the next game"); a later call gives a fresh one.
+// (CSP connect-src 'none') but frames Facebook's video player (the owner's test, 2026-10-08) and runs scripts, so the page
+// is small and makes no request of its own: Facebook's player in an iframe, one status line, and a few lines of script.
+// It shows what was true when live_view answered ("joining", "live", "waiting for the next game"); a later call gives a
+// fresh one.
+//
+// The player starts by itself, muted (autoplay: browsers allow it only without sound), with a hint to tap it for sound
+// that goes once the viewer has tapped the player (focus moves into its frame). A fresh player of the same live video
+// is loaded in the background every 5 minutes while the viewer has not touched it, and on "Reload video" at once, and
+// cross-faded in once loaded: never more than two frames, no black flash.
 
 const PLAYER = 'https://www.facebook.com/plugins/video.php?';
 
@@ -31,20 +37,35 @@ export function statusLine(v) {
   return v.fb === false ? 'Live video is off on this server.' : 'Waiting for the next game.';
 }
 
+/** The watchdog and the sound hint (no request of its own: it only makes iframes of the same player URL). */
+const SCRIPT = `(()=>{const v=document.getElementById('v');if(!v)return;const src=v.dataset.src;let cur=v.querySelector('iframe'),next=null,touched=0;
+const h=document.getElementById('h');
+function swap(){if(next)next.remove();const f=document.createElement('iframe');next=f;f.src=src;f.title='Live video';f.allow='autoplay; encrypted-media; picture-in-picture; web-share';f.allowFullscreen=true;f.style.opacity='0';v.insertBefore(f,h);
+f.onload=()=>setTimeout(()=>{if(next!==f)return;f.style.opacity='1';const old=cur;cur=f;next=null;setTimeout(()=>old.remove(),900);h.hidden=false;},2500);}
+document.getElementById('r').onclick=()=>swap();
+setInterval(()=>{if(!touched)swap();},300000);
+addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement&&document.activeElement.tagName==='IFRAME'){touched=1;h.hidden=true;}},0));})();`;
+
 /**
  * The page: Facebook's player for embedUrl (when there is one and it is Facebook's) above the status line.
- * @param {{state: string, game?: string, camera?: string, embedUrl?: string|null, fb?: boolean}} v
+ * @param {{state: string, game?: string, camera?: string, embedUrl?: string|null, fb?: boolean, aspect?: string}} v
  */
 export function liveViewHtml(v) {
-  // the player at the video's own shape (vertical with the terminal, 9/16 or 4/5), as tall as the panel allows
+  // the player at the video's own shape (square in the UI layout), as wide as the panel and no taller than it
   const [aw, ah] = /^\d{1,4}\/\d{1,4}$/.test(String(v.aspect ?? '')) ? String(v.aspect).split('/').map(Number) : [16, 9];
   const ratio = Math.round((aw / ah) * 10_000) / 10_000;
-  const player = v.embedUrl && isPlayerUrl(v.embedUrl) && v.state !== 'off' && v.state !== 'waiting'
-    ? `<div><iframe src="${esc(v.embedUrl)}" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe></div>`
+  const live = v.embedUrl && isPlayerUrl(v.embedUrl) && v.state !== 'off' && v.state !== 'waiting';
+  const src = live ? `${v.embedUrl}&autoplay=true&mute=true` : '';
+  const player = live
+    ? `<div id="v" data-src="${esc(src)}"><iframe src="${esc(src)}" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe>`
+      + '<b id="h">Tap the video for sound</b><button id="r" type="button">Reload video</button></div>'
     : '';
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-    + '<title>Minecraft live</title><style>html,body{margin:0;background:#0c0e10;color:#e8e4dc;font:14px/1.4 system-ui,sans-serif}'
-    + `div{position:relative;aspect-ratio:${aw}/${ah};width:min(100%,calc((100vh - 40px)*${ratio}));margin:0 auto;background:#000}`
-    + 'iframe{position:absolute;inset:0;width:100%;height:100%;border:0}'
-    + `p{margin:0;padding:8px 12px}</style></head><body>${player}<p>${esc(statusLine(v))}</p></body></html>`;
+    + '<title>Minecraft live</title><style>html,body{margin:0;background:#0c0e10;color:#e8e4dc;font:13px/1.4 system-ui,sans-serif}'
+    + `#v{position:relative;aspect-ratio:${aw}/${ah};width:min(100%,calc((100vh - 28px)*${ratio}));margin:0 auto;background:#000;overflow:hidden}`
+    + 'iframe{position:absolute;inset:0;width:100%;height:100%;border:0;transition:opacity .8s}'
+    + '#h{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);padding:6px 14px;border-radius:99px;background:rgba(12,14,16,.78);color:#fff;font-weight:600;pointer-events:none;white-space:nowrap}'
+    + '#r{position:absolute;top:8px;right:8px;padding:3px 9px;border:0;border-radius:99px;background:rgba(12,14,16,.6);color:#e8e4dc;font:12px system-ui,sans-serif;cursor:pointer;opacity:.7}#r:hover{opacity:1}'
+    + `p{margin:0;padding:5px 12px}</style></head><body>${player}<p>${esc(statusLine(v))}</p>`
+    + `${live ? `<script>${SCRIPT}</script>` : ''}</body></html>`;
 }

@@ -151,7 +151,7 @@ function push(args, { nodeExit = 0, freeGb = 100 } = {}) {
 const AGENT = ROOT;
 const PROD_CALLS = [
   `[${AGENT}] ssh picasso mkdir -p ~/workspace/muse-minecraft/{app,data,logs} ~/workspace/muse-minecraft/app/mineai-data && chmod 700 ~/workspace/muse-minecraft/app/mineai-data`,
-  `[${AGENT}] rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy mineai package.json package-lock.json README.md .dockerignore picasso:workspace/muse-minecraft/app/`,
+  `[${AGENT}] rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy assets mineai package.json package-lock.json README.md .dockerignore picasso:workspace/muse-minecraft/app/`,
   `[${AGENT}/server] rsync -azL paper.jar picasso:workspace/muse-minecraft/app/paper.jar`,
   `[${AGENT}/server] rsync -azL --delete --include *.jar --exclude * plugins/ picasso:workspace/muse-minecraft/app/plugins/`,
   `[${AGENT}] ssh picasso set -eo pipefail; cd ~/workspace/muse-minecraft/app`,
@@ -162,7 +162,7 @@ test('push.sh: staging by default; production only with --prod and only after th
   assert.equal(stg.code, 0, stg.err);
   const joined = stg.calls.join('\n');
   assert.match(joined, /ssh picasso mkdir -p ~\/workspace\/muse-staging\/\{app,data,logs,mineai-data\} && chmod 700 ~\/workspace\/muse-staging\/mineai-data$/m, 'the bots\' data: this user only');
-  assert.match(joined, /rsync -az --delete .*--exclude deploy\/compose\.yaml --exclude deploy\/camera-test\.compose\.yaml .*--relative src scripts deploy mineai .* picasso:workspace\/muse-staging\/app\//);
+  assert.match(joined, /rsync -az --delete .*--exclude deploy\/compose\.yaml --exclude deploy\/camera-test\.compose\.yaml .*--relative src scripts deploy assets mineai .* picasso:workspace\/muse-staging\/app\//);
   assert.match(joined, /docker compose -p muse-staging -f staging\.compose\.yaml up -d --build/);
   // staging prunes our dangling images too; picasso's docker wrapper refuses prune to non-root users, and that must not
   // end the deploy before its checks (the remote script runs with set -eo pipefail): a note instead

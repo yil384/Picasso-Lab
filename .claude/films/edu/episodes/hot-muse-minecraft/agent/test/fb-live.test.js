@@ -535,16 +535,22 @@ test('service and client: focus and /live over loopback; focus puts a game the c
   } finally { plain.close(); }
 });
 
-test('live page: under 1 KB, no script or request of its own, only Facebook\'s player; joining, live, waiting, off', () => {
+test('live page: small, no request of its own, only Facebook\'s player (autoplay, muted), the reload watchdog and the sound hint; joining, live, waiting, off', () => {
   const embed = facebookEmbedUrl(`https://www.facebook.com/${PAGE_ID}/videos/7100000000001/`);
   const live = liveViewHtml({ state: 'live', game: 'g1a2b3c', camera: 'g1a2b3c', embedUrl: embed, fb: true });
-  assert.ok(Buffer.byteLength(live) < 1024, `${Buffer.byteLength(live)} bytes`);
+  assert.ok(Buffer.byteLength(live) < 3072, `${Buffer.byteLength(live)} bytes`);
   assert.match(live, /^<!doctype html>/);
-  for (const banned of ['<script', 'fetch', 'WebSocket', 'XMLHttpRequest', 'http-equiv', 'javascript:']) assert.equal(live.toLowerCase().includes(banned.toLowerCase()), false, banned);
+  for (const banned of ['fetch', 'WebSocket', 'XMLHttpRequest', 'sendBeacon', 'http-equiv', 'javascript:', 'eval(', 'import(']) assert.equal(live.toLowerCase().includes(banned.toLowerCase()), false, banned);
   assert.doesNotMatch(live, /\son\w+=/i, 'no event handler attributes');
+  const player = `${embed}&autoplay=true&mute=true`;
   const urls = live.match(/https?:\/\/[^"\s<]+/g);
-  assert.deepEqual(urls.map((u) => u.replace(/&amp;/g, '&')), [embed], 'one URL: the player');
-  assert.ok(live.includes(`<iframe src="${embed.replace(/&/g, '&amp;')}"`));
+  assert.deepEqual([...new Set(urls.map((u) => u.replace(/&amp;/g, '&')))], [player], 'one URL: the player, starting by itself and muted');
+  assert.ok(live.includes(`<iframe src="${player.replace(/&/g, '&amp;')}"`));
+  assert.match(live, /<b id="h">Tap the video for sound<\/b><button id="r" type="button">Reload video<\/button>/);
+  const script = live.match(/<script>([\s\S]*)<\/script>/)[1];
+  assert.match(script, /setInterval\(\(\)=>\{if\(!touched\)swap\(\);\},300000\)/, 'a fresh player every 5 min while untouched');
+  assert.match(script, /if\(next\)next\.remove\(\)/, 'never more than two players');
+  assert.match(script, /old\.remove\(\)/);
   assert.match(live, /<p>Live: game g1a2b3c\. One camera films the game that asked for the live view last\.<\/p>/);
   const joining = liveViewHtml({ state: 'connecting', game: 'g1a2b3c', embedUrl: embed, fb: true });
   assert.match(joining, /<iframe/);
@@ -580,9 +586,9 @@ test('MCP live_view with the channel: called before the stream is up it waits fo
   const v = [...fake.videos.values()][0];
   const video = `https://www.facebook.com/${PAGE_ID}/videos/${v.videoId}/`;
   assert.match(txt, new RegExp(`^Live view of game ${game}: live on Facebook since \\d\\d:\\d\\d:\\d\\d UTC\\.\\nVideo \\(plain link\\): ${video.replace(/[./]/g, '\\$&')}\\nOne camera serves every game on this server: it films the game whose live_view call came last`));
-  assert.ok(txt.includes('\nHTML page (Facebook\'s video player and a status line; no script):\n<!doctype html>'));
+  assert.ok(txt.includes('\nHTML page (Facebook\'s video player and a status line; a small script reloads the player, no request of its own):\n<!doctype html>'));
   assert.deepEqual({ ...r.structuredContent, html: undefined }, { format: 'html', game, state: 'live', live: true, camera_game: game, video_url: video, embed_url: facebookEmbedUrl(video), html: undefined });
-  assert.ok(r.structuredContent.html.includes(`<iframe src="${facebookEmbedUrl(video).replace(/&/g, '&amp;')}"`));
+  assert.ok(r.structuredContent.html.includes(`<iframe src="${`${facebookEmbedUrl(video)}&autoplay=true&mute=true`.replace(/&/g, '&amp;')}"`));
   const embed = JSON.parse((await c.callTool({ name: 'live_view', arguments: { format: 'embed' } })).content[0].text);
   assert.deepEqual(embed, { format: 'embed', game, live: true, state: 'live', camera_game: game, player: 'facebook', embed_url: facebookEmbedUrl(video), video_url: video });
   // the game ends: its body's end takes it off the channel (the agent hands the channel the body), and the live video ends

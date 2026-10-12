@@ -1,0 +1,8 @@
+The stream UI's assets (src/ui-panel.js, src/camera.js):
+
+- sprites/, icons/: the "Muse" mascot and the UI icons, our own original art, made with Codex's image tool from the
+  prompts in the episode's ui-art folder (gen.sh, character.txt, style.txt) on a #00FF00 screen, keyed by ui-art/key.mjs.
+- fonts/Inter-*.ttf: Inter 4.1 by The Inter Project Authors (github.com/rsms/inter), SIL Open Font License 1.1
+  (fonts/Inter-OFL.txt).
+- music/etirwer.m4a: "Etirwer" by Kistol (opengameart.org/content/etirwer), CC0 1.0, a seamless game loop; levelled
+  in ~/picasso-work/game-music. Credit not required; given here anyway.

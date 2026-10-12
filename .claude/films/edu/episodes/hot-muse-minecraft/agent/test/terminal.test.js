@@ -41,13 +41,13 @@ test('lines: ASCII only, never another player\'s name, an address, a link or a t
 });
 
 test('lines: calls abbreviated, results by what they did, failures with their code, the clock, the status bar', () => {
-  assert.deepEqual(callLine('play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 8 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] }), { k: 'call', t: '> play_sequence: collect oak_log 8, craft wooden_pickaxe' });
+  assert.deepEqual(callLine('play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 8 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] }), { k: 'call', t: '> play_sequence: collect oak_log 8, craft wooden_pickaxe', say: 'Mine 8 oak logs, then craft a wooden pickaxe' });
   assert.equal(callLine('play_sequence', { steps: Array.from({ length: 7 }, () => ({ skill: 'eat', args: {} })) }).t, '> play_sequence: eat, eat, eat, eat, +3 more');
   assert.equal(callLine('play', { skill: 'collect', block: 'stone', n: 3 }).t, '> play: collect stone 3', 'flat args');
   assert.equal(callLine('get_state', {}).t, '> get_state');
-  assert.deepEqual(resultLine({ skill: 'collect', args: { block: 'oak_log', n: 8 }, status: 'confirmed', result: 'mined 8 oak_log and picked up 8 oak_log (8 of 8 wanted)', ms: 12_340 }), { k: 'ok', t: 'ok  mined 8 oak log (12 s)' });
+  assert.deepEqual(resultLine({ skill: 'collect', args: { block: 'oak_log', n: 8 }, status: 'confirmed', result: 'mined 8 oak_log and picked up 8 oak_log (8 of 8 wanted)', ms: 12_340 }), { k: 'ok', t: 'ok  mined 8 oak log (12 s)', say: 'Mine 8 oak logs', ms: 12_340 });
   assert.equal(resultLine({ skill: 'craft', args: { item: 'wooden_pickaxe' }, status: 'confirmed', result: 'crafted 1 wooden_pickaxe at a crafting table put down at 14 70 -38', ms: 2_400 }).t, 'ok  crafted 1 wooden pickaxe (2.4 s)');
-  assert.deepEqual(resultLine({ skill: 'collect', args: { block: 'iron_ore', n: 3 }, status: 'failed', code: 'NOT_FOUND', result: 'no iron_ore within 64 blocks; stone is 3 blocks down', ms: 1_200 }), { k: 'fail', t: 'FAIL collect iron ore 3 NOT_FOUND: no iron ore within 64 blocks (1.2 s)' });
+  assert.deepEqual(resultLine({ skill: 'collect', args: { block: 'iron_ore', n: 3 }, status: 'failed', code: 'NOT_FOUND', result: 'no iron_ore within 64 blocks; stone is 3 blocks down', ms: 1_200 }), { k: 'fail', t: 'FAIL collect iron ore 3 NOT_FOUND: no iron ore within 64 blocks (1.2 s)', say: 'Mine 3 iron ore', ms: 1_200, why: 'no iron ore within 64 blocks' });
   assert.equal(resultLine({ skill: 'eat', args: {}, status: 'cancelled', why: 'an earlier step failed' }).t, 'skip eat: an earlier step failed');
   assert.equal(resultLine({ skill: 'eat', args: {}, status: 'pending' }), null);
   assert.deepEqual([clockText(0), clockText(6_000), clockText(13_000), clockText(18_000), clockText(23_500), clockText(24_250)], ['DAY 06:00', 'DAY 12:00', 'NIGHT 19:00', 'NIGHT 00:00', 'DAY 05:30', 'DAY 06:15']);
@@ -64,7 +64,7 @@ test('feed: a call, then its results once; advice when it changes; reflexes and 
   const game = { id: 'g1', body: { attribution: () => ({ muse: 3, reflex: 1, musePct: 75 }), snapshot: () => ({ dimension }) } };
   const reply = (st) => ({ content: [{ type: 'text', text: 'x' }], structuredContent: st });
   feed.reply(game, 'start_game', { adult: true }, reply({ steps: [], state: { health: 20, food: 20, time: 0 } }));
-  assert.deepEqual(sent.at(-1), { id: 'g1', lines: [{ k: 'call', t: '> start_game' }], status: 'HP 20/20  FOOD 20/20  DAY 06:00  |  Muse 3 | Reflex 1 | 75% Muse' });
+  assert.deepEqual(sent.at(-1), { id: 'g1', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], status: 'HP 20/20  FOOD 20/20  DAY 06:00  |  Muse 3 | Reflex 1 | 75% Muse', st: { hp: 20, food: 20, clock: 'DAY 06:00', muse: 3, reflex: 1, pct: 75 } });
   feed.call(game, 'play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 3 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] });
   assert.equal(sent.at(-1).lines[0].t, '> play_sequence: collect oak_log 3, craft wooden_pickaxe');
   assert.match(sent.at(-1).status, /^HP 20\/20/, 'the last state, though the call carries none');
@@ -73,14 +73,15 @@ test('feed: a call, then its results once; advice when it changes; reflexes and 
   const advice = [{ kind: 'night', text: 'night in 45 s, no shelter, no shield' }];
   clock += 41_000;
   feed.reply(game, 'play_sequence', {}, reply({ steps: [s1, s2], advice, state: { health: 18, food: 19, time: 12_250 } }));
-  assert.deepEqual(sent.at(-1).lines, [{ k: 'ok', t: 'ok  mined 3 oak log (9 s)' }, { k: 'advice', t: 'advice: night in 45 s, no shelter, no shield' }]);
+  assert.deepEqual(sent.at(-1).lines, [{ k: 'ok', t: 'ok  mined 3 oak log (9 s)', say: 'Mine 3 oak logs', ms: 9_000, n: 1, of: 2 }, { k: 'advice', t: 'advice: night in 45 s, no shelter, no shield', ak: 'night' }]);
+  assert.deepEqual(sent.at(-1).adv, [{ k: 'night', t: 'night in 45 s, no shelter, no shield', sev: 1 }], 'the advice as it stands, one per kind');
   feed.call(game, 'get_state', {});
   feed.reply(game, 'get_state', {}, reply({
     steps: [], earlier: [s1, { ...s2, status: 'confirmed', result: 'crafted 1 wooden_pickaxe', ms: 2_000, gained: { wooden_pickaxe: 1 } }], advice,
     onItsOwn: [{ seq: 4, source: 'reflex', kind: 'defend', text: 'defending itself (zombie)' }, { seq: 5, source: 'reflex', kind: 'death', text: 'died: slain by a zombie at 10 64 -3' }],
     state: { health: 20, food: 20, time: 13_100 },
   }));
-  assert.deepEqual(sent.at(-1).lines, [
+  assert.deepEqual(sent.at(-1).lines.map(({ k, t }) => ({ k, t })), [
     { k: 'ok', t: 'ok  crafted 1 wooden pickaxe (2 s)' }, { k: 'milestone', t: 'milestone: a wooden pickaxe at 0:41' },
     { k: 'reflex', t: 'reflex: defending itself (zombie)' }, { k: 'fail', t: 'death: died: slain by a zombie at 10 64 -3' },
   ], 'the first step not twice, the same advice not again');
@@ -149,7 +150,7 @@ test('feed: start_game\'s reply carries no state: the status line has health, fo
   const text = { content: [{ type: 'text', text: 'New game' }] };
   const bot = { id: 'g7', status: 'ready', body: { bot: { entity: {}, health: 19.6, food: 18, time: { timeOfDay: 1000 } }, attribution: () => ({ muse: 0, reflex: 0 }) } };
   feed.reply(bot, 'start_game', { adult: true }, text);
-  assert.deepEqual(sent.at(-1), { id: 'g7', lines: [{ k: 'call', t: '> start_game' }], status: 'HP 20/20  FOOD 18/20  DAY 07:00  |  Muse 0 | Reflex 0' });
+  assert.deepEqual(sent.at(-1), { id: 'g7', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], status: 'HP 20/20  FOOD 18/20  DAY 07:00  |  Muse 0 | Reflex 0', st: { hp: 20, food: 18, clock: 'DAY 07:00', muse: 0, reflex: 0 } });
   const mineai = { id: 'g8', status: 'ready', body: { snapshot: () => ({ health: 20, food: 20, timeOfDay: 0, dimension: 'overworld' }) } };
   feed.reply(mineai, 'start_game', { adult: true }, text);
   assert.equal(sent.at(-1).status, 'HP 20/20  FOOD 20/20  DAY 06:00');
@@ -210,19 +211,24 @@ test('MCP: each call and its results reach the game\'s stream as terminal lines'
   assert.equal(JSON.stringify(updates).includes('Muse_'), false, 'no bot name in the terminal');
 });
 
-test('live_view\'s page: the player at the video\'s shape, as tall as the panel allows, still under 1 KB', () => {
+test('live_view\'s page: the player at the video\'s shape, as wide as the panel and no taller, still small', () => {
   const embed = 'https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2F1%2Fvideos%2F2%2F&show_text=false&width=1280';
   const tall = liveViewHtml({ state: 'live', game: 'g1', embedUrl: embed, aspect: '1080/1920' });
-  assert.match(tall, /div\{position:relative;aspect-ratio:1080\/1920;width:min\(100%,calc\(\(100vh - 40px\)\*0\.5625\)\);margin:0 auto;background:#000\}/);
-  assert.ok(Buffer.byteLength(tall) < 1024);
-  assert.match(liveViewHtml({ state: 'live', game: 'g1', embedUrl: embed, aspect: '1080/1350' }), /aspect-ratio:1080\/1350;width:min\(100%,calc\(\(100vh - 40px\)\*0\.8\)\)/);
+  assert.match(tall, /#v\{position:relative;aspect-ratio:1080\/1920;width:min\(100%,calc\(\(100vh - 28px\)\*0\.5625\)\);margin:0 auto;background:#000;overflow:hidden\}/);
+  assert.ok(Buffer.byteLength(tall) < 3072);
+  assert.match(liveViewHtml({ state: 'live', game: 'g1', embedUrl: embed, aspect: '1080/1350' }), /aspect-ratio:1080\/1350;width:min\(100%,calc\(\(100vh - 28px\)\*0\.8\)\)/);
+  // square (the UI layout): a 1000x1050 desktop panel gets the whole width, no bars at the sides
+  assert.match(liveViewHtml({ state: 'live', game: 'g1', embedUrl: embed, aspect: '1080/1080' }), /aspect-ratio:1080\/1080;width:min\(100%,calc\(\(100vh - 28px\)\*1\)\)/);
   assert.match(liveViewHtml({ state: 'live', game: 'g1', embedUrl: embed }), /aspect-ratio:16\/9/, 'the old shape without one');
   assert.match(liveViewHtml({ state: 'live', game: 'g1', embedUrl: embed, aspect: 'x;}body{' }), /aspect-ratio:16\/9/, 'nothing else gets into the style');
 });
 
-test('config: the vertical layout with the terminal by default, 1080x1920 or 1080x1350; landscape as before', () => {
+test('config: the UI layout by default, square; the terminal (1080x1920 or 1080x1350) and landscape as before; the sound', () => {
   const c = loadConfig({});
-  assert.deepEqual([c.stream.layout, c.stream.terminalSize], ['terminal', '1080x1920']);
+  assert.deepEqual([c.stream.layout, c.stream.uiSize, c.stream.terminalSize], ['ui', '1080x1080', '1080x1920']);
+  assert.deepEqual([c.stream.gameAudio, c.stream.music, c.stream.musicDb, c.stream.gameDb], [true, true, 0, 0]);
+  assert.deepEqual([loadConfig({ STREAM_MUSIC: 'off' }).stream.music, loadConfig({ STREAM_UI_SIZE: '1080x1350' }).stream.uiSize], [false, '1080x1350']);
+  assert.throws(() => loadConfig({ STREAM_UI_SIZE: '1920x1080' }), /STREAM_UI_SIZE must be one of/);
   assert.deepEqual([loadConfig({ STREAM_LAYOUT: 'landscape' }).stream.layout, loadConfig({ STREAM_TERMINAL_SIZE: '1080x1350' }).stream.terminalSize], ['landscape', '1080x1350']);
   assert.throws(() => loadConfig({ STREAM_TERMINAL_SIZE: '720x1280' }), /STREAM_TERMINAL_SIZE must be one of/);
 });
