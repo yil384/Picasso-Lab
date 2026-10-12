@@ -7,6 +7,8 @@
 export const KINDS = Object.freeze(['call', 'ok', 'fail', 'advice', 'reflex', 'body', 'milestone', 'info']);
 /** Why nothing runs, for the stream's status line: Muse sheltering or asleep for the night, looking, thinking. */
 export const IDLE_REASONS = Object.freeze(['waiting', 'checking', 'shelter', 'shelter_body', 'sleep', 'nether']);
+/** The kinds of the body's live sub-steps (src/mineai/body.js subStepOf). */
+export const SUB_KINDS = Object.freeze(['walk', 'mine', 'build', 'bucket', 'smelt', 'fight', 'eat', 'sleep', 'explore', 'other']);
 
 /** A terminal update from outside (the camera service's caption endpoint): kinds checked, every text cleaned again. */
 export function cleanTerm(u) {
@@ -41,6 +43,16 @@ export function cleanTerm(u) {
     if (step) live.step = step;
     for (const [key, lo, hi] of [['sinceS', 0, 86_400], ['dawnS', 0, 1_200]]) { const v = int(l[key], lo, hi); if (v !== undefined) live[key] = v; }
     out.live = live;
+  }
+  if (u && 'sub' in u) {
+    // the body's live sub-step for the running command (null: none now)
+    const sb = u.sub;
+    const text = sb && typeof sb.text === 'string' ? clean(sb.text, 80) : '';
+    if (!text) out.sub = null;
+    else {
+      out.sub = { kind: SUB_KINDS.includes(sb.kind) ? sb.kind : 'other', text };
+      for (const [key, lo, hi] of [['done', 0, 100_000], ['of', 1, 100_000], ['left', 0, 100_000]]) { const v = int(sb[key], lo, hi); if (v !== undefined) out.sub[key] = v; }
+    }
   }
   if (Array.isArray(u?.adv)) {
     out.adv = u.adv.slice(0, 6)
@@ -249,9 +261,23 @@ export function createTermFeed(o) {
   const games = new Map(); // id -> {seen: Set, own: number, advice: Map(kind -> words), got: Set, startedAt, state, dim}
   const of = (s) => {
     let g = games.get(s.id);
-    if (!g) { g = { seen: new Set(), own: -1, advice: new Map(), got: new Set(), startedAt: now(), state: null, dim: null }; games.set(s.id, g); }
+    if (!g) { g = { seen: new Set(), own: -1, advice: new Map(), got: new Set(), startedAt: now(), state: null, dim: null, sub: null }; games.set(s.id, g); }
+    if (!g.offProgress && typeof s.body?.on === 'function') {
+      // the body's live sub-steps while a command runs (about once a second), at most 2 a second to the video
+      try {
+        g.offProgress = s.body.on('progress', (e) => {
+          const sub = e?.sub ?? null;
+          g.sub = sub;
+          const t = now();
+          if (sub && t - (g.subSentAt ?? 0) < 500) return;
+          g.subSentAt = t;
+          try { o.send(s.id, { lines: [], sub }); } catch { /* the video goes on without it */ }
+        }) ?? (() => {});
+      } catch { g.offProgress = () => {}; }
+    }
     return g;
   };
+  const drop = (id) => { const g = games.get(id); try { g?.offProgress?.(); } catch { /* gone */ } games.delete(id); };
   /** Health, food and the clock as the body knows them now, without a reply: the bot's, else the body's snapshot. */
   const liveState = (s) => {
     if (s?.status && s.status !== 'ready') return null;
@@ -311,7 +337,8 @@ export function createTermFeed(o) {
     try {
       const { text, st } = statusOf(s, structured);
       const adv = adviceOf(structured);
-      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, of(s)), ...(adv ? { adv } : {}) });
+      const g = of(s);
+      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}) });
     } catch { /* the video goes on without it */ }
   };
   const PLACES = { the_nether: 'entered the Nether', the_end: 'entered the End', overworld: 'back in the Overworld' };
@@ -379,7 +406,7 @@ export function createTermFeed(o) {
       const dim = dimOf(s);
       if (dim && g.dim && dim !== g.dim) lines.push({ k: 'milestone', t: clean(`${PLACES[dim] ?? `entered ${word(dim)}`} at ${elapsed(g)}`) });
       if (dim) g.dim = dim;
-      if (tool === 'end_game') { lines.push({ k: 'info', t: clean(`game over after ${elapsed(g)}`) }); emit(s, lines, st); games.delete(s.id); return; }
+      if (tool === 'end_game') { lines.push({ k: 'info', t: clean(`game over after ${elapsed(g)}`) }); emit(s, lines, st); drop(s.id); return; }
       emit(s, lines, st);
     },
     /** Every few seconds between calls: the status and what is happening now, with no lines (the picture lives). */
@@ -387,6 +414,6 @@ export function createTermFeed(o) {
       if (!s?.id || !games.has(s.id)) return;
       emit(s, [], null);
     },
-    forget: (id) => games.delete(id),
+    forget: (id) => drop(id),
   };
 }

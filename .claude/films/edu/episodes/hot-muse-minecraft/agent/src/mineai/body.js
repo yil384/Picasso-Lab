@@ -114,6 +114,60 @@ export function progressWords(cp) {
   return [got !== null ? `${got}${of ? ` of ${of}` : ''} so far` : null, phase].filter(Boolean).join(', ');
 }
 
+/**
+ * What the body is doing within a running step, in plain words with its numbers, from the runtime's checkpoint (their
+ * action's progress, read about once a second while it runs): walking with the distance left, mining "obsidian 3 of
+ * 14", placing blocks, filling or pouring a bucket, smelting, fighting, eating, sleeping, exploring. null when the
+ * checkpoint says nothing worth showing. For the live video: the body carrying out Muse's command, never a new action.
+ */
+export function subStepOf(tool, args = {}, cp = {}) {
+  const n = (x) => (Number.isFinite(Number(x)) ? Math.max(0, Math.round(Number(x))) : null);
+  const name = (v) => String(v ?? '').replace(/^minecraft:/, '').replace(/_/g, ' ').trim();
+  const a = args ?? {};
+  const c = cp ?? {};
+  switch (tool) {
+    case 'navigate': {
+      const d = n(c.remainingDistance);
+      return d === null ? { kind: 'walk', text: 'finding the way' } : { kind: 'walk', text: d <= 1 ? 'almost there' : `${d} blocks to go`, left: d };
+    }
+    case 'collect_block': {
+      const got = n(c.gained) ?? 0;
+      const of = n(c.requested) ?? n(a.count);
+      return { kind: 'mine', text: `${name(a.block_name) || 'blocks'} ${got}${of ? ` of ${of}` : ''}`, done: got, ...(of ? { of } : {}) };
+    }
+    case 'build_structure': {
+      const ok = n(c.correct) ?? 0;
+      const of = n(c.requested);
+      return { kind: 'build', text: `placing blocks ${ok}${of ? ` of ${of}` : ''}`, done: ok, ...(of ? { of } : {}) };
+    }
+    case 'use_bucket': {
+      const liquid = name(a.liquid) || 'water';
+      if (c.obsidianFormed) return { kind: 'bucket', text: 'obsidian formed' };
+      if (c.phase === 'finding_and_filling') return { kind: 'bucket', text: `filling a bucket with ${liquid}` };
+      if (c.phase === 'approaching_and_pouring') return { kind: 'bucket', text: c.targetBlock === 'lava' ? `pouring ${liquid} on lava` : `pouring ${liquid}` };
+      return null;
+    }
+    case 'smelt_item': {
+      if (c.phase === 'loading_furnace') return { kind: 'smelt', text: 'loading the furnace' };
+      const got = n(c.produced) ?? 0;
+      const of = n(c.requested) ?? n(a.count);
+      return { kind: 'smelt', text: `smelting ${got}${of ? ` of ${of}` : ''}`, done: got, ...(of ? { of } : {}) };
+    }
+    case 'hunt_mob': {
+      const hits = n(c.attacks);
+      return { kind: 'fight', text: `fighting a ${name(a.entity_name ?? a.mob ?? a.target) || 'mob'}${hits ? ` \u00b7 ${hits} hits` : ''}` };
+    }
+    case 'eat_food': return { kind: 'eat', text: `eating ${name(c.item ?? a.food_name ?? a.item_name)}`.trim() };
+    case 'sleep': return { kind: 'sleep', text: c.asleep ? 'sleeping' : 'finding a bed' };
+    case 'explore_frontier': {
+      const got = n(c.expandedChunks) ?? 0;
+      const of = n(c.requested);
+      return { kind: 'explore', text: `exploring ${got}${of ? ` of ${of}` : ''} chunks`, done: got, ...(of ? { of } : {}) };
+    }
+    default: return null;
+  }
+}
+
 /** Calls sent once more after one of their reflexes cut them short (sending them again repeats nothing). */
 export const RETRY_AFTER_REFLEX = new Set(['craft_item', 'smelt_item', 'equip', 'eat_food', 'place_block', 'use_bucket', 'navigate', 'build_structure', 'activate_portal']);
 /** collect obsidian makes it from lava within this many blocks of the bot, else it is refused. */
@@ -196,6 +250,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   // stood): a build of the same blueprint and material near it continues it (src/mineai/skills.js continuesLast)
   let lastBuild = null;
   let progress = null; // the running step's progress in words (their checkpoint)
+  let lastSub = 'null'; // the last sub-step sent to the video (JSON), so only a change goes out
   let lastPortal = null; // the frame the last build nether_portal made: {dimension, frame, inside, cells}
   const arrivals = {}; // dimension -> {pos, at}: where the bot last came out of a portal there
   let current = null; // the action running now: {actionId, stop}
@@ -494,13 +549,20 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       ctl.actionId ??= data.actionId;
       // how far it got, as their checkpoint says (get_state shows it while a long step runs: F2 of the log hunt)
       const cp = data.progress?.request?.evidence?.checkpoint;
-      if (cp && typeof cp === 'object') progress = progressWords(cp);
+      if (cp && typeof cp === 'object') {
+        progress = progressWords(cp);
+        // the live sub-step for the video, when its words change
+        const sub = subStepOf(call.tool, call.args, cp);
+        const key = JSON.stringify(sub);
+        if (key !== lastSub) { lastSub = key; emit('progress', { sub, skill: ctl.skill ?? null }); }
+      }
       if (ctl.attack && !cancelled && deaths(data) > 0) { ctl.killed = deaths(data); await cancel(KILLED, { self: true }); }
       else if (ctl.stopped) await cancel(ctl.stopped);
       else if (left() <= 0) await cancel(`timed out after ${Math.round((ctl.limitMs ?? timeouts[ctl.skill] ?? 60_000) / 1000)} s`);
       const ms = cancelled ? 15_000 : ctl.attack ? Math.max(500, Math.min(ATTACK_POLL_MS, waitFor())) : Math.max(1_000, waitFor());
       data = await rpc('wait_for_action', { action_id: ctl.actionId, timeout_ms: ms }, ms + RPC_SLACK_MS);
     }
+    if (lastSub !== 'null') { lastSub = 'null'; emit('progress', { sub: null }); }
     if (data.state === 'settled' || data.state === 'storage_failed') return { output: data.output, stopped: ctl.stopped };
     if (data.state === 'refused') return { error: `${data.code}: ${data.error}`, code: data.code };
     return { error: data.error ?? `unexpected reply (${String(data.state)})` };

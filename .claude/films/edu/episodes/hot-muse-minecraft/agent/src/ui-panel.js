@@ -252,7 +252,7 @@ export function createUiPanel(o) {
     const secs = (ms) => (ms >= 10_000 ? `${Math.round(ms / 1000)} s` : `${Math.max(0.1, Math.round(ms / 100) / 10)} s`);
     if (l.k === 'ok') {
       const last = !multi || l.n >= l.of;
-      r.state = last ? { kind: 'ok', text: r.msSum > 0 ? `done ${secs(r.msSum)}` : 'done' } : { kind: 'run', text: `${l.n} of ${l.of}` };
+      r.state = last ? { kind: 'ok', text: r.msSum > 0 ? `done ${secs(r.msSum)}` : 'done' } : { kind: 'run', text: `${l.n} of ${l.of}`, seq: `${l.n} of ${l.of}` };
     } else {
       const why = (l.why || String(l.t ?? '').replace(/^FAIL\s*/, '')).split(/[;(]/)[0].trim();
       r.state = { kind: 'fail', text: `failed${why ? ` · ${why}` : ''}` };
@@ -310,6 +310,11 @@ export function createUiPanel(o) {
       if (Array.isArray(u.lines) && u.lines.length) api.push(u.lines);
       if (u.st) api.status(u.status, u.st);
       if (u.live) live = { ...u.live, at: now() };
+      if ('sub' in u) {
+        // the body's live sub-step: the running command's state on the right ("obsidian 3 of 14", "23 blocks to go")
+        const r = rows.find((x) => x.kind === 'action' && x.state?.kind === 'run');
+        if (r) { r.state = { ...r.state, text: u.sub?.text ?? (r.state.seq ?? '') }; }
+      }
     },
     /** Another game on camera: an empty list, with a note. */
     reset(note = '') {

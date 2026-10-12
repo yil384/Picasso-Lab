@@ -17,6 +17,7 @@ import { createUiPanel, milestoneWords } from '../src/ui-panel.js';
 import { ffmpegArgs, audioArgs, findFfmpeg, streamAspect } from '../src/stream.js';
 import { createCameraStream, pulseScript, pulsePaths, PULSE_SOURCE } from '../src/camera.js';
 import { callRow } from '../src/mcp.js';
+import { subStepOf } from '../src/mineai/body.js';
 import { callLine } from '../src/terminal.js';
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'muse-ui-'));
@@ -52,6 +53,40 @@ test('why: Muse\'s own words with a call go to the stream (cleaned, cut at 140) 
   assert.equal(callLine('play', { skill: 'eat', args: {} }).words, undefined, 'optional');
   assert.equal(callRow('play_sequence', { steps: [{ skill: 'eat', args: {} }], why }, { structuredContent: {} }, 'g1', 5).why, why);
   assert.equal(cleanTerm({ lines: [{ k: 'call', t: '> play', words: 'see https://x.example now' }] }).lines[0].words, 'see [link] now');
+});
+
+test('sub-steps: the body carrying out a command, from the runtime\'s checkpoints, at most twice a second to the video', () => {
+  assert.deepEqual(subStepOf('navigate', { x: 1, y: 2, z: 3 }, { remainingDistance: 23.4 }), { kind: 'walk', text: '23 blocks to go', left: 23 });
+  assert.deepEqual(subStepOf('collect_block', { block_name: 'obsidian', count: 14 }, { gained: 3, requested: 14 }), { kind: 'mine', text: 'obsidian 3 of 14', done: 3, of: 14 });
+  assert.deepEqual(subStepOf('build_structure', {}, { phase: 'building', correct: 7, requested: 12 }), { kind: 'build', text: 'placing blocks 7 of 12', done: 7, of: 12 });
+  assert.equal(subStepOf('use_bucket', { liquid: 'water' }, { phase: 'approaching_and_pouring', targetBlock: 'lava' }).text, 'pouring water on lava');
+  assert.equal(subStepOf('smelt_item', { count: 5 }, { phase: 'smelting_or_collecting', produced: 2, requested: 5 }).text, 'smelting 2 of 5');
+  assert.equal(subStepOf('smelt_item', {}, { phase: 'loading_furnace' }).text, 'loading the furnace');
+  assert.equal(subStepOf('hunt_mob', { entity_name: 'zombie' }, { attacks: 3 }).text, 'fighting a zombie \u00b7 3 hits');
+  assert.equal(subStepOf('craft_item', {}, {}), null);
+  // the feed: the body's progress events go out as sub, throttled, and with every update
+  const sent = [];
+  let clock = 1_000_000;
+  const handlers = [];
+  const body = { on: (name, fn) => { handlers.push(fn); return () => handlers.splice(handlers.indexOf(fn), 1); }, attribution: () => null };
+  const feed = createTermFeed({ send: (id, u) => sent.push(u), now: () => clock });
+  const game = { id: 'g1', body };
+  feed.call(game, 'play', { skill: 'collect', args: { block: 'obsidian', n: 14 } });
+  assert.equal(handlers.length, 1, 'subscribed once');
+  handlers[0]({ sub: { kind: 'mine', text: 'obsidian 1 of 14', done: 1, of: 14 } });
+  assert.deepEqual(sent.at(-1), { lines: [], sub: { kind: 'mine', text: 'obsidian 1 of 14', done: 1, of: 14 } });
+  clock += 200;
+  handlers[0]({ sub: { kind: 'mine', text: 'obsidian 2 of 14', done: 2, of: 14 } });
+  assert.equal(sent.at(-1).sub.text, 'obsidian 1 of 14', 'within 500 ms: not sent');
+  feed.call(game, 'get_state', {});
+  assert.equal(sent.at(-1).sub.text, 'obsidian 2 of 14', 'every update carries the latest');
+  clock += 600;
+  handlers[0]({ sub: null });
+  assert.equal(sent.at(-1).sub, null, 'the step ended');
+  feed.forget('g1');
+  assert.equal(handlers.length, 0, 'unsubscribed');
+  assert.deepEqual(cleanTerm({ lines: [], sub: { kind: 'evil', text: 'near Muse_aB3dE9fGh2k', done: -4 } }).sub, { kind: 'other', text: 'near a player', done: 0 });
+  assert.equal(cleanTerm({ lines: [], sub: null }).sub, null);
 });
 
 test('feed: the advice once per kind and change of words (the time in it is not news), the list as it stands with each update', () => {
@@ -92,7 +127,11 @@ test('panel: the last seven actions (six under the status line), newest first, e
   assert.deepEqual(p.state().rows[0].state, { kind: 'ok', text: 'done 9 s' });
   p.term({ lines: [{ k: 'call', t: '> play_sequence', say: 'Craft 4 sticks, then craft a crafting table' }] });
   p.term({ lines: [{ k: 'ok', t: 'ok', say: 'Craft 4 sticks', ms: 700, n: 1, of: 2 }] });
-  assert.deepEqual(p.state().rows[0].state, { kind: 'run', text: '1 of 2' });
+  assert.deepEqual(p.state().rows[0].state, { kind: 'run', text: '1 of 2', seq: '1 of 2' });
+  p.term({ lines: [], sub: { kind: 'build', text: 'placing blocks 4 of 9' } });
+  assert.equal(p.state().rows[0].state.text, 'placing blocks 4 of 9', 'the body\'s sub-step on the running command');
+  p.term({ lines: [], sub: null });
+  assert.equal(p.state().rows[0].state.text, '1 of 2', 'back to the step count');
   p.term({ lines: [{ k: 'ok', t: 'ok', say: 'Craft a crafting table', ms: 600, n: 2, of: 2 }] });
   assert.deepEqual(p.state().rows[0].state, { kind: 'ok', text: 'done 1.3 s' }, 'a sequence: its steps\' time');
   p.term({ lines: [{ k: 'call', t: '> play', say: 'Mine 3 iron ore' }] });
