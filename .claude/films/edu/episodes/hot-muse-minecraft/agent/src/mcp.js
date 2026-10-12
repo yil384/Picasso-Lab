@@ -33,6 +33,8 @@ import { createTermFeed } from './terminal.js';
 const CALL_MS = 45_000; // every reply within 45 s: MCP clients commonly give up after 60 s (a long skill keeps going)
 /** Of a call's time, what building the reply may take (the state text scans the blocks around: ~850 ms on Paper). */
 const replyBudget = (callMs) => Math.min(2_000, Math.round(callMs / 20));
+/** Muse's own words with a call (play, play_sequence: why), shown live on the stream. */
+export const WHY_MAX = 140;
 const IDLE_MS = 5 * 60_000; // a game nobody has called for 5 minutes (and that runs nothing) is ended, freeing its bot
 const IDLE_SESSION_MS = 10 * 60_000; // an MCP session without a game is dropped after 10 minutes without calls
 const JOIN_WAIT_MS = 30_000;
@@ -228,6 +230,7 @@ const REPLY_OUT = z.object({
 export function callRow(tool, args, out, game, ms, session = null) {
   const a = args && typeof args === 'object' ? args : {};
   const brief = (x) => JSON.stringify(x ?? {}, (k, v) => (typeof v === 'string' && v.length > 80 ? `${v.slice(0, 77)}...` : v)).slice(0, 300);
+  const words = typeof a.why === 'string' && a.why.trim() ? { why: a.why.trim().slice(0, 140) } : {};
   const summary = tool === 'play' ? { skill: a.skill ?? null, args: brief(a.args) }
     : tool === 'play_sequence' ? { steps: (a.steps ?? []).slice(0, 16).map((st) => `${st?.skill ?? '?'} ${brief(st?.args)}`) }
       : tool === 'start_game' ? { adult: a.adult === true, resume: Boolean(a.game) }
@@ -235,7 +238,7 @@ export function callRow(tool, args, out, game, ms, session = null) {
   const sc = out?.structuredContent ?? {};
   const text = (out?.content ?? []).map((c) => c?.text ?? '').join('\n');
   return {
-    session, game, tool, ...summary,
+    session, game, tool, ...summary, ...words,
     code: sc.code ?? null, isError: Boolean(out?.isError), ms,
     ...(Array.isArray(sc.steps) && sc.steps.length ? { stepsOut: sc.steps.slice(0, 16).map((st) => ({ skill: st.skill, status: st.status, code: st.code ?? null })) } : {}),
     ...(Array.isArray(sc.advice) && sc.advice.length ? { advice: sc.advice.map((x) => ({ kind: x.kind, text: String(x.text ?? '').slice(0, 160), hint: x.hint?.skill ?? null })) } : {}),
@@ -645,6 +648,9 @@ export function createMcp(hooks) {
   };
 
   const callShape = { skill: z.enum(skills.names), args: z.record(z.string(), z.any()).optional().describe("the skill's arguments, e.g. {\"block\": \"oak_log\", \"n\": 3} for collect") };
+  // what Muse is doing and why, in its own words: shown live on the stream, ignored by the body, logged
+  // (longer words are cut, never a reason to refuse the call)
+  const whyShape = z.string().optional().describe('optional: one short sentence, what you do and why; shown live to viewers as your own words');
   const requestIdShape = z.string().min(1).max(64).optional().describe(`any id of yours for this call (1 to 64 characters): if the call is sent again with the same request_id (a retry after a broken connection), nothing runs twice and the reply carries the first call's results. Without one, the same call within ${REPEAT_MS / 1000} s counts as a repeat; give a new request_id to repeat a call on purpose`);
   const queueText = `Steps run in order in a queue: what does not finish within ${Math.round(callMs / 1000)} s keeps running after the reply (a later reply, or get_state, reports it); a step that fails cancels the steps queued after it (except eat's NOT_HUNGRY, which changes nothing: the steps after it still run); stop clears the queue. Before anything runs, a check simulates your inventory through the steps: if an ingredient, fuel, tool or station is missing, the call is refused with the list (code NEED_ITEMS) and nothing runs; planks, sticks, a crafting table or a furnace that can be made from what you carry are added as crafts. Replies carry structuredContent: each step's status (pending, confirmed, failed, cancelled) and code (${RESULT_CODES.join(', ')}), what changed, and a short state.`;
 
@@ -671,7 +677,7 @@ export function createMcp(hooks) {
 
   function build(entry) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
-      instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot. The skills this server offers (${skills.names.length}): ${SKILL_NAMES_TEXT}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.${CARE_TEXT}`,
+      instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot. The skills this server offers (${skills.names.length}): ${SKILL_NAMES_TEXT}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server. Give play and play_sequence a why: one short sentence in plain words, what you are doing and why; viewers of the live stream see it as your own words.${CARE_TEXT}`,
     });
     {
       // every call in the log (F9 of the log hunt: refusals, calls and the advice shown were in no log): the game, the
@@ -776,9 +782,9 @@ export function createMcp(hooks) {
 
     server.registerTool('play', {
       description: `Run ONE skill: {skill, args}, with that skill's arguments in args. Replies within ${Math.round(callMs / 1000)} s with the result and the new state; a skill still running then keeps going, and get_state waits for it and reports its result. ${queueText} Skills and their arguments:\n${SKILLS}`,
-      inputSchema: z.object({ ...callShape, request_id: requestIdShape }).loose(),
+      inputSchema: z.object({ ...callShape, request_id: requestIdShape, why: whyShape }).loose(),
       outputSchema: REPLY_OUT,
-    }, async ({ request_id: requestId, ...raw }, extra) => runCall(entry, 'play', { steps: [raw], request_id: requestId }, extra));
+    }, async ({ request_id: requestId, why, ...raw }, extra) => runCall(entry, 'play', { steps: [raw], request_id: requestId, why }, extra));
 
     server.registerTool('play_sequence', {
       description: `Run up to ${MAX_STEPS} skills in order, sent in ONE call, e.g. steps [{"skill": "collect", "args": {"block": "oak_log", "n": 3}}, {"skill": "craft_batch", "args": {"items": [{"item": "oak_planks", "n": 12}, {"item": "crafting_table", "n": 1}, {"item": "wooden_pickaxe", "n": 1}]}}]. Same skills and arguments as play (its description gives each skill's arguments; craft_batch crafts a list in one step); the ${skills.names.length} skills: ${SKILL_NAMES_TEXT}. Replies within ${Math.round(callMs / 1000)} s with every step's result or status and the final state. ${queueText} dry_run: true only checks the steps and shows them as they would run. Saves many round trips.`,
@@ -786,6 +792,7 @@ export function createMcp(hooks) {
         steps: z.array(z.object(callShape).loose()).min(1).max(MAX_STEPS),
         request_id: requestIdShape,
         dry_run: z.boolean().optional().describe('true: only check the steps (what is missing, what crafts would be added); nothing runs'),
+        why: whyShape,
       },
       outputSchema: REPLY_OUT,
     }, async (raw, extra) => runCall(entry, 'play_sequence', raw, extra));

@@ -344,7 +344,7 @@ Every change runs on staging on picasso before production (ROADMAP M0 item 9). S
 its own name and shares nothing with it: compose project `muse-staging` (`deploy/staging.compose.yaml`), code in
 `~/workspace/muse-staging/app`, its own Paper 1.21.4 and world (seed 71811045) in `~/workspace/muse-staging/data`,
 logs in `~/workspace/muse-staging/logs`, network 10.77.79.0/28, the agent on 172.24.0.1:7851, served at
-https://play-staging.picasso-lab.com (its own block in the FRAS Caddyfile, next to `play.`, with `X-Robots-Tag:
+https://play-staging.picasso-lab.com (its own block in the shared Caddyfile, next to `play.`, with `X-Robots-Tag:
 noindex`). It runs no streamer or camera (production runs neither on 2026-10-08). Its `deploy/.env` holds its own admin token;
 push.sh writes one the first time and never copies or overwrites it.
 
@@ -403,7 +403,9 @@ proxy secret, the whitelist, the smoke checks and the one-line rollback: `docs/S
 
 Caddy: the block was added to `~/workspace/FRAS/caddy-config/Caddyfile` after a backup
 (`Caddyfile.bak-20261007-222723`), validated as a separate file inside the container, moved into place, then
-`docker exec fras-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
+`docker exec fras-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`. (Since 2026-10-12 the shared Caddy is
+another project's `picasso-edge-caddy`, config in `/nvme2n1/yichen/picasso-edge/caddy-config`; `deploy/caddy-proxy-line.py`
+needs `--dir` and `--container` for it, `docs/SWITCH.md`.)
 
 ## Live video (Facebook Live)
 
@@ -1209,7 +1211,7 @@ X display) and feeds the terminal a scripted session through the real formatter
 | `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
 | `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `5`, `30`, `fast`, `0.75` | the client's video settings (the tuned ones); it draws at 1280x720 times the scale and ffmpeg scales up |
 | `STREAM_LAYOUT`, `STREAM_UI_SIZE`, `STREAM_TERMINAL_SIZE` | `ui`, `1080x1080`, `1080x1920` | the camera's video: `ui`, square (or `1080x1200`, `1080x1350`), the game over Muse's panel (section "The stream UI"); `terminal`, vertical with the terminal of Muse's calls (or `1080x1350`); `landscape`, the game alone at 1280x720 |
-| `STREAM_GAME_AUDIO`, `STREAM_MUSIC`, `STREAM_MUSIC_FILE`, `STREAM_MUSIC_DB`, `STREAM_GAME_DB` | on, on, (Etirwer), -2, 12 | the camera's sound: the game's own effects and ambience (the client's music at 0), a CC0 music bed under it ducked while the game is loud, the gains in dB, then a limiter at -1 dBFS (section "The stream UI") |
+| `STREAM_GAME_AUDIO`, `STREAM_MUSIC`, `STREAM_MUSIC_FILE`, `STREAM_MUSIC_DB`, `STREAM_GAME_DB` | on, on, (Etirwer), -15, 12 | the camera's sound: the game's own effects and ambience (the client's music at 0), a CC0 music bed under it ducked while the game is loud, the gains in dB, then a limiter at -1 dBFS (section "The stream UI") |
 | `CAMERA_VIEW` | `third` | `third`: over the bot's shoulder (its arm, tool and swing in view), outside its shelter while it is enclosed; `first`: in its head (outside too while enclosed). The Paper datapack does it (section "Real-client camera") |
 | `CAMERA_MODS`, `CAMERA_CHUNK_THREADS`, `CAMERA_JVM_ARGS` | `sodium`, `0`, (none) | client mods from the image (`deploy/camera/mods.json`; `off` = vanilla); Sodium's chunk builder threads (0: its own choice); extra JVM flags (a collector given here replaces G1) |
 | `STREAM_CLOCK`, `STREAM_CLOCK_TZ` | `false`, `America/Los_Angeles` | test only: the wall clock burned into the video |

@@ -4,9 +4,11 @@
 // (src/terminal-panel.js); the agent sends it over the camera service's loopback caption endpoint, for the filmed game
 // only. Every line is ASCII, without tokens, keys, addresses or the names of other players.
 
-export const KINDS = Object.freeze(['call', 'ok', 'fail', 'advice', 'reflex', 'body', 'milestone', 'info']);
+export const KINDS = Object.freeze(['call', 'ok', 'fail', 'advice', 'reflex', 'body', 'milestone', 'info', 'checked', 'follow']);
 /** Why nothing runs, for the stream's status line: Muse sheltering or asleep for the night, looking, thinking. */
 export const IDLE_REASONS = Object.freeze(['waiting', 'checking', 'shelter', 'shelter_body', 'sleep', 'nether']);
+/** The kinds of the body's live sub-steps (src/mineai/body.js subStepOf). */
+export const SUB_KINDS = Object.freeze(['walk', 'mine', 'build', 'bucket', 'smelt', 'fight', 'eat', 'sleep', 'explore', 'other']);
 
 /** A terminal update from outside (the camera service's caption endpoint): kinds checked, every text cleaned again. */
 export function cleanTerm(u) {
@@ -19,6 +21,8 @@ export function cleanTerm(u) {
       if (say) out.say = say;
       const why = typeof l.why === 'string' ? clean(l.why, 80) : '';
       if (why) out.why = why;
+      const words = typeof l.words === 'string' ? clean(l.words, 140) : ''; // Muse's own words with a call
+      if (words) out.words = words;
       for (const [key, lo, hi] of [['ms', 0, 86_400_000], ['n', 1, 64], ['of', 1, 64]]) { const v = int(l[key], lo, hi); if (v !== undefined) out[key] = v; }
       if (typeof l.ak === 'string' && /^[a-z_]{1,24}$/.test(l.ak)) out.ak = l.ak;
       return out;
@@ -39,6 +43,16 @@ export function cleanTerm(u) {
     if (step) live.step = step;
     for (const [key, lo, hi] of [['sinceS', 0, 86_400], ['dawnS', 0, 1_200]]) { const v = int(l[key], lo, hi); if (v !== undefined) live[key] = v; }
     out.live = live;
+  }
+  if (u && 'sub' in u) {
+    // the body's live sub-step for the running command (null: none now)
+    const sb = u.sub;
+    const text = sb && typeof sb.text === 'string' ? clean(sb.text, 80) : '';
+    if (!text) out.sub = null;
+    else {
+      out.sub = { kind: SUB_KINDS.includes(sb.kind) ? sb.kind : 'other', text };
+      for (const [key, lo, hi] of [['done', 0, 100_000], ['of', 1, 100_000], ['left', 0, 100_000]]) { const v = int(sb[key], lo, hi); if (v !== undefined) out.sub[key] = v; }
+    }
   }
   if (Array.isArray(u?.adv)) {
     out.adv = u.adv.slice(0, 6)
@@ -94,7 +108,9 @@ export function callLine(tool, args = {}) {
     what = parts.slice(0, 4).join(', ') + (parts.length > 4 ? `, +${parts.length - 4} more` : '');
   } else if (tool === 'play') what = stepSummary(args);
   else if (tool === 'live_view') what = args?.format ?? '';
-  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args) };
+  const words = typeof args?.why === 'string' ? clean(args.why, 140) : ''; // Muse's own words (why), cut at 140
+  const of = tool === 'play_sequence' && Array.isArray(args?.steps) ? args.steps.length : tool === 'play' ? 1 : 0;
+  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args), ...(words ? { words } : {}), ...(of ? { of } : {}) };
 }
 
 // ----- plain words for the stream's speech bubble ("Mine 3 oak logs"), never the raw call
@@ -210,6 +226,27 @@ export function statusText(state, attribution) {
   return clean([parts.join('  '), who].filter(Boolean).join('  |  '), 120);
 }
 
+/** Items worth naming when Muse looks (progress first): what it carries that matters for its way up. */
+const NOTABLE = ['diamond_pickaxe', 'iron_pickaxe', 'stone_pickaxe', 'diamond', 'obsidian', 'flint_and_steel', 'water_bucket', 'lava_bucket', 'bucket',
+  'iron_ingot', 'raw_iron', 'coal', 'shield', 'blaze_rod', 'ender_pearl', 'cooked_beef', 'bread', 'cobblestone'];
+/**
+ * What Muse saw when it looked (a get_state): "Muse checked: HP 20, food 14, 14 obsidian, 1 water bucket, dawn in
+ * 2 min" (ASCII: the stream's cleaning keeps nothing else). The numbers from the state the reply carried; at most three notable items.
+ */
+export function checkedLine(state, dim) {
+  if (!state || state.joining) return '';
+  const parts = [];
+  if (Number.isFinite(state.health)) parts.push(`HP ${Math.round(state.health)}`);
+  if (Number.isFinite(state.food)) parts.push(`food ${state.food}`);
+  const inv = state.inventory && typeof state.inventory === 'object' ? state.inventory : {};
+  for (const item of NOTABLE.filter((x) => Number(inv[x]) > 0).slice(0, 3)) parts.push(countOf(Number(inv[item]), item).replace(/^an? /, '1 '));
+  const t = Number.isFinite(state.time) ? ((Math.floor(state.time) % 24_000) + 24_000) % 24_000 : null;
+  if (dim === 'the_nether') parts.push('in the Nether');
+  else if (t !== null && t >= 13_000 && t < 23_000) parts.push(`dawn in ${Math.max(1, Math.round((23_000 - t) / 1200))} min`);
+  else if (t !== null && t >= 11_000 && t < 13_000) parts.push(`dusk in ${Math.max(1, Math.round((13_000 - t) / 1200))} min`);
+  return parts.length ? clean(`Muse checked: ${parts.join(', ')}`, 160) : '';
+}
+
 /** The status line as numbers for the stream's status row: {hp, food, clock, muse, reflex, pct}. */
 export function statusData(state, attribution) {
   const st = {};
@@ -246,9 +283,23 @@ export function createTermFeed(o) {
   const games = new Map(); // id -> {seen: Set, own: number, advice: Map(kind -> words), got: Set, startedAt, state, dim}
   const of = (s) => {
     let g = games.get(s.id);
-    if (!g) { g = { seen: new Set(), own: -1, advice: new Map(), got: new Set(), startedAt: now(), state: null, dim: null }; games.set(s.id, g); }
+    if (!g) { g = { seen: new Set(), own: -1, advice: new Map(), got: new Set(), startedAt: now(), state: null, dim: null, sub: null }; games.set(s.id, g); }
+    if (!g.offProgress && typeof s.body?.on === 'function') {
+      // the body's live sub-steps while a command runs (about once a second), at most 2 a second to the video
+      try {
+        g.offProgress = s.body.on('progress', (e) => {
+          const sub = e?.sub ?? null;
+          g.sub = sub;
+          const t = now();
+          if (sub && t - (g.subSentAt ?? 0) < 500) return;
+          g.subSentAt = t;
+          try { o.send(s.id, { lines: [], sub }); } catch { /* the video goes on without it */ }
+        }) ?? (() => {});
+      } catch { g.offProgress = () => {}; }
+    }
     return g;
   };
+  const drop = (id) => { const g = games.get(id); try { g?.offProgress?.(); } catch { /* gone */ } games.delete(id); };
   /** Health, food and the clock as the body knows them now, without a reply: the bot's, else the body's snapshot. */
   const liveState = (s) => {
     if (s?.status && s.status !== 'ready') return null;
@@ -308,7 +359,8 @@ export function createTermFeed(o) {
     try {
       const { text, st } = statusOf(s, structured);
       const adv = adviceOf(structured);
-      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, of(s)), ...(adv ? { adv } : {}) });
+      const g = of(s);
+      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}) });
     } catch { /* the video goes on without it */ }
   };
   const PLACES = { the_nether: 'entered the Nether', the_end: 'entered the End', overworld: 'back in the Overworld' };
@@ -319,7 +371,19 @@ export function createTermFeed(o) {
   return {
     call(s, tool, args) {
       if (!s?.id) return;
-      emit(s, [callLine(tool, args)], null);
+      const g = of(s);
+      const lines = [callLine(tool, args)];
+      // the advice the last reply gave: did this command take it? Said only when it is clear: the advised skill is in
+      // the command, or a pressing advice (night, health) is left for something else
+      if ((tool === 'play' || tool === 'play_sequence') && g.hints?.length) {
+        const skills = tool === 'play' ? [args?.skill] : (Array.isArray(args?.steps) ? args.steps.map((x) => x?.skill) : []);
+        const took = g.hints.find((h) => h.skill && skills.includes(h.skill));
+        const pressing = g.hints.find((h) => h.sev >= 2);
+        if (took) lines.push({ k: 'follow', t: clean(`Followed the body's advice: ${took.words}`, 120), ok: 1 });
+        else if (pressing) lines.push({ k: 'follow', t: clean(`Went on without the body's advice: ${pressing.words}`, 120) });
+        g.hints = [];
+      }
+      emit(s, lines, null);
     },
     reply(s, tool, args, out) {
       if (!s?.id) return;
@@ -371,12 +435,19 @@ export function createTermFeed(o) {
         kinds.set(k, shape);
         if (g.advice.get(k) !== shape && told < 3) { lines.push({ k: 'advice', t: `advice: ${t}`, ak: k }); told += 1; }
       }
-      if (Array.isArray(st.advice)) g.advice = kinds;
+      if (Array.isArray(st.advice)) {
+        g.advice = kinds;
+        g.hints = st.advice.slice(0, 4).map((a) => ({ skill: a?.hint?.skill ?? null, sev: severityOf(a), words: clean(String(a?.text ?? '').replace(/\s*\([^)]*\)/g, '').split(';')[0], 70) })).filter((h) => h.words);
+      }
+      if (tool === 'get_state') {
+        const seen = checkedLine(st.state ?? null, dimOf(s) ?? g.dim);
+        if (seen) lines.push({ k: 'checked', t: seen });
+      }
       // a portal: the first line of the new world
       const dim = dimOf(s);
       if (dim && g.dim && dim !== g.dim) lines.push({ k: 'milestone', t: clean(`${PLACES[dim] ?? `entered ${word(dim)}`} at ${elapsed(g)}`) });
       if (dim) g.dim = dim;
-      if (tool === 'end_game') { lines.push({ k: 'info', t: clean(`game over after ${elapsed(g)}`) }); emit(s, lines, st); games.delete(s.id); return; }
+      if (tool === 'end_game') { lines.push({ k: 'info', t: clean(`game over after ${elapsed(g)}`) }); emit(s, lines, st); drop(s.id); return; }
       emit(s, lines, st);
     },
     /** Every few seconds between calls: the status and what is happening now, with no lines (the picture lives). */
@@ -384,6 +455,6 @@ export function createTermFeed(o) {
       if (!s?.id || !games.has(s.id)) return;
       emit(s, [], null);
     },
-    forget: (id) => games.delete(id),
+    forget: (id) => drop(id),
   };
 }

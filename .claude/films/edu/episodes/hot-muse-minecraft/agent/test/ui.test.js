@@ -13,9 +13,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { plainCall, plainStep, countOf, shortWhy, severityOf, statusData, createTermFeed, cleanTerm } from '../src/terminal.js';
-import { createUiPanel, milestoneWords } from '../src/ui-panel.js';
+import { createUiPanel, milestoneWords, adviceGist, shortReason, iconFor } from '../src/ui-panel.js';
 import { ffmpegArgs, audioArgs, findFfmpeg, streamAspect } from '../src/stream.js';
 import { createCameraStream, pulseScript, pulsePaths, PULSE_SOURCE } from '../src/camera.js';
+import { callRow } from '../src/mcp.js';
+import { subStepOf } from '../src/mineai/body.js';
+import { callLine } from '../src/terminal.js';
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'muse-ui-'));
 
@@ -43,18 +46,78 @@ test('plain words: a call as Muse would say it, counts and plurals, a sequence, 
   assert.deepEqual(statusData({ health: 20, food: 20, dimension: 'the_nether' }, null), { hp: 20, food: 20, clock: 'NETHER' });
 });
 
+test('why: Muse\'s own words with a call go to the stream (cleaned, cut at 140) and the log; the body never sees them', () => {
+  const why = 'Night in 2 min and no shield: digging in, then smelting the iron while I wait';
+  assert.deepEqual(callLine('play', { skill: 'shelter', args: {}, why }), { k: 'call', t: '> play: shelter', say: 'Build a shelter for the night', words: why, of: 1 });
+  assert.equal(callLine('play_sequence', { steps: [{ skill: 'eat', args: {} }], why: `${'x '.repeat(100)}token EAAPageTok3n0123456789abcdef` }).words.length, 140);
+  assert.equal(callLine('play', { skill: 'eat', args: {} }).words, undefined, 'optional');
+  assert.equal(callRow('play_sequence', { steps: [{ skill: 'eat', args: {} }], why }, { structuredContent: {} }, 'g1', 5).why, why);
+  assert.equal(cleanTerm({ lines: [{ k: 'call', t: '> play', words: 'see https://x.example now' }] }).lines[0].words, 'see [link] now');
+});
+
+test('sub-steps: the body carrying out a command, from the runtime\'s checkpoints, at most twice a second to the video', () => {
+  assert.deepEqual(subStepOf('navigate', { x: 1, y: 2, z: 3 }, { remainingDistance: 23.4 }), { kind: 'walk', text: '23 blocks to go', left: 23 });
+  assert.deepEqual(subStepOf('collect_block', { block_name: 'obsidian', count: 14 }, { gained: 3, requested: 14 }), { kind: 'mine', text: 'mining obsidian', done: 3, of: 14 });
+  assert.deepEqual(subStepOf('build_structure', {}, { phase: 'building', correct: 7, requested: 12 }), { kind: 'build', text: 'placing blocks', done: 7, of: 12 });
+  assert.equal(subStepOf('use_bucket', { liquid: 'water' }, { phase: 'approaching_and_pouring', targetBlock: 'lava' }).text, 'pouring water on lava');
+  assert.deepEqual(subStepOf('smelt_item', { item_name: 'raw_iron', count: 5 }, { phase: 'smelting_or_collecting', produced: 2, requested: 5 }), { kind: 'smelt', text: 'smelting raw iron', done: 2, of: 5 });
+  assert.equal(subStepOf('smelt_item', {}, { phase: 'loading_furnace' }).text, 'loading the furnace');
+  assert.equal(subStepOf('hunt_mob', { entity_name: 'zombie' }, { attacks: 3 }).text, 'fighting a zombie, 3 hits');
+  assert.equal(subStepOf('craft_item', {}, {}), null);
+  // the feed: the body's progress events go out as sub, throttled, and with every update
+  const sent = [];
+  let clock = 1_000_000;
+  const handlers = [];
+  const body = { on: (name, fn) => { handlers.push(fn); return () => handlers.splice(handlers.indexOf(fn), 1); }, attribution: () => null };
+  const feed = createTermFeed({ send: (id, u) => sent.push(u), now: () => clock });
+  const game = { id: 'g1', body };
+  feed.call(game, 'play', { skill: 'collect', args: { block: 'obsidian', n: 14 } });
+  assert.equal(handlers.length, 1, 'subscribed once');
+  handlers[0]({ sub: { kind: 'mine', text: 'obsidian 1 of 14', done: 1, of: 14 } });
+  assert.deepEqual(sent.at(-1), { lines: [], sub: { kind: 'mine', text: 'obsidian 1 of 14', done: 1, of: 14 } });
+  clock += 200;
+  handlers[0]({ sub: { kind: 'mine', text: 'obsidian 2 of 14', done: 2, of: 14 } });
+  assert.equal(sent.at(-1).sub.text, 'obsidian 1 of 14', 'within 500 ms: not sent');
+  feed.call(game, 'get_state', {});
+  assert.equal(sent.at(-1).sub.text, 'obsidian 2 of 14', 'every update carries the latest');
+  clock += 600;
+  handlers[0]({ sub: null });
+  assert.equal(sent.at(-1).sub, null, 'the step ended');
+  feed.forget('g1');
+  assert.equal(handlers.length, 0, 'unsubscribed');
+  assert.deepEqual(cleanTerm({ lines: [], sub: { kind: 'evil', text: 'near Muse_aB3dE9fGh2k', done: -4 } }).sub, { kind: 'other', text: 'near a player', done: 0 });
+  assert.equal(cleanTerm({ lines: [], sub: null }).sub, null);
+});
+
+test('what Muse saw and whether it took the advice: a line after a get_state, and one when the next command takes (or leaves) it', () => {
+  const sent = [];
+  const feed = createTermFeed({ send: (id, u) => sent.push(u) });
+  const game = { id: 'g1', body: { attribution: () => null } };
+  const reply = (st) => ({ content: [{ type: 'text', text: '' }], structuredContent: st });
+  feed.reply(game, 'get_state', {}, reply({ steps: [], state: { health: 19.6, food: 14, time: 21_000, inventory: { obsidian: 14, water_bucket: 1, dirt: 30 } },
+    advice: [{ kind: 'night', text: 'night (time 21000): no closed shelter around you; 13 blocks for one', hint: { skill: 'shelter', args: {} } }] }));
+  assert.equal(sent.at(-1).lines.find((l) => l.k === 'checked').t, 'Muse checked: HP 20, food 14, 14 obsidian, 1 water bucket, dawn in 2 min');
+  feed.call(game, 'play_sequence', { steps: [{ skill: 'shelter', args: {} }, { skill: 'smelt', args: { item: 'raw_iron', n: 3 } }] });
+  assert.deepEqual(sent.at(-1).lines.find((l) => l.k === 'follow'), { k: 'follow', t: 'Followed the body\'s advice: night: no closed shelter around you', ok: 1 });
+  feed.reply(game, 'get_state', {}, reply({ steps: [], state: { health: 20, food: 14, time: 21_000 }, advice: [{ kind: 'night', text: 'night (time 21000): no closed shelter around you', hint: { skill: 'shelter', args: {} } }] }));
+  feed.call(game, 'play', { skill: 'collect', args: { block: 'iron_ore', n: 3 } });
+  assert.equal(sent.at(-1).lines.find((l) => l.k === 'follow').t, 'Went on without the body\'s advice: night: no closed shelter around you');
+  feed.call(game, 'play', { skill: 'eat', args: {} });
+  assert.equal(sent.at(-1).lines.some((l) => l.k === 'follow'), false, 'judged once, for the next command only');
+});
+
 test('feed: the advice once per kind and change of words (the time in it is not news), the list as it stands with each update', () => {
   const sent = [];
   const feed = createTermFeed({ send: (id, u) => sent.push(u) });
   const game = { id: 'g1', body: { attribution: () => ({ muse: 1, reflex: 0 }) } };
   const reply = (advice) => ({ content: [{ type: 'text', text: '' }], structuredContent: { steps: [], advice, state: { health: 20, food: 20, time: 13_100 } } });
   feed.reply(game, 'get_state', {}, reply([{ kind: 'night', text: 'night (time 13100): no closed shelter around you, no shield' }, { kind: 'shield', text: 'no shield; you can make one' }]));
-  assert.deepEqual(sent.at(-1).lines.map((l) => l.ak), ['night', 'shield']);
+  assert.deepEqual(sent.at(-1).lines.filter((l) => l.k === 'advice').map((l) => l.ak), ['night', 'shield']);
   feed.reply(game, 'get_state', {}, reply([{ kind: 'night', text: 'night (time 13350): no closed shelter around you, no shield' }, { kind: 'shield', text: 'no shield; you can make one' }]));
-  assert.deepEqual(sent.at(-1).lines, [], 'only the number changed: no line');
+  assert.deepEqual(sent.at(-1).lines.filter((l) => l.k === 'advice'), [], 'only the number changed: no line');
   assert.equal(sent.at(-1).adv[0].t, 'night (time 13350): no closed shelter around you, no shield', 'the card gets the new words');
   feed.reply(game, 'get_state', {}, reply([{ kind: 'night', text: 'night (time 13400): no closed shelter around you' }]));
-  assert.deepEqual(sent.at(-1).lines.map((l) => l.t), ['advice: night (time 13400): no closed shelter around you'], 'the words changed');
+  assert.deepEqual(sent.at(-1).lines.filter((l) => l.k === 'advice').map((l) => l.t), ['advice: night (time 13400): no closed shelter around you'], 'the words changed');
   assert.deepEqual(sent.at(-1).adv.map((a) => a.k), ['night'], 'the shield advice is gone');
   // cleaned again by the service: the new fields too
   const u = cleanTerm({
@@ -66,108 +129,63 @@ test('feed: the advice once per kind and change of words (the time in it is not 
   assert.deepEqual(u.adv, [{ k: 'night', t: 'token ***', sev: 3 }]);
 });
 
-test('panel: the last seven actions (six under the status line), newest first, each with its state; reflexes muted, milestones gold, no advice; the header', () => {
+test('panel A: the command now (step, time, Muse\'s words, the body\'s sub-step and bar, the step before, reflexes), the side column, a toast', () => {
   let t = 1_000_000;
   const dir = tmp();
-  const p = createUiPanel({ width: 1080, height: 270, file: path.join(dir, 'panel.bmp'), now: () => t });
-  const rows = () => p.state().rows.map((r) => `${r.kind}:${r.text}:${r.state ? `${r.state.kind} ${r.state.text}`.trim() : ''}`);
-  p.term({ lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], st: { hp: 20, food: 20, clock: 'DAY 08:15', muse: 1, reflex: 0, pct: 100 } });
-  assert.deepEqual(rows(), ['action:Start a new game:ok ready'], 'start_game comes with its reply');
-  p.term({ lines: [{ k: 'call', t: '> play: collect oak_log 3', say: 'Mine 3 oak logs' }] });
-  p.term({ lines: [{ k: 'call', t: '> get_state' }] });
-  assert.equal(p.state().rows.length, 2, 'looking around is not an action');
-  assert.deepEqual(p.state().rows[0].state, { kind: 'run', text: '' });
-  p.term({ lines: [{ k: 'ok', t: 'ok  mined 3 oak log (9 s)', say: 'Mine 3 oak logs', ms: 9_000 }] });
-  assert.deepEqual(p.state().rows[0].state, { kind: 'ok', text: 'done 9 s' });
-  p.term({ lines: [{ k: 'call', t: '> play_sequence', say: 'Craft 4 sticks, then craft a crafting table' }] });
-  p.term({ lines: [{ k: 'ok', t: 'ok', say: 'Craft 4 sticks', ms: 700, n: 1, of: 2 }] });
-  assert.deepEqual(p.state().rows[0].state, { kind: 'run', text: '1 of 2' });
-  p.term({ lines: [{ k: 'ok', t: 'ok', say: 'Craft a crafting table', ms: 600, n: 2, of: 2 }] });
-  assert.deepEqual(p.state().rows[0].state, { kind: 'ok', text: 'done 1.3 s' }, 'a sequence: its steps\' time');
-  p.term({ lines: [{ k: 'call', t: '> play', say: 'Mine 3 iron ore' }] });
-  p.term({ lines: [{ k: 'fail', t: 'FAIL collect iron ore 3 NOT_FOUND', say: 'Mine 3 iron ore', why: 'no iron ore within 64 blocks; stone below' }] });
-  assert.deepEqual(p.state().rows[0].state, { kind: 'fail', text: 'failed \u00b7 no iron ore within 64 blocks' });
-  assert.deepEqual(rows().slice(1), ['action:Craft 4 sticks, then craft a crafting table:ok done 1.3 s', 'action:Mine 3 oak logs:ok done 9 s', 'action:Start a new game:ok ready']);
-  // reflexes (once), milestones, no advice
-  p.term({ lines: [{ k: 'reflex', t: 'reflex: fought a zombie, then back to collecting' }], adv: [{ k: 'night', t: 'night soon', sev: 2 }] });
-  p.term({ lines: [{ k: 'reflex', t: 'reflex: fought a zombie, then back to collecting' }, { k: 'advice', t: 'advice: night soon', ak: 'night' }] });
-  p.term({ lines: [{ k: 'milestone', t: 'entered the Nether at 0:41' }] });
-  assert.deepEqual(rows().slice(0, 3), ['milestone:Entered the Nether:', 'reflex:Reflex: fought a zombie:', 'action:Mine 3 iron ore:fail failed \u00b7 no iron ore within 64 blocks']);
-  assert.equal(p.state().rows.length, 6, 'every row so far: up to seven are kept on screen');
-  for (let i = 0; i < 4; i++) p.term({ lines: [{ k: 'call', t: '> play', say: `Mine ${i + 1} stone` }] });
-  assert.equal(p.state().rows.length, 7, 'seven at most');
-  assert.equal(p.state().rows[6].text, 'Mine 3 iron ore', 'the oldest go');
-  assert.equal(milestoneWords('milestone: a wooden pickaxe at 0:41'), 'Got a wooden pickaxe');
-  // a result for an action that is no longer the newest finds it by its words
-  p.term({ lines: [{ k: 'call', t: '> play', say: 'Walk to 1 2 3' }, { k: 'call', t: '> play', say: 'Build a shelter for the night' }] });
-  p.term({ lines: [{ k: 'ok', t: 'ok', say: 'Walk to 1 2 3', ms: 2_000 }] });
-  assert.deepEqual(p.state().rows.slice(0, 2).map((r) => r.state), [{ kind: 'run', text: '' }, { kind: 'ok', text: 'done 2 s' }]);
-  p.term({ st: { hp: 12, clock: 'NETHER', muse: 6, reflex: 1, pct: 86 } });
-  assert.deepEqual(p.state().st, { hp: 12, food: 20, clock: 'NETHER', muse: 6, reflex: 1, pct: 86 });
-  // another game on camera: an empty list with a note
-  p.reset('the camera moved to another game');
-  assert.deepEqual(rows(), ['note:The camera moved to another game:']);
-  // frames: a top-down 32-bit BMP of the panel's size, written by renaming
-  for (let i = 0; i < 20; i++) { t += 33; p.render(t); }
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, file: path.join(dir, 'panel.bmp'), now: () => t });
+  const at = (ms) => { t += ms; p.render(t); return p.state(); };
+  p.term({ lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], st: { hp: 20, food: 14, clock: 'NIGHT 21:30', ticks: 15_500, muse: 26, reflex: 2, pct: 93 } });
+  assert.deepEqual(at(10).commands[0].state, { kind: 'ok', text: 'ready' }, 'start_game is never the running command');
+  p.term({ lines: [{ k: 'call', t: '> play_sequence', say: 'Walk to 360 35 -78, then mine 14 obsidian', words: 'Lava pool at 360 34 -78: water on it makes obsidian', of: 2 }] });
+  let st = at(1_000);
+  assert.deepEqual([st.commands[0].say, st.commands[0].words, st.commands[0].of, st.status], ['Walk to 360 35 -78, then mine 14 obsidian', 'Lava pool at 360 34 -78: water on it makes obsidian', 2, null]);
+  p.term({ lines: [], sub: { kind: 'walk', text: '41 blocks to go', left: 41 } });
+  p.term({ lines: [], sub: { kind: 'walk', text: '12 blocks to go', left: 12 } });
+  assert.equal(at(100).sub.first, 41, 'a walk\'s bar: the distance it began with');
+  p.term({ lines: [{ k: 'ok', t: 'ok', say: 'Walk to 360 35 -78', ms: 68_500, n: 1, of: 2 }, { k: 'reflex', t: 'reflex: it fought a creeper, then back to walking' }] });
+  p.term({ lines: [], sub: { kind: 'mine', text: 'mining obsidian', done: 3, of: 14 } });
+  st = at(100);
+  assert.deepEqual([st.commands[0].done, st.commands[0].reflexes, st.sub.text, st.sub.done], [1, ['it fought a creeper'], 'mining obsidian', 3]);
+  // the side column: what Muse checked, the advice and whether it took it, the earlier commands
+  p.term({ lines: [{ k: 'checked', t: 'Muse checked: HP 20, food 14, 1 water bucket' }, { k: 'follow', t: 'Followed the body\'s advice: the nearest lava pool', ok: 1 }],
+    adv: [{ k: 'lava', t: 'the nearest lava pool is at 360 34 -78, 69 blocks away: go_to a spot a few blocks from it', sev: 1 }] });
+  st = at(100);
+  assert.deepEqual([st.checked, st.follow, st.advice], ['HP 20, food 14, 1 water bucket', 'Followed the body\'s advice: the nearest lava pool', [{ k: 'lava', text: 'the nearest lava pool is at 360 34 -78, 69 blocks away', sev: 1 }]]);
+  // a failed step: the command fails with the step's words and a short reason; the card then says what is happening
+  p.term({ lines: [{ k: 'fail', t: 'FAIL collect obsidian 14', say: 'Mine 14 obsidian', why: 'no lava pool within 16 blocks to make obsidian from', n: 2, of: 2 }], live: { mode: 'idle', reason: 'waiting', sinceS: 0 } });
+  st = at(3_000);
+  assert.deepEqual(st.commands[0].state, { kind: 'fail', why: 'no lava pool within 16 blocks', step: 'Mine 14 obsidian' });
+  assert.equal(st.status, 'Waiting for Muse\u2019s next move \u00b7 0:03', 'nothing runs: the card\'s top line says what is happening');
+  // a milestone: a toast for 6 s
+  p.term({ lines: [{ k: 'milestone', t: 'milestone: a bucket at 12:03' }] });
+  assert.equal(at(100).toast, 'Got a bucket');
+  assert.equal(at(6_500).toast, null);
+  // frames: a top-down 32-bit BMP with the toast's see-through band
   p.write(t);
   const b = fs.readFileSync(path.join(dir, 'panel.bmp'));
-  assert.equal(b.toString('ascii', 0, 2), 'BM');
-  assert.deepEqual([b.readInt32LE(18), b.readInt32LE(22), b.readUInt16LE(28), b.length], [1080, -270, 32, 54 + 1080 * 270 * 4]);
-  assert.equal(b[54 + 3], 255, 'opaque');
+  assert.deepEqual([b.toString('ascii', 0, 2), b.readInt32LE(18), b.readInt32LE(22), b.readUInt16LE(28)], ['BM', 1080, -544, 32]);
+  assert.equal(b[54 + 3], 0, 'the band over the game is see-through');
+  assert.equal(b[54 + (100 * 1080) * 4 + 3], 255, 'the panel itself is opaque');
+  // the words: advice, reasons, icons, milestones
+  assert.equal(adviceGist('advice: night (time 13100): no closed shelter around you; 7 blocks'), 'night: no closed shelter around you');
+  assert.equal(shortReason('no lava pool within 16 blocks to make obsidian from'), 'no lava pool within 16 blocks');
+  assert.deepEqual([iconFor('Walk to 1 2 3'), iconFor('Mine 3 iron ore'), iconFor('x', 'smelt'), iconFor('Go through the portal')], ['boot', 'pickaxe', 'flame', 'portal']);
+  assert.equal(milestoneWords('entered the Nether at 0:41'), 'Entered the Nether');
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('feed: what is happening between calls: a skill running, a shelter at night with the time to dawn, Muse looking, waiting; a tick every few seconds', () => {
-  const sent = [];
-  let clock = 1_000_000;
-  let q = { busy: false, running: null, lastCallAt: clock, lastTool: 'play' };
-  const feed = createTermFeed({ send: (id, u) => sent.push(u), now: () => clock, liveOf: () => q });
-  const game = { id: 'g1', body: { attribution: () => ({ muse: 1, reflex: 0 }) } };
-  const reply = (st) => ({ content: [{ type: 'text', text: '' }], structuredContent: st });
-  feed.reply(game, 'start_game', { adult: true }, reply({ steps: [], state: { health: 20, food: 20, time: 1_000 } }));
-  q = { busy: true, running: { skill: 'shelter', args: {} }, lastCallAt: clock, lastTool: 'play' };
-  feed.call(game, 'play', { skill: 'shelter' });
-  assert.deepEqual(sent.at(-1).live, { mode: 'run', step: 'Build a shelter for the night', sinceS: 0 });
-  clock += 8_000;
-  q = { busy: false, running: null, lastCallAt: clock - 8_000, lastTool: 'play' };
-  feed.reply(game, 'play', {}, reply({ steps: [{ call: 1, n: 1, skill: 'shelter', args: {}, status: 'confirmed', result: 'built a shelter', ms: 7_000 }], state: { health: 20, food: 20, time: 13_600 } }));
-  assert.deepEqual(sent.at(-1).live, { mode: 'idle', reason: 'shelter', sinceS: 8, dawnS: 470 }, 'night: (23000 - 13600) / 20 s to dawn');
-  clock += 60_000;
-  sent.length = 0;
-  feed.tick(game);
-  assert.deepEqual(sent.at(-1).lines, [], 'a tick: no lines');
-  assert.equal(sent.at(-1).live.sinceS, 68);
-  q = { busy: false, running: null, lastCallAt: clock, lastTool: 'get_state' };
-  feed.reply(game, 'get_state', {}, reply({ steps: [], state: { health: 20, food: 20, time: 1_000 } }));
-  assert.deepEqual(sent.at(-1).live, { mode: 'idle', reason: 'checking', sinceS: 0 }, 'morning: Muse looking around');
-  clock += 60_000;
-  feed.tick(game);
-  assert.deepEqual(sent.at(-1).live, { mode: 'idle', reason: 'waiting', sinceS: 60 });
-  // the body sheltered on its own before Muse's own shelter: Muse's choice wins
-  feed.reply(game, 'play', {}, reply({ steps: [{ call: 2, n: 1, skill: 'shelter', args: {}, status: 'confirmed', result: 'built', ms: 5_000 }], state: { health: 20, food: 20, time: 14_000 }, onItsOwn: [{ seq: 9, agoS: 30, source: 'care', kind: 'shelter', text: 'shelter: climbed down and dug in' }] }));
-  assert.equal(sent.at(-1).live.reason, 'shelter');
-  clock += 5_000;
-  feed.reply(game, 'get_state', {}, reply({ steps: [], state: { health: 20, food: 20, time: 14_100 }, onItsOwn: [{ seq: 10, agoS: 0, source: 'care', kind: 'shelter', text: 'shelter: dug in again' }] }));
-  assert.equal(sent.at(-1).live.reason, 'shelter_body', 'the body sheltering after it: the body');
-  const before = sent.length;
-  feed.tick({ id: 'unknown' });
-  assert.equal(sent.length, before, 'a game the feed has not seen: nothing sent');
-  assert.deepEqual(cleanTerm({ lines: [], live: { mode: 'idle', reason: 'evil', sinceS: 1e9, dawnS: 30, step: 'x' } }).live, { mode: 'idle', reason: 'waiting', step: 'x', sinceS: 86_400, dawnS: 30 });
-});
-
-test('panel: the top row says what is happening when nothing runs (waiting with a ticking time, sheltering with the time to dawn, Muse looking), and the clock ticks with the game', () => {
+test('panel A: when nothing runs the card says what is happening (waiting, sheltering until dawn, Muse looking) with a ticking time, and the clock moves on', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 270, now: () => t });
-  const at = (ms) => { t += ms; p.render(t); for (let i = 0; i < 40; i++) { t += 33; p.render(t); } return p.state().status; };
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const at = (ms) => { t += ms; p.render(t); return p.state().status; };
   p.term({ lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], st: { hp: 20, food: 20, clock: 'DAY 08:00', ticks: 2_000 }, live: { mode: 'idle', reason: 'waiting', sinceS: 0 } });
-  assert.equal(at(3_000), 'Waiting for Muse\u2019s next move \u00b7 0:04', 'nothing runs: what is happening, with the time ticking');
-  p.term({ lines: [{ k: 'call', t: '> play', say: 'Build a shelter for the night' }], live: { mode: 'run', step: 'Build a shelter for the night', sinceS: 0 } });
-  assert.equal(at(100), null, 'a skill runs: its row is on top');
+  assert.equal(at(4_000), 'Waiting for Muse\u2019s next move \u00b7 0:04');
+  p.term({ lines: [{ k: 'call', t: '> play', say: 'Build a shelter for the night', of: 1 }], live: { mode: 'run', step: 'Build a shelter for the night', sinceS: 0 } });
+  assert.equal(at(100), null, 'a command runs: its card');
   p.term({ lines: [{ k: 'ok', t: 'ok', say: 'Build a shelter for the night', ms: 7_000 }], st: { ticks: 13_600, clock: 'NIGHT 19:36' }, live: { mode: 'idle', reason: 'shelter', sinceS: 0, dawnS: 470 } });
-  assert.equal(at(3_000), 'Sheltering until morning (Muse\u2019s choice) \u00b7 night ends in ~8 min');
+  assert.equal(at(3_000), 'Sheltering until morning (Muse\u2019s choice), night ends in ~8 min');
   p.term({ lines: [{ k: 'call', t: '> get_state' }], live: { mode: 'idle', reason: 'checking', sinceS: 0 } });
-  assert.equal(at(12_000), 'Muse is checking the situation \u00b7 0:13');
-  // the clock: 20 ticks a second between updates (seen from two updates), so the minutes move on their own
+  assert.equal(at(12_000), 'Muse is checking the situation \u00b7 0:12');
   p.term({ st: { ticks: 2_000, clock: 'DAY 08:00' } });
   t += 5_000;
   p.term({ st: { ticks: 2_100, clock: 'DAY 08:06' } });
@@ -177,8 +195,8 @@ test('panel: the top row says what is happening when nothing runs (waiting with 
 
 test('panel: a frame costs little (cached cards, sprites drawn at their size)', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 270, now: () => t });
-  p.term({ lines: [{ k: 'call', t: '> play', say: 'Mine 3 oak logs' }], st: { hp: 20, food: 20, clock: 'DAY 08:15', muse: 1, reflex: 0 } });
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  p.term({ lines: [{ k: 'call', t: '> play', say: 'Mine 3 oak logs', words: 'Wood first: planks, a table, then a pickaxe' }], st: { hp: 20, food: 20, clock: 'DAY 08:15', muse: 1, reflex: 0 }, sub: { kind: 'mine', text: 'mining oak logs', done: 1, of: 3 } });
   const t0 = process.hrtime.bigint();
   for (let i = 0; i < 90; i++) { t += 33; p.bmp(t); }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6 / 90;
@@ -190,6 +208,8 @@ test('ffmpeg: the UI chain (the game cut to its shape over the panel read 30 tim
   const vf = args[args.indexOf('-vf') + 1];
   assert.match(vf, /^\[in\]setpts=PTS-STARTPTS,crop=w='min\(iw,ih\*1080\/720\)':h='min\(ih,iw\*720\/1080\)',scale=1080:720:flags=bicubic,pad=1080:1080:0:0:color=0x0B0D0F,format=yuv420p\[top\];movie='\/dev\/shm\/p\/panel\.bmp':f=image2:loop=0,setpts=N\/\(30\*TB\),scale=1080:360,format=yuv420p\[pan\];\[top\]\[pan\]overlay=0:720:format=yuv420\[out\]$/);
   assert.equal(vf.includes('drawtext'), false, 'Muse\'s panel says it');
+  const over = ffmpegArgs({ output: '/tmp/x.mp4', width: 1080, height: 1080, fps: 30, x11: { display: ':99.0+0,0', width: 960, height: 540 }, panel: { file: '/dev/shm/p/panel.bmp', top: 608, kind: 'ui', fps: 30, over: 72 } });
+  assert.match(over[over.indexOf('-vf') + 1], /scale=1080:544,format=yuva420p\[pan\];\[top\]\[pan\]overlay=0:536:format=yuv420\[out\]$/, 'the toast\'s band over the game, overlaid with its alpha');
   assert.deepEqual(args.slice(args.indexOf('-map'), args.indexOf('-map') + 4), ['-map', '0:v', '-map', '1:a'], 'silence without a sound server');
   assert.equal(streamAspect({ layout: 'ui', uiSize: '1080x1080' }), '1080/1080');
   // the game's sound and the music bed: ducked under the game, a limiter at -1 dBFS

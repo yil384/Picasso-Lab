@@ -18,6 +18,8 @@ const SHEETS = {
   sheet3: ['worried', 'hurt', 'nether', 'nether_blink'],
 };
 const ICONS = { icons1: ['heart', 'food', 'sun', 'moon'], icons2: ['flame', 'shield', 'bulb', 'star'] };
+// the skills' icons, a 3x3 sheet
+const SKILL_ICONS = { skills1: ['pickaxe', 'boot', 'hammer', 'sword', 'house', 'portal', 'bucket', 'compass', 'bed'] };
 const OUT = path.join(agent, 'assets', 'muse-ui');
 
 /** Green to transparent: how much greener than its red and blue a pixel is, with the green spill taken out. */
@@ -36,13 +38,15 @@ function key(img) {
   return img;
 }
 
-/** A cell of a 2x2 sheet, keyed. */
-async function cells(file) {
+/** The cells of an n x n sheet (2 by default), keyed, row by row. */
+async function cells(file, n = 2) {
   const im = await loadImage(file);
-  const w = Math.floor(im.width / 2);
-  const h = Math.floor(im.height / 2);
+  const w = Math.floor(im.width / n);
+  const h = Math.floor(im.height / n);
   const out = [];
-  for (const [cx, cy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+  const at = [];
+  for (let cy = 0; cy < n; cy++) for (let cx = 0; cx < n; cx++) at.push([cx, cy]);
+  for (const [cx, cy] of at) {
     const c = createCanvas(w, h);
     const g = c.getContext('2d');
     g.drawImage(im, cx * w, cy * h, w, h, 0, 0, w, h);
@@ -115,8 +119,9 @@ for (const p of poses) {
 }
 
 // the icons: trimmed to their box, square, 256 px
-for (const [sheet, names] of Object.entries(ICONS)) {
-  const cs = await cells(path.join(here, 'art', `${sheet}.png`));
+for (const [sheet, names] of [...Object.entries(ICONS), ...Object.entries(SKILL_ICONS)]) {
+  if (!fs.existsSync(path.join(here, 'art', `${sheet}.png`))) continue;
+  const cs = await cells(path.join(here, 'art', `${sheet}.png`), sheet in SKILL_ICONS ? 3 : 2);
   cs.forEach((c, i) => {
     const b = box(c);
     const side = Math.max(b.x1 - b.x0, b.y1 - b.y0) + 8;
