@@ -49,6 +49,17 @@ function within(promise, ms) {
 }
 
 /** Minecraft username for a web session id: the house bot is MC_USERNAME, a guest is <name>_<id> (at most 16). */
+/** The usual game lease (30 minutes); a longer one is for a long Muse run and must be taken back afterwards. */
+export const USUAL_LEASE_MS = 1_800_000;
+/**
+ * A warning when the lease is longer than usual (F19 of the log hunt: production ran 36 hours with the 2-hour lease
+ * of a long run left in deploy/.env), else null.
+ */
+export function leaseWarning(leaseMs) {
+  if (!(leaseMs > USUAL_LEASE_MS)) return null;
+  return `the game lease is ${Math.round(leaseMs / 60_000)} min, not the usual ${USUAL_LEASE_MS / 60_000}: a long Muse run's setting (PROD_LEASE_MS or STAGING_LEASE_MS in deploy/.env); remove it once the run is over (docs/MUSE-LONG-RUN.md)`;
+}
+
 export function usernameFor(base, sessionId) {
   if (sessionId === 'house') return base;
   const id = String(sessionId).replace(/[^A-Za-z0-9_]/g, '').slice(0, 7) || 'guest';
@@ -500,6 +511,8 @@ export async function startAgent(opts = {}) {
   });
   print(`Muse plays Minecraft: ${url}/${publicUrl && publicUrl !== url ? ` (public: ${publicUrl}/)` : ''}`);
   print(`world: ${world}; guests get up to ${config.web.maxSessions} bots for ${Math.round(config.web.leaseMs / 60_000)} min each`);
+  const longLease = leaseWarning(config.web.leaseMs);
+  if (longLease) { print(`note: ${longLease}`); log.event('config_warning', { what: 'lease', leaseMs: config.web.leaseMs, text: longLease }); }
   print(llm
     ? `Ask queue: open, ${llm.model} · ${llm.effort} · ${llm.tier} at ${llm.baseURL}; caps ${config.caps.steps} steps and $${config.caps.usdPerRun} per run, $${config.caps.usdPerHour} per hour`
     : `Ask queue: closed (${askOff})`);
