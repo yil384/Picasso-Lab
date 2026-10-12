@@ -866,6 +866,11 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         lastPortal = null;
       }
     }
+    // where a walk ended up (F13 of the log hunt: a stopped explore said only "stopped through MCP"), and which world a
+    // portal led to (its coordinates are where the bot came out, not the portal it left)
+    if (['go_to', 'explore'].includes(tool) && !r.ok && latest.position) r = { ...r, result: `${r.result}; you are now at ${floorPos(latest.position).x} ${floorPos(latest.position).y} ${floorPos(latest.position).z}` };
+    if (tool === 'explore' && r.ok && latest.position) r = { ...r, result: `${r.result === 'done' ? 'explored' : r.result}; you are now at ${floorPos(latest.position).x} ${floorPos(latest.position).y} ${floorPos(latest.position).z}` };
+    if (tool === 'portal' && r.ok && v.args.action === 'enter') r = { ...r, result: r.result.replace(/went through the portal( into the \S+)? at/, `went through the portal; you came out in the ${{ the_nether: 'Nether', the_end: 'End' }[dimension] ?? dimension} at`) };
     if (yielded === 'recover') r = { ...r, result: `${r.result} (before it the body finished going back for the items it dropped when it died)` };
     const ms = Date.now() - t0;
     if (!['get_state', 'policy'].includes(tool) && !refusedFirst) museActions += 1;

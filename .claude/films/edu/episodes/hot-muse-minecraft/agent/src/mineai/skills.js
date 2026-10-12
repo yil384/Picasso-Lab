@@ -25,6 +25,16 @@ export const HUNT_MOBS = Object.freeze([
   'blaze', 'magma_cube', 'ghast', 'wither_skeleton', 'phantom', 'silverfish', 'zombified_piglin', 'hoglin',
 ]);
 const EQUIP_TO = ['hand', 'off-hand', 'head', 'torso', 'legs', 'feet'];
+/** What each huntable mob drops (item names as the game has them), for the hunt's description and its refusals. */
+export const HUNT_DROPS = Object.freeze({
+  cow: ['beef', 'leather'], mooshroom: ['beef', 'leather'], pig: ['porkchop'], sheep: ['mutton', 'white_wool'],
+  chicken: ['chicken', 'feather'], rabbit: ['rabbit', 'rabbit_hide'], goat: [], cod: ['cod'], salmon: ['salmon'],
+  squid: ['ink_sac'], zombie: ['rotten_flesh'], husk: ['rotten_flesh'], drowned: ['rotten_flesh'], skeleton: ['bone', 'arrow'],
+  stray: ['bone', 'arrow'], spider: ['string', 'spider_eye'], cave_spider: ['string', 'spider_eye'], creeper: ['gunpowder'],
+  slime: ['slime_ball'], witch: ['redstone', 'glowstone_dust', 'sugar'], enderman: ['ender_pearl'], blaze: ['blaze_rod'],
+  magma_cube: ['magma_cream'], ghast: ['ghast_tear', 'gunpowder'], wither_skeleton: ['bone', 'coal'], phantom: ['phantom_membrane'],
+  silverfish: [], zombified_piglin: ['rotten_flesh', 'gold_nugget'], hoglin: ['porkchop', 'leather'],
+});
 /**
  * How near (blocks, flat, to its nearest cell; and 6 up or down) a build of the same blueprint and material continues
  * the structure the last build left incomplete instead of starting a new one. The Muse re-test on staging (2026-10-08,
@@ -57,7 +67,7 @@ export const EXTRA_DEFS = Object.freeze([
     'Wear armor, hold a tool or weapon, or put a shield in the off-hand (the slot follows from the item unless to is given).',
     obj({ item: NAME('a carried item, e.g. iron_chestplate, shield, stone_sword'), to: pick('where it goes', EQUIP_TO) }, ['item'])],
   ['hunt',
-    'Hunt mobs of one kind until n of a drop came into your inventory (e.g. cow -> beef, sheep -> white_wool, spider -> string, chicken -> feather). Hostile mobs need a shield carried, unless without_shield is true.',
+    'Hunt mobs of one kind until n of a drop came into your inventory. The drop is the item\'s name as the game has it: cow -> beef or leather, pig -> porkchop, sheep -> mutton or white_wool, chicken -> chicken (the raw meat) or feather, rabbit -> rabbit, spider -> string, skeleton -> bone, zombie -> rotten_flesh. Hostile mobs need a shield carried, unless without_shield is true.',
     obj({ mob: pick('which mob', HUNT_MOBS), drop: NAME('the item you want from it'), n: int('how many of the drop, 1 to 64', 1, 64), without_shield: { type: 'boolean', description: 'true: fight a hostile mob with no shield' } }, ['mob', 'drop', 'n'])],
   ['sleep',
     'Sleep in the nearest free bed (or put down the one you carry): through the night, and it sets your respawn point.',
@@ -349,7 +359,14 @@ export function toTheirs(skill, args, ctx) {
     }
     case 'say': return { calls: [{ tool: 'send_message', args: { message: args.text } }] };
     case 'equip': return { calls: [{ tool: 'equip', args: { items: [{ item_name: args.item, ...(args.to ? { destination: args.to } : {}) }] } }] };
-    case 'hunt': return { calls: [{ tool: 'collect_mob_drop', args: { mob_name: args.mob, drop_name: args.drop, count: args.n, ...(args.without_shield ? { allow_without_shield: true } : {}) } }] };
+    case 'hunt': {
+      // a drop the game has no item for, or one this mob does not drop: refused before a hunt (F12 of the log hunt:
+      // "raw_chicken" hunted for nothing, and the reply never said "chicken")
+      const known = HUNT_DROPS[args.mob] ?? [];
+      if (!reg.itemsByName[args.drop]) return refuse(`there is no item named ${args.drop}${known.length ? `; a ${args.mob} drops ${known.join(' or ')}` : ''}`, 'BAD_ARGS');
+      if (known.length && !known.includes(args.drop) && !/_wool$/.test(args.drop)) return refuse(`a ${args.mob} does not drop ${args.drop}; it drops ${known.join(' or ')}`, 'BAD_ARGS');
+      return { calls: [{ tool: 'collect_mob_drop', args: { mob_name: args.mob, drop_name: args.drop, count: args.n, ...(args.without_shield ? { allow_without_shield: true } : {}) } }] };
+    }
     case 'sleep': return { calls: [{ tool: 'sleep', args: {} }] };
     case 'bucket': {
       if (args.action === 'pour') {
@@ -430,7 +447,7 @@ export function toTheirs(skill, args, ctx) {
       if (args.junk) {
         const items = junkOf(inv);
         if (!items.length) return refuse('nothing to drop as junk: your inventory holds none beyond its reserve', 'BAD_ARGS');
-        return { calls: [{ tool: 'drop_item', args: { items: items.map(({ item, n }) => ({ item_name: item, count: n })) } }], note: `dropped ${items.map(({ item, n }) => `${n} ${item}`).join(', ')}` };
+        return { calls: [{ tool: 'drop_item', args: { items: items.map(({ item, n }) => ({ item_name: item, count: n })) } }] };
       }
       if (!args.item || !args.n) return refuse('drop needs item and n, or junk: true', 'BAD_ARGS');
       return { calls: [{ tool: 'drop_item', args: { items: [{ item_name: args.item, count: args.n }], allow_equipped: true } }] };
@@ -590,6 +607,14 @@ function describe(tool, r, call) {
   if (tool === 'activate_portal' && r?.portal?.kind === 'nether') {
     const p = r.portal;
     return p.activated ? `lit the Nether portal (${p.portalAfter} portal blocks)` : p.portalBefore ? `the portal was already lit (${p.portalAfter} portal blocks)` : 'the portal did not light';
+  }
+  // F13 of the log hunt: a bucket and a drop said only "done"
+  if (tool === 'use_bucket' && r?.status === 'succeeded') {
+    const a = call?.args ?? {};
+    return a.action === 'pour' ? `poured the ${a.liquid ?? 'water'} at ${a.x} ${a.y} ${a.z}` : `filled a bucket with ${a.liquid ?? 'water'}`;
+  }
+  if (tool === 'drop_item' && r?.status === 'succeeded' && Array.isArray(call?.args?.items)) {
+    return `dropped ${call.args.items.map((i) => `${i.count} ${i.item_name}`).join(', ')}`;
   }
   if (tool === 'enter_nether_portal') {
     const at = r?.navigation?.final ?? r?.navigation?.end ?? null;

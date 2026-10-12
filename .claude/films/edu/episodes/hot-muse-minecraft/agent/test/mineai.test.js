@@ -132,6 +132,14 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   const full = fromTheirs('collect_mob_drop', { result: { status: 'failed', error: 'No free slot or matching stack space for mutton.' } });
   assert.equal(full.code, 'INVENTORY_FULL');
   assert.match(full.result, /drop \{"junk": true\} drops the stacks no skill uses in one go$/);
+  // F13 of the log hunt: a bucket and a drop say what they did
+  assert.equal(fromTheirs('use_bucket', { result: { status: 'succeeded' } }, { call: { args: { action: 'fill', liquid: 'water' } } }).result, 'filled a bucket with water');
+  assert.equal(fromTheirs('drop_item', { result: { status: 'succeeded' } }, { call: { args: { items: [{ item_name: 'tuff', count: 73 }] } } }).result, 'dropped 73 tuff');
+  // F12 of the log hunt: a drop name the game does not have, or a mob does not drop, is refused with the right names
+  assert.equal(toTheirs('hunt', { mob: 'chicken', drop: 'raw_chicken', n: 1 }, ctx).refused.result, 'there is no item named raw_chicken; a chicken drops chicken or feather');
+  assert.equal(toTheirs('hunt', { mob: 'cow', drop: 'mutton', n: 1 }, ctx).refused.result, 'a cow does not drop mutton; it drops beef or leather');
+  assert.equal(toTheirs('hunt', { mob: 'sheep', drop: 'black_wool', n: 1 }, ctx).calls[0].tool, 'collect_mob_drop', 'any wool from a sheep');
+  assert.equal(toTheirs('hunt', { mob: 'chicken', drop: 'chicken', n: 1 }, ctx).calls[0].args.drop_name, 'chicken');
   // F5 of the log hunt: a walk's refusal names no argument we do not have, and says what y to send
   const nav = fromTheirs('navigate', { result: { status: 'failed', error: '[NAVIGATION_NO_FOOTING] No usable footing was observed within 1 blocks of 9, 66, -25. The ground in that column is at y=61. Choose an observed supported height, or pass build: true to scaffold to this point deliberately.' } });
   assert.equal(nav.result, 'failed: nothing to stand on at 9 66 -25: y is the height of your feet, one above the ground, and the ground there is at y=61, so go_to 9 62 -25');

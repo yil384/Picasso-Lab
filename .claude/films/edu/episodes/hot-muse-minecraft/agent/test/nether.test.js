@@ -41,7 +41,7 @@ test('nether: a frame built, lit and entered; back without a pos, out of the por
     assert.equal(r.result, 'lit the Nether portal (6 portal blocks)');
     r = await body.run('portal', { action: 'enter' });
     assert.equal(r.ok, true, r.result);
-    assert.match(r.result, /^went through the portal at 3 70 4/);
+    assert.match(r.result, /^went through the portal; you came out in the Nether at 3 70 4/);
     assert.doesNotMatch(r.result, /stepped out/, 'in front of a fresh frame it goes straight in');
     assert.match(body.state(), /^position 3 70 4 in the Nether/m);
     // the way back: no pos (the portal it came out of here, never the Overworld frame), the first side blocked
@@ -50,7 +50,7 @@ test('nether: a frame built, lit and entered; back without a pos, out of the por
     fake.world.durations = { ...(fake.world.durations ?? {}), navigate: 1_800 };
     r = await body.run('portal', { action: 'enter' });
     assert.equal(r.ok, true, r.result);
-    assert.match(r.result, /went through the portal at 3 70 4 \(stepped out of the portal first\)$/);
+    assert.match(r.result, /went through the portal; you came out in the overworld at .* \(stepped out of the portal first\)$/);
     const walks = fake.tools('navigate').slice(-2).map((c) => c.args.x);
     assert.deepEqual(walks, [6, 0], 'one side, then the other');
     const ids = fake.calls.filter((c) => c.tool === 'wait_for_action').map((c) => c.args.action_id);
