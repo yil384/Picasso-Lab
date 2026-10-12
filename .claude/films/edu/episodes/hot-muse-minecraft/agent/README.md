@@ -958,12 +958,13 @@ Remove the `pre-ui` tags once this has held for a week.
 The owner watched the vertical stream (2026-10-11): 9:16 left black bars in muse.ai's panel (about 1000x1050 on a
 desktop, narrower and taller on a phone), and the terminal looked like a terminal. The `ui` layout (the default) is
 square, 1080x1080, so the video fills the panel's width on a desktop and the top of it on a phone: the game on top
-(1080x810, the middle of the 16:9 picture: Minecraft's field of view is vertical, so this is what a 4:3 window shows)
+(1080x756, the middle of the 16:9 picture: Minecraft's field of view is vertical, so this is what a 10:7 window shows)
 and Muse's panel under it:
 
-- **The minimal panel** (2026-10-12, the owner: "remove the mascot, just show the last few actions"): a quarter of the
-  height (1080x270), the game gets 1080x810. One slim header line: our heart and food icons with the numbers, the sun
-  or moon with the time, or "Nether", and "Muse 88%" with a slim meter on the right. Under it the last four actions,
+- **The minimal panel** (2026-10-12, the owner: "remove the mascot, just show the last few actions"): 30 % of the
+  height (1080x324, the game gets 1080x756). One slim header line: our heart and food icons with the numbers, the sun
+  or moon with the time, or "Nether", and "Muse 88%" with a slim meter on the right. Under it the last seven actions
+  (six under the status line; the owner wanted more of them), anchored at the top,
   newest on top and brightest, older ones dimmer: each in plain words ("Mine 3 diamond ore", "Walk to 141 100 -174";
   the agent's `plainCall`, never the raw call, chat text never shown) with its state on the right: three quiet dots
   breathing while it runs ("2 of 4" before them in a sequence), "done 14 s", or "failed" and a few words. A reflex is

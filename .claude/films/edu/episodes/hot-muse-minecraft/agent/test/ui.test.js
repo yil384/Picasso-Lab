@@ -66,7 +66,7 @@ test('feed: the advice once per kind and change of words (the time in it is not 
   assert.deepEqual(u.adv, [{ k: 'night', t: 'token ***', sev: 3 }]);
 });
 
-test('panel: the last four actions, newest first, each with its state; reflexes muted, milestones gold, no advice; the header', () => {
+test('panel: the last seven actions (six under the status line), newest first, each with its state; reflexes muted, milestones gold, no advice; the header', () => {
   let t = 1_000_000;
   const dir = tmp();
   const p = createUiPanel({ width: 1080, height: 270, file: path.join(dir, 'panel.bmp'), now: () => t });
@@ -93,7 +93,10 @@ test('panel: the last four actions, newest first, each with its state; reflexes 
   p.term({ lines: [{ k: 'reflex', t: 'reflex: fought a zombie, then back to collecting' }, { k: 'advice', t: 'advice: night soon', ak: 'night' }] });
   p.term({ lines: [{ k: 'milestone', t: 'entered the Nether at 0:41' }] });
   assert.deepEqual(rows().slice(0, 3), ['milestone:Entered the Nether:', 'reflex:Reflex: fought a zombie:', 'action:Mine 3 iron ore:fail failed \u00b7 no iron ore within 64 blocks']);
-  assert.equal(p.state().rows.length, 4, 'four rows');
+  assert.equal(p.state().rows.length, 6, 'every row so far: up to seven are kept on screen');
+  for (let i = 0; i < 4; i++) p.term({ lines: [{ k: 'call', t: '> play', say: `Mine ${i + 1} stone` }] });
+  assert.equal(p.state().rows.length, 7, 'seven at most');
+  assert.equal(p.state().rows[6].text, 'Mine 3 iron ore', 'the oldest go');
   assert.equal(milestoneWords('milestone: a wooden pickaxe at 0:41'), 'Got a wooden pickaxe');
   // a result for an action that is no longer the newest finds it by its words
   p.term({ lines: [{ k: 'call', t: '> play', say: 'Walk to 1 2 3' }, { k: 'call', t: '> play', say: 'Build a shelter for the night' }] });

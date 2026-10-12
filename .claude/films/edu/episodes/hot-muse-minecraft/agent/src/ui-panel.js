@@ -1,6 +1,6 @@
 // src/ui-panel.js - the panel under the game in the live video (STREAM_LAYOUT=ui, the camera's side), minimal: one slim
 // header line (health, food, the time of day or the Nether, and how much of the game Muse played itself) and the last
-// four actions as a list, newest on top: each in plain words ("Mine 3 diamond ore") with its state on the right (a
+// seven actions as a list (six under the status line), newest on top: each in plain words ("Mine 3 diamond ore") with its state on the right (a
 // quiet animated "running", "done 14 s", or "failed" and a few words). A reflex is a small muted row, a milestone a
 // gold one. A new row slides in, the oldest fades out. No mascot, no cards, no boxes: the owner's call (2026-10-12).
 //
@@ -25,7 +25,7 @@ export const UI_COLORS = Object.freeze({
 const FAMILY = 'MuseUI';
 /** Calls that are not an action (Muse looking around, the live view itself). */
 const QUIET = /^> (?:get_state|live_view)\b/;
-const ROWS = 4; // rows shown
+const ROWS = 7; // rows shown: the status line and six earlier actions, or seven actions while one runs
 const ease = (t) => 1 - (1 - Math.min(1, Math.max(0, t))) ** 3;
 const clamp01 = (t) => Math.min(1, Math.max(0, t));
 
@@ -84,19 +84,19 @@ export function createUiPanel(o) {
     }
   }
   // two sizes only: the rows, and the header and the states
-  const BIG = 30;
-  const SMALL = 25;
+  const BIG = 27;
+  const SMALL = 22;
   const font = (weight, px) => `${weight} ${Math.round(px * s)}px ${FAMILY}`;
   const load = (p) => { const im = new Image(); im.src = fs.readFileSync(p); return im; };
   const sized = (im, w, h) => { const c = createCanvas(Math.round(w), Math.round(h)); const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, 0, 0, c.width, c.height); return c; };
-  const IS = Math.round(28 * s);
+  const IS = Math.round(25 * s);
   const icons = {};
   for (const n of ICONS) icons[n] = sized(load(path.join(assets, 'icons', `${n}.png`)), IS, IS);
 
   // ----- the frame and its background
   const PAD = 34 * s; // the left and right margins
-  const HEAD = Math.round(58 * s); // the header line
-  const ROW = (H - HEAD - 12 * s) / ROWS; // each row
+  const HEAD = Math.round(50 * s); // the header line
+  const ROW = (H - HEAD - 8 * s) / ROWS; // each row, anchored at the top: a short game leaves the space at the bottom
   const canvas = createCanvas(W, H);
   const g = canvas.getContext('2d');
   const bg = createCanvas(W, H);
@@ -328,7 +328,7 @@ export function createUiPanel(o) {
       if (!header || clockNow() !== shownClock) drawHeader(); // the clock ticks with the game
       g.drawImage(header, 0, 0);
       const moved = ease((t - shiftAt) / 380);
-      const top = HEAD + 6 * s;
+      const top = HEAD + 4 * s;
       // nothing running for 2.5 s: the top row says what is happening, and the actions move a slot down
       const runningRow = rows.some((r) => r.kind === 'action' && r.state?.kind === 'run');
       const idle = rows.length > 0 && !runningRow && (live?.mode === 'run' || t - lastEventAt > 2_500);
@@ -349,7 +349,7 @@ export function createUiPanel(o) {
         g.arc(PAD + 7 * s, cy, 6 * s, 0, Math.PI * 2);
         g.fill();
       }
-      const dims = [1, 0.62, 0.42, 0.26, 0, 0];
+      const dims = [1, 0.66, 0.5, 0.38, 0.28, 0.2, 0.13, 0, 0]; // older, fainter
       const dimAt = (x) => { const i = Math.floor(x); const f = x - i; return (dims[i] ?? 0) * (1 - f) + (dims[i + 1] ?? 0) * f; };
       rows.forEach((r, i) => {
         // where it is going and where it came from: one row lower than before, the new one from just above its place;
@@ -374,7 +374,7 @@ export function createUiPanel(o) {
             g.globalAlpha = a * k;
             g.fillStyle = UI_COLORS.muse;
             g.beginPath();
-            g.arc(cx - (2 - d) * 16 * s, cy, 4.5 * s, 0, Math.PI * 2);
+            g.arc(cx - (2 - d) * 15 * s, cy, 4 * s, 0, Math.PI * 2);
             g.fill();
           }
           if (r.state.text) {
