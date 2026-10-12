@@ -32,11 +32,15 @@ const RECIPES = {
 for (const w of WOODS) RECIPES[`${w}_planks`] = { out: 4, need: { [`${w}_log`]: 1 } };
 RECIPES.stone_sword = { out: 1, need: { cobblestone: 2, stick: 1 }, table: true };
 RECIPES.shield = { out: 1, need: { iron_ingot: 1, $planks: 6 }, table: true };
+RECIPES.torch = { out: 4, need: { stick: 1, coal: 1 } };
+RECIPES.bucket = { out: 1, need: { iron_ingot: 3 }, table: true };
+RECIPES.flint_and_steel = { out: 1, need: { iron_ingot: 1, flint: 1 } };
+RECIPES.diamond_pickaxe = { out: 1, need: { diamond: 3, stick: 2 }, table: true };
 for (const [m, unit] of [['iron', 'iron_ingot'], ['leather', 'leather']]) {
   for (const [piece, n] of [['helmet', 5], ['chestplate', 8], ['leggings', 7], ['boots', 4]]) RECIPES[`${m}_${piece}`] = { out: 1, need: { [unit]: n }, table: true };
 }
-const DROPS = { stone: 'cobblestone', coal_ore: 'coal', iron_ore: 'raw_iron', logs: 'oak_log' };
-const SMELTS = { raw_iron: 'iron_ingot', cobblestone: 'stone', oak_log: 'charcoal', beef: 'cooked_beef' };
+const DROPS = { stone: 'cobblestone', coal_ore: 'coal', iron_ore: 'raw_iron', logs: 'oak_log', deepslate_iron_ore: 'raw_iron', deepslate_diamond_ore: 'diamond', diamond_ore: 'diamond', deepslate: 'cobbled_deepslate' };
+const SMELTS = { raw_iron: 'iron_ingot', cobblestone: 'stone', oak_log: 'charcoal', beef: 'cooked_beef', mutton: 'cooked_mutton', chicken: 'cooked_chicken', porkchop: 'cooked_porkchop' };
 const FUELS = { coal: 8, charcoal: 8, oak_planks: 1.5, birch_planks: 1.5, oak_log: 1.5, birch_log: 1.5 };
 
 /**
@@ -250,7 +254,14 @@ export async function startFakeMineAi(opts = {}) {
       // (made) or before it, the action failing with the reflex's reason
       const t = world.takeovers[0]?.tool === tool ? world.takeovers.shift() : null;
       const done = !t || t.made ? perform(tool, a, () => act.cancel) : null;
-      const result = t ? { status: 'failed', error: t.error } : done;
+      // the guard reflex's way with a fresh shield: into the off-hand; the temporary table left standing
+      if (t?.offHand && have(t.offHand) > 0) { add(t.offHand, -1); world.equipment.set('off-hand', { name: t.offHand, count: 1 }); }
+      if (t?.tableLeft && have('crafting_table') > 0) {
+        add('crafting_table', -1);
+        world.blocks = [...world.blocks.filter((b) => b.name !== 'crafting_table'), { name: 'crafting_table', found: 1, listed: [{ x: Math.floor(world.position.x) + 1, y: Math.floor(world.position.y), z: Math.floor(world.position.z) }] }];
+      }
+      const result = t ? { ...(done ?? {}), status: 'failed', error: t.error } : done;
+      // their reflexes that acted during the action, as their runner lists them (world.interruptionsFor[tool])
       // what else happened meanwhile (a walk's digging and scaffolding, a pickup): in the inventory, not in the evidence
       if (result.status !== 'cancelled') for (const [k, n] of Object.entries(world.side[tool] ?? {})) add(k, n);
       settle(act, result);
@@ -264,7 +275,7 @@ export async function startFakeMineAi(opts = {}) {
     if (act.state !== 'running') return;
     clearTimeout(act.timer);
     act.state = 'settled';
-    act.output = { action: act.tool, durationMs: Date.now() - act.t0, result };
+    act.output = { action: act.tool, durationMs: Date.now() - act.t0, result, ...(world.interruptionsFor?.[act.tool] ? { interruptions: [...world.interruptionsFor[act.tool]] } : {}) };
     if (active === act.id) active = null;
     unretrieved = act.id;
     for (const w of act.waiters.splice(0)) w();
@@ -276,6 +287,7 @@ export async function startFakeMineAi(opts = {}) {
     if (act.state !== 'settled') {
       // their progress: request.evidence.checkpoint (a hunt counts the target deaths it saw)
       const killed = act.hunting && Date.now() - act.t0 >= world.huntKillAfterMs ? 1 : 0;
+      if (world.progressFor?.[act.tool]) return { state: 'pending', wakeReason: 'timeout', actionId: id, progress: { request: { evidence: { checkpoint: world.progressFor[act.tool] } } } };
       return { state: 'pending', wakeReason: 'timeout', actionId: id, progress: act.hunting ? { request: { evidence: { checkpoint: { phase: killed ? 'collecting' : 'fighting', attacks: 3, targetDeathsObserved: killed, gained: 0 } } } } : {} };
     }
     if (unretrieved === id) unretrieved = null;

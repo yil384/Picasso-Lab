@@ -2266,6 +2266,34 @@ Players' share: 100%. One round-3 bot fell off vines 7 s after it landed and pla
 Nether, the state and the advice say where the portal back is (and that food is short when it is). A prepared check
 on the Mac (items given on the console, labelled prepared) ran the frame, light, enter and back three times.
 
+### The log hunt's fixes (2026-10-12)
+
+A read-only hunt over every production and staging game log found 19 findings (F1 to F19). The product bugs are fixed,
+each with a regression test.
+
+- **F1:** a shield the guard reflex equips straight into the off-hand now counts as made, in the craft step and the
+  shield skill. The reply says it is in the off-hand, and the crafting table a cut-short craft leaves standing is
+  taken back.
+- **F4:** a step a reflex cut short says first what it did. A collect with every block in is ok.
+- **F5:** a walk's refusal names no argument go_to lacks. It says which y to send, since y is the feet's height.
+- **F6:** a temporary furnace or table hitch (nothing made) is tried once more.
+- **F7:** a portal frame that would be cut into rock is refused before any obsidian is spent.
+- **F2:** collect obsidian needs a still lava pool within 16 blocks, and its description says just that. Its time
+  limit is 2 minutes plus 20 s a block, and get_state shows a running step's progress ("3 of 14 so far").
+- **F3:** `drop {"junk": true}` drops every stack digging fills the bag with in one skill. The full-bag advice and the
+  INVENTORY_FULL refusal point to it.
+- **F9:** every MCP call (`mcp_call`) and every schema refusal (`mcp_refused`) is logged, with the advice shown.
+- **F10:** reflexes inside a step count in the attribution. A step refused before it ran does not count.
+- **F11:** in-step reflexes are said in plain words, once each.
+- **F12:** a hunt for a drop name the game does not have is refused with the right names.
+- **F13:** buckets, drops, walks and portals say what they did.
+- **F14:** a runtime that exits while starting is started once more.
+- **F17:** before the player's first call, a new bot in danger shelters on its own.
+- **F19:** a lease longer than 30 minutes is warned about at start.
+
+`test/replay.test.js` replays Muse's real steps of production games gb1cfe3 and g64e8c5 against the fake runtime,
+with the real incidents. Every change must pass it.
+
 ## What is mocked
 
 - The model: `test/mock-llm.js` speaks Chat Completions and the Responses API (streamed and not), replays scripted tool

@@ -1,0 +1,614 @@
+{
+ "about": "Muse's real steps in production games gb1cfe3 (2026-10-11) and g64e8c5 (2026-10-12), from the agent's viewer_action rows: the skill, its arguments, whether it was ok and the first 120 characters of what production said (test/replay.test.js)",
+ "games": {
+  "gb1cfe3": [
+   {
+    "tool": "collect",
+    "args": {
+     "block": "oak_log",
+     "n": 16
+    },
+    "ok": true,
+    "result": "mined 16 oak_log and picked up 16 oak_log (16 of 16 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "oak_planks",
+     "n": 12
+    },
+    "ok": true,
+    "result": "crafted 12 oak_planks"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "crafting_table",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 crafting_table"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "wooden_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 wooden_pickaxe at a crafting table put down at 226 113 434 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "cobblestone",
+     "n": 16
+    },
+    "ok": true,
+    "result": "mined 16 stone (stone drops cobblestone) and picked up 16 cobblestone (16 of 16 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stone_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 stone_pickaxe at a crafting table put down at 227 106 437 (the table was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "furnace",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 furnace at a crafting table put down at 227 106 437 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "coal_ore",
+     "n": 8
+    },
+    "ok": true,
+    "result": "mined 8 coal_ore (coal_ore drops coal) and picked up 8 coal (8 of 8 wanted)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "iron_ore",
+     "n": 5
+    },
+    "ok": true,
+    "result": "mined 5 iron_ore (iron_ore drops raw_iron) and picked up 5 raw_iron (5 of 5 wanted)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 5
+    },
+    "ok": true,
+    "result": "smelted 5 iron_ingot from 5 raw_iron with coal in the furnace at 225 91 439 (the furnace was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "torch",
+     "n": 8
+    },
+    "ok": true,
+    "result": "crafted 8 torch"
+   },
+   {
+    "tool": "shield",
+    "args": {},
+    "ok": true,
+    "result": "crafted a shield and put it in its off-hand (its fight reflex raises it against arrows)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "iron_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 iron_pickaxe at a crafting table put down at 225 91 439 (the table was picked up again)"
+   }
+  ],
+  "g64e8c5": [
+   {
+    "tool": "shelter",
+    "args": {},
+    "ok": true,
+    "result": "dug two blocks down; collected 11 dirt for walls; closed itself in at 2 79 -364 (placed 7 blocks, 4 wall cells already s"
+   },
+   {
+    "tool": "hunt",
+    "args": {
+     "mob": "chicken",
+     "drop": "raw_chicken",
+     "n": 1
+    },
+    "ok": false,
+    "result": "failed: Minecraft has no item registry entry named raw_chicken. (hunted chicken: 0 killed, 0 raw_chicken picked up (1 wa"
+   },
+   {
+    "tool": "hunt",
+    "args": {
+     "mob": "chicken",
+     "drop": "chicken",
+     "n": 1
+    },
+    "ok": true,
+    "result": "hunted chicken: 1 killed, 1 chicken picked up (1 wanted) [on its own: evade response for zombie#2531 at -7,90,-348 (4.9 "
+   },
+   {
+    "tool": "hunt",
+    "args": {
+     "mob": "sheep",
+     "drop": "mutton",
+     "n": 2
+    },
+    "ok": true,
+    "result": "hunted sheep: 1 killed, 2 mutton picked up (2 wanted)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "oak_log",
+     "n": 8
+    },
+    "ok": true,
+    "result": "mined 8 oak_log and picked up 8 oak_log (8 of 8 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "oak_planks",
+     "n": 12
+    },
+    "ok": true,
+    "result": "crafted 12 oak_planks"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "crafting_table",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 crafting_table"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "wooden_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 wooden_pickaxe at a crafting table put down at -55 84 -276 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "cobblestone",
+     "n": 11
+    },
+    "ok": true,
+    "result": "mined 11 stone (stone drops cobblestone) and picked up 11 cobblestone (11 of 11 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stone_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 stone_pickaxe at a crafting table put down at -56 78 -274 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "coal_ore",
+     "n": 3
+    },
+    "ok": true,
+    "result": "mined 3 coal_ore (coal_ore drops coal) and picked up 3 coal (3 of 3 wanted)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "iron_ore",
+     "n": 4
+    },
+    "ok": true,
+    "result": "mined 4 iron_ore (iron_ore drops raw_iron) and picked up 4 raw_iron (4 of 4 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "furnace",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 furnace at a crafting table put down at -72 61 -277 (the table was picked up again)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 3
+    },
+    "ok": true,
+    "result": "smelted 3 iron_ingot from 3 raw_iron with coal in the furnace at -72 61 -277 (the furnace was picked up again)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "mutton",
+     "n": 2
+    },
+    "ok": false,
+    "result": "failed: The block appeared, but consumption of furnace was not observed (inventory 1 \u2192 1). (nothing was put into a furna"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "iron_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 iron_pickaxe at a crafting table put down at -72 61 -277 (the table was picked up again)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "mutton",
+     "n": 2
+    },
+    "ok": true,
+    "result": "smelted 2 cooked_mutton from 2 mutton with coal in the furnace at -72 61 -277 (the furnace was picked up again)"
+   },
+   {
+    "tool": "eat",
+    "args": {},
+    "ok": true,
+    "result": "ate cooked_mutton: food 9 -> 15"
+   },
+   {
+    "tool": "eat",
+    "args": {},
+    "ok": true,
+    "result": "ate cooked_mutton: food 15 -> 20"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -72,
+     "y": -50,
+     "z": -276
+    },
+    "ok": true,
+    "result": "walked to -72 -49 -276"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate_diamond_ore",
+     "n": 3
+    },
+    "ok": true,
+    "result": "mined 3 deepslate_diamond_ore (deepslate_diamond_ore drops diamond) and picked up 3 diamond (3 of 3 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "diamond_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 diamond_pickaxe at a crafting table put down at -73 -41 -269 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate_iron_ore",
+     "n": 4
+    },
+    "ok": true,
+    "result": "mined 4 deepslate_iron_ore (deepslate_iron_ore drops raw_iron) and picked up 4 raw_iron (4 of 4 wanted)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 4
+    },
+    "ok": true,
+    "result": "smelted 4 iron_ingot from 4 raw_iron with coal in the furnace at -81 -31 -272 (the furnace was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "bucket",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 bucket at a crafting table put down at -81 -31 -272 (the table was picked up again)"
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill",
+     "liquid": "water"
+    },
+    "ok": true,
+    "result": "done"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "gravel",
+     "n": 10
+    },
+    "ok": true,
+    "result": "mined 10 gravel and picked up 1 flint, 9 gravel (10 of 10 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "flint_and_steel",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 flint_and_steel"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -78,
+     "y": -58,
+     "z": -288
+    },
+    "ok": true,
+    "result": "walked to -78 -57 -288"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 14
+    },
+    "ok": false,
+    "result": "no lava within 16 blocks to make obsidian from: go near lava first (get_state lists it among the nearby blocks; deep cav"
+   },
+   {
+    "tool": "explore",
+    "args": {
+     "heading": 0,
+     "chunks": 4
+    },
+    "ok": false,
+    "result": "stopped: stopped through MCP"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -44,
+     "y": 79,
+     "z": -287
+    },
+    "ok": true,
+    "result": "walked to -43 79 -287"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 1
+    },
+    "ok": true,
+    "result": "smelted 1 iron_ingot from 1 raw_iron with coal in the furnace at -43 79 -288 (the furnace was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "oak_planks",
+     "n": 8
+    },
+    "ok": true,
+    "result": "crafted 8 oak_planks"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "shield",
+     "n": 1
+    },
+    "ok": false,
+    "result": "failed: Equip an available shield before nearby hostiles require a guard."
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 14
+    },
+    "ok": true,
+    "result": "mined 14 obsidian and picked up 14 obsidian (14 of 14 wanted) [on its own: fight response for zombie#5761 at 48,-43,-315"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -43,
+     "y": 79,
+     "z": -287
+    },
+    "ok": true,
+    "result": "walked to -43 79 -287"
+   },
+   {
+    "tool": "hunt",
+    "args": {
+     "mob": "sheep",
+     "drop": "mutton",
+     "n": 3
+    },
+    "ok": false,
+    "result": "failed: No free slot or matching stack space for mutton. (hunted sheep: 0 killed, 0 mutton picked up (3 wanted))"
+   },
+   {
+    "tool": "drop",
+    "args": {
+     "item": "gravel",
+     "n": 9
+    },
+    "ok": true,
+    "result": "done"
+   },
+   {
+    "tool": "drop",
+    "args": {
+     "item": "clay_ball",
+     "n": 16
+    },
+    "ok": true,
+    "result": "done"
+   },
+   {
+    "tool": "drop",
+    "args": {
+     "item": "azalea",
+     "n": 2
+    },
+    "ok": true,
+    "result": "done"
+   },
+   {
+    "tool": "drop",
+    "args": {
+     "item": "flowering_azalea",
+     "n": 1
+    },
+    "ok": true,
+    "result": "done"
+   },
+   {
+    "tool": "drop",
+    "args": {
+     "item": "moss_block",
+     "n": 5
+    },
+    "ok": true,
+    "result": "done"
+   },
+   {
+    "tool": "hunt",
+    "args": {
+     "mob": "sheep",
+     "drop": "mutton",
+     "n": 3
+    },
+    "ok": true,
+    "result": "hunted sheep: 2 killed, 3 mutton picked up (3 wanted) [on its own: fight response for skeleton#6659 at -82,86,-246 (10.3"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "mutton",
+     "n": 2
+    },
+    "ok": true,
+    "result": "smelted 2 cooked_mutton from 2 mutton with coal in the furnace at -75 87 -244 (the furnace was picked up again)"
+   },
+   {
+    "tool": "eat",
+    "args": {},
+    "ok": true,
+    "result": "ate cooked_mutton: food 6 -> 12"
+   },
+   {
+    "tool": "eat",
+    "args": {},
+    "ok": true,
+    "result": "ate cooked_mutton: food 12 -> 18"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": true,
+    "result": "placed 12 obsidian and dug 6 cells clear (18 of 18 cells as the blueprint) (built facing west)"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "light"
+    },
+    "ok": true,
+    "result": "lit the Nether portal (6 portal blocks)"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "enter"
+    },
+    "ok": true,
+    "result": "went through the portal at -3 68 -31"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "enter",
+     "pos": {
+      "x": -3,
+      "y": 68,
+      "z": -31
+     }
+    },
+    "ok": true,
+    "result": "went through the portal at -75 87 -244 (stepped out of the portal first)"
+   }
+  ]
+ }
+}

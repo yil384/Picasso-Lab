@@ -1,6 +1,6 @@
 // test/fake-mineai-host.mjs - stands in for their src/server/host.ts as a process (test/mineai.test.js, host
 // manager): the same command-line flags, the token from MINEAI_HOST_TOKEN and the player name from MINEAI_USERNAME (our
-// patches 0004 and 0005), and FAKE_MODE to misbehave: ok | crash (exits 1.5 s after it listens) | hang (stops
+// patches 0004 and 0005), and FAKE_MODE to misbehave: ok | early (exits with code 1 before it listens) | crash (exits 1.5 s after it listens) | hang (stops
 // answering /health 1.5 s after) | never (never ready) | disconnect (reports the bot disconnected 1.5 s after) | open
 // (no token check: a runtime without patch 0004) | natural (ends on SIGTERM as theirs does: closes its server and never
 // calls process.exit) | orphan (has a child of its own that ignores SIGTERM, as a runtime whose event loop is stuck,
@@ -20,6 +20,8 @@ const bad = starts <= Number(process.env.FAKE_BAD_STARTS ?? 99);
 const mode = bad ? process.env.FAKE_MODE ?? 'ok' : 'ok';
 
 if (values['listen-host'] !== '127.0.0.1') { console.error('refusing: not loopback'); process.exit(3); }
+// early: exits at once with code 1, as their runtime did right after a restart of the gateway (F14 of the log hunt)
+if (mode === 'early') { console.error('Runtime exited: code=1'); process.exit(1); }
 if (mode === 'never') setInterval(() => {}, 1_000);
 else {
   const username = process.env.MINEAI_USERNAME || values.username || 'MineAI';

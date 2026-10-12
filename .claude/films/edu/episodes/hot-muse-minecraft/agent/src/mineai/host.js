@@ -141,6 +141,9 @@ function allGameFolders(root) {
 /**
  * @param {{config: object, log: object, spawnFn?: typeof spawn, fetchFn?: typeof fetch, isFree?: (port: number) => Promise<boolean>, preload?: string|null, now?: () => number}} opts
  */
+/** How long a host that could not start waits before its one more try. */
+export const START_RETRY_MS = 3_000;
+
 export function createHostManager({ config, log, spawnFn = spawn, fetchFn = globalThis.fetch, isFree = portFree, preload = PRELOAD, now = Date.now }) {
   const m = config.mineai;
   const grace = killGrace(m);
@@ -270,6 +273,9 @@ export function createHostManager({ config, log, spawnFn = spawn, fetchFn = glob
       });
       c.exited.then(({ code, signal }) => {
         if (child !== c || closing) return;
+        // still starting: the start itself sees the exit and tries once more (a crash handler here would launch a
+        // second process beside it, and the start's failure would close the host: F14 of the log hunt)
+        if (!started) { event('mineai_host_exit', { code, signal, last: lines.slice(-3), starting: true }); return; }
         event('mineai_host_exit', { code, signal, last: lines.slice(-3) });
         crashed(`its process exited (${signal ?? `code ${code}`})`);
       });
@@ -323,6 +329,7 @@ export function createHostManager({ config, log, spawnFn = spawn, fetchFn = glob
     }
 
     let recovering = null;
+    let started = false; // the first start is done (an exit before it is the start's to handle)
     function crashed(why) {
       if (closing || down || recovering) return;
       clearTimeout(timer);
@@ -401,7 +408,20 @@ export function createHostManager({ config, log, spawnFn = spawn, fetchFn = glob
 
     host.ready = (async () => {
       try {
-        await waitReady(launch());
+        try {
+          await waitReady(launch());
+        } catch (err) {
+          // a runtime that exited or failed while starting is started once more after a moment (F14 of the log hunt:
+          // 16 first games after a restart of the gateway on staging failed with "Runtime exited: code=1" within 26 s);
+          // a missing patch or a close is not tried again
+          if (closing || !/exited while starting|failed while starting/.test(String(err?.message))) throw err;
+          event('mineai_host_start_retry', { why: String(err.message).slice(0, 200) });
+          await kill(child);
+          await new Promise((r) => { setTimeout(r, START_RETRY_MS); });
+          if (closing) throw err;
+          await waitReady(launch());
+        }
+        started = true;
       } catch (err) {
         failed = true;
         await host.close(`start failed: ${err.message}`);

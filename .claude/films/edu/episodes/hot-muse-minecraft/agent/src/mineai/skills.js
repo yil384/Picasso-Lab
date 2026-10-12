@@ -25,6 +25,16 @@ export const HUNT_MOBS = Object.freeze([
   'blaze', 'magma_cube', 'ghast', 'wither_skeleton', 'phantom', 'silverfish', 'zombified_piglin', 'hoglin',
 ]);
 const EQUIP_TO = ['hand', 'off-hand', 'head', 'torso', 'legs', 'feet'];
+/** What each huntable mob drops (item names as the game has them), for the hunt's description and its refusals. */
+export const HUNT_DROPS = Object.freeze({
+  cow: ['beef', 'leather'], mooshroom: ['beef', 'leather'], pig: ['porkchop'], sheep: ['mutton', 'white_wool'],
+  chicken: ['chicken', 'feather'], rabbit: ['rabbit', 'rabbit_hide'], goat: [], cod: ['cod'], salmon: ['salmon'],
+  squid: ['ink_sac'], zombie: ['rotten_flesh'], husk: ['rotten_flesh'], drowned: ['rotten_flesh'], skeleton: ['bone', 'arrow'],
+  stray: ['bone', 'arrow'], spider: ['string', 'spider_eye'], cave_spider: ['string', 'spider_eye'], creeper: ['gunpowder'],
+  slime: ['slime_ball'], witch: ['redstone', 'glowstone_dust', 'sugar'], enderman: ['ender_pearl'], blaze: ['blaze_rod'],
+  magma_cube: ['magma_cream'], ghast: ['ghast_tear', 'gunpowder'], wither_skeleton: ['bone', 'coal'], phantom: ['phantom_membrane'],
+  silverfish: [], zombified_piglin: ['rotten_flesh', 'gold_nugget'], hoglin: ['porkchop', 'leather'],
+});
 /**
  * How near (blocks, flat, to its nearest cell; and 6 up or down) a build of the same blueprint and material continues
  * the structure the last build left incomplete instead of starting a new one. The Muse re-test on staging (2026-10-08,
@@ -57,7 +67,7 @@ export const EXTRA_DEFS = Object.freeze([
     'Wear armor, hold a tool or weapon, or put a shield in the off-hand (the slot follows from the item unless to is given).',
     obj({ item: NAME('a carried item, e.g. iron_chestplate, shield, stone_sword'), to: pick('where it goes', EQUIP_TO) }, ['item'])],
   ['hunt',
-    'Hunt mobs of one kind until n of a drop came into your inventory (e.g. cow -> beef, sheep -> white_wool, spider -> string, chicken -> feather). Hostile mobs need a shield carried, unless without_shield is true.',
+    'Hunt mobs of one kind until n of a drop came into your inventory. The drop is the item\'s name as the game has it: cow -> beef or leather, pig -> porkchop, sheep -> mutton or white_wool, chicken -> chicken (the raw meat) or feather, rabbit -> rabbit, spider -> string, skeleton -> bone, zombie -> rotten_flesh. Hostile mobs need a shield carried, unless without_shield is true.',
     obj({ mob: pick('which mob', HUNT_MOBS), drop: NAME('the item you want from it'), n: int('how many of the drop, 1 to 64', 1, 64), without_shield: { type: 'boolean', description: 'true: fight a hostile mob with no shield' } }, ['mob', 'drop', 'n'])],
   ['sleep',
     'Sleep in the nearest free bed (or put down the one you carry): through the night, and it sets your respawn point.',
@@ -98,8 +108,8 @@ export const EXTRA_DEFS = Object.freeze([
     'Pick up items lying within 8 blocks (only item if given); death_items: true walks back to where you died and picks up what you dropped (within 5 minutes).',
     obj({ item: NAME('only this item'), death_items: { type: 'boolean', description: 'true: recover what you dropped when you died' } }, [])],
   ['drop',
-    'Throw n of an item on the ground where you stand (to make room in the inventory). Never worn armor.',
-    obj({ item: NAME('a carried item'), n: int('how many, 1 to 2304', 1, 2304) })],
+    'Throw n of an item on the ground where you stand (to make room in the inventory), or with junk: true every stack of what digging fills the bag with and no skill here uses (gravel, tuff, granite, diorite, andesite, moss, clay balls, flowers and the like, and cobblestone, cobbled deepslate, dirt and netherrack beyond a reserve) in one go. Never worn armor.',
+    obj({ item: NAME('a carried item'), n: int('how many, 1 to 2304', 1, 2304), junk: { type: 'boolean', description: 'true: drop every junk stack at once (item and n not needed)' } }, [])],
 ]);
 
 /**
@@ -108,8 +118,8 @@ export const EXTRA_DEFS = Object.freeze([
  * waits for the whole load in one furnace, and fuel goes one kind after another.
  */
 export const MINEAI_DESCRIPTIONS = Object.freeze({
-  go_to: 'Walk to a block position; the body finds its own way (it may dig, bridge, pillar or swim). The target must be within 256 blocks. Seconds to two minutes; a walk that finds no way ends and says why.',
-  collect: 'Mine n blocks of one type and pick up the drops: the body searches every loaded chunk around you (not only the nearest 32 blocks), walks there and uses the best tool you carry. stone drops cobblestone (collect cobblestone mines stone for it); iron_ore drops raw_iron and needs a stone pickaxe or better; diamond_ore (deepslate_diamond_ore below y 0) drops diamond and needs an iron pickaxe: diamonds lie at y 16 and below, most near y -59. obsidian needs a diamond pickaxe, cobblestone to close off lava and a water bucket: with no obsidian loaded the body pours the water onto still lava, scoops it back and mines what formed. It walks to the nearest lava it knows of, which can be far away or on the surface (at night too): go near lava first (get_state lists lava among the nearby blocks; deep caves below y -54 have plenty). gravel drops flint now and then (about 1 in 10). Lava next to a target is closed off with a carried block before the dig; a target it cannot make safe is refused (code LAVA). The reply says what the step mined and picked up, and apart from that what changed on the way (blocks dug through, scaffolding placed).',
+  go_to: 'Walk to a block position; the body finds its own way (it may dig, bridge, pillar or swim). y is the height of your feet: one above the ground block you want to stand on (get_state\'s position is your feet). The target must be within 256 blocks. Seconds for a short walk, a few minutes for a long one or a climb out of the deep (its time limit grows with the distance); a walk that finds no way ends and says why.',
+  collect: 'Mine n blocks of one type and pick up the drops: the body searches every loaded chunk around you (not only the nearest 32 blocks), walks there and uses the best tool you carry. stone drops cobblestone (collect cobblestone mines stone for it); iron_ore drops raw_iron and needs a stone pickaxe or better; diamond_ore (deepslate_diamond_ore below y 0) drops diamond and needs an iron pickaxe: diamonds lie at y 16 and below, most near y -59. obsidian needs a diamond pickaxe, cobblestone to close off lava and a water bucket: the body pours the water onto a still lava pool within 16 blocks of you, scoops it back and mines what formed (with no pool that near it is refused, code LAVA: go next to one first; get_state lists lava among the nearby blocks, and deep caves below y -54 have the most). About 10 s a block; while it runs, get_state says how many are done. gravel drops flint now and then (about 1 in 10). Lava next to a target is closed off with a carried block before the dig; a target it cannot make safe is refused (code LAVA). The reply says what the step mined and picked up, and apart from that what changed on the way (blocks dug through, scaffolding placed).',
   craft: 'Craft n of an item from your inventory (rounded up to whole recipe batches; planks and sticks it lacks are made from what you carry). When the recipe needs a crafting table, the one you carry is put down for the craft and picked up again; carrying none, a table within reach is used, else one is made from 4 planks and left standing.',
   craft_batch: `Craft several items in order in ONE skill, one after another, each as craft: later items use what the earlier ones made, and a crafting table you carry (or one made earlier in the list) is put down for each item that needs it and picked up again. Up to ${CRAFT_BATCH_MAX} items; stops at the first item that cannot be made and says what is missing.`,
   build: `Build a blueprint from blocks in your inventory in front of you, facing your way (shelter: around you). Blueprints: ${BLUEPRINT_NAMES.map((b) => `${b} = ${BLUEPRINTS[b].description}`).join('; ')}. Build again with the same blueprint and material within ${CONTINUE_RADIUS} blocks of one your last build left incomplete to continue that one, at its place and facing; else a new one. It digs cells clear, puts dirt under walls over a drop or water, keeps stone it cannot dig out and leaves water.`,
@@ -195,6 +205,23 @@ export function blueprintCells(blueprint, material, feet, headingDegrees) {
   return { cells, facing: f.name };
 }
 
+/**
+ * What digging walks fill the bag with and no skill here uses, with the reserve kept of each (F3 of the log hunt: one
+ * 37-minute game picked up 314 cobbled deepslate, 73 tuff and more, and a hunt then found no free slot).
+ */
+export const JUNK = Object.freeze([
+  ['gravel', 0], ['andesite', 0], ['diorite', 0], ['granite', 0], ['tuff', 0], ['calcite', 0], ['deepslate', 0],
+  ['dripstone_block', 0], ['pointed_dripstone', 0], ['smooth_basalt', 0], ['moss_block', 0], ['moss_carpet', 0],
+  ['azalea', 0], ['flowering_azalea', 0], ['clay_ball', 0], ['glow_lichen', 0], ['rotten_flesh', 0], ['wheat_seeds', 0],
+  ['poppy', 0], ['dandelion', 0], ['azure_bluet', 0], ['oxeye_daisy', 0], ['cornflower', 0], ['short_grass', 0],
+  ['raw_copper', 0], ['copper_ingot', 0], ['redstone', 0], ['lapis_lazuli', 0], ['netherrack', 16], ['dirt', 16],
+  ['sand', 16], ['cobbled_deepslate', 32], ['cobblestone', 32],
+].map(([item, keep]) => Object.freeze({ item, keep })));
+/** The junk stacks over their reserve in an inventory: [{item, n}], the biggest first. */
+export function junkOf(inventory = {}) {
+  return JUNK.map(({ item, keep }) => ({ item, n: (inventory[item] ?? 0) - keep })).filter((j) => j.n > 0).sort((a, b) => b.n - a.n);
+}
+
 /** How close (blocks) another player may be to an obsidian frame being placed, built or lit. */
 export const FRAME_PLAYER_GUARD = 8;
 
@@ -216,7 +243,7 @@ export function frameGuard(cells, ctx) {
 
 /** Collects that take longer than the skill's limit: a base and a time per block (ms). */
 export const SLOW_COLLECT = Object.freeze({
-  obsidian: { base: 180_000, each: 30_000 },
+  obsidian: { base: 120_000, each: 20_000 },
   diamond_ore: { base: 240_000, each: 30_000 },
   deepslate_diamond_ore: { base: 240_000, each: 30_000 },
 });
@@ -332,7 +359,14 @@ export function toTheirs(skill, args, ctx) {
     }
     case 'say': return { calls: [{ tool: 'send_message', args: { message: args.text } }] };
     case 'equip': return { calls: [{ tool: 'equip', args: { items: [{ item_name: args.item, ...(args.to ? { destination: args.to } : {}) }] } }] };
-    case 'hunt': return { calls: [{ tool: 'collect_mob_drop', args: { mob_name: args.mob, drop_name: args.drop, count: args.n, ...(args.without_shield ? { allow_without_shield: true } : {}) } }] };
+    case 'hunt': {
+      // a drop the game has no item for, or one this mob does not drop: refused before a hunt (F12 of the log hunt:
+      // "raw_chicken" hunted for nothing, and the reply never said "chicken")
+      const known = HUNT_DROPS[args.mob] ?? [];
+      if (!reg.itemsByName[args.drop]) return refuse(`there is no item named ${args.drop}${known.length ? `; a ${args.mob} drops ${known.join(' or ')}` : ''}`, 'BAD_ARGS');
+      if (known.length && !known.includes(args.drop) && !/_wool$/.test(args.drop)) return refuse(`a ${args.mob} does not drop ${args.drop}; it drops ${known.join(' or ')}`, 'BAD_ARGS');
+      return { calls: [{ tool: 'collect_mob_drop', args: { mob_name: args.mob, drop_name: args.drop, count: args.n, ...(args.without_shield ? { allow_without_shield: true } : {}) } }] };
+    }
     case 'sleep': return { calls: [{ tool: 'sleep', args: {} }] };
     case 'bucket': {
       if (args.action === 'pour') {
@@ -409,7 +443,15 @@ export function toTheirs(skill, args, ctx) {
     }
     case 'pick_up': return { calls: [{ tool: 'pick_up_items', args: { ...(args.item ? { item: args.item } : {}), ...(args.death_items ? { recover_death_items: true } : {}) } }] };
     // the item in hand may go too (the body holds whatever it last used); worn armor and the off-hand never do
-    case 'drop': return { calls: [{ tool: 'drop_item', args: { items: [{ item_name: args.item, count: args.n }], allow_equipped: true } }] };
+    case 'drop': {
+      if (args.junk) {
+        const items = junkOf(inv);
+        if (!items.length) return refuse('nothing to drop as junk: your inventory holds none beyond its reserve', 'BAD_ARGS');
+        return { calls: [{ tool: 'drop_item', args: { items: items.map(({ item, n }) => ({ item_name: item, count: n })) } }] };
+      }
+      if (!args.item || !args.n) return refuse('drop needs item and n, or junk: true', 'BAD_ARGS');
+      return { calls: [{ tool: 'drop_item', args: { items: [{ item_name: args.item, count: args.n }], allow_equipped: true } }] };
+    }
     default: return refuse(`${skill} is not a skill of this body`, 'BAD_ARGS');
   }
 }
@@ -566,6 +608,14 @@ function describe(tool, r, call) {
     const p = r.portal;
     return p.activated ? `lit the Nether portal (${p.portalAfter} portal blocks)` : p.portalBefore ? `the portal was already lit (${p.portalAfter} portal blocks)` : 'the portal did not light';
   }
+  // F13 of the log hunt: a bucket and a drop said only "done"
+  if (tool === 'use_bucket' && r?.status === 'succeeded') {
+    const a = call?.args ?? {};
+    return a.action === 'pour' ? `poured the ${a.liquid ?? 'water'} at ${a.x} ${a.y} ${a.z}` : `filled a bucket with ${a.liquid ?? 'water'}`;
+  }
+  if (tool === 'drop_item' && r?.status === 'succeeded' && Array.isArray(call?.args?.items)) {
+    return `dropped ${call.args.items.map((i) => `${i.count} ${i.item_name}`).join(', ')}`;
+  }
   if (tool === 'enter_nether_portal') {
     const at = r?.navigation?.final ?? r?.navigation?.end ?? null;
     const dim = String(r?.dimension ?? r?.navigation?.dimension ?? '').replace(/^minecraft:/, '');
@@ -623,12 +673,64 @@ function doneInFull(r) {
  *   timeout); call: the call of theirs it answers (for the block a collect mined, the material a build placed)
  * @returns {{ok: boolean, result: string, code: string|null, theirs: string|null}}
  */
+/**
+ * Their words where they would mislead a player of ours (F5 of the log hunt: 76 go_to refusals asked for "build:
+ * true", an argument our go_to does not have, and never said that y is the feet's height).
+ */
+export function plainer(tool, text, call = null) {
+  let t = String(text ?? '');
+  if (tool === 'navigate') {
+    const at = /of (-?\d+), (-?\d+), (-?\d+)\./.exec(t);
+    const ground = /The ground in that column is at y=(-?\d+)/.exec(t);
+    if (/No usable footing was observed/.test(t) && at && ground) {
+      t = t.replace(/No usable footing was observed within \d+ blocks? of -?\d+, -?\d+, -?\d+\. The ground in that column is at y=-?\d+\. Choose an observed supported height, or pass build: true to scaffold to this point deliberately\./,
+        `nothing to stand on at ${at[1]} ${at[2]} ${at[3]}: y is the height of your feet, one above the ground, and the ground there is at y=${ground[1]}, so go_to ${at[1]} ${Number(ground[1]) + 1} ${at[3]}`);
+    }
+    t = t.replace(/No usable footing was observed within \d+ blocks? of (-?\d+), (-?\d+), (-?\d+)\. No ground was found within (\d+) blocks below it\.( Choose an observed supported height, or pass build: true to scaffold to this point deliberately\.)?/, 'nothing to stand on at $1 $2 $3, and no ground within $4 blocks below it (open air or a deep drop): pick a point just above the ground');
+    t = t.replace(/,? or pass build: true to scaffold to this point deliberately/g, '').replace(/within 1 blocks/g, 'within 1 block');
+  }
+  return t;
+}
+
+/** A failure that is one of their reflexes taking the body over, in plain words, else null. */
+export function reflexTakeover(text) {
+  const t = String(text ?? '');
+  if (/Equip an available shield/i.test(t)) return 'it put a shield in the off-hand with hostile mobs near';
+  const m = /\b(fight|evade|hide|deflect|flee|retreat|avoid) response for ([a-z_]+)/i.exec(t);
+  if (m) return `${{ fight: 'it fought', evade: 'it got out of the way of', hide: 'it hid from', deflect: 'it blocked', flee: 'it fled from', retreat: 'it fled from', avoid: 'it kept away from' }[m[1].toLowerCase()]} a ${m[2]}`;
+  if (/\[BREATH\]|surface at air|air supply/i.test(t)) return 'it swam up for air';
+  if (/fire_reflex|\bin (fire|lava)\b.*\b(escape|leave)/i.test(t)) return 'it got out of fire or lava';
+  if (/recover_footing|External impulse threatens footing/i.test(t)) return 'it got its footing back';
+  return null;
+}
+/**
+ * Their reflexes that acted during a step, in plain words, once each (F11 of the log hunt: raw runtime text with entity
+ * ids, coordinates, floats and jargon, the same zombie five times, entries cut mid-word): "it fought a zombie, it hid
+ * from a skeleton and 2 more".
+ */
+export function reflexWords(list = []) {
+  const said = [];
+  for (const x of list) {
+    const t = String(x ?? '').replace(/^\s*\[[A-Z_]+\]\s*/, '');
+    const words = reflexTakeover(t) ?? (/fall|footing|water placement/i.test(t) ? 'it saved itself from a fall' : /eat|food/i.test(t) ? 'it ate' : null);
+    if (words && !said.includes(words)) said.push(words);
+  }
+  if (!said.length && list.length) said.push('one of its reflexes acted');
+  return said.length > 3 ? `${said.slice(0, 3).join(', ')} and ${said.length - 3} more` : said.join(', ');
+}
+
+/** What a call did so far, in words (their evidence), or null: what a reply leads with when a reflex cut it short. */
+export function doneSoFar(tool, output, call) {
+  try { return describe(tool, output?.result ?? {}, call); } catch { return null; }
+}
+
 export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   const r = output?.result ?? {};
   const status = String(r.status ?? 'failed');
-  const { code: theirs, text } = splitError(r.error);
+  const { code: theirs, text: raw } = splitError(r.error);
+  const text = plainer(tool, raw, call);
   const said = describe(tool, r, call);
-  const extra = (output?.interruptions ?? []).length ? ` [on its own: ${output.interruptions.map((x) => clean(String(x).replace(/^\s*\[[A-Z_]+\]\s*/, ''), 80)).join(', ')}]` : '';
+  const extra = (output?.interruptions ?? []).length ? ` [meanwhile on its own: ${reflexWords(output.interruptions)}]` : '';
   if (status === 'succeeded') return { ok: true, result: `${said ?? 'done'}${extra}`, code: null, theirs: null };
   if (status === 'cancelled' && stopped) return { ok: false, result: `stopped: ${stopped}${said ? `; ${said}` : ''}${extra}`, code: /timed out after/.test(stopped) ? 'TIMED_OUT' : 'STOPPED', theirs };
   // the craft or smelt was done in full and only the table or furnace put down for it was not picked up again (their
@@ -651,6 +753,7 @@ export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   if (code === 'FAILED' && /\blava\b/i.test(why)) code = 'LAVA';
   // no room for what a craft, smelt or pickup makes (a local run: a full inventory of gravel stopped flint_and_steel)
   if (code === 'FAILED' && /\binventory room\b|\binventory is full\b|\bno (free|empty) (inventory )?slot/i.test(why)) code = 'INVENTORY_FULL';
+  if (code === 'INVENTORY_FULL') return { ok: false, result: `failed: ${why}${said ? ` (${said})` : ''}${extra}; your inventory is full: drop {"junk": true} drops the stacks no skill uses in one go`, code, theirs };
   // partial counts as failed: the steps queued after it were planned on all of it
   return { ok: false, result: `${status === 'partial' ? 'only partly done' : 'failed'}: ${why}${said ? ` (${said})` : ''}${extra}`, code, theirs };
 }

@@ -16,7 +16,7 @@ import { createLogger, readJsonl } from '../src/log.js';
 import { FORBIDDEN_PARAMS } from '../src/llm.js';
 import { EventEmitter } from 'node:events';
 import { createRequire } from 'node:module';
-import { startAgent, usernameFor, privateName, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts, spreadSpots } from '../src/index.js';
+import { startAgent, usernameFor, privateName, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts, spreadSpots, leaseWarning } from '../src/index.js';
 import { consoleLine } from '../src/stations.js';
 import { start } from './mock-llm.js';
 
@@ -350,4 +350,10 @@ test('startAgent: live_view embed follows the game\'s stream and STREAM_VIDEO_UR
     await agent.stop('test over');
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('a lease longer than the usual 30 minutes is warned about at start (F19 of the log hunt)', () => {
+  assert.equal(leaseWarning(1_800_000), null);
+  assert.equal(leaseWarning(600_000), null);
+  assert.match(leaseWarning(7_200_000), /^the game lease is 120 min, not the usual 30: a long Muse run's setting .*remove it once the run is over/);
 });

@@ -753,7 +753,7 @@ export function createWeb(opts = {}) {
         addLine(s, `${tool} ${fmtArgs(args)} -> ${r.ok ? 'ok' : 'not done'}: ${r.result}${delta ? ` [${delta}]` : ''}`);
         // phases: where the skill's time went, in ms (path, dig, drop, sync, place, open, clicks, pickup, cook, other)
         // own: what the step itself used and made, when the body can tell (BODY=mineai); delta minus own changed on the way
-        log.event('viewer_action', { session: s.id, source: 'muse', tool, args, ok: r.ok, result: r.result.slice(0, 600), delta: r.delta, ...(r.own ? { own: r.own } : {}), ms: r.ms ?? null, phases: r.phases ?? null });
+        log.event('viewer_action', { session: s.id, source: 'muse', tool, args, ok: r.ok, result: r.result.slice(0, 1000), delta: r.delta, ...(r.own ? { own: r.own } : {}), ms: r.ms ?? null, phases: r.phases ?? null });
         return r;
       });
     return { ok: true, promise };

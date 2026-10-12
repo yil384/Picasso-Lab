@@ -170,7 +170,7 @@ function careRig({ situation: sit, inventory = {}, stacks = [], results = {}, id
   const state = { situation: sit, inventory, stacks, idle, idleSince: NOW - 10_000, clock: NOW, events: [] };
   const deps = {
     situation: () => state.situation,
-    latest: () => ({ inventory: state.inventory }),
+    latest: () => ({ inventory: state.inventory, equipment: state.equipment ?? {} }),
     stacks: () => state.stacks,
     refresh: async () => {},
     act: async (call, deadline, ctl) => {
@@ -519,6 +519,7 @@ test('advise: the reflex knobs in words', () => {
 
 test('advise loop: no plan carried out by itself, advice instead; its reflexes stay', async () => {
   const rig = careRig({ mode: 'advise', situation: situation({ clock: { timeOfDay: 14000, phase: 'night' } }), inventory: { cobblestone: 20 } });
+  rig.care.playerCalled(); // the player plays (before the first call a new bot shelters on its own: F17)
   rig.state.events.push({ type: 'survival_outcome', observedAt: new Date(NOW).toISOString(), payload: { source: 'hostile_reflex', evidence: { response: 'fight', cancelled: false, interrupted: null, outcome: { threats: [{ id: 3, name: 'zombie' }], attacks: 2, killedTargetIds: [3], explosions: 0, healthBefore: 20, healthAfter: 18 } } } });
   await rig.care.tick();
   assert.deepEqual(rig.calls, [], 'no shelter of its own');
@@ -617,12 +618,12 @@ test('advise on the way to the Nether: what the frame still needs, a death in la
   assert.equal(nl[0].text, 'in the Nether: beds explode here and water boils away; the portal back is at 3 70 4 (portal enter with that pos)');
 });
 
-test('advise: a full inventory names the cheapest stack to drop', () => {
+test('advise: a full inventory says what fills it and drops every junk stack in one skill', () => {
   const base = { now: NOW, memory: { cool: {}, night: 0 }, canCraft: () => false };
   const stacks = [stack('shield', 1, 'off-hand'), ...Array.from({ length: 33 }, (_, i) => stack(`oak_planks`, 1, 'main')), stack('gravel', 64, 'main'), stack('gravel', 20, 'main'), stack('cobblestone', 40, 'hotbar')];
   const a = advise(situation(), { ...base, stacks, inventory: { gravel: 84, cobblestone: 40, oak_planks: 33 } }).find((x) => x.kind === 'inventory');
-  assert.equal(a.text, 'your inventory is full (36 of 36 slots): a craft, smelt or pickup needs room');
-  assert.deepEqual(a.hint, { skill: 'drop', args: { item: 'gravel', n: 84 } });
+  assert.equal(a.text, 'your inventory is full (36 of 36 slots; most: 84 gravel, 40 cobblestone, 33 oak_planks): a craft, smelt, hunt or pickup needs room; 2 junk stacks can go');
+  assert.deepEqual(a.hint, { skill: 'drop', args: { junk: true } }, 'every junk stack in one skill (F3 of the log hunt)');
   assert.equal(advise(situation(), { ...base, stacks: stacks.slice(0, 20), inventory: {} }).find((x) => x.kind === 'inventory'), undefined);
 });
 
@@ -634,4 +635,31 @@ test('advise: a pickaxe gone (broken or lost) gets the best one what is carried 
   assert.equal(a.text, 'you carry no pickaxe');
   assert.deepEqual(a.hint, { skill: 'craft', args: { item: 'stone_pickaxe', n: 1 } });
   assert.equal(advise(situation(), { ...base, stacks: [shield, stack('wooden_pickaxe', 1, 'hand')], canCraft: () => true }).find((x) => x.kind === 'tools'), undefined);
+});
+
+test('care shield (F1 of the log hunt): a shield their guard reflex put straight into the off-hand counts as made', async () => {
+  const rig = careRig({
+    mode: 'advise', situation: situation(), inventory: { iron_ingot: 4, oak_planks: 8 },
+    results: { craft_item: () => { rig.state.equipment = { 'off-hand': { name: 'shield', count: 1 } }; return { status: 'failed', error: 'Equip an available shield before nearby hostiles require a guard.' }; } },
+  });
+  const r = await rig.care.perform('shield', { stopped: null });
+  assert.equal(r.ok, true, r.text);
+  assert.match(r.text, /crafted a shield; it is in its off-hand already/);
+  assert.equal(rig.calls.filter((c) => c.tool === 'equip').length, 0, 'nothing more to equip');
+});
+
+test('advise (F17 of the log hunt): before the player\'s first call a new bot shelters from hostile mobs; after it, never on its own', async () => {
+  const zombie = { name: 'zombie', kind: 'hostile', nearest: { distance: 9, position: { x: 18, y: 64, z: -3 } } };
+  const results = { build_structure: { status: 'succeeded', structure: { cells: 15, correct: 15, placed: 13, dug: 0, wrong: 0, kept: [], left: [], supports: [] } } };
+  const rig = careRig({ mode: 'advise', situation: situation({ nearby: { mobs: [zombie] } }), inventory: { cobblestone: 20 }, results });
+  await rig.care.tick();
+  assert.deepEqual(rig.calls.map((c) => c.tool), ['build_structure']);
+  assert.match(rig.care.since(0)[0].text, /^waiting for your first call with hostile mobs near or at night: closed itself in/);
+  const quiet = careRig({ mode: 'advise', situation: situation({ nearby: { mobs: [zombie] } }), inventory: { cobblestone: 20 }, results });
+  quiet.care.playerCalled();
+  await quiet.care.tick();
+  assert.deepEqual(quiet.calls, [], 'after the first call the plans are the player\'s');
+  const calm = careRig({ mode: 'advise', situation: situation(), inventory: { cobblestone: 20 }, results });
+  await calm.care.tick();
+  assert.deepEqual(calm.calls, [], 'a calm day: nothing');
 });

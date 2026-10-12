@@ -41,7 +41,7 @@ test('nether: a frame built, lit and entered; back without a pos, out of the por
     assert.equal(r.result, 'lit the Nether portal (6 portal blocks)');
     r = await body.run('portal', { action: 'enter' });
     assert.equal(r.ok, true, r.result);
-    assert.match(r.result, /^went through the portal at 3 70 4/);
+    assert.match(r.result, /^went through the portal; you came out in the Nether at 3 70 4/);
     assert.doesNotMatch(r.result, /stepped out/, 'in front of a fresh frame it goes straight in');
     assert.match(body.state(), /^position 3 70 4 in the Nether/m);
     // the way back: no pos (the portal it came out of here, never the Overworld frame), the first side blocked
@@ -50,7 +50,7 @@ test('nether: a frame built, lit and entered; back without a pos, out of the por
     fake.world.durations = { ...(fake.world.durations ?? {}), navigate: 1_800 };
     r = await body.run('portal', { action: 'enter' });
     assert.equal(r.ok, true, r.result);
-    assert.match(r.result, /went through the portal at 3 70 4 \(stepped out of the portal first\)$/);
+    assert.match(r.result, /went through the portal; you came out in the overworld at .* \(stepped out of the portal first\)$/);
     const walks = fake.tools('navigate').slice(-2).map((c) => c.args.x);
     assert.deepEqual(walks, [6, 0], 'one side, then the other');
     const ids = fake.calls.filter((c) => c.tool === 'wait_for_action').map((c) => c.args.action_id);
@@ -93,11 +93,19 @@ test('nether: the portal site is read around the frame: water next to it, or not
     fake.world.boxAt = (x, y) => (y === 66 ? 'lava' : 'air');
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
     assert.equal(r.code, 'LAVA');
+    // F7 of the log hunt: a frame cut into rock is refused before any obsidian is spent
+    fake.world.boxAt = (x, y) => (y >= 64 ? 'deepslate' : 'stone');
+    r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.match(r.result, /^the frame would be cut into rock \(10 of its cells hold deepslate\)/);
+    // two stone cells of a hillside on the surface: built as usual
+    fake.world.boxAt = (x, y) => (y === 64 && x % 2 === 0 ? 'stone' : y < 64 ? 'stone' : 'air');
+    r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.doesNotMatch(r.result, /cut into rock/);
     fake.world.boxAt = null;
     fake.world.viewFail = true;
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
     assert.match(r.result, /could not be read/);
-    assert.equal(fake.tools('build_structure').length, 0, 'nothing placed');
+    assert.equal(fake.tools('build_structure').length, 1, 'only the hillside frame was placed');
   } finally { await body.close(); }
 });
 
@@ -111,9 +119,26 @@ test('nether: collect obsidian runs only near lava, in the Overworld, with no ot
     a.fake.world.blocks = [];
     let r = await a.body.run('collect', { block: 'obsidian', n: 4 });
     assert.equal(r.code, 'LAVA', r.result);
-    assert.match(r.result, /^no lava within 16 blocks to make obsidian from/);
-    a.fake.world.blocks = [lava(-148, 60, 150)];
+    assert.match(r.result, /^no lava pool within 16 blocks to make obsidian from/);
+    // a pool loaded farther away: the refusal says where (a staging bench, 2026-10-12)
+    a.fake.world.blocks = [{ name: 'lava', found: 1, listed: [{ x: -150, y: 40, z: 175, level: 0 }] }];
     r = await a.body.run('collect', { block: 'obsidian', n: 4 });
+    assert.match(r.result, /The nearest lava pool loaded is at -150 40 175, 3\d blocks away: go_to a spot a few blocks from it first\.$/);
+    // F2 of the log hunt: flowing lava near by is not a pool to make obsidian from
+    a.fake.world.blocks = [{ name: 'lava', found: 3, listed: [{ x: -148, y: 60, z: 150, level: 3 }, { x: -147, y: 60, z: 150, level: 5 }] }];
+    r = await a.body.run('collect', { block: 'obsidian', n: 4 });
+    assert.equal(r.code, 'LAVA');
+    assert.match(r.result, /is flowing, not a pool/);
+    // a pool: it runs, and while it runs get_state says how far it got
+    a.fake.world.blocks = [{ name: 'lava', found: 2, listed: [{ x: -148, y: 60, z: 150, level: 3 }, { x: -149, y: 59, z: 151, level: 0 }] }];
+    a.fake.world.durations = { ...(a.fake.world.durations ?? {}), collect_block: 2_500 };
+    a.fake.world.progressFor = { collect_block: { broken: 3, gained: 3, requested: 4 } };
+    const running = a.body.run('collect', { block: 'obsidian', n: 4 });
+    await sleep(2_000);
+    assert.match(a.body.state(), /^doing now: collect obsidian 4 \(3 of 4 so far\)/m);
+    r = await running;
+    a.fake.world.durations.collect_block = 20;
+    a.fake.world.progressFor = null;
     assert.equal(r.ok, true, r.result);
     // another game builds a frame near by: a's collect obsidian could take it
     const built = await b.body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
@@ -187,11 +212,14 @@ test('a reflex takes a craft over: made means ok (with a note), cut short means 
   await body.ready;
   try {
     // the production case (g64e8c5): the shield made, then their guard reflex took the body to equip it
-    fake.world.takeovers.push({ tool: 'craft_item', made: true, error: 'Equip an available shield before nearby hostiles require a guard.' });
+    // the reflex put the fresh shield in the off-hand (the main inventory has none: F1 of the log hunt) and the
+    // temporary table stayed standing: ok, said so, the table taken back
+    fake.world.takeovers.push({ tool: 'craft_item', made: true, offHand: 'shield', tableLeft: true, error: 'Equip an available shield before nearby hostiles require a guard.' });
     let r = await body.run('craft', { item: 'shield', n: 1 });
     assert.equal(r.ok, true, r.result);
-    assert.match(r.result, /^crafted 1 shield; then a reflex took the body over \(it put a shield in the off-hand with hostile mobs near\)/);
+    assert.match(r.result, /^crafted 1 shield; it is in your off-hand; a reflex took the body over meanwhile \(it put a shield in the off-hand with hostile mobs near\); the crafting table put down for the craft was picked up again/);
     assert.equal(r.delta.shield, 1);
+    assert.equal(fake.tools('collect_block').at(-1).args.block_name, 'crafting_table', 'mined back at its place');
     // cut short before the craft: sent once more once the reflex let go, and done
     fake.world.takeovers.push({ tool: 'craft_item', made: false, error: '[ACTION_PREEMPTED] fight response for zombie#12 at 1,64,2 (2.5 blocks).' });
     r = await body.run('craft', { item: 'stick', n: 4 });
@@ -204,6 +232,31 @@ test('a reflex takes a craft over: made means ok (with a note), cut short means 
     assert.equal(r.ok, false);
     assert.equal(r.code, 'INTERRUPTED');
     assert.match(r.result, /a reflex took the body over \(it fought a skeleton\) before craft item was done; nothing is wrong with the step: send it again/);
+    // F4 of the log hunt: a collect with all its blocks in when an evade took over: done; one cut short leads with what it got
+    fake.world.takeovers.push({ tool: 'collect_block', made: true, error: 'evade response for zombie#29420 at -11775,104,2346 (7.6 blocks) (hurt: health is below the engagement minimum).' });
+    r = await body.run('collect', { block: 'oak_log', n: 6 });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /^mined 6 oak_log and picked up 6 oak_log .*; a reflex took the body over meanwhile \(it got out of the way of a zombie\)$/);
+    fake.world.takeovers.push({ tool: 'collect_block', made: false, error: 'evade response for zombie#1 (hurt).' });
+    r = await body.run('collect', { block: 'oak_log', n: 6 });
+    assert.equal(r.code, 'INTERRUPTED');
+    assert.match(r.result, /a reflex took the body over \(it got out of the way of a zombie\) before collect block was done/);
+    // F10 of the log hunt: reflexes during a step count as the body's, a step refused before it ran is not Muse's action
+    const before = body.attribution();
+    fake.world.interruptionsFor = { collect_block: ['fight response for zombie#1 at 1,2,3 (2.0 blocks).', 'fight response for zombie#1 at 1,2,3 (2.0 blocks).', 'hide response for skeleton#4'] };
+    r = await body.run('collect', { block: 'oak_log', n: 2 });
+    fake.world.interruptionsFor = null;
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /\[meanwhile on its own: it fought a zombie, it hid from a skeleton\]$/);
+    await body.run('portal', { action: 'dismantle' }); // refused before it ran: no frame
+    const after = body.attribution();
+    assert.equal(after.reflex - before.reflex, 2, 'two distinct reflex responses in the step');
+    assert.equal(after.muse - before.muse, 1, 'the collect, not the refused dismantle');
+    // F6 of the log hunt: their station hitch, then the same craft works: tried once more, ok
+    fake.world.takeovers.push({ tool: 'craft_item', made: false, error: 'The block appeared, but consumption of crafting_table was not observed (inventory 1 → 1).' });
+    r = await body.run('craft', { item: 'stick', n: 4 });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /^the crafting table put down for it was not seen in place \(a timing hitch\); tried again; crafted 4 stick/);
     // a real failure stays a failure
     fake.world.fail.craft_item = '[CRAFT_MATERIALS_MISSING] not enough oak_planks';
     r = await body.run('craft', { item: 'stick', n: 4 });

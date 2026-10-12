@@ -119,11 +119,33 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   // a failed portal action is never "went through"
   assert.equal(fromTheirs('enter_nether_portal', { result: { status: 'failed', error: '[NAVIGATION_PORTAL_NO_EDGE] No supported entry.' } }).result, 'failed: No supported entry.');
   // obsidian and diamonds get longer than a collect's 3 minutes; other blocks keep it
-  assert.equal(toTheirs('collect', { block: 'obsidian', n: 12 }, ctx).timeoutMs, 540_000);
+  assert.equal(toTheirs('collect', { block: 'obsidian', n: 12 }, ctx).timeoutMs, 360_000);
   assert.equal(toTheirs('collect', { block: 'deepslate_diamond_ore', n: 3 }, ctx).timeoutMs, 330_000);
   assert.equal(toTheirs('collect', { block: 'stone', n: 12 }, ctx).timeoutMs, undefined);
   assert.equal(toTheirs('go_to', { x: 0, y: 70, z: 0 }, { ...ctx, position: { x: 0, y: -50, z: 0 } }).timeoutMs, 240_000, 'a climb of 120 blocks: 2 minutes and 2 s a block past 60');
   assert.equal(toTheirs('go_to', { x: 10, y: 70, z: 0 }, { ...ctx, position: { x: 0, y: 70, z: 0 } }).timeoutMs, undefined);
+  // F3 of the log hunt: every junk stack beyond its reserve in one drop; a full bag's refusal says so
+  const junk = toTheirs('drop', { junk: true }, { ...ctx, inventory: { cobbled_deepslate: 314, tuff: 73, cobblestone: 20, gravel: 9, iron_ingot: 3, clay_ball: 16 } });
+  assert.deepEqual(junk.calls[0].args.items, [{ item_name: 'cobbled_deepslate', count: 282 }, { item_name: 'tuff', count: 73 }, { item_name: 'clay_ball', count: 16 }, { item_name: 'gravel', count: 9 }]);
+  assert.equal(toTheirs('drop', { junk: true }, { ...ctx, inventory: { iron_ingot: 3 } }).refused.code, 'BAD_ARGS');
+  assert.equal(toTheirs('drop', {}, ctx).refused.code, 'BAD_ARGS');
+  const full = fromTheirs('collect_mob_drop', { result: { status: 'failed', error: 'No free slot or matching stack space for mutton.' } });
+  assert.equal(full.code, 'INVENTORY_FULL');
+  assert.match(full.result, /drop \{"junk": true\} drops the stacks no skill uses in one go$/);
+  // F13 of the log hunt: a bucket and a drop say what they did
+  assert.equal(fromTheirs('use_bucket', { result: { status: 'succeeded' } }, { call: { args: { action: 'fill', liquid: 'water' } } }).result, 'filled a bucket with water');
+  assert.equal(fromTheirs('drop_item', { result: { status: 'succeeded' } }, { call: { args: { items: [{ item_name: 'tuff', count: 73 }] } } }).result, 'dropped 73 tuff');
+  // F12 of the log hunt: a drop name the game does not have, or a mob does not drop, is refused with the right names
+  assert.equal(toTheirs('hunt', { mob: 'chicken', drop: 'raw_chicken', n: 1 }, ctx).refused.result, 'there is no item named raw_chicken; a chicken drops chicken or feather');
+  assert.equal(toTheirs('hunt', { mob: 'cow', drop: 'mutton', n: 1 }, ctx).refused.result, 'a cow does not drop mutton; it drops beef or leather');
+  assert.equal(toTheirs('hunt', { mob: 'sheep', drop: 'black_wool', n: 1 }, ctx).calls[0].tool, 'collect_mob_drop', 'any wool from a sheep');
+  assert.equal(toTheirs('hunt', { mob: 'chicken', drop: 'chicken', n: 1 }, ctx).calls[0].args.drop_name, 'chicken');
+  // F5 of the log hunt: a walk's refusal names no argument we do not have, and says what y to send
+  const nav = fromTheirs('navigate', { result: { status: 'failed', error: '[NAVIGATION_NO_FOOTING] No usable footing was observed within 1 blocks of 9, 66, -25. The ground in that column is at y=61. Choose an observed supported height, or pass build: true to scaffold to this point deliberately.' } });
+  assert.equal(nav.result, 'failed: nothing to stand on at 9 66 -25: y is the height of your feet, one above the ground, and the ground there is at y=61, so go_to 9 62 -25');
+  const air = fromTheirs('navigate', { result: { status: 'failed', error: 'No usable footing was observed within 1 blocks of 9, 166, -25. No ground was found within 64 blocks below it. Choose an observed supported height, or pass build: true to scaffold to this point deliberately.' } });
+  assert.doesNotMatch(air.result, /build: true|1 blocks/);
+  assert.match(air.result, /nothing to stand on at 9 166 -25, and no ground within 64 blocks below it/);
   // their failures in our codes: lava in the way, no room in the inventory
   assert.equal(fromTheirs('collect_block', { result: { status: 'failed', error: '[MINE_TARGET_PROHIBITED] 2 lava faces, 0 blocks available for placement' } }).code, 'LAVA');
   assert.equal(fromTheirs('craft_item', { result: { status: 'failed', error: 'Mineflayer stopped while executing the selected recipe batch: This crafting execution needs inventory room to store 1 flint_and_steel' } }).code, 'INVENTORY_FULL');
@@ -191,7 +213,11 @@ test('mineai skills: their results become our text and typed codes', () => {
   assert.equal(fromTheirs('navigate', { result: { status: 'succeeded', navigation: { end: { x: 3.5, y: 64, z: -2.2 }, target: { x: 3, y: 64, z: -3 }, remainingDistance: 0.4 } } }).result, 'walked to 3 64 -3');
   assert.equal(fromTheirs('collect_mob_drop', { result: { status: 'succeeded', hunt: { mob: 'sheep', drop: 'white_wool', requested: 2, gained: 2, targetDeathsObserved: 2 } } }).result, 'hunted sheep: 2 killed, 2 white_wool picked up (2 wanted)');
   assert.equal(fromTheirs('navigate', { result: { status: 'cancelled' } }, { stopped: 'timed out after 120 s' }).code, 'TIMED_OUT');
-  assert.match(fromTheirs('navigate', { result: { status: 'succeeded' }, interruptions: ['hostile_contact'] }).result, /\[on its own: hostile_contact\]/);
+  assert.match(fromTheirs('navigate', { result: { status: 'succeeded' }, interruptions: ['hostile_contact'] }).result, /\[meanwhile on its own: one of its reflexes acted\]/);
+  // F11 of the log hunt: once each, in plain words, no entity ids, coordinates or floats
+  const busy = fromTheirs('collect_block', { result: { status: 'succeeded', collected: { requested: 14, gained: 14, gainedByItem: { obsidian: 14 }, blocksBroken: 14 } }, interruptions: ['fight response for zombie#5761 at 48,-43,-315 (3.7 blocks).', 'fight response for zombie#5814 at 44,-54,-320 (3.4 blocks).', 'fight response for zombie#5814 at 44,-54,-320 (3.4 blocks).', 'evade ended with capability_limit at health 7.166667938232422: Emergency evade s'] }, { call: { args: { block_name: 'obsidian', count: 14 } } });
+  assert.match(busy.result, / \[meanwhile on its own: it fought a zombie, one of its reflexes acted\]$|\[meanwhile on its own: it fought a zombie\]$/);
+  assert.doesNotMatch(busy.result, /#\d|\d+\.\d{3}|capability_limit/);
   assert.equal(codeFor('SMELT_FUEL_STARVED'), 'NEED_ITEMS');
   assert.equal(fromTheirs('build_structure', { result: { status: 'failed', error: '[BUILD_INCOMPLETE] 7 cells still wrong: 7 need a block the bot does not carry; short of 7 dirt.' } }).code, 'NEED_ITEMS', 'their words say what is not carried');
   assert.equal(codeFor('UNKNOWN_HUNT_MOB'), 'BAD_ARGS');
@@ -394,6 +420,22 @@ test('mineai host: starts on the range with a token, refuses past the cap, close
   await again.ready;
   assert.equal(again.port, cfg.mineai.portBase, 'its port is free again');
   await hosts.closeAll();
+});
+
+test('mineai host: a runtime that exits while starting is started once more (F14 of the log hunt); twice is a failed start', async () => {
+  const cfg = hostConfig();
+  const state = path.join(tmp('mineai-st-'), 'starts');
+  const hosts = createHostManager({ config: cfg, log, spawnFn: fakeSpawn({ FAKE_MODE: 'early', FAKE_STATE: state, FAKE_BAD_STARTS: '1' }), preload: null });
+  const h = await hosts.start({ instanceId: 'g1', username: 'Tst_rv_e' });
+  await h.ready;
+  assert.ok((await h.health())?.minecraft, 'ready on the second try');
+  assert.equal(fs.readFileSync(state, 'utf8'), '2');
+  await h.close('test');
+  const state2 = path.join(tmp('mineai-st-'), 'starts');
+  const hosts2 = createHostManager({ config: cfg, log, spawnFn: fakeSpawn({ FAKE_MODE: 'early', FAKE_STATE: state2 }), preload: null });
+  const h2 = await hosts2.start({ instanceId: 'g2', username: 'Tst_rv_e2' });
+  await assert.rejects(h2.ready, /exited while starting/);
+  assert.equal(fs.readFileSync(state2, 'utf8'), '2', 'one more try, not more');
 });
 
 test('mineai host: a crash is restarted once; the second time it is down', async () => {

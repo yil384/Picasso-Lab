@@ -95,6 +95,32 @@ async function phase(name, tries, attempt, between) {
   say(`phase ${name} not done after ${tries} tries`);
   return false;
 }
+/**
+ * Up to open ground: back where the game began when that is within reach, else straight up where it is; a walk
+ * refused for want of ground says which y to send (y is the feet), and that is sent.
+ */
+async function climbOut() {
+  // never up into the night: a shelter where it is until morning (a staging bench, 2026-10-12: a night climb ended in
+  // three deaths)
+  await call('get_state');
+  if (time() >= 12300 && time() < 23300) {
+    await step('shelter', {});
+    for (let k = 0; k < 20 && time() >= 12300 && time() < 23300; k++) { await sleep(30_000); await call('get_state'); }
+  }
+  const p = positionOf(s);
+  if (!p) return;
+  const near = start && Math.hypot(start.x - p.x, start.y - p.y, start.z - p.z) < 250;
+  for (const t of [near ? start : null, { x: p.x, y: Math.min(p.y + 180, 120), z: p.z }].filter(Boolean)) {
+    let r = await step('go_to', { x: t.x, y: t.y, z: t.z });
+    for (let k = 0; k < 3 && !r.ok; k++) {
+      const m = /so go_to (-?\d+) (-?\d+) (-?\d+)/.exec(r.line);
+      if (!m) break;
+      r = await step('go_to', { x: Number(m[1]), y: Number(m[2]), z: Number(m[3]) });
+    }
+    if (r.ok) return;
+  }
+}
+let start = null;
 const down = async (dy) => { const p = positionOf(s); if (p) await step('go_to', { x: p.x + 4, y: Math.max(-58, p.y - dy), z: p.z + 4 }); };
 const along = async (k) => { const p = positionOf(s); if (p) await step('go_to', { x: p.x + (k % 2 ? 24 : -24), y: p.y, z: p.z + (k % 2 ? 0 : 24) }); };
 
@@ -105,7 +131,7 @@ try {
   if (r.isError) throw new Error(`start_game: ${r.text.slice(0, 200)}`);
   run.game = /game (g\w+)/.exec(r.text)?.[1] ?? null;
   if (/still joining/.test(r.text)) await call('get_state');
-  const start = positionOf(s);
+  start = positionOf(s);
   say(`game ${run.game} at ${JSON.stringify(start)}, time ${time()}`);
   const wood = woodOf(s);
 
@@ -144,12 +170,28 @@ try {
   // obsidian: blocks to close off lava first, then their collect makes it from lava and the water
   // lava near first (the state's nearby blocks): their collect walks to the nearest lava it knows of, which can be on
   // the surface at night
-  const lavaNear = () => /^nearby blocks[^\n]*\blava \d/m.test(stateOf(s));
-  await phase('lava in sight', 4, async () => { await call('get_state'); return lavaNear(); }, async (i) => { const p = positionOf(s); if (p && p.y > -50) await down(p.y + 54); else await along(i); });
+  // lava listed among the nearby blocks: walk to a few blocks from it (obsidian is made from a pool within 16 blocks)
+  const lavaAt = () => { const m = /\blava \d+\+? \(nearest ([\d.]+) away at (-?\d+) (-?\d+) (-?\d+)\)/.exec(stateOf(s)); return m ? { d: Number(m[1]), x: Number(m[2]), y: Number(m[3]), z: Number(m[4]) } : null; };
+  await phase('lava in sight', 5, async () => {
+    await call('get_state');
+    const l = lavaAt();
+    if (!l) return false;
+    if (l.d > 10) for (const [dx, dz] of [[3, 0], [-3, 0], [0, 3], [0, -3]]) if ((await step('go_to', { x: l.x + dx, y: l.y + 1, z: l.z + dz })).ok) break;
+    return true;
+  }, async (i) => { const p = positionOf(s); if (p && p.y > -50) await down(p.y + 54); else await along(i); });
   await phase('obsidian', 6, async () => {
     if (n('cobblestone') + n('cobbled_deepslate') < 16) await step('collect', { block: positionOf(s)?.y < 0 ? 'deepslate' : 'stone', n: 20 });
     if (!n('water_bucket')) await step('bucket', { action: 'fill', liquid: 'water' });
-    if (n('obsidian') < 14) await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
+    if (n('obsidian') < 14) {
+      const r = await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
+      // refused for want of a pool near: the reply says where the nearest one is; a few blocks from it, then again
+      const pool = /nearest lava pool loaded is at (-?\d+) (-?\d+) (-?\d+)/.exec(r.line);
+      if (!r.ok && pool) {
+        const [x, y, z] = pool.slice(1).map(Number);
+        for (const [dx, dz] of [[3, 0], [-3, 0], [0, 3], [0, -3]]) if ((await step('go_to', { x: x + dx, y: y + 1, z: z + dz })).ok) break;
+        await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
+      }
+    }
     return n('obsidian') >= 14;
   }, async (i) => { if (i % 2) await along(i); });
   await phase('flint', 6, async () => {
@@ -161,15 +203,17 @@ try {
   await phase('flint and steel', 3, async () => (await step('craft', { item: 'flint_and_steel', n: 1 })).ok || n('flint_and_steel') > 0);
   // the frame on open ground: back up where the game began first when deep underground (a frame in rock keeps cells
   // its dig cannot clear), else beside that
-  if ((positionOf(s)?.y ?? 99) < 40 && start) {
-    // the start's height was where the bot landed; the ground may be a few blocks off it
-    for (const dy of [0, -4, 4, -8]) if ((await step('go_to', { x: start.x, y: start.y + dy, z: start.z })).ok) break;
-  }
-  await phase('portal frame', 3, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async (i) => {
-    // a frame that did not work out: its obsidian back first (portal dismantle: its own frame, block by block)
+  if ((positionOf(s)?.y ?? 99) < 40) await climbOut();
+  await phase('portal frame', 6, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async (i) => {
+    // a frame that did not work out: its obsidian back first (portal dismantle: its own frame, block by block); a site
+    // refused (water or lava near, rock): somewhere else, farther each time, on whatever ground is there
     if (n('obsidian') < 14) await step('portal', { action: 'dismantle' });
+    if ((positionOf(s)?.y ?? 99) < 40) { await climbOut(); return; }
     const p = positionOf(s);
-    if (p) await step('go_to', { x: p.x + 6, y: p.y, z: p.z + (i % 2 ? 6 : 0) });
+    if (!p) return;
+    const d = 10 + 5 * i;
+    const [dx, dz] = [[d, 0], [0, d], [-d, 0], [0, -d]][i % 4];
+    for (const dy of [0, 2, -2, 4, -4]) if ((await step('go_to', { x: p.x + dx, y: p.y + dy, z: p.z + dz })).ok) break;
   });
   await phase('portal lit', 2, async () => (await step('portal', { action: 'light' })).ok);
   await phase('in the Nether', 2, async () => { await step('portal', { action: 'enter', low_supplies: true }); await call('get_state'); return dimension() === 'the_nether'; });
