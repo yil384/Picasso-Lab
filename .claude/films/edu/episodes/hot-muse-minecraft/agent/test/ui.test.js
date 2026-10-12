@@ -16,6 +16,8 @@ import { plainCall, plainStep, countOf, shortWhy, severityOf, statusData, create
 import { createUiPanel, milestoneWords } from '../src/ui-panel.js';
 import { ffmpegArgs, audioArgs, findFfmpeg, streamAspect } from '../src/stream.js';
 import { createCameraStream, pulseScript, pulsePaths, PULSE_SOURCE } from '../src/camera.js';
+import { callRow } from '../src/mcp.js';
+import { callLine } from '../src/terminal.js';
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'muse-ui-'));
 
@@ -41,6 +43,15 @@ test('plain words: a call as Muse would say it, counts and plurals, a sequence, 
   assert.deepEqual([severityOf({ kind: 'food', text: 'starving: food 2' }), severityOf({ kind: 'night', text: 'night (time 13250): no closed shelter' }), severityOf({ kind: 'shield', text: 'no shield' })], [3, 2, 1]);
   assert.deepEqual(statusData({ health: 17.6, food: 17, time: 2_250 }, { muse: 47, reflex: 4, musePct: 92 }), { hp: 18, food: 17, clock: 'DAY 08:15', ticks: 2250, muse: 47, reflex: 4, pct: 92 });
   assert.deepEqual(statusData({ health: 20, food: 20, dimension: 'the_nether' }, null), { hp: 20, food: 20, clock: 'NETHER' });
+});
+
+test('why: Muse\'s own words with a call go to the stream (cleaned, cut at 140) and the log; the body never sees them', () => {
+  const why = 'Night in 2 min and no shield: digging in, then smelting the iron while I wait';
+  assert.deepEqual(callLine('play', { skill: 'shelter', args: {}, why }), { k: 'call', t: '> play: shelter', say: 'Build a shelter for the night', words: why });
+  assert.equal(callLine('play_sequence', { steps: [{ skill: 'eat', args: {} }], why: `${'x '.repeat(100)}token EAAPageTok3n0123456789abcdef` }).words.length, 140);
+  assert.equal(callLine('play', { skill: 'eat', args: {} }).words, undefined, 'optional');
+  assert.equal(callRow('play_sequence', { steps: [{ skill: 'eat', args: {} }], why }, { structuredContent: {} }, 'g1', 5).why, why);
+  assert.equal(cleanTerm({ lines: [{ k: 'call', t: '> play', words: 'see https://x.example now' }] }).lines[0].words, 'see [link] now');
 });
 
 test('feed: the advice once per kind and change of words (the time in it is not news), the list as it stands with each update', () => {

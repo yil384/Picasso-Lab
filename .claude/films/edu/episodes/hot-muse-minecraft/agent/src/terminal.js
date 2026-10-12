@@ -19,6 +19,8 @@ export function cleanTerm(u) {
       if (say) out.say = say;
       const why = typeof l.why === 'string' ? clean(l.why, 80) : '';
       if (why) out.why = why;
+      const words = typeof l.words === 'string' ? clean(l.words, 140) : ''; // Muse's own words with a call
+      if (words) out.words = words;
       for (const [key, lo, hi] of [['ms', 0, 86_400_000], ['n', 1, 64], ['of', 1, 64]]) { const v = int(l[key], lo, hi); if (v !== undefined) out[key] = v; }
       if (typeof l.ak === 'string' && /^[a-z_]{1,24}$/.test(l.ak)) out.ak = l.ak;
       return out;
@@ -94,7 +96,8 @@ export function callLine(tool, args = {}) {
     what = parts.slice(0, 4).join(', ') + (parts.length > 4 ? `, +${parts.length - 4} more` : '');
   } else if (tool === 'play') what = stepSummary(args);
   else if (tool === 'live_view') what = args?.format ?? '';
-  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args) };
+  const words = typeof args?.why === 'string' ? clean(args.why, 140) : ''; // Muse's own words (why), cut at 140
+  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args), ...(words ? { words } : {}) };
 }
 
 // ----- plain words for the stream's speech bubble ("Mine 3 oak logs"), never the raw call
