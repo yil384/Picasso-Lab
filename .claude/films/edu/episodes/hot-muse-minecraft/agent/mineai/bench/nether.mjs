@@ -95,6 +95,25 @@ async function phase(name, tries, attempt, between) {
   say(`phase ${name} not done after ${tries} tries`);
   return false;
 }
+/**
+ * Up to open ground: back where the game began when that is within reach, else straight up where it is; a walk
+ * refused for want of ground says which y to send (y is the feet), and that is sent.
+ */
+async function climbOut() {
+  const p = positionOf(s);
+  if (!p) return;
+  const near = start && Math.hypot(start.x - p.x, start.y - p.y, start.z - p.z) < 250;
+  for (const t of [near ? start : null, { x: p.x, y: Math.min(p.y + 180, 120), z: p.z }].filter(Boolean)) {
+    let r = await step('go_to', { x: t.x, y: t.y, z: t.z });
+    for (let k = 0; k < 3 && !r.ok; k++) {
+      const m = /so go_to (-?\d+) (-?\d+) (-?\d+)/.exec(r.line);
+      if (!m) break;
+      r = await step('go_to', { x: Number(m[1]), y: Number(m[2]), z: Number(m[3]) });
+    }
+    if (r.ok) return;
+  }
+}
+let start = null;
 const down = async (dy) => { const p = positionOf(s); if (p) await step('go_to', { x: p.x + 4, y: Math.max(-58, p.y - dy), z: p.z + 4 }); };
 const along = async (k) => { const p = positionOf(s); if (p) await step('go_to', { x: p.x + (k % 2 ? 24 : -24), y: p.y, z: p.z + (k % 2 ? 0 : 24) }); };
 
@@ -105,7 +124,7 @@ try {
   if (r.isError) throw new Error(`start_game: ${r.text.slice(0, 200)}`);
   run.game = /game (g\w+)/.exec(r.text)?.[1] ?? null;
   if (/still joining/.test(r.text)) await call('get_state');
-  const start = positionOf(s);
+  start = positionOf(s);
   say(`game ${run.game} at ${JSON.stringify(start)}, time ${time()}`);
   const wood = woodOf(s);
 
@@ -177,14 +196,12 @@ try {
   await phase('flint and steel', 3, async () => (await step('craft', { item: 'flint_and_steel', n: 1 })).ok || n('flint_and_steel') > 0);
   // the frame on open ground: back up where the game began first when deep underground (a frame in rock keeps cells
   // its dig cannot clear), else beside that
-  if ((positionOf(s)?.y ?? 99) < 40 && start) {
-    // the start's height was where the bot landed; the ground may be a few blocks off it
-    for (const dy of [0, -4, 4, -8]) if ((await step('go_to', { x: start.x, y: start.y + dy, z: start.z })).ok) break;
-  }
+  if ((positionOf(s)?.y ?? 99) < 40) await climbOut();
   await phase('portal frame', 6, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async (i) => {
     // a frame that did not work out: its obsidian back first (portal dismantle: its own frame, block by block); a site
     // refused (water or lava near, rock): somewhere else, farther each time, on whatever ground is there
     if (n('obsidian') < 14) await step('portal', { action: 'dismantle' });
+    if ((positionOf(s)?.y ?? 99) < 40) { await climbOut(); return; }
     const p = positionOf(s);
     if (!p) return;
     const d = 10 + 5 * i;
