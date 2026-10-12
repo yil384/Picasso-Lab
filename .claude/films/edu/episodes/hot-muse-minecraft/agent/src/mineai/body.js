@@ -668,6 +668,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (!body.connected) return { ok: false, result: 'not in the game yet', delta: {}, ms: 0, code: 'NOT_STARTED' };
     if (host?.restarting) return { ok: false, result: 'the body is being started again after it stopped; send the step again in a few seconds', delta: {}, ms: 0, code: 'NOT_STARTED' };
     if (body.busy) return { ok: false, result: `busy: ${doing ?? 'a skill'} is still running`, delta: {}, ms: 0 };
+    care?.playerCalled();
     const v = MINEAI_SKILLS.validate(tool, args ?? {});
     if (!v.ok) return { ok: false, result: `bad arguments: ${v.error}`, delta: {}, ms: 0, code: 'BAD_ARGS' };
     body.busy = true;

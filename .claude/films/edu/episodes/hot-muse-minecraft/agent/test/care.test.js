@@ -519,6 +519,7 @@ test('advise: the reflex knobs in words', () => {
 
 test('advise loop: no plan carried out by itself, advice instead; its reflexes stay', async () => {
   const rig = careRig({ mode: 'advise', situation: situation({ clock: { timeOfDay: 14000, phase: 'night' } }), inventory: { cobblestone: 20 } });
+  rig.care.playerCalled(); // the player plays (before the first call a new bot shelters on its own: F17)
   rig.state.events.push({ type: 'survival_outcome', observedAt: new Date(NOW).toISOString(), payload: { source: 'hostile_reflex', evidence: { response: 'fight', cancelled: false, interrupted: null, outcome: { threats: [{ id: 3, name: 'zombie' }], attacks: 2, killedTargetIds: [3], explosions: 0, healthBefore: 20, healthAfter: 18 } } } });
   await rig.care.tick();
   assert.deepEqual(rig.calls, [], 'no shelter of its own');
@@ -645,4 +646,20 @@ test('care shield (F1 of the log hunt): a shield their guard reflex put straight
   assert.equal(r.ok, true, r.text);
   assert.match(r.text, /crafted a shield; it is in its off-hand already/);
   assert.equal(rig.calls.filter((c) => c.tool === 'equip').length, 0, 'nothing more to equip');
+});
+
+test('advise (F17 of the log hunt): before the player\'s first call a new bot shelters from hostile mobs; after it, never on its own', async () => {
+  const zombie = { name: 'zombie', kind: 'hostile', nearest: { distance: 9, position: { x: 18, y: 64, z: -3 } } };
+  const results = { build_structure: { status: 'succeeded', structure: { cells: 15, correct: 15, placed: 13, dug: 0, wrong: 0, kept: [], left: [], supports: [] } } };
+  const rig = careRig({ mode: 'advise', situation: situation({ nearby: { mobs: [zombie] } }), inventory: { cobblestone: 20 }, results });
+  await rig.care.tick();
+  assert.deepEqual(rig.calls.map((c) => c.tool), ['build_structure']);
+  assert.match(rig.care.since(0)[0].text, /^waiting for your first call with hostile mobs near or at night: closed itself in/);
+  const quiet = careRig({ mode: 'advise', situation: situation({ nearby: { mobs: [zombie] } }), inventory: { cobblestone: 20 }, results });
+  quiet.care.playerCalled();
+  await quiet.care.tick();
+  assert.deepEqual(quiet.calls, [], 'after the first call the plans are the player\'s');
+  const calm = careRig({ mode: 'advise', situation: situation(), inventory: { cobblestone: 20 }, results });
+  await calm.care.tick();
+  assert.deepEqual(calm.calls, [], 'a calm day: nothing');
 });

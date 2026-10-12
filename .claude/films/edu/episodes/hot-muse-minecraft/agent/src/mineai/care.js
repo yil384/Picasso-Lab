@@ -1103,11 +1103,13 @@ export function createCare(deps) {
       const nightNow = isNight(situation.clock?.timeOfDay);
       if (nightNow && memory.wasNight === false) memory.night += 1;
       memory.wasNight = nightNow;
-      if (mode === 'advise') return; // the plans are the player's: advice() says what they are
       if (running || !deps.idle() || now() - deps.idleSince() < (deps.idleBeforeMs ?? IDLE_BEFORE_MS)) return;
       if (situation.activity?.owner && situation.activity.owner !== 'idle') return; // one of their reflexes has the body
       const latest = deps.latest();
-      const d = decide(situation, { inventory: latest.inventory ?? {}, stacks: deps.stacks(), policy, memory, now: now(), canCraft, furnace: (latest.inventory?.furnace ?? 0) > 0 || deps.furnaceNear(), idleMs: now() - deps.idleSince() });
+      // advise mode: the plans are the player's (advice() says what they are), except before the player's first call:
+      // a new bot with hostile mobs near or at night shelters until then (F17 of the log hunt: a fresh bot fought a
+      // skeleton from 20 to 10 health in the 4:45 before Muse's first call), told in the first reply as its own
+      const d = mode === 'advise' ? (memory.playerCalled ? null : prePlay(situation)) : decide(situation, { inventory: latest.inventory ?? {}, stacks: deps.stacks(), policy, memory, now: now(), canCraft, furnace: (latest.inventory?.furnace ?? 0) > 0 || deps.furnaceNear(), idleMs: now() - deps.idleSince() });
       if (!d) return;
       const ctl = { skill: `care:${d.kind}`, actionId: null, stopped: null, cancel: null, attack: null, killed: 0 };
       const preemptible = d.kind !== 'recover';
@@ -1125,6 +1127,18 @@ export function createCare(deps) {
       ticking = false;
     }
   }
+
+  /** Before the player's first call: a shelter when hostile mobs are near or it is night, unless it stands in one. */
+  function prePlay(situation) {
+    if (policy.night === 'off' || cool('shelter', 45_000)) return null;
+    const danger = hostilesWithin(situation, 16).length > 0 || isNight(situation.clock?.timeOfDay);
+    if (!danger) return null;
+    const p = situation.position;
+    const sh = memory.shelter;
+    if (sh && p && sh.feet.x === Math.floor(p.x) && sh.feet.z === Math.floor(p.z) && Math.abs(sh.feet.y - Math.floor(p.y)) <= 1) return null;
+    return { kind: 'shelter', why: 'waiting for your first call with hostile mobs near or at night', blocks: shelterBlocks(deps.latest().inventory ?? {}).total, check: false };
+  }
+  const cool = (kind, ms) => memory.cool?.[kind] && now() - memory.cool[kind] < ms;
 
   /** The advice inputs, as decide's. */
   const inputs = () => {
@@ -1144,6 +1158,8 @@ export function createCare(deps) {
         return advise(deps.situation(), i);
       } catch { return []; }
     },
+    /** The player's first call came: no more sheltering of its own before it (advise mode). */
+    playerCalled() { memory.playerCalled = true; },
     /** What the body did by itself this game: {reflex, care}. */
     counts() { return { ...counts }; },
     /** Their reflexes that acted during a step of the player's: counted, and logged as reflex rows (not in the journal:
