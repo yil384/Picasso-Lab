@@ -84,8 +84,8 @@ function caddyDir() {
   fs.writeFileSync(path.join(d, 'Caddyfile'), CADDYFILE, { mode: 0o664 });
   fs.chmodSync(path.join(d, 'Caddyfile'), 0o664);
   for (const n of ['muse-staging-proxy-secret', 'muse-play-proxy-secret']) fs.writeFileSync(path.join(d, 'priv', n), 'f00d', { mode: 0o600 });
-  const run = (args, env = {}) => {
-    const r = spawnSync(PY, [path.join(ROOT, 'deploy/caddy-proxy-line.py'), ...args, '--dir', d], {
+  const run = (args, env = {}, noFlags = false) => {
+    const r = spawnSync(PY, [path.join(ROOT, 'deploy/caddy-proxy-line.py'), ...args, ...(noFlags ? [] : ['--dir', d, '--container', 'picasso-edge-caddy'])], {
       encoding: 'utf8', timeout: 30_000,
       env: { PATH: `${s.bin}:/usr/bin:/bin`, HOME: s.dir, FAKE_LOG: s.log, FAKE_CADDY: d, ...env },
     });
@@ -112,8 +112,8 @@ test('caddy-proxy-line: adds the one header line, validated, then reloaded; the 
     assert.equal(fs.readFileSync(path.join(c.d, record), 'utf8'), CADDYFILE);
     assert.ok(!c.files().includes('Caddyfile.new'));
     assert.deepEqual(calls(c.log).map((l) => l.replace(/^\S+ docker /, '')), [
-      'exec fras-caddy-1 caddy validate --config /etc/caddy/Caddyfile.new --adapter caddyfile',
-      'exec fras-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile',
+      'exec picasso-edge-caddy caddy validate --config /etc/caddy/Caddyfile.new --adapter caddyfile',
+      'exec picasso-edge-caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile',
     ]);
 
     const again = c.run(['add', 'staging']);
@@ -187,6 +187,11 @@ test('caddy-proxy-line: stops with the live Caddyfile untouched: validate refuse
       assert.equal(u.code, 1);
       assert.match(u.err, /^usage: caddy-proxy-line\.py add\|remove staging\|production/);
     }
+    // the shared Caddy moves: without both --dir and --container it refuses and names today's entry
+    const bare = c.run(['add', 'staging'], {}, true);
+    assert.equal(bare.code, 1);
+    assert.match(bare.err, /both are required \(the shared Caddy moves\): today --dir \/nvme2n1\/yichen\/picasso-edge\/caddy-config --container picasso-edge-caddy/);
+    assert.equal(c.live(), CADDYFILE.replace('play-staging.picasso-lab.com {\n\treverse_proxy', 'play-staging.picasso-lab.com {\n\tencode gzip\n\treverse_proxy'), 'nothing changed');
   } finally { c.done(); }
 });
 
@@ -196,7 +201,7 @@ test('caddy-proxy-line: a failed reload says so (exit 2): the validated file is 
     const r = c.run(['add', 'production'], { FAKE_RELOAD: 'fail' });
     assert.equal(r.code, 2);
     assert.equal(c.live(), withLine(CADDYFILE, 7850, PRD));
-    assert.match(r.err, /the reload failed and Caddy still runs the old config; run `docker exec fras-caddy-1 caddy reload --config \/etc\/caddy\/Caddyfile --adapter caddyfile` again, or `caddy-proxy-line\.py remove production` to go back/);
+    assert.match(r.err, /the reload failed and Caddy still runs the old config; run `docker exec picasso-edge-caddy caddy reload --config \/etc\/caddy\/Caddyfile --adapter caddyfile` again, or `caddy-proxy-line\.py remove production` to go back/);
   } finally { c.done(); }
 });
 

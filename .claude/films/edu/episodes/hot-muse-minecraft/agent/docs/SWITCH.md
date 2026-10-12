@@ -22,7 +22,8 @@ route ok, no death, 0 heartbeat misses or restarts; `docs/MUSE-TEST.md`, "Runs")
 
 Production is `play.picasso-lab.com` on picasso: compose project `muse-minecraft`, code in
 `~/workspace/muse-minecraft/app`, its world in `app/data`, logs in `app/logs`, the agent on `172.24.0.1:7850` behind
-the FRAS Caddy (`~/workspace/FRAS/caddy-config/Caddyfile`, container `fras-caddy-1`). Commands marked "Mac" run in this
+the shared edge Caddy (`/nvme2n1/yichen/picasso-edge/caddy-config/Caddyfile`, container `picasso-edge-caddy`, compose project picasso-edge; another
+project's: until 2026-10-12 it was FRAS's `~/workspace/FRAS/caddy-config`, container `fras-caddy-1`). Commands marked "Mac" run in this
 agent folder; the others on picasso (`ssh picasso`).
 
 The steps go in this order and each one leaves production working. Every step that restarts the agent or Paper ends
@@ -157,7 +158,8 @@ The secret lives in a file in `caddy-config/priv/` (mode 700, mounted read-only 
 Caddyfile (which is mode 664). Checked on picasso with the FRAS Caddy image (v2.11.2) in a throwaway container
 (2026-10-08): the header carried exactly the file's contents, with or without a trailing newline.
 
-`deploy/caddy-proxy-line.py add|remove staging|production` (python3, on picasso) makes the Caddy change, and only
+`deploy/caddy-proxy-line.py add|remove staging|production --dir DIR --container NAME` (python3, on picasso; both
+flags required, the shared Caddy has moved before) makes the Caddy change, and only
 that: it adds (or removes) the one line `header_up X-Muse-Proxy {file./etc/caddy/priv/<secret file>}` right after the
 site's `reverse_proxy` line, writes `Caddyfile.new`, prints the diff, has the Caddy container validate it, checks
 that nobody saved the Caddyfile meanwhile, moves it into place and reloads; any stop before the move leaves the live
@@ -179,9 +181,9 @@ and `body: Mine AI MCP` again within seconds.
 Caddy first (picasso):
 
 ```sh
-cd ~/workspace/FRAS/caddy-config &&
+cd /nvme2n1/yichen/picasso-edge/caddy-config &&
 { [ -e priv/muse-staging-proxy-secret ] || (umask 077; openssl rand -hex 24 | tr -d '\n' > priv/muse-staging-proxy-secret); } &&
-python3 ~/workspace/muse-staging/app/deploy/caddy-proxy-line.py add staging &&
+python3 ~/workspace/muse-staging/app/deploy/caddy-proxy-line.py add staging --dir /nvme2n1/yichen/picasso-edge/caddy-config --container picasso-edge-caddy &&
 curl -s -o /dev/null -w '%{http_code}\n' https://play-staging.picasso-lab.com/
 ```
 
@@ -207,10 +209,10 @@ it prints again.
 Then the agent; the first line makes sure Caddy has the line:
 
 ```sh
-grep -q 'priv/muse-staging-proxy-secret}' ~/workspace/FRAS/caddy-config/Caddyfile &&
+grep -q 'priv/muse-staging-proxy-secret}' /nvme2n1/yichen/picasso-edge/caddy-config/Caddyfile &&
 cd ~/workspace/muse-staging/app/deploy &&
 B=~/workspace/muse-staging/backups && mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S) &&
-{ grep -q '^WEB_PROXY_SECRET=' .env || printf 'WEB_PROXY_SECRET=%s\n' "$(cat ~/workspace/FRAS/caddy-config/priv/muse-staging-proxy-secret)" >> .env; } &&
+{ grep -q '^WEB_PROXY_SECRET=' .env || printf 'WEB_PROXY_SECRET=%s\n' "$(cat /nvme2n1/yichen/picasso-edge/caddy-config/priv/muse-staging-proxy-secret)" >> .env; } &&
 sh recreate.sh staging
 ```
 
@@ -236,7 +238,7 @@ wants it):
 
 ```sh
 cd ~/workspace/muse-staging/app/deploy && sed -i '/^WEB_PROXY_SECRET=/d' .env && sh recreate.sh staging &&
-python3 ~/workspace/muse-staging/app/deploy/caddy-proxy-line.py remove staging
+python3 ~/workspace/muse-staging/app/deploy/caddy-proxy-line.py remove staging --dir /nvme2n1/yichen/picasso-edge/caddy-config --container picasso-edge-caddy
 ```
 
 Expected: the recreate lines, then a diff with the one `-		header_up X-Muse-Proxy {file./etc/caddy/priv/muse-staging-proxy-secret}`
@@ -249,9 +251,9 @@ Idle check first (section 1): the agent recreate ends the games in progress, and
 live views. Then on picasso, Caddy:
 
 ```sh
-cd ~/workspace/FRAS/caddy-config &&
+cd /nvme2n1/yichen/picasso-edge/caddy-config &&
 { [ -e priv/muse-play-proxy-secret ] || (umask 077; openssl rand -hex 24 | tr -d '\n' > priv/muse-play-proxy-secret); } &&
-python3 ~/workspace/muse-minecraft/app/deploy/caddy-proxy-line.py add production &&
+python3 ~/workspace/muse-minecraft/app/deploy/caddy-proxy-line.py add production --dir /nvme2n1/yichen/picasso-edge/caddy-config --container picasso-edge-caddy &&
 curl -s -o /dev/null -w '%{http_code}\n' https://play.picasso-lab.com/
 ```
 
@@ -259,10 +261,10 @@ Expected: as in 3a, with `reverse_proxy 172.24.0.1:7850`, `priv/muse-play-proxy-
 sends X-Muse-Proxy; reloaded (...)` and `200`. Then the agent:
 
 ```sh
-grep -q 'priv/muse-play-proxy-secret}' ~/workspace/FRAS/caddy-config/Caddyfile &&
+grep -q 'priv/muse-play-proxy-secret}' /nvme2n1/yichen/picasso-edge/caddy-config/Caddyfile &&
 cd ~/workspace/muse-minecraft/app/deploy &&
 B=~/workspace/muse-minecraft/backups && mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S) &&
-{ grep -q '^WEB_PROXY_SECRET=' .env || printf 'WEB_PROXY_SECRET=%s\n' "$(cat ~/workspace/FRAS/caddy-config/priv/muse-play-proxy-secret)" >> .env; } &&
+{ grep -q '^WEB_PROXY_SECRET=' .env || printf 'WEB_PROXY_SECRET=%s\n' "$(cat /nvme2n1/yichen/picasso-edge/caddy-config/priv/muse-play-proxy-secret)" >> .env; } &&
 sh recreate.sh production
 ```
 
@@ -275,7 +277,7 @@ Undo 3b (idle check first; the agent, then Caddy, in one chain):
 
 ```sh
 cd ~/workspace/muse-minecraft/app/deploy && sed -i '/^WEB_PROXY_SECRET=/d' .env && sh recreate.sh production &&
-python3 ~/workspace/muse-minecraft/app/deploy/caddy-proxy-line.py remove production
+python3 ~/workspace/muse-minecraft/app/deploy/caddy-proxy-line.py remove production --dir /nvme2n1/yichen/picasso-edge/caddy-config --container picasso-edge-caddy
 ```
 
 Expected: as the undo of 3a, for `play.picasso-lab.com`; staging's line stays. `WEB_MCP_GAMES_PER_ADDRESS` can go into

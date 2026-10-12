@@ -344,7 +344,7 @@ Every change runs on staging on picasso before production (ROADMAP M0 item 9). S
 its own name and shares nothing with it: compose project `muse-staging` (`deploy/staging.compose.yaml`), code in
 `~/workspace/muse-staging/app`, its own Paper 1.21.4 and world (seed 71811045) in `~/workspace/muse-staging/data`,
 logs in `~/workspace/muse-staging/logs`, network 10.77.79.0/28, the agent on 172.24.0.1:7851, served at
-https://play-staging.picasso-lab.com (its own block in the FRAS Caddyfile, next to `play.`, with `X-Robots-Tag:
+https://play-staging.picasso-lab.com (its own block in the shared Caddyfile, next to `play.`, with `X-Robots-Tag:
 noindex`). It runs no streamer or camera (production runs neither on 2026-10-08). Its `deploy/.env` holds its own admin token;
 push.sh writes one the first time and never copies or overwrites it.
 
@@ -403,7 +403,9 @@ proxy secret, the whitelist, the smoke checks and the one-line rollback: `docs/S
 
 Caddy: the block was added to `~/workspace/FRAS/caddy-config/Caddyfile` after a backup
 (`Caddyfile.bak-20261007-222723`), validated as a separate file inside the container, moved into place, then
-`docker exec fras-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
+`docker exec fras-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`. (Since 2026-10-12 the shared Caddy is
+another project's `picasso-edge-caddy`, config in `/nvme2n1/yichen/picasso-edge/caddy-config`; `deploy/caddy-proxy-line.py`
+needs `--dir` and `--container` for it, `docs/SWITCH.md`.)
 
 ## Live video (Facebook Live)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""deploy/caddy-proxy-line.py add|remove staging|production: adds or removes the one line that makes the FRAS Caddy
-send the proxy secret to the agent (docs/SWITCH.md, step 3), and changes nothing else in that shared Caddyfile.
+"""deploy/caddy-proxy-line.py add|remove staging|production --dir DIR --container NAME: adds or removes the one line that
+makes the shared edge Caddy send the proxy secret to the agent (docs/SWITCH.md, step 3), and changes nothing else in that shared Caddyfile.
 
     header_up X-Muse-Proxy {file./etc/caddy/priv/<secret file>}
 
@@ -14,7 +14,9 @@ only; write `Caddyfile.new` (the same mode and group) and print the diff; `caddy
 check that the Caddyfile is still the one read (another session's save in between stops it); move it into place;
 `caddy reload`. Any stop before the move leaves the live Caddyfile as it was and removes `Caddyfile.new`.
 Exit 0 done, 1 stopped with nothing changed, 2 the file moved but the reload failed (Caddy still runs the old config).
-Options: --dir DIR (default ~/workspace/FRAS/caddy-config), --container NAME (default fras-caddy-1).
+Both --dir (the Caddy config folder: its Caddyfile and priv/) and --container (the running Caddy) are required: the
+shared Caddy has moved before (fras-caddy-1 to picasso-edge-caddy, 2026-10-12), so the script never guesses. Today:
+--dir /nvme2n1/yichen/picasso-edge/caddy-config --container picasso-edge-caddy.
 """
 import difflib
 import hashlib
@@ -49,8 +51,10 @@ def edit(text, op, host, port, name):
 
 def args_of(argv):
     """(options dict, None) or (None, usage text)."""
-    usage = 'usage: caddy-proxy-line.py add|remove staging|production [--dir DIR] [--container NAME]'
-    opts = {'dir': os.path.expanduser('~/workspace/FRAS/caddy-config'), 'container': 'fras-caddy-1'}
+    usage = ('usage: caddy-proxy-line.py add|remove staging|production --dir DIR --container NAME\n'
+             '  both are required (the shared Caddy moves): today --dir /nvme2n1/yichen/picasso-edge/caddy-config'
+             ' --container picasso-edge-caddy')
+    opts = {}
     rest = []
     it = iter(argv)
     for a in it:
@@ -61,8 +65,9 @@ def args_of(argv):
             opts[a[2:]] = v
         else:
             rest.append(a)
-    if len(rest) != 2 or rest[0] not in ('add', 'remove') or rest[1] not in SITES:
+    if len(rest) != 2 or rest[0] not in ('add', 'remove') or rest[1] not in SITES or not opts.get('dir') or not opts.get('container'):
         return None, usage
+    opts['dir'] = os.path.expanduser(opts['dir'])
     opts['op'], opts['target'] = rest
     return opts, None
 
