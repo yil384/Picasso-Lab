@@ -116,8 +116,9 @@ export function progressWords(cp) {
 
 /**
  * What the body is doing within a running step, in plain words with its numbers, from the runtime's checkpoint (their
- * action's progress, read about once a second while it runs): walking with the distance left, mining "obsidian 3 of
- * 14", placing blocks, filling or pouring a bucket, smelting, fighting, eating, sleeping, exploring. null when the
+ * action's progress, read about once a second while it runs): walking with the distance left, "mining obsidian" with
+ * its count apart (done 3, of 14), placing blocks, filling or pouring a bucket, smelting, fighting, eating, sleeping,
+ * exploring. null when the
  * checkpoint says nothing worth showing. For the live video: the body carrying out Muse's command, never a new action.
  */
 export function subStepOf(tool, args = {}, cp = {}) {
@@ -133,12 +134,12 @@ export function subStepOf(tool, args = {}, cp = {}) {
     case 'collect_block': {
       const got = n(c.gained) ?? 0;
       const of = n(c.requested) ?? n(a.count);
-      return { kind: 'mine', text: `${name(a.block_name) || 'blocks'} ${got}${of ? ` of ${of}` : ''}`, done: got, ...(of ? { of } : {}) };
+      return { kind: 'mine', text: `mining ${name(a.block_name) || 'blocks'}`, done: got, ...(of ? { of } : {}) };
     }
     case 'build_structure': {
       const ok = n(c.correct) ?? 0;
       const of = n(c.requested);
-      return { kind: 'build', text: `placing blocks ${ok}${of ? ` of ${of}` : ''}`, done: ok, ...(of ? { of } : {}) };
+      return { kind: 'build', text: 'placing blocks', done: ok, ...(of ? { of } : {}) };
     }
     case 'use_bucket': {
       const liquid = name(a.liquid) || 'water';
@@ -151,7 +152,7 @@ export function subStepOf(tool, args = {}, cp = {}) {
       if (c.phase === 'loading_furnace') return { kind: 'smelt', text: 'loading the furnace' };
       const got = n(c.produced) ?? 0;
       const of = n(c.requested) ?? n(a.count);
-      return { kind: 'smelt', text: `smelting ${got}${of ? ` of ${of}` : ''}`, done: got, ...(of ? { of } : {}) };
+      return { kind: 'smelt', text: `smelting ${name(a.item_name) || 'items'}`, done: got, ...(of ? { of } : {}) };
     }
     case 'hunt_mob': {
       const hits = n(c.attacks);
@@ -162,7 +163,7 @@ export function subStepOf(tool, args = {}, cp = {}) {
     case 'explore_frontier': {
       const got = n(c.expandedChunks) ?? 0;
       const of = n(c.requested);
-      return { kind: 'explore', text: `exploring ${got}${of ? ` of ${of}` : ''} chunks`, done: got, ...(of ? { of } : {}) };
+      return { kind: 'explore', text: 'exploring new chunks', done: got, ...(of ? { of } : {}) };
     }
     default: return null;
   }

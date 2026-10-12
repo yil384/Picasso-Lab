@@ -41,7 +41,7 @@ test('lines: ASCII only, never another player\'s name, an address, a link or a t
 });
 
 test('lines: calls abbreviated, results by what they did, failures with their code, the clock, the status bar', () => {
-  assert.deepEqual(callLine('play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 8 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] }), { k: 'call', t: '> play_sequence: collect oak_log 8, craft wooden_pickaxe', say: 'Mine 8 oak logs, then craft a wooden pickaxe' });
+  assert.deepEqual(callLine('play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 8 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] }), { k: 'call', t: '> play_sequence: collect oak_log 8, craft wooden_pickaxe', say: 'Mine 8 oak logs, then craft a wooden pickaxe', of: 2 });
   assert.equal(callLine('play_sequence', { steps: Array.from({ length: 7 }, () => ({ skill: 'eat', args: {} })) }).t, '> play_sequence: eat, eat, eat, eat, +3 more');
   assert.equal(callLine('play', { skill: 'collect', block: 'stone', n: 3 }).t, '> play: collect stone 3', 'flat args');
   assert.equal(callLine('get_state', {}).t, '> get_state');

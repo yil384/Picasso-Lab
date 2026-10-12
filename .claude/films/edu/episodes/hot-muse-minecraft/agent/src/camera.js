@@ -768,14 +768,17 @@ export function createCameraStream(o) {
   let shm = null; // the UI panel's frames go to memory (/dev/shm) when the container has it
   let size = { width: opt.width, height: opt.height };
   if (opt.layout === 'ui') {
-    // the UI layout (STREAM_LAYOUT=ui, square by default): the game on top, cut to its shape, and Muse's panel under
-    // it, 30 % of the height (src/ui-panel.js: the last actions), redrawn 30 times a second
+    // the UI layout (STREAM_LAYOUT=ui, square by default): the game on top and the command area under it
+    // (src/ui-panel.js), redrawn 30 times a second
     try {
       const [uw, uh] = String(opt.uiSize ?? '1080x1080').split('x').map(Number);
-      const ph = Math.round((uh * 0.3) / 2) * 2; // 30 %: the header, the status line and six earlier actions
+      // the whole 16:9 game on top, the command area under it (the owner's option A: 472 px of the square), and a
+      // see-through band of 72 px over the game's bottom for the milestone toast
+      const top = Math.round((uw * 9) / 16 / 2) * 2;
+      const ph = uh - top;
       try { shm = fs.mkdtempSync(path.join(opt.shmDir ?? '/dev/shm', 'muse-ui-')); } catch { shm = null; }
-      panel = createUiPanel({ width: uw, height: ph, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS });
-      panel.top = uh - ph;
+      panel = createUiPanel({ width: uw, height: ph, over: 72, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS });
+      panel.top = top;
       panel.kind = 'ui';
       panel.write(); // ffmpeg opens the file at its start
       size = { width: uw, height: uh };
@@ -826,7 +829,7 @@ export function createCameraStream(o) {
     const audio = { pulse: sound?.source ?? null, music: music && fs.existsSync(music) ? music : null, musicDb: opt.musicDb, gameDb: opt.gameDb };
     const args = ffmpegArgs({
       ...opt, ...size, font, captionFile, x11: x11Input(ro), progress: true, audio,
-      ...(panel ? { panel: { file: panel.file, top: panel.top, kind: panel.kind ?? 'terminal', fps: panel.kind === 'ui' ? opt.fps : undefined } } : {}),
+      ...(panel ? { panel: { file: panel.file, top: panel.top, kind: panel.kind ?? 'terminal', fps: panel.kind === 'ui' ? opt.fps : undefined, over: panel.over ?? 0 } } : {}),
     });
     const { child, failure } = spawnEncoder({
       ffmpeg, args, output: opt.output, nice: opt.encoderNice, stdio: ['ignore', 'pipe', 'pipe'],

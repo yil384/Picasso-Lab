@@ -109,7 +109,8 @@ export function callLine(tool, args = {}) {
   } else if (tool === 'play') what = stepSummary(args);
   else if (tool === 'live_view') what = args?.format ?? '';
   const words = typeof args?.why === 'string' ? clean(args.why, 140) : ''; // Muse's own words (why), cut at 140
-  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args), ...(words ? { words } : {}) };
+  const of = tool === 'play_sequence' && Array.isArray(args?.steps) ? args.steps.length : tool === 'play' ? 1 : 0;
+  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args), ...(words ? { words } : {}), ...(of ? { of } : {}) };
 }
 
 // ----- plain words for the stream's speech bubble ("Mine 3 oak logs"), never the raw call

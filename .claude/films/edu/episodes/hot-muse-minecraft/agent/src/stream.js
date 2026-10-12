@@ -178,7 +178,9 @@ export function ffmpegArgs(o) {
       // The UI panel is read the same way at the video's own rate (an uncompressed BMP, renamed over the file 30 times a
       // second by src/ui-panel.js), so Muse moves smoothly.
       ? ['-map', '0:v', ...audioMaps, '-vf', `[in]setpts=PTS-STARTPTS,${scaleGame}${caption}${clock},pad=${width}:${height}:0:0:color=0x0B0D0F,format=yuv420p[top];`
-        + `movie=${filterPath(o.panel.file)}:f=image2:loop=0,setpts=N/(${o.panel.fps ?? 4}*TB),scale=${width}:${height - gameH},format=yuv420p[pan];[top][pan]overlay=0:${gameH}:format=yuv420[out]`]
+        // with o.panel.over the panel image is that much taller and see-through at its top (a toast over the game):
+        // overlaid with its alpha, that much higher
+        + `movie=${filterPath(o.panel.file)}:f=image2:loop=0,setpts=N/(${o.panel.fps ?? 4}*TB),scale=${width}:${height - gameH + (o.panel.over ?? 0)},format=${o.panel.over ? 'yuva420p' : 'yuv420p'}[pan];[top][pan]overlay=0:${gameH - (o.panel.over ?? 0)}:format=yuv420[out]`]
       : ['-map', '0:v', ...audioMaps, '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p`]),
     '-c:v', 'libx264', '-preset', o.preset ?? STREAM_DEFAULTS.preset, '-tune', 'zerolatency', '-profile:v', 'high',
     '-threads', String(o.threads ?? STREAM_DEFAULTS.threads),
