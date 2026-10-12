@@ -256,14 +256,18 @@ test('channel: the terminal of every game is kept; a stream that starts for a ga
   const { streams, ch } = await channelOn(t);
   ch.term('g1', { lines: [{ k: 'call', t: '> start_game' }], status: 'HP 20/20  FOOD 20/20  DAY 06:00' }); // before the channel has it
   ch.start('g1', { player: 'Muse_aaaa' });
-  for (let i = 0; i < 30; i++) ch.term('g1', { lines: [{ k: 'ok', t: `line ${i}` }], status: i === 29 ? 'HP 18/20  FOOD 17/20  DAY 07:00' : '' });
+  for (let i = 0; i < 46; i++) ch.term('g1', { lines: [{ k: 'ok', t: `line ${i}` }], status: i === 45 ? 'HP 18/20  FOOD 17/20  DAY 07:00' : '' });
+  // the HUD's state of g1 (items, place, goal, advice, the game's age), kept for the stream that films it later
+  ch.term('g1', { lines: [], inv: { diamond: 2, pick: 'iron' }, pos: { y: -42, place: 'deep caves' }, goal: { key: 'nether', title: 'The Nether', reached: false, list: [{ k: 'wooden_pickaxe', t: 'wooden pickaxe', atS: 41 }] }, adv: [{ k: 'night', t: 'night soon', sev: 2 }], game: { id: 'g1', s: 100 } });
   ch.start('g2', { player: 'Muse_bbbb' });
   ch.term('g2', { lines: [{ k: 'call', t: '> start_game' }, { k: 'advice', t: 'advice: night in 45 s' }], status: 'HP 20/20  FOOD 20/20  DAY 12:00' });
   ch.term('g2', { lines: [{ k: 'call', t: '> live_view' }] });
   ch.focus('g1');
   await until(() => ch.live().state === 'live');
   const s = streams.made[0];
-  assert.deepEqual(s.terms[0].lines.map((l) => l.t), ['> start_game', '...', ...Array.from({ length: 20 }, (_, i) => `line ${i + 10}`)]);
+  assert.deepEqual(s.terms[0].lines.map((l) => l.t), ['> start_game', '...', ...Array.from({ length: 36 }, (_, i) => `line ${i + 10}`)]);
+  assert.deepEqual([s.terms[0].inv, s.terms[0].pos, s.terms[0].goal.title, s.terms[0].adv[0].k, s.terms[0].game.id], [{ diamond: 2, pick: 'iron' }, { y: -42, place: 'deep caves' }, 'The Nether', 'night', 'g1']);
+  assert.ok(s.terms[0].game.s >= 100 && s.terms[0].game.s < 110, 'the game\'s age counts on while it is off camera');
   assert.equal(s.terms[0].status, 'HP 18/20  FOOD 17/20  DAY 07:00', 'never an empty status bar');
   ch.term('g1', { lines: [{ k: 'ok', t: 'new' }] });
   ch.term('g2', { lines: [{ k: 'ok', t: 'off camera' }] });
@@ -276,7 +280,7 @@ test('channel: the terminal of every game is kept; a stream that starts for a ga
   assert.equal(s.terms.at(-1).status, 'HP 20/20  FOOD 20/20  DAY 12:00');
   await ch.stop('g2');
   await until(() => s.calls.at(-1) === 'follow Muse_aaaa');
-  assert.deepEqual(s.terms.at(-1).lines.map((l) => l.t).slice(-2), ['line 29', 'new'], 'back to g1: its terminal again');
+  assert.deepEqual(s.terms.at(-1).lines.map((l) => l.t).slice(-2), ['line 45', 'new'], 'back to g1: its terminal again');
   ch.term('g9', { lines: [{ k: 'call', t: 'x' }] });
   ch.term('bad id!', { lines: [{ k: 'call', t: 'x' }] });
   await ch.stop('g1');

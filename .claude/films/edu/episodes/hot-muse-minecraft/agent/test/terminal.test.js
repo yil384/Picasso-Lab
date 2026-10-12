@@ -41,7 +41,7 @@ test('lines: ASCII only, never another player\'s name, an address, a link or a t
 });
 
 test('lines: calls abbreviated, results by what they did, failures with their code, the clock, the status bar', () => {
-  assert.deepEqual(callLine('play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 8 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] }), { k: 'call', t: '> play_sequence: collect oak_log 8, craft wooden_pickaxe', say: 'Mine 8 oak logs, then craft a wooden pickaxe', of: 2 });
+  assert.deepEqual(callLine('play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 8 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] }), { k: 'call', t: '> play_sequence: collect oak_log 8, craft wooden_pickaxe', say: 'Mine 8 oak logs, then craft a wooden pickaxe', tool: 'play_sequence', of: 2, steps: [{ say: 'Mine 8 oak logs', raw: 'collect oak_log 8' }, { say: 'Craft a wooden pickaxe', raw: 'craft wooden_pickaxe' }] });
   assert.equal(callLine('play_sequence', { steps: Array.from({ length: 7 }, () => ({ skill: 'eat', args: {} })) }).t, '> play_sequence: eat, eat, eat, eat, +3 more');
   assert.equal(callLine('play', { skill: 'collect', block: 'stone', n: 3 }).t, '> play: collect stone 3', 'flat args');
   assert.equal(callLine('get_state', {}).t, '> get_state');
@@ -64,7 +64,7 @@ test('feed: a call, then its results once; advice when it changes; reflexes and 
   const game = { id: 'g1', body: { attribution: () => ({ muse: 3, reflex: 1, musePct: 75 }), snapshot: () => ({ dimension }) } };
   const reply = (st) => ({ content: [{ type: 'text', text: 'x' }], structuredContent: st });
   feed.reply(game, 'start_game', { adult: true }, reply({ steps: [], state: { health: 20, food: 20, time: 0 } }));
-  assert.deepEqual(sent.at(-1), { id: 'g1', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], status: 'HP 20/20  FOOD 20/20  DAY 06:00  |  Muse 3 | Reflex 1 | 75% Muse', st: { hp: 20, food: 20, clock: 'DAY 06:00', ticks: 0, muse: 3, reflex: 1, pct: 75 }, live: { mode: 'idle', reason: 'waiting' }, sub: null });
+  assert.deepEqual(sent.at(-1), { id: 'g1', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game', tool: 'start_game' }], status: 'HP 20/20  FOOD 20/20  DAY 06:00  |  Muse 3 | Reflex 1 | 75% Muse', st: { hp: 20, food: 20, clock: 'DAY 06:00', ticks: 0, muse: 3, reflex: 1, pct: 75 }, live: { mode: 'idle', reason: 'waiting' }, sub: null, game: { id: 'g1', s: 0 } });
   feed.call(game, 'play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 3 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] });
   assert.equal(sent.at(-1).lines[0].t, '> play_sequence: collect oak_log 3, craft wooden_pickaxe');
   assert.match(sent.at(-1).status, /^HP 20\/20/, 'the last state, though the call carries none');
@@ -73,7 +73,9 @@ test('feed: a call, then its results once; advice when it changes; reflexes and 
   const advice = [{ kind: 'night', text: 'night in 45 s, no shelter, no shield' }];
   clock += 41_000;
   feed.reply(game, 'play_sequence', {}, reply({ steps: [s1, s2], advice, state: { health: 18, food: 19, time: 12_250 } }));
-  assert.deepEqual(sent.at(-1).lines, [{ k: 'ok', t: 'ok  mined 3 oak log (9 s)', say: 'Mine 3 oak logs', ms: 9_000, n: 1, of: 2 }, { k: 'advice', t: 'advice: night in 45 s, no shelter, no shield', ak: 'night' }]);
+  assert.deepEqual(sent.at(-1).lines, [{ k: 'ok', t: 'ok  mined 3 oak log (9 s)', say: 'Mine 3 oak logs', ms: 9_000, n: 1, of: 2, c: 1 }, { k: 'advice', t: 'advice: night in 45 s, no shelter, no shield', ak: 'night' }]);
+  assert.equal(sent.at(-1).bind, 1, 'the call this reply answered');
+  assert.equal(sent.at(-1).game.s, 41, 'the game\'s age');
   assert.deepEqual(sent.at(-1).adv, [{ k: 'night', t: 'night in 45 s, no shelter, no shield', sev: 1 }], 'the advice as it stands, one per kind');
   feed.call(game, 'get_state', {});
   feed.reply(game, 'get_state', {}, reply({
@@ -95,7 +97,7 @@ test('feed: a call, then its results once; advice when it changes; reflexes and 
   // a refused call, and the end
   feed.call(game, 'play', { skill: 'craft', args: { item: 'iron_pickaxe' } });
   feed.reply(game, 'play', {}, { isError: true, content: [{ type: 'text', text: 'Missing items: 3 iron_ingot\nmore' }], structuredContent: { code: 'NEED_ITEMS', steps: [] } });
-  assert.deepEqual(sent.at(-1).lines, [{ k: 'fail', t: 'FAIL NEED_ITEMS Missing items: 3 iron_ingot' }]);
+  assert.deepEqual(sent.at(-1).lines, [{ k: 'fail', t: 'FAIL NEED_ITEMS Missing items: 3 iron_ingot', why: 'missing items: 3 iron ingot' }]);
   feed.call(game, 'end_game', {});
   feed.reply(game, 'end_game', {}, reply({}));
   assert.deepEqual(sent.at(-1).lines.at(-1), { k: 'info', t: 'game over after 0:41' });
@@ -151,7 +153,7 @@ test('feed: start_game\'s reply carries no state: the status line has health, fo
   const text = { content: [{ type: 'text', text: 'New game' }] };
   const bot = { id: 'g7', status: 'ready', body: { bot: { entity: {}, health: 19.6, food: 18, time: { timeOfDay: 1000 } }, attribution: () => ({ muse: 0, reflex: 0 }) } };
   feed.reply(bot, 'start_game', { adult: true }, text);
-  assert.deepEqual(sent.at(-1), { id: 'g7', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], status: 'HP 20/20  FOOD 18/20  DAY 07:00  |  Muse 0 | Reflex 0', st: { hp: 20, food: 18, clock: 'DAY 07:00', ticks: 1000, muse: 0, reflex: 0 }, live: { mode: 'idle', reason: 'waiting' }, sub: null });
+  assert.deepEqual(sent.at(-1), { id: 'g7', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game', tool: 'start_game' }], status: 'HP 20/20  FOOD 18/20  DAY 07:00  |  Muse 0 | Reflex 0', st: { hp: 20, food: 18, clock: 'DAY 07:00', ticks: 1000, muse: 0, reflex: 0 }, live: { mode: 'idle', reason: 'waiting' }, sub: null, game: { id: 'g7', s: 0 } });
   const mineai = { id: 'g8', status: 'ready', body: { snapshot: () => ({ health: 20, food: 20, timeOfDay: 0, dimension: 'overworld' }) } };
   feed.reply(mineai, 'start_game', { adult: true }, text);
   assert.equal(sent.at(-1).status, 'HP 20/20  FOOD 20/20  DAY 06:00');

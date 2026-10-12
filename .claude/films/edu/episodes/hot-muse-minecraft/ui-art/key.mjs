@@ -19,7 +19,12 @@ const SHEETS = {
 };
 const ICONS = { icons1: ['heart', 'food', 'sun', 'moon'], icons2: ['flame', 'shield', 'bulb', 'star'] };
 // the skills' icons, a 3x3 sheet
-const SKILL_ICONS = { skills1: ['pickaxe', 'boot', 'hammer', 'sword', 'house', 'portal', 'bucket', 'compass', 'bed'] };
+const SKILL_ICONS = {
+  skills1: ['pickaxe', 'boot', 'hammer', 'sword', 'house', 'portal', 'bucket', 'compass', 'bed'],
+  // the HUD's items (inventory, goals, the depth), 3x3 sheets too
+  items1: ['wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'diamond_pickaxe', 'diamond', 'iron_ingot', 'raw_iron', 'coal', 'obsidian'],
+  items2: ['flint_and_steel', 'water_bucket', 'lava_bucket', 'steak', 'bread', 'cobblestone', 'log', 'depth', 'ender_pearl'],
+};
 const OUT = path.join(agent, 'assets', 'muse-ui');
 
 /** Green to transparent: how much greener than its red and blue a pixel is, with the green spill taken out. */
@@ -94,15 +99,15 @@ function box(c) {
 fs.mkdirSync(path.join(OUT, 'sprites'), { recursive: true });
 fs.mkdirSync(path.join(OUT, 'icons'), { recursive: true });
 
-// the poses: one canvas size, the helmet at the same spot and the same width in all
+// the poses: one canvas size, the helmet at the same spot and the same width in all (ICONS_ONLY=1: the icons only)
 const poses = [];
-for (const [sheet, names] of Object.entries(SHEETS)) {
+for (const [sheet, names] of process.env.ICONS_ONLY ? [] : Object.entries(SHEETS)) {
   const cs = await cells(path.join(here, 'art', `${sheet}.png`));
   // a blink is the cell beside its pose and drawn at the same spot: it takes its pose's anchor, so a blink never moves
   const hs = cs.map((c) => helmet(c));
   cs.forEach((c, i) => poses.push({ name: names[i], c, h: names[i].endsWith('_blink') ? hs[i - 1] : hs[i] }));
 }
-const widths = poses.map((p) => p.h.w).sort((a, b) => a - b);
+const widths = poses.map((p) => p.h.w).sort((a, b) => a - b); // (none with ICONS_ONLY)
 const refW = widths[Math.floor(widths.length / 2)];
 const SIZE = 560;
 const AX = 0.47 * SIZE; // where the helmet's centre goes

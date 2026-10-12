@@ -600,10 +600,17 @@ profile `camera`, `deploy/Dockerfile.camera`).
   start), every tick: the camera rides an invisible display entity (`item_display`, tag `muse_cam_eye`) teleported
   to the spot behind the bot, and the client interpolates each teleport over `teleport_duration` (6 ticks), so the
   follow is a smooth, damped one and the bot's sudden turns become short swings; the farthest of three spots with open
-  air on the way wins, so a wall pulls the camera in instead of hiding the bot. When a block that is not leaves sits
-  right above the bot's head for a second (its night shelter, a tunnel) the eye moves outside to look at it (behind and
-  above, else straight above, else close behind its head underground), in either view; a second without the roof and
-  the view goes back. The camera player has night vision all the time (given again whenever it is gone: a respawn, a
+  air on the way wins, so a wall pulls the camera in instead of hiding the bot. When the bot is enclosed for a second
+  (a roof right above its head that is not leaves, and walls on all four sides at head height: its night shelter, a
+  sealed hole; a tunnel or a shaft is followed over the shoulder) the eye moves outside to look at it, in either view,
+  and only to a spot `muse_cam:good` accepts, checked again every tick: open air with 0.4 blocks of room all round (the
+  eye never touches a block, so the picture never shows one from inside: production game ga13a88 showed the dark
+  inside of a shelter's roof from an eye left just above it) and a straight line from it to the bot's eyes through open
+  air until within 3.2 blocks of the bot (it sees the shelter, not a tree or rock). The best first: the orbit's ring (5
+  out, 3.5 up), else the nearest good spot within 8 blocks, else 10 to 32 blocks above (the line may pass leaves), else
+  the bot's own eyes (sealed in under rock; tried again every 2 s). A second without the enclosure and the view goes
+  back. Checked on a local Paper (2026-10-12): open sky, the orbit; a canopy just over the roof, 3 out and 2 up under
+  it; leaves all round, 24 up; sealed in rock, first person. The camera player has night vision all the time (given again whenever it is gone: a respawn, a
   dimension change), so a night or a cave is never black. The camera service only tags through the console:
   `muse_cam` on the camera, `muse_cam_third` for the view, `muse_cam_target` on the bot.
   The camera's yaw follows the bot's damped (it closes 30 % of the gap each tick, held on a server-only `marker`), so a
@@ -1087,7 +1094,24 @@ square, 1080x1080, so the video fills the panel's width on a desktop and the top
 (1080x756, the middle of the 16:9 picture: Minecraft's field of view is vertical, so this is what a 10:7 window shows)
 and Muse's panel under it:
 
-- **The minimal panel** (2026-10-12, the owner: "remove the mascot, just show the last few actions"): 30 % of the
+- **The HUD** (layout 2 of two dense layouts, the owner's pick, 2026-10-12; `../ui-art/hud-mockups.mjs`,
+  `~/Downloads/muse-hud-final.png`): the full 16:9 game on top (1080x608) and an agent trace under it (472 px). A
+  header: health, food, the time with dawn or dusk; Muse's share, the game's id and its age. THINKING across the top:
+  Muse's latest `why` (20 px, two lines, cut at a word), the two before it fading; before the first move, what is
+  happening and the goal. MUSE · TRACE on the left: the call's tool and every step in plain words beside the step as
+  Muse wrote it (JetBrains Mono): done with its time, running with the body's sub-step, its count and a bar, queued,
+  failed with the reason, skipped; then every earlier call one line each (get_state with what Muse saw, set_goal with
+  the goal, the body's own actions among them, a failure's reason under it); while nothing runs, what is happening
+  with a breathing dot. STATE on the right: the goal from the server's feed (a preset's milestones with their times
+  and the next marked; a counted goal's parts with counts and bars, "Pigs killed 37/100"; a goal of plain words as its
+  words), lit for 10 s with a toast when set_goal changes it; the items that matter (Codex icons, counts); y and the
+  place ("deep caves", "surface, birch forest", from the body's y and the trees around); the Body advice and whether
+  Muse took it. The feed sends the step running now (its call's number and Muse's step) with every update and with
+  the body's sub-steps, so a step shows done before the reply says so; the HUD's state is kept per game for a stream
+  that starts later. 16-20 px text, 13 px spaced labels. Measured in the camera image on picasso under a load of 200
+  to 227 (2026-10-12, 4 CPUs, a second HUD drawing alongside): 30.2 frames a second, gaps p99 48 ms; a frame 7.9 ms
+  on average.
+- *Before the HUD* (history) **The minimal panel** (2026-10-12, the owner: "remove the mascot, just show the last few actions"): 30 % of the
   height (1080x324, the game gets 1080x756). One slim header line: our heart and food icons with the numbers, the sun
   or moon with the time, or "Nether", and "Muse 88%" with a slim meter on the right. Under it the last seven actions
   (six under the status line; the owner wanted more of them), anchored at the top,
@@ -1106,9 +1130,9 @@ and Muse's panel under it:
   seconds since Muse's last call, the seconds to dawn from the game time; `st.ticks` for the clock), and the header's
   clock moves on with the game between updates at the pace it was seen moving (still when the day is locked).
 - **The camera around a shut-in bot**: instead of a still picture of its shelter the eye circles it slowly (5 blocks
-  out, 3.5 up, a round a minute, turned to the bot), only through open air (the spot and a block above and below it),
-  turning back at a wall (`muse_cam:orbit`; checked on a local Paper: a circle of radius 5 that turned back at a
-  pillar in its way).
+  out, 3.5 up, a round a minute, turned to the bot), only through good spots (`muse_cam:good`, see "Real-client
+  camera"), turning back where one is not (`muse_cam:orbit`; checked on a local Paper: a circle of radius 5 that turned
+  back at a pillar in its way).
 - **How it is drawn**: `src/ui-panel.js` with node-canvas, 30 frames a second while live: the sprites pre-scaled, every
   text card drawn into its own canvas only when it changes, so a frame is a few image copies (about 1.3 ms on the Mac).
   Each frame is an uncompressed 32-bit BMP renamed over `/dev/shm/muse-ui-*/panel.bmp`; ffmpeg reads it again for

@@ -257,7 +257,7 @@ export function createLiveChannel(o) {
   // to it, begins with the game's start (start_game and what came with it), its last lines and its status
   const terms = new Map(); // id -> {head: [{k, t}], tail: [{k, t}], cut: boolean, status: string, updates: number}
   const TERM_HEAD = 4;
-  const TERM_TAIL = 20;
+  const TERM_TAIL = 36; // with the 4 first lines, within the 40 a term update carries
   const keepTerm = (id, u) => {
     let t = terms.get(id);
     if (!t) {
@@ -274,6 +274,9 @@ export function createLiveChannel(o) {
     if (u?.st) t.st = u.st; // the numbers, and what is happening now, for the UI panel
     if (u?.live) t.live = u.live;
     if (u && 'sub' in u) t.sub = u.sub;
+    // the HUD's state: the items, where the bot is, the goal, the advice, the game's age (when it was told)
+    for (const k of ['inv', 'pos', 'goal', 'adv']) if (u?.[k]) t[k] = u[k];
+    if (u?.game) t.game = { ...u.game, at: Date.now() };
     t.updates += 1;
   };
   /** The game's terminal so far onto a stream that films it from now on. */
@@ -281,7 +284,12 @@ export function createLiveChannel(o) {
     const t = terms.get(id);
     if (!t || typeof stream?.term !== 'function') return;
     const lines = [...t.head, ...(t.cut ? [{ k: 'info', t: '...' }] : []), ...t.tail];
-    try { stream.term({ lines, status: t.status, ...(t.st ? { st: t.st } : {}), ...(t.live ? { live: t.live } : {}), ...('sub' in t ? { sub: t.sub } : {}) }); } catch { /* the video goes on without it */ }
+    const hud = Object.fromEntries(['inv', 'pos', 'goal', 'adv'].filter((k) => t[k]).map((k) => [k, t[k]]));
+    if (t.game) {
+      const { at, ...game } = t.game;
+      hud.game = Number.isFinite(game.s) ? { ...game, s: game.s + Math.max(0, Math.round((Date.now() - at) / 1000)) } : game;
+    }
+    try { stream.term({ lines, status: t.status, ...(t.st ? { st: t.st } : {}), ...(t.live ? { live: t.live } : {}), ...('sub' in t ? { sub: t.sub } : {}), ...hud }); } catch { /* the video goes on without it */ }
   };
   const asked = new Map(); // id -> when live_view asked for a game the channel does not have yet
   let focus = null; // the game the camera films
