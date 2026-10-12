@@ -100,6 +100,13 @@ async function phase(name, tries, attempt, between) {
  * refused for want of ground says which y to send (y is the feet), and that is sent.
  */
 async function climbOut() {
+  // never up into the night: a shelter where it is until morning (a staging bench, 2026-10-12: a night climb ended in
+  // three deaths)
+  await call('get_state');
+  if (time() >= 12300 && time() < 23300) {
+    await step('shelter', {});
+    for (let k = 0; k < 20 && time() >= 12300 && time() < 23300; k++) { await sleep(30_000); await call('get_state'); }
+  }
   const p = positionOf(s);
   if (!p) return;
   const near = start && Math.hypot(start.x - p.x, start.y - p.y, start.z - p.z) < 250;
