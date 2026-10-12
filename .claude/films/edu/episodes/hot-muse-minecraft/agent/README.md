@@ -953,6 +953,38 @@ docker tag muse-minecraft-camera:pre-ui muse-minecraft-camera:latest && sh recre
 
 Remove the `pre-ui` tags once this has held for a week.
 
+### On production (2026-10-12, the minimal panel)
+
+The owner approved the minimal panel ("可以可以") and asked for more of the earlier commands. Deployed with
+`deploy/push.sh --prod` from main 756a78f (the minimal panel with seven rows, the live status line and the ticking
+clock, the orbit around a shut-in bot, the sound hint at the top; main's 8dc21db with the night-shelter advice and the
+busy fix), production idle, 365 tests passing. Before it: `deploy/.env` and `deploy/camera.env` backed up
+(`backups/*.bak-pre-ui2-20261012-202741`), the files archived (`backups/app-pre-ui2.tgz`), the images tagged `pre-ui2`
+(agent, paper, camera). Staging runs the same main (checked by file hashes), its camera stopped.
+
+Checks (all passed): the scripted game through `https://play.picasso-lab.com/mcp` (wooden pickaxe in 20.0 s), 0
+heartbeat misses, hosts closed with 0 restarts, no ffmpeg restart (30 fps captured, 0 dropped or duplicated, 0.999x,
+ffmpeg 90 % of a core at night among trees). One natural game with `live_view` (gab1449, at night), the panel and the
+camera's own screen read inside the camera container: while "Mine 13 dirt, then build a shelter for the night" ran,
+its row on top with the running dots; after it, the status line "Sheltering until morning (the body's reflex) · night
+ends in ~4 min" with the body's row and the earlier actions under it, and the clock moving on (00:47, then 01:03);
+the camera's screen 6 and 11 s apart from two places outside the dirt shelter (the orbit). The page: the square
+player, "Tap the video for sound" at the top under Facebook's badge, "Reload video" beside the status line. The other
+sites as before (`picasso-hopper` and `autoresearch` redirect to `picasso-lab.com`, `poker` 404, `yichen` 502).
+Seen there and fixed after the deploy (in main, not deployed yet): the body had sheltered by itself before Muse's own
+shelter, and the line credited the body; Muse's later shelter now wins.
+
+Rollbacks, on picasso in `~/workspace/muse-minecraft/app/deploy` (each `recreate.sh` stops when a game runs):
+
+```sh
+# the panel of before this deploy (the mascot one), the agent and Paper too
+docker tag muse-minecraft-agent:pre-ui2 muse-minecraft-agent:latest && docker tag muse-minecraft-paper:pre-ui2 muse-minecraft-paper:latest &&
+docker tag muse-minecraft-camera:pre-ui2 muse-minecraft-camera:latest && sh recreate.sh production all
+```
+
+The earlier rollbacks (`STREAM_MUSIC=off`, `STREAM_GAME_AUDIO=off`, `STREAM_LAYOUT=terminal`, `pre-ui`) still apply.
+Remove the `pre-ui2` tags once this has held for a week.
+
 ## The stream UI (STREAM_LAYOUT=ui)
 
 The owner watched the vertical stream (2026-10-11): 9:16 left black bars in muse.ai's panel (about 1000x1050 on a

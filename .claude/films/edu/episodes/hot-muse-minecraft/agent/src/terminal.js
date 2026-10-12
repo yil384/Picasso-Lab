@@ -340,7 +340,7 @@ export function createTermFeed(o) {
         if (step.status === 'confirmed') {
           // the last thing done, for the status line between calls (a shelter at night, a bed)
           const sk = step.skill === 'build' && step.args?.blueprint === 'shelter' ? 'shelter' : step.skill;
-          Object.assign(g, { lastSkill: sk, lastSkillBy: 'muse' });
+          Object.assign(g, { lastSkill: sk, lastSkillBy: 'muse', museShelterAt: sk === 'shelter' ? now() : g.museShelterAt });
           for (const [item, n] of Object.entries(step.gained ?? step.delta ?? {})) {
             if (n > 0 && MILESTONES[item] && !g.got.has(item)) { g.got.add(item); lines.push({ k: 'milestone', t: clean(`milestone: ${MILESTONES[item]} at ${elapsed(g)}`) }); }
           }
@@ -353,7 +353,9 @@ export function createTermFeed(o) {
       for (const e of st.onItsOwn ?? []) {
         if (!(e.seq > g.own)) continue;
         g.own = e.seq;
-        if (/shelter/i.test(`${e.kind} ${e.text}`)) Object.assign(g, { lastSkill: 'shelter', lastSkillBy: 'body' });
+        // the body sheltered by itself, unless Muse's own shelter came after it (this reply's steps, or later)
+        const bodyAt = now() - (Number.isFinite(e.agoS) ? e.agoS * 1000 : 0);
+        if (/shelter/i.test(`${e.kind} ${e.text}`) && !(g.museShelterAt >= bodyAt)) Object.assign(g, { lastSkill: 'shelter', lastSkillBy: 'body' });
         const death = /death|died/i.test(`${e.kind} ${e.text}`);
         lines.push({ k: death ? 'fail' : e.source === 'reflex' ? 'reflex' : 'body', t: clean(`${death ? 'death' : e.source === 'reflex' ? 'reflex' : 'body'}: ${e.text}`) });
       }
