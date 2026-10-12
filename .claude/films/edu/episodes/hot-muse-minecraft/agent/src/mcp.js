@@ -811,7 +811,7 @@ export function createMcp(hooks) {
     });
 
     server.registerTool('live_view', {
-      description: 'Read-only for the game. format "html" (default): a web page under 1 KB that shows this game\'s live video (Facebook\'s video player and a status line, no script; it can be shown as a web artifact), and a plain link. The server has one camera: it films the game whose live_view call came last. While the video starts, the call waits up to about 40 s. "link": JSON with two 3D views of the bot (first_person_url, behind_url). "embed": JSON with the player URL.',
+      description: 'Read-only for the game. format "html" (default): a web page of about 2 KB that shows this game\'s live video (Facebook\'s video player, starting muted, a status line and a few lines of script that reload the player; no request of its own; it can be shown as a web artifact), and a plain link. The server has one camera: it films the game whose live_view call came last. While the video starts, the call waits up to about 40 s. "link": JSON with two 3D views of the bot (first_person_url, behind_url). "embed": JSON with the player URL.',
       inputSchema: { format: z.enum(['html', 'link', 'embed']).optional().describe('"html" (default), "link" or "embed"') },
       annotations: { readOnlyHint: true },
     }, async ({ format = 'html' }, extra) => {
@@ -852,7 +852,7 @@ export function createMcp(hooks) {
       lines.push(videoUrl ? `Video (plain link): ${videoUrl}` : `3D view in a web page (plain link): ${l.eyes}`);
       if (v.warning) lines.push(`Warning: ${v.warning}`);
       if (v.fb) lines.push('One camera serves every game on this server: it films the game whose live_view call came last, so if another game calls live_view, this video shows that game until live_view is called again here. When no game is left the live video ends; the next game gets a new one.');
-      lines.push('', 'HTML page (Facebook\'s video player and a status line; no script):', html);
+      lines.push('', 'HTML page (Facebook\'s video player and a status line; a small script reloads the player, no request of its own):', html);
       return {
         content: [{ type: 'text', text: lines.join('\n') }],
         structuredContent: { format: 'html', game: s.id, state: v.state, live, camera_game: camera, video_url: videoUrl, embed_url: embedUrl, ...(v.warning ? { warning: v.warning } : {}), html },

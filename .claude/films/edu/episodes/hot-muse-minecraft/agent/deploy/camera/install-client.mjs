@@ -1,6 +1,7 @@
 // deploy/camera/install-client.mjs - installs the vanilla Minecraft Java client for the camera container (build time):
 // the version JSON from Mojang's manifest, the client jar, the Linux libraries (natives unpacked into one folder), the
-// asset index and every asset except the sounds (the camera plays none). Every file is checked against its SHA-1.
+// asset index and every asset except the music and the records (the stream carries the game's sound effects and
+// ambience; Minecraft's soundtrack risks copyright claims on Facebook). Every file is checked against its SHA-1.
 // Writes <dir>/launch.json: main class, class path, asset index, the folders, for src/camera.js. No account is needed.
 // With a pin file (deploy/camera/mods.json) it also installs the Fabric loader and the pinned client mods (Sodium and
 // friends) into <dir>/mods, every jar checked against its pinned SHA-512; launch.json then has a `fabric` part that
@@ -99,7 +100,9 @@ const assetsDir = path.join(dir, 'assets');
 const indexBuf = await get(v.assetIndex.url, v.assetIndex.sha1);
 fs.mkdirSync(path.join(assetsDir, 'indexes'), { recursive: true });
 fs.writeFileSync(path.join(assetsDir, 'indexes', `${v.assetIndex.id}.json`), indexBuf);
-const objects = Object.entries(JSON.parse(indexBuf).objects).filter(([name]) => !name.endsWith('.ogg'));
+// the sound effects, ambience and voices, never the soundtrack or the records (the client's music volume is 0 as well)
+export const soundtrack = (name) => /^minecraft\/sounds\/(?:music|records)\//.test(name);
+const objects = Object.entries(JSON.parse(indexBuf).objects).filter(([name]) => !soundtrack(name));
 let bytes = 0;
 await pool(objects, 16, async ([, o]) => {
   const sub = o.hash.slice(0, 2);
@@ -133,5 +136,5 @@ if (pinFile) {
   launch.fabric = { loader: pins.fabric.loader, mainClass: pins.fabric.mainClass, jvmArgs: pins.fabric.jvmArgs ?? [], classpath: fabricCp, replaces, mods };
 }
 fs.writeFileSync(path.join(dir, 'launch.json'), `${JSON.stringify(launch, null, 2)}\n`);
-console.log(`Minecraft ${version}: ${classpath.length} jars, ${fs.readdirSync(nativesDir).length} natives, ${objects.length} assets (${Math.round(bytes / 1e6)} MB, sounds left out) in ${dir}`
+console.log(`Minecraft ${version}: ${classpath.length} jars, ${fs.readdirSync(nativesDir).length} natives, ${objects.length} assets (${Math.round(bytes / 1e6)} MB, the soundtrack left out) in ${dir}`
   + (launch.fabric ? `; Fabric ${launch.fabric.loader} with ${Object.entries(launch.fabric.mods).map(([k, m]) => `${k} ${m.version}`).join(', ')}` : ''));

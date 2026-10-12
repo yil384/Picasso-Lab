@@ -398,7 +398,7 @@ test('mcp live_view: the embed data while a live video of the game runs; link da
   assert.match(link.first_person_url, new RegExp(`^${url}/eyes/[A-Za-z0-9_-]{22}/$`));
   const page = await c.callTool({ name: 'live_view', arguments: { format: 'html' } });
   assert.match(text(page), /live on Facebook\.\nVideo \(plain link\): https:\/\/www\.facebook\.com\/picassolab\/videos\/123\/\n/);
-  assert.ok(page.structuredContent.html.includes('<iframe src="https://www.facebook.com/plugins/video.php?href=x&amp;show_text=false"'));
+  assert.ok(page.structuredContent.html.includes('<iframe src="https://www.facebook.com/plugins/video.php?href=x&amp;show_text=false&amp;autoplay=true&amp;mute=true"'));
   const bad = await c.callTool({ name: 'live_view', arguments: { format: 'gif' } });
   assert.equal(bad.isError, true, 'html, link or embed');
 });

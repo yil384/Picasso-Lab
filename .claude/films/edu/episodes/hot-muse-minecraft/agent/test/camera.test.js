@@ -37,12 +37,14 @@ function script(dir, name, body) {
 const LAUNCH = { version: '1.21.4', mainClass: 'net.minecraft.client.main.Main', classpath: ['/opt/mc/a.jar', '/opt/mc/client.jar'], assetsDir: '/opt/mc/assets', assetIndex: '19', nativesDir: '/opt/mc/natives' };
 const TOKEN = 'eyJhbGciOiJIUzI1NiJ9.secret-minecraft-token-0123456789';
 
-test('client options: the video settings, no HUD chat, no sound, no first-run screens, no pause without focus', () => {
+test('client options: the video settings, no HUD chat, the sound effects without music, no first-run screens, no pause without focus', () => {
   const o = clientOptions({ renderDistance: 8, maxFps: 30 });
   const v = Object.fromEntries(o.trim().split('\n').map((l) => [l.slice(0, l.indexOf(':')), l.slice(l.indexOf(':') + 1)]));
   assert.equal(v.version, '4189');
   assert.deepEqual([v.renderDistance, v.maxFps, v.enableVsync, v.graphicsMode, v.particles], ['8', '30', 'false', '0', '0'], 'fast leaves by default');
-  assert.deepEqual([v.chatVisibility, v.soundCategory_master, v.pauseOnLostFocus, v.onboardAccessibility, v.tutorialStep], ['2', '0.0', 'false', 'false', 'none']);
+  assert.deepEqual([v.chatVisibility, v.soundCategory_master, v.pauseOnLostFocus, v.onboardAccessibility, v.tutorialStep], ['2', '1.0', 'false', 'false', 'none']);
+  assert.deepEqual([v.soundCategory_music, v.soundCategory_record, v.soundCategory_block, v.soundCategory_hostile, v.soundCategory_ambient], ['0.0', '0.0', '1.0', '1.0', '1.0'], 'no soundtrack (copyright), the effects on');
+  assert.equal(clientOptions({ sound: false }).includes('soundCategory_master:0.0'), true, 'no sound server: all off');
   assert.equal(v.inactivityFpsLimit, '"minimized"', 'never throttled as AFK');
   assert.equal(clientOptions({ graphics: 'fancy' }).includes('graphicsMode:1'), true);
 });

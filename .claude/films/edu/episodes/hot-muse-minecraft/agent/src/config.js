@@ -313,10 +313,20 @@ export function loadConfig(env = process.env) {
     // 'viewer': prismarine-viewer in headless Chromium (src/stream.js); 'client': the real Minecraft client as a
     // spectator in the bot's head (src/camera.js, the camera container)
     source: r.oneOf('STREAM_SOURCE', 'viewer', ['viewer', 'client']),
-    // the real-client camera's picture: 'terminal', vertical, the game on top and the terminal of Muse's calls under it
-    // (it fills muse.ai's tall panel), or 'landscape', the game alone at 1280x720
-    layout: r.oneOf('STREAM_LAYOUT', 'terminal', ['terminal', 'landscape']),
+    // the real-client camera's picture: 'ui', square by default (it fills the width of muse.ai's panel, about
+    // 1000x1050 on a desktop), the game on top and Muse's panel under it (src/ui-panel.js: the mascot, the command in
+    // plain words, the advice, the status); 'terminal', vertical, the game over a terminal of Muse's calls; or
+    // 'landscape', the game alone at 1280x720
+    layout: r.oneOf('STREAM_LAYOUT', 'ui', ['ui', 'terminal', 'landscape']),
+    uiSize: r.oneOf('STREAM_UI_SIZE', '1080x1080', ['1080x1080', '1080x1200', '1080x1350']),
     terminalSize: r.oneOf('STREAM_TERMINAL_SIZE', '1080x1920', ['1080x1920', '1080x1350']),
+    // the sound (camera only): the game's own from the client (STREAM_GAME_AUDIO, its music off), and a soft CC0
+    // music bed under it (STREAM_MUSIC, assets/muse-ui/music), ducked while the game is loud, then a limiter
+    gameAudio: r.bool('STREAM_GAME_AUDIO', true),
+    music: r.bool('STREAM_MUSIC', true),
+    musicFile: r.str('STREAM_MUSIC_FILE', ''),
+    musicDb: r.num('STREAM_MUSIC_DB', 0, -40, 6),
+    gameDb: r.num('STREAM_GAME_DB', 0, -30, 12),
     camera: {
       mcDir: r.str('CAMERA_MC_DIR', '/opt/mc'),
       home: path.resolve(r.str('CAMERA_HOME', path.join(os.tmpdir(), 'muse-camera'))),
