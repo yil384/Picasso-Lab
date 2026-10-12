@@ -144,12 +144,28 @@ try {
   // obsidian: blocks to close off lava first, then their collect makes it from lava and the water
   // lava near first (the state's nearby blocks): their collect walks to the nearest lava it knows of, which can be on
   // the surface at night
-  const lavaNear = () => /^nearby blocks[^\n]*\blava \d/m.test(stateOf(s));
-  await phase('lava in sight', 4, async () => { await call('get_state'); return lavaNear(); }, async (i) => { const p = positionOf(s); if (p && p.y > -50) await down(p.y + 54); else await along(i); });
+  // lava listed among the nearby blocks: walk to a few blocks from it (obsidian is made from a pool within 16 blocks)
+  const lavaAt = () => { const m = /\blava \d+\+? \(nearest ([\d.]+) away at (-?\d+) (-?\d+) (-?\d+)\)/.exec(stateOf(s)); return m ? { d: Number(m[1]), x: Number(m[2]), y: Number(m[3]), z: Number(m[4]) } : null; };
+  await phase('lava in sight', 5, async () => {
+    await call('get_state');
+    const l = lavaAt();
+    if (!l) return false;
+    if (l.d > 10) for (const [dx, dz] of [[3, 0], [-3, 0], [0, 3], [0, -3]]) if ((await step('go_to', { x: l.x + dx, y: l.y + 1, z: l.z + dz })).ok) break;
+    return true;
+  }, async (i) => { const p = positionOf(s); if (p && p.y > -50) await down(p.y + 54); else await along(i); });
   await phase('obsidian', 6, async () => {
     if (n('cobblestone') + n('cobbled_deepslate') < 16) await step('collect', { block: positionOf(s)?.y < 0 ? 'deepslate' : 'stone', n: 20 });
     if (!n('water_bucket')) await step('bucket', { action: 'fill', liquid: 'water' });
-    if (n('obsidian') < 14) await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
+    if (n('obsidian') < 14) {
+      const r = await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
+      // refused for want of a pool near: the reply says where the nearest one is; a few blocks from it, then again
+      const pool = /nearest lava pool loaded is at (-?\d+) (-?\d+) (-?\d+)/.exec(r.line);
+      if (!r.ok && pool) {
+        const [x, y, z] = pool.slice(1).map(Number);
+        for (const [dx, dz] of [[3, 0], [-3, 0], [0, 3], [0, -3]]) if ((await step('go_to', { x: x + dx, y: y + 1, z: z + dz })).ok) break;
+        await step('collect', { block: 'obsidian', n: 14 - n('obsidian') });
+      }
+    }
     return n('obsidian') >= 14;
   }, async (i) => { if (i % 2) await along(i); });
   await phase('flint', 6, async () => {

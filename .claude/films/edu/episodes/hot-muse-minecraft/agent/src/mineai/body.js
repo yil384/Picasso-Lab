@@ -597,10 +597,16 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // walked 95 blocks out and 120 down for 315 s; refused deep down with no source near)
     const data = await rpc('view_blocks', { find: { block_names: ['lava'], limit: 64 } }, 10_000).catch(() => null);
     if (!data?.result?.blocks) return refuse('the blocks around could not be read; try again in a moment');
-    const near = (data.result.blocks.find?.[0]?.listed ?? []).filter((l) => Math.hypot(l.x - p.x, l.y - p.y, l.z - p.z) <= LAVA_NEAR);
+    const listed = data.result.blocks.find?.[0]?.listed ?? [];
+    const away = (l) => Math.hypot(l.x - p.x, l.y - p.y, l.z - p.z);
+    const near = listed.filter((l) => away(l) <= LAVA_NEAR);
     const lava = near.filter((l) => !Number.isFinite(l.level) || l.level === 0).map(floorPos);
-    if (!lava.length && near.length) return refuse(`the lava within ${LAVA_NEAR} blocks is flowing, not a pool: obsidian forms on still lava. Go next to a lava pool first (get_state lists lava among the nearby blocks)`, 'LAVA');
-    if (!lava.length) return refuse(`no lava pool within ${LAVA_NEAR} blocks to make obsidian from: go next to one first (get_state lists lava among the nearby blocks; deep caves below y -54 have the most)`, 'LAVA');
+    // where the nearest pool is, when one is loaded farther away: the player can walk there (a staging bench, 2026-10-12:
+    // lava listed in sight, but no pool within 16 blocks, and nothing said where one was)
+    const pool = listed.filter((l) => !Number.isFinite(l.level) || l.level === 0).sort((a, b) => away(a) - away(b))[0];
+    const there = pool ? ` The nearest lava pool loaded is at ${floorPos(pool).x} ${floorPos(pool).y} ${floorPos(pool).z}, ${Math.round(away(pool))} blocks away: go_to a spot a few blocks from it first.` : '';
+    if (!lava.length && near.length) return refuse(`the lava within ${LAVA_NEAR} blocks is flowing, not a pool: obsidian forms on still lava.${there || ' Go next to a lava pool first (get_state lists lava among the nearby blocks).'}`, 'LAVA');
+    if (!lava.length) return refuse(`no lava pool within ${LAVA_NEAR} blocks to make obsidian from.${there || ' Go next to one first (get_state lists lava among the nearby blocks; deep caves below y -54 have the most).'}`, 'LAVA');
     if (spawnAt && lava.some((l) => Math.hypot(l.x - spawnAt.x, l.z - spawnAt.z) <= SPAWN_GUARD)) return refuse(`the lava near by is within ${SPAWN_GUARD} blocks of the world spawn, where new players arrive: make obsidian somewhere else`, 'LAVA');
     const players = (status?.nearby?.players ?? []).map((x) => x?.position).filter(Boolean);
     if (players.some((q) => lava.some((l) => Math.hypot(q.x - l.x, q.y - l.y, q.z - l.z) <= 8))) return refuse('another player is next to the lava near by: make obsidian somewhere else', 'LAVA');

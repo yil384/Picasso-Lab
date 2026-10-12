@@ -116,6 +116,10 @@ test('nether: collect obsidian runs only near lava, in the Overworld, with no ot
     let r = await a.body.run('collect', { block: 'obsidian', n: 4 });
     assert.equal(r.code, 'LAVA', r.result);
     assert.match(r.result, /^no lava pool within 16 blocks to make obsidian from/);
+    // a pool loaded farther away: the refusal says where (a staging bench, 2026-10-12)
+    a.fake.world.blocks = [{ name: 'lava', found: 1, listed: [{ x: -150, y: 40, z: 175, level: 0 }] }];
+    r = await a.body.run('collect', { block: 'obsidian', n: 4 });
+    assert.match(r.result, /The nearest lava pool loaded is at -150 40 175, 3\d blocks away: go_to a spot a few blocks from it first\.$/);
     // F2 of the log hunt: flowing lava near by is not a pool to make obsidian from
     a.fake.world.blocks = [{ name: 'lava', found: 3, listed: [{ x: -148, y: 60, z: 150, level: 3 }, { x: -147, y: 60, z: 150, level: 5 }] }];
     r = await a.body.run('collect', { block: 'obsidian', n: 4 });
