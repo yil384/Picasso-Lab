@@ -18,7 +18,8 @@ const N_KEYS = ['count', 'amount', 'quantity', 'qty', 'number', 'num'];
 /** The keys whose values are game names (items, blocks, mobs, biomes): the only free strings that are normalized. */
 const NAME_KEYS = new Set(['item', 'block', 'drop', 'mob', 'target', 'material', 'biome', 'blueprint']);
 /** Interchangeable names of the one name argument a skill has. */
-const NAME_SWAPS = [['item', 'block'], ['block', 'item'], ['mob', 'target'], ['target', 'mob'], ['item', 'name'], ['block', 'name'], ['mob', 'name']];
+const NAME_SWAPS = [['item', 'block'], ['block', 'item'], ['mob', 'target'], ['target', 'mob'], ['item', 'name'], ['block', 'name'], ['mob', 'name'],
+  ['liquid', 'block'], ['liquid', 'fluid'], ['liquid', 'type']]; // bucket {block: water} (ga13a88)
 
 const WOODS = ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'mangrove', 'cherry', 'pale_oak', 'bamboo', 'crimson', 'warped'];
 

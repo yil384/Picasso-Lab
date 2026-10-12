@@ -1,5 +1,5 @@
 // test/replay.test.js - Muse's real calls replayed (the log hunt's REPLAY): every step of production games gb1cfe3
-// (2026-10-11, the iron pickaxe) and g64e8c5 (2026-10-12, the long run to the Nether), as Muse sent them, through our
+// (2026-10-11, the iron pickaxe), g64e8c5, g0793f1 and ga13a88 (2026-10-12, the long runs to the Nether and back), as Muse sent them, through our
 // /mcp against the fake runtime, with the incidents of the real game played by the fake where they happened (the
 // guard reflex equipping the fresh shield, the furnace hitch, a bag full of rock, no lava pool near the first time).
 // What is checked, on every reply: no false failure (a step production did is ok here, a step that failed there gets
@@ -87,6 +87,32 @@ INCIDENTS.g0793f1 = {
   43: (w) => { w.netherAt = { x: 49.5, y: 97, z: -6.5 }; },
 };
 
+INCIDENTS.ga13a88 = {
+  0: (w) => { w.position = { x: -23.5, y: 81, z: 234.5 }; },
+  // the gravel gave 3 flint
+  23: (w) => { w.inventory.set('flint', 3); },
+  // the bucket fills that failed (a flowing cell named, a skeleton, a stalled path, a drowned) until the one that worked
+  27: (w) => { w.fail.use_bucket = 'The named cell holds water, not a water source; a bucket only scoops sources.'; },
+  // the blocks dug on the walks (production carried 425 at the first night's shelter)
+  33: (w) => { w.inventory.set('cobblestone', 120); },
+  // hungry where production ate
+  37: (w) => { w.food = 10; },
+  38: (w) => { w.food = 18; },
+  43: (w) => { w.food = 17; w.inventory.set('porkchop', 1); }, // the hunt gave 4, 2 were cooked
+  63: (w) => { w.food = 10; },
+  44: (w) => { delete w.fail.use_bucket; },
+  // the lava pool next to it
+  48: (w) => { w.blocks = [{ name: 'lava', found: 9, listed: [{ x: Math.floor(w.position.x) + 4, y: Math.floor(w.position.y) - 1, z: Math.floor(w.position.z), level: 0 }] }]; },
+  // the second site was a hillside of stone; the third had birch leaves where the frame would stand
+  55: (w) => { w.boxAt = (x, y) => (y >= Math.floor(w.position.y) + 1 ? 'stone' : 'air'); },
+  56: (w) => { w.boxAt = null; },
+  57: (w) => { w.boxAt = (x, y) => (y >= Math.floor(w.position.y) + 1 ? 'birch_leaves' : 'air'); },
+  58: (w) => { w.boxAt = null; },
+  // the obsidian back from the frames that failed
+  64: (w) => { w.inventory.set('obsidian', 14); },
+  66: (w) => { w.netherAt = { x: 12.5, y: 58, z: 18.5 }; },
+};
+
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
   // 1: raw_chicken (refused before a hunt until 2026-10-12) is read as chicken now and hunted (src/tolerant.js); 18: production smelted the mutton again after its hitch, but here the
@@ -97,10 +123,20 @@ const EXPECTED = {
   // 24, 34: no pool within 16 blocks (the reply names the nearest); 26: a reflex took the collect over; 29: the death;
   // 39: lava next to the frame's site
   g0793f1: { 22: null, 24: 'LAVA', 26: 'INTERRUPTED', 29: 'DIED', 34: 'LAVA', 39: 'LAVA' },
+  // 0: production's first collect found no path out of the 24-block shaft the pre-play dig made (fixed, and the fake
+  // never dug it): ok here; 1: go_to {pos}, refused in production, runs; the bucket fills, walks and the frame that
+  // failed for the world's reasons (a flowing cell, reflexes, paths, one stone cell kept): not checked; 46: stopped by
+  // Muse; 55: the stone hillside; 57: birch leaves in the frame, now refused before any obsidian is placed; 58: no frame
+  // left to take back here
+  ga13a88: { 27: null, 28: null, 31: null, 40: null, 41: null, 42: null, 46: null, 47: null, 52: null, 53: null, 55: 'FAILED', 57: 'FAILED', 58: null },
+};
+/** What a step's reply must say (by index). */
+const EXPECTED_TEXT = {
+  ga13a88: { 1: /^go_to \{"x":-20,"y":78,"z":236\}: ok/, 57: /hold birch_leaves, which the build cannot clear: collect the tree there first/ },
 };
 
 /** The goal each game played for. */
-const GOALS = { gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back' };
+const GOALS = { gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
 /** A why for a step, as Muse writes them (the fixtures predate why in the log). */
 const whyOf = (i, st) => `Step ${i}: ${[st.tool, ...Object.values(st.args ?? {}).filter((v) => typeof v !== 'object')].join(' ')} for the goal`;
 
@@ -109,6 +145,13 @@ const EXPECTED_REPORT = {
   gb1cfe3: (r) => {
     assert.equal(r.goalReached, true, 'the iron pickaxe');
     assert.deepEqual(r.milestones.map((m) => m.key), ['wooden_pickaxe', 'stone_pickaxe', 'iron_ingot', 'iron_pickaxe']);
+    return true;
+  },
+  ga13a88: (r, text) => {
+    // the whole way, with no death
+    assert.deepEqual(r.milestones.filter((m) => m.atS === null).map((m) => m.key), [], text);
+    assert.equal(r.goalReached, true);
+    assert.match(text, /\nDeaths: none\./);
     return true;
   },
   g0793f1: (r, text) => {
@@ -171,6 +214,7 @@ for (const [id, steps] of Object.entries(games)) {
       const where = `${id} step ${o.i} ${o.st.tool} ${JSON.stringify(o.st.args)}: ${o.result}`;
       if (want === 'ok') assert.equal(o.status, 'confirmed', `no false failure: ${where}`);
       else if (want) assert.equal(o.code, want, `the right code: ${where}`);
+      if (EXPECTED_TEXT[id]?.[o.i]) assert.match(o.text, EXPECTED_TEXT[id][o.i], where);
       if (o.code) assert.ok(RESULT_CODES.includes(o.code), `a known code: ${where}`);
       assert.doesNotMatch(o.text, JARGON, `no runtime jargon: ${where}`);
       assert.ok(o.advice.length <= 5, `at most 5 advice items: ${where}`);
