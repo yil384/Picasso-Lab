@@ -54,6 +54,18 @@ export function cleanTerm(u) {
       for (const [key, lo, hi] of [['done', 0, 100_000], ['of', 1, 100_000], ['left', 0, 100_000]]) { const v = int(sb[key], lo, hi); if (v !== undefined) out.sub[key] = v; }
     }
   }
+  if (u?.goal && typeof u.goal === 'object') {
+    // the goal from start_game and its milestones with the time each was reached (src/report.js progress), for the
+    // stream's checklist
+    const g = u.goal;
+    const goal = { key: /^[a-z_]{1,24}$/.test(String(g.key)) ? String(g.key) : 'free', title: clean(g.title, 40) || 'Goal', reached: g.reached === true };
+    const words = typeof g.text === 'string' ? clean(g.text, 80) : '';
+    if (words) goal.text = words;
+    goal.list = (Array.isArray(g.list) ? g.list : []).slice(0, 16)
+      .filter((m) => typeof m?.k === 'string' && /^[a-z_]{1,24}$/.test(m.k) && typeof m.t === 'string')
+      .map((m) => ({ k: m.k, t: clean(m.t, 32), atS: int(m.atS, 0, 86_400) ?? null })).filter((m) => m.t);
+    out.goal = goal;
+  }
   if (Array.isArray(u?.adv)) {
     out.adv = u.adv.slice(0, 6)
       .filter((a) => typeof a?.k === 'string' && /^[a-z_]{1,24}$/.test(a.k) && typeof a.t === 'string')
@@ -360,7 +372,10 @@ export function createTermFeed(o) {
       const { text, st } = statusOf(s, structured);
       const adv = adviceOf(structured);
       const g = of(s);
-      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}) });
+      // the goal and its milestones, as the game's tracker has them (src/report.js; MCP games only)
+      let goal = null;
+      try { goal = s.tracker?.progress?.() ?? null; } catch { goal = null; }
+      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}), ...(goal ? { goal } : {}) });
     } catch { /* the video goes on without it */ }
   };
   const PLACES = { the_nether: 'entered the Nether', the_end: 'entered the End', overworld: 'back in the Overworld' };
