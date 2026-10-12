@@ -57,12 +57,43 @@ const INCIDENTS = {
     51: (w) => { w.netherAt = { x: -2.5, y: 68, z: -30.5 }; },
   },
 };
+INCIDENTS.g0793f1 = {
+  0: (w) => { w.position = { x: 381.5, y: 103, z: -21.5 }; },
+  // flint picked up on the walks
+  22: (w) => { w.inventory.set('flint', 1); },
+  // the nearest lava pool 69 blocks away
+  24: (w) => { w.blocks = [{ name: 'lava', found: 9, listed: [{ x: 360, y: 34, z: -78, level: 0 }] }]; },
+  // a pool next to it, and a skeleton the hide reflex answered in the middle of the collect
+  26: (w) => {
+    w.blocks = [{ name: 'lava', found: 9, listed: [{ x: Math.floor(w.position.x) + 4, y: Math.floor(w.position.y) - 1, z: Math.floor(w.position.z), level: 0 }] }];
+    w.takeovers.push({ tool: 'collect_block', made: false, error: 'hide response for skeleton#41 at 300,40,50 (8.0 blocks) (hurt: health is below the engagement minimum).' });
+  },
+  // food 6 at 3.4 health, rotten flesh the only food: eaten now, with a warning
+  27: (w) => { w.food = 6; w.health = 3.4; for (const f of ['bread', 'cooked_beef', 'cooked_mutton', 'beef']) w.inventory.delete(f); w.inventory.set('rotten_flesh', 2); },
+  28: (w) => { w.inventory.set('cobblestone', 20); },
+  // shot by a skeleton during the hunt
+  29: (w) => { w.die = 'collect_mob_drop'; },
+  // the items back at the death spot (the fake runtime's pickup does not restore them)
+  31: (w) => { for (const [k, n] of [['diamond_pickaxe', 1], ['iron_pickaxe', 1], ['water_bucket', 1], ['flint_and_steel', 1], ['shield', 1], ['cobblestone', 20], ['cooked_beef', 4]]) w.inventory.set(k, n); w.health = 12; w.food = 14; },
+  34: (w) => { w.blocks = [{ name: 'lava', found: 9, listed: [{ x: 287, y: 84, z: 53, level: 0 }] }]; },
+  36: (w) => { w.blocks = [{ name: 'lava', found: 9, listed: [{ x: 287, y: 84, z: 53, level: 0 }] }]; },
+  37: (w) => { for (const [k, n] of [['cobblestone', 214], ['cobbled_deepslate', 155], ['granite', 32], ['andesite', 24], ['tuff', 7]]) w.inventory.set(k, n); },
+  // lava at the first frame site
+  39: (w) => { w.boxAt = (x, y, z) => (x === 287 && y === 84 && z === 53 ? 'lava' : 'air'); },
+  40: (w) => { w.boxAt = null; },
+  43: (w) => { w.netherAt = { x: 49.5, y: 97, z: -6.5 }; },
+};
+
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
   // 1: raw_chicken is refused before a hunt; 18: production smelted the mutton again after its hitch, but here the
   // hitch was tried again within step 15, so the mutton is already cooked and the repeat is refused by the check;
   // 31: no lava pool within 16 blocks; 39: the full bag
   g64e8c5: { 1: 'BAD_ARGS', 18: 'NEED_ITEMS', 31: 'LAVA', 39: 'INVENTORY_FULL' },
+  // 22: a second fill without an empty bucket (production's first fill had timed out; here it worked): not checked;
+  // 24, 34: no pool within 16 blocks (the reply names the nearest); 26: a reflex took the collect over; 29: the death;
+  // 39: lava next to the frame's site
+  g0793f1: { 22: null, 24: 'LAVA', 26: 'INTERRUPTED', 29: 'DIED', 34: 'LAVA', 39: 'LAVA' },
 };
 
 async function replay(id, steps) {
