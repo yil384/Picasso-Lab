@@ -153,7 +153,7 @@ export function attributionOf(muse, { reflex = 0, care = 0 } = {}) {
   return { muse, reflex, care, musePct, text };
 }
 
-export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs, portalSettleMs = PORTAL_SETTLE_MS }) {
+export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs, careYieldMs, portalSettleMs = PORTAL_SETTLE_MS }) {
   const emitter = new EventEmitter();
   emitter.setMaxListeners(50);
   let host = null;
@@ -701,8 +701,16 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     emit('skill', { phase: 'start', tool, args: v.args });
     // the body may be looking after itself (src/mineai/care.js): that stops for the step at once, except a recovery of
     // the items a death dropped (they despawn), which finishes first; the step's time starts after it
-    const yielded = await care?.yield().catch(() => null);
+    const yielded = await care?.yield(careYieldMs ? { maxMs: careYieldMs } : {}).catch(() => null);
     if (yielded === 'recover') t0 = Date.now();
+    // what it did on its own has not let go of the body yet: refused, never run beside it (two actions at once: their
+    // runtime answers the second with ACTION_BUSY; a local check, 2026-10-12)
+    if (care?.busy()) {
+      body.busy = false; doing = null; current = null;
+      const out = { ok: false, result: `busy: the body is still finishing what it did on its own (${care.now() ?? 'its own step'}); send the step again in a few seconds`, delta: {}, ms: Date.now() - t0, code: 'FAILED' };
+      emit('skill', { phase: 'end', tool, args: v.args, ...out });
+      return out;
+    }
     let r;
     // the inventory change is counted from here: carried and worn (an equip moves an item, it does not lose it); a
     // status read that fails keeps the copy from before, never an empty one

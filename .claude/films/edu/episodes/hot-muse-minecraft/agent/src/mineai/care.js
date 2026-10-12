@@ -497,7 +497,22 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
   const sh = memory.shelter;
   const pos = s.position;
   const feet = pos ? { x: Math.floor(pos.x), y: Math.floor(pos.y), z: Math.floor(pos.z) } : null;
-  const sheltered = Boolean(sh && feet && sh.feet.x === feet.x && sh.feet.z === feet.z && Math.abs(sh.feet.y - feet.y) <= 1 && (sh.night === memory.night || !night));
+  // in its shelter, or below it in its own column (a shaft dug straight down from it stays walled in by the ground)
+  const sheltered = Boolean(sh && feet && sh.feet.x === feet.x && sh.feet.z === feet.z && feet.y <= sh.feet.y + 1 && (sh.night === memory.night || !night));
+  // waiting out the night in its shelter: how long until dawn, and what can be done meanwhile without leaving it (a
+  // production game, 2026-10-12: Muse sheltered and only polled get_state every 4 minutes, which looked like a hang)
+  if (overworld && night && sheltered && Number.isFinite(time)) {
+    const left = Math.max(0, Math.round((NIGHT_TO - time) / 20));
+    const when = left >= 60 ? `${Math.floor(left / 60)} min ${left % 60} s` : `${left} s`;
+    const raw = ['raw_iron', 'beef', 'porkchop', 'mutton', 'chicken', 'rabbit', 'cod', 'salmon', 'potato'].find((x) => (inventory[x] ?? 0) > 0);
+    const fuel = ['coal', 'charcoal', ...PLANK_NAMES, ...LOG_NAMES].some((x) => (inventory[x] ?? 0) > 0 && x !== raw);
+    const options = [
+      raw && fuel ? `smelt the ${inventory[raw]} ${raw} you carry` : null,
+      'craft what you need from what you carry (the shelter has a pocket for a crafting table or furnace)',
+      pickaxe ? `dig straight down from here (go_to ${feet.x} ${Math.max(-58, feet.y - 12)} ${feet.z}: the body digs in its own column, so the ground stays around you, unless the shaft opens into a cave)` : null,
+    ].filter(Boolean);
+    say('waiting', `night, inside your shelter: dawn in about ${when}. Meanwhile you can ${options.join('; or ')}. A game with no call for 5 minutes ends: call get_state at least every 4 minutes while you wait`, raw && fuel ? { skill: 'smelt', args: { item: raw, n: Math.min(inventory[raw], 24) } } : null);
+  }
   if (overworld && Number.isFinite(time) && !sheltered) {
     if (night) {
       const mobs = near.length ? `, ${near.length} hostile mob${near.length > 1 ? 's' : ''} within 16 blocks` : '';
@@ -1008,7 +1023,9 @@ export function createCare(deps) {
           if (ctl.stopped) return stopped();
         }
         // short of blocks: dirt from around, then the shelter again (once)
-        if (!v.closed && v.short > 0 && !d.check && !fight()) {
+        // (never before the player's first call: a long collect there kept running into the player's own steps; a local
+        // check, 2026-10-12)
+        if (!v.closed && v.short > 0 && !d.check && !d.prePlay && !fight()) {
           const want = v.short + 2;
           const g = await run([{ tool: 'collect_block', args: { block_name: 'dirt', count: want } }], LIMITS.gather, ctl);
           await deps.refresh();
@@ -1136,7 +1153,7 @@ export function createCare(deps) {
     const p = situation.position;
     const sh = memory.shelter;
     if (sh && p && sh.feet.x === Math.floor(p.x) && sh.feet.z === Math.floor(p.z) && Math.abs(sh.feet.y - Math.floor(p.y)) <= 1) return null;
-    return { kind: 'shelter', why: 'waiting for your first call with hostile mobs near or at night', blocks: shelterBlocks(deps.latest().inventory ?? {}).total, check: false };
+    return { kind: 'shelter', why: 'waiting for your first call with hostile mobs near or at night', blocks: shelterBlocks(deps.latest().inventory ?? {}).total, check: false, prePlay: true };
   }
   const cool = (kind, ms) => memory.cool?.[kind] && now() - memory.cool[kind] < ms;
 
@@ -1211,6 +1228,8 @@ export function createCare(deps) {
     },
     tick,
     readEvents,
+    /** Something of its own still running (a yield that ran out of time). */
+    busy() { return running !== null; },
     /** What the body is doing by itself right now, in words, or null. */
     now() { return running ? DOING[running.kind] ?? running.kind : null; },
     /** Let the player's step have the body: cancel what the care runs (a recovery is waited for) and wait until it settled. */
