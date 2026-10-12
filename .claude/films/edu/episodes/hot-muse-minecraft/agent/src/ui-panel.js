@@ -564,8 +564,10 @@ export function createUiPanel(o) {
         const yy = from + (target - from) * moved;
         const alpha = [0.92, 0.6, 0.3][i] ?? 0;
         const a0 = i === 0 ? 0 : [0.92, 0.6, 0.3][i - 1];
-        g.globalAlpha = Math.max(0, a0 + (alpha - a0) * moved) * (yy < 60 * s ? clamp01((yy - 20 * s) / (40 * s)) : 1);
-        if (yy > 14 * s) g.drawImage(c, BX + 6 * s, yy);
+        // under the status row only: a pill fades out as it reaches it
+        const room = clamp01((yy - 66 * s) / (34 * s));
+        g.globalAlpha = Math.max(0, a0 + (alpha - a0) * moved) * room;
+        if (room > 0) g.drawImage(c, BX + 6 * s, yy);
         y = target - 10 * s;
       });
       g.globalAlpha = 1;

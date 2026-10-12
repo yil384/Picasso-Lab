@@ -57,6 +57,7 @@ export const CAMERA_DEFAULTS = Object.freeze({
   followMs: 5_000, // how often the camera checks it still rides the bot
   idleMs: 600_000, // a camera with no game for this long quits its client (Xvfb stays); the next game starts it again
   view: 'third', // 'third': over the bot's shoulder (its arm, tool and swing in view); 'first': in its head
+  sound: true, // the game's sound into a PulseAudio sink of the rig's own (when pulseaudio is installed), music at 0
   maxRestarts: 6, // client restarts within restartWindowMs before the rig rests for coolOffMs
   restartWindowMs: 600_000,
   coolOffMs: 120_000,
@@ -81,7 +82,8 @@ export function offlineUuid(name) {
 }
 
 /**
- * The client's options.txt: 1280x720-friendly video settings, the HUD and chat off, no sound, no first-run screens,
+ * The client's options.txt: 1280x720-friendly video settings, the HUD and chat off, the sound effects without music
+ * (or no sound), no first-run screens,
  * no pause when the window has no focus, never throttled for inactivity.
  */
 export function clientOptions(o = {}) {
@@ -95,7 +97,14 @@ export function clientOptions(o = {}) {
     graphicsMode: c.graphics === 'fast' ? 0 : 1, ao: true, renderClouds: c.graphics === 'fast' ? '"fast"' : '"true"',
     particles: 0, entityShadows: true, biomeBlendRadius: 2, mipmapLevels: 4, gamma: c.gamma, fov: '0.0', bobView: true,
     chatVisibility: 2, showAutosaveIndicator: false, darkMojangStudiosBackground: true, attackIndicator: 0,
-    showSubtitles: false, soundCategory_master: '0.0',
+    showSubtitles: false,
+    // with sound: the effects and ambience at full, Minecraft's music and records at 0 (soundtrack copyright on
+    // Facebook); without: all off
+    ...(c.sound ? {
+      soundCategory_master: '1.0', soundCategory_music: '0.0', soundCategory_record: '0.0', soundCategory_weather: '1.0',
+      soundCategory_block: '1.0', soundCategory_hostile: '1.0', soundCategory_neutral: '1.0', soundCategory_player: '1.0',
+      soundCategory_ambient: '1.0', soundCategory_voice: '1.0', soundDevice: '""',
+    } : { soundCategory_master: '0.0' }),
   };
   return `${Object.entries(v).map(([k, x]) => `${k}:${x}`).join('\n')}\n`;
 }
@@ -367,6 +376,32 @@ export async function launcherProfile(dir, { fetchFn = globalThis.fetch } = {}) 
   return { name: mc.name, uuid: mc.uuid, token: mc.token, auth: 'msa' };
 }
 
+// ----- the rig's sound: a PulseAudio server of its own with one null sink, nothing else
+
+/** The sink's monitor ffmpeg records from. */
+export const PULSE_SOURCE = 'muse.monitor';
+
+/**
+ * The PulseAudio script (pulseaudio -n --file=...): one null sink at 48 kHz stereo as the default, and the native
+ * protocol on a unix socket in the rig's own folder (mode 700). No hardware, no network, no discovery modules: only
+ * processes of this container that can reach the folder (the client and ffmpeg) play into it or record from it.
+ */
+export function pulseScript(socket) {
+  return [
+    'load-module module-null-sink sink_name=muse rate=48000 channels=2 sink_properties=device.description=muse',
+    'set-default-sink muse',
+    `set-default-source ${PULSE_SOURCE}`,
+    `load-module module-native-protocol-unix auth-anonymous=1 socket=${socket}`,
+    '',
+  ].join('\n');
+}
+
+/** The rig's PulseAudio files: the folder (700), the script, the socket, the runtime folder. */
+export const pulsePaths = (home) => {
+  const dir = path.join(home, 'pulse');
+  return { dir, script: path.join(dir, 'muse.pa'), socket: path.join(dir, 'native'), runtime: path.join(dir, 'run') };
+};
+
 // ----- the rig: Xvfb + the client, kept in the world
 
 /**
@@ -384,6 +419,8 @@ export function createCameraRig(o = {}) {
   };
   let state = 'off'; // off -> starting -> joining -> ready; resting (too many restarts); asleep; stopped
   let xvfb = null;
+  let pulse = null; // the rig's PulseAudio server (sound on, pulseaudio installed)
+  let pulseOn = false;
   let client = null; // {child, startedAt, joined, hidden}
   let profile = null;
   let fps = null; // the client's frames a second (Mesa's LIBGL_SHOW_FPS, or its HUD file)
@@ -425,6 +462,36 @@ export function createCameraRig(o = {}) {
     throw new Error(`Xvfb :${c.display} did not start: ${clip(err)}`);
   }
 
+  /** The sound server: started once, like Xvfb; without pulseaudio (or with sound off) the stream stays silent. */
+  async function startPulse() {
+    if (!c.sound || alive(pulse)) return;
+    const bin = c.pulseaudio ?? 'pulseaudio';
+    const p = pulsePaths(c.home);
+    fs.mkdirSync(p.runtime, { recursive: true, mode: 0o700 });
+    fs.chmodSync(p.dir, 0o700);
+    fs.writeFileSync(p.script, pulseScript(p.socket));
+    try { fs.rmSync(p.socket, { force: true }); } catch { /* none */ }
+    const env = { ...childEnv({ HOME: c.home }), XDG_RUNTIME_DIR: p.runtime, PULSE_RUNTIME_PATH: p.runtime };
+    const child = spawn(bin, ['-n', `--file=${p.script}`, '--daemonize=no', '--exit-idle-time=-1', '--use-pid-file=no', '--disallow-exit', '--log-target=stderr', '--log-level=error'], { env, stdio: ['ignore', 'ignore', 'pipe'] });
+    pulse = child;
+    let err = '';
+    child.stderr.on('data', (d) => { err = (err + d).slice(-2_000); });
+    child.on('error', (e) => { err += String(e?.message ?? e); });
+    child.on('exit', (code, signal) => {
+      if (pulse !== child) return;
+      pulse = null;
+      pulseOn = false;
+      if (!stopped) event('camera_sound_exit', { code, signal, detail: clip(err.split('\n').filter(Boolean).slice(-2).join(' | ')) });
+    });
+    const until = Date.now() + 5_000;
+    while (Date.now() < until && alive(child)) {
+      if (fs.existsSync(p.socket)) { pulseOn = true; event('camera_sound', { sink: 'muse' }); return; }
+      await sleep(100);
+    }
+    event('camera_sound_off', { detail: clip(err || 'no socket') });
+    if (alive(child)) child.kill('SIGTERM');
+  }
+
   function xReady() {
     return new Promise((resolve) => {
       execFile(c.xdpyinfo ?? 'xdpyinfo', ['-display', `:${c.display}`], { timeout: 3_000 }, (e) => resolve(!e));
@@ -445,7 +512,9 @@ export function createCameraRig(o = {}) {
       fs.mkdirSync(cmd.hudDir, { recursive: true });
       hudFile = path.join(cmd.hudDir, 'fps');
     }
-    fs.writeFileSync(path.join(cmd.gameDir, 'options.txt'), clientOptions(c));
+    fs.writeFileSync(path.join(cmd.gameDir, 'options.txt'), clientOptions({ ...c, sound: c.sound && pulseOn }));
+    // the client's OpenAL plays into the rig's sink and nowhere else
+    if (pulseOn) Object.assign(cmd.env, { PULSE_SERVER: `unix:${pulsePaths(c.home).socket}`, ALSOFT_DRIVERS: 'pulse' });
     if (modJars(c, launch).length) {
       fs.mkdirSync(path.join(cmd.gameDir, 'config'), { recursive: true });
       fs.writeFileSync(path.join(cmd.gameDir, 'config', 'sodium-options.json'), `${JSON.stringify(sodiumOptions(c), null, 2)}\n`);
@@ -584,6 +653,7 @@ export function createCameraRig(o = {}) {
         if (stopped) return;
         if (!client) state = 'starting';
         await startX();
+        await startPulse().catch((err) => event('camera_sound_off', { detail: clip(err?.message ?? err) }));
         if (!client && !stopped) await launchClient();
       } catch (err) {
         event('camera_error', { message: clip(err?.message ?? err) });
@@ -600,6 +670,8 @@ export function createCameraRig(o = {}) {
     get ready() { return state === 'ready'; },
     get name() { return profile?.name ?? null; },
     get fps() { return fps ?? hudFps(); },
+    /** The PulseAudio server and source the game's sound is recorded from, or null (silence). */
+    get sound() { return pulseOn && alive(pulse) ? { server: `unix:${pulsePaths(c.home).socket}`, source: PULSE_SOURCE } : null; },
     options: c,
     /** Start Xvfb and the client (idempotent; failures are retried in the background). Wakes a sleeping rig. */
     start() { stopped = false; return run(); },
@@ -656,6 +728,10 @@ export function createCameraRig(o = {}) {
       const x = xvfb;
       xvfb = null;
       if (alive(x)) { x.kill('SIGTERM'); await Promise.race([new Promise((r) => x.once('exit', r)), sleep(3_000)]); }
+      const a = pulse;
+      pulse = null;
+      pulseOn = false;
+      if (alive(a)) { a.kill('SIGTERM'); await Promise.race([new Promise((r) => a.once('exit', r)), sleep(3_000)]); }
     },
   };
   return rig;

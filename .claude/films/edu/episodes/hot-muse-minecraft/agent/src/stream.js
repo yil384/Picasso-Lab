@@ -99,6 +99,29 @@ export function poseOf(body) {
 const filterPath = (p) => `'${String(p).replace(/\\/g, '/').replace(/'/g, "'\\''").replace(/:/g, '\\:')}'`;
 
 /**
+ * The sound: the game's own (o.pulse, the camera's PulseAudio monitor source: the client's sound effects and ambience,
+ * its music at 0), else silence, and with o.music a soft bed under it (a CC0 track looped in real time, o.musicDb, ducked
+ * by a side-chain compressor whenever the game is loud), then a limiter at -1 dBFS. Inputs 1 (and 2) of ffmpeg; the
+ * mix on a complex graph of its own, the picture stays on -vf (input 0).
+ * @param {{pulse?: string, music?: string, musicDb?: number, gameDb?: number}} [a]
+ */
+export function audioArgs(a = {}) {
+  const inputs = a?.pulse
+    ? ['-thread_queue_size', '1024', '-f', 'pulse', '-sample_rate', '48000', '-channels', '2', '-fragment_size', '3840', '-i', String(a.pulse)]
+    : ['-re', '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000'];
+  const db = (v, d) => (Number.isFinite(v) ? v : d).toFixed(1);
+  const game = `aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${db(a?.gameDb, 0)}dB`;
+  const limit = 'alimiter=limit=0.891:attack=5:release=80:level=disabled';
+  if (!a?.music) return { inputs, maps: ['-map', '1:a', '-af', `${game},${limit}`] };
+  inputs.push('-re', '-stream_loop', '-1', '-i', String(a.music));
+  const graph = `[1:a]${game},asplit=2[g][key];`
+    + `[2:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${db(a.musicDb, -4)}dB[bed];`
+    + '[bed][key]sidechaincompress=threshold=0.02:ratio=6:attack=20:release=700:knee=4[ducked];'
+    + `[g][ducked]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,${limit}[aout]`;
+  return { inputs, maps: ['-filter_complex', graph, '-map', '[aout]'] };
+}
+
+/**
  * ffmpeg arguments: JPEG frames on stdin at a constant rate (or, with o.x11 = {display, width, height}, an X display
  * grabbed at that rate: src/camera.js), silent stereo AAC paced in real time, scaled to width x height (with the
  * caption from captionFile, when there is a font), H.264 CBR with a closed GOP of keyframeSec; FLV for a network
@@ -116,8 +139,10 @@ export function ffmpegArgs(o) {
   // with a panel (o.panel = {file, top, fps}: the vertical layout, src/terminal-panel.js) the game is width x top at
   // the top and the panel image below it; the caption and the clock belong to the game's part
   const gameH = o.panel ? o.panel.top : height;
+  const ui = o.panel?.kind === 'ui';
   const size = Math.round(gameH / 26);
-  const caption = o.font && o.captionFile
+  // the UI layout says what Muse does in its own panel (src/ui-panel.js): no caption on the game
+  const caption = !ui && o.font && o.captionFile
     ? `,drawtext=fontfile=${filterPath(o.font)}:textfile=${filterPath(o.captionFile)}:reload=1:fontsize=${size}:fontcolor=0xF4F1EA`
       + `:box=1:boxcolor=0x0C0E10@0.62:boxborderw=${Math.round(size / 2)}:x=${Math.round(gameH / 20)}:y=h-th-${Math.round(gameH / 18)}`
     : '';
@@ -134,10 +159,14 @@ export function ffmpegArgs(o) {
       : o.x11
       ? ['-thread_queue_size', '64', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', String(fps), '-video_size', `${o.x11.width ?? width}x${o.x11.height ?? height}`, '-i', String(o.x11.display)]
       : ['-thread_queue_size', '64', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', 'pipe:0'];
+  // the game's part: scaled to the frame's width; in the UI layout cut to its shape first (the middle of a 16:9
+  // picture: Minecraft's field of view is vertical, so this is what a window of that shape shows)
+  const scaleGame = `${ui ? `crop=w='min(iw,ih*${width}/${gameH})':h='min(ih,iw*${gameH}/${width})',` : ''}scale=${width}:${gameH}:flags=${o.scaleFlags ?? 'bicubic'}`;
+  const { inputs: audioInputs, maps: audioMaps } = audioArgs(o.audio);
   return [
     '-hide_banner', '-nostdin', '-loglevel', 'warning', '-nostats', ...(o.progress ? ['-progress', 'pipe:1', '-stats_period', '5'] : []),
     ...video,
-    '-re', '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
+    ...audioInputs,
     ...(o.panel
       // the vertical layout in the same single-input chain as the landscape one (-vf): the game padded to the full
       // frame, and the panel a movie source overlaid under it. Not -filter_complex with the panel as an input of its
@@ -146,9 +175,11 @@ export function ffmpegArgs(o) {
       // the picture back (0.72x of real time). The movie source re-reads the file on every loop (it is replaced by
       // renaming, never half written) and its frames are counted at 4 a second (setpts), so it is read 4 times a
       // second; this chain ran at real time (0.996x) on the real display on picasso.
-      ? ['-map', '0:v', '-map', '1:a', '-vf', `[in]setpts=PTS-STARTPTS,scale=${width}:${gameH}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},pad=${width}:${height}:0:0:color=0x0B0D0F,format=yuv420p[top];`
+      // The UI panel is read the same way at the video's own rate (an uncompressed BMP, renamed over the file 30 times a
+      // second by src/ui-panel.js), so Muse moves smoothly.
+      ? ['-map', '0:v', ...audioMaps, '-vf', `[in]setpts=PTS-STARTPTS,${scaleGame}${caption}${clock},pad=${width}:${height}:0:0:color=0x0B0D0F,format=yuv420p[top];`
         + `movie=${filterPath(o.panel.file)}:f=image2:loop=0,setpts=N/(${o.panel.fps ?? 4}*TB),scale=${width}:${height - gameH},format=yuv420p[pan];[top][pan]overlay=0:${gameH}:format=yuv420[out]`]
-      : ['-map', '0:v', '-map', '1:a', '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p`]),
+      : ['-map', '0:v', ...audioMaps, '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p`]),
     '-c:v', 'libx264', '-preset', o.preset ?? STREAM_DEFAULTS.preset, '-tune', 'zerolatency', '-profile:v', 'high',
     '-threads', String(o.threads ?? STREAM_DEFAULTS.threads),
     '-r', String(fps), '-g', String(gop), '-keyint_min', String(gop), '-sc_threshold', '0', '-bf', '0',
@@ -840,13 +871,21 @@ export function captionsOf(body, put) {
   ];
 }
 
+/** The picture's shape for live_view's page ("1080/1080"): the UI and terminal layouts' sizes, else 16:9. */
+export function streamAspect(c) {
+  if (c?.layout === 'ui') return String(c.uiSize ?? '1080x1080').replace('x', '/');
+  if (c?.layout === 'terminal') return String(c.terminalSize ?? '1080x1920').replace('x', '/');
+  return '16/9';
+}
+
 /** The manager's configuration from config.stream (STREAM_*). */
 export function managerConfig(c) {
   return {
     enabled: Boolean(c?.enabled), outputs: c?.outputs ?? [], outDir: c?.outDir || '', max: c?.max ?? 0,
     options: {
       fps: c?.fps, scale: c?.scale, bitrateK: c?.bitrateK, far: c?.far, maxRssMB: c?.maxRssMB, noSandbox: c?.noSandbox, clock: c?.clock || undefined, clockTz: c?.clockTz,
-      layout: c?.layout, terminalSize: c?.terminalSize,
+      layout: c?.layout, terminalSize: c?.terminalSize, uiSize: c?.uiSize,
+      gameAudio: c?.gameAudio, music: c?.music, musicFile: c?.musicFile, musicDb: c?.musicDb, gameDb: c?.gameDb,
     },
   };
 }
