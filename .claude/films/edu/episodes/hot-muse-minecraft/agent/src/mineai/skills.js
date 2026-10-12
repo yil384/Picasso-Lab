@@ -153,6 +153,9 @@ export function needsTable(item) {
   return tableCache.get(item);
 }
 
+/** Food that may give Hunger but never takes health, eaten when nothing safe is carried and food is low. */
+export const EMERGENCY_FOOD = Object.freeze(['rotten_flesh', 'chicken']);
+export const EMERGENCY_AT = 6;
 const UNSAFE_FOOD = new Set(['rotten_flesh', 'spider_eye', 'poisonous_potato', 'pufferfish', 'chicken', 'suspicious_stew', 'chorus_fruit']);
 /** The safe food carried with the best food value + saturation (as our eat skill picks), or null. */
 export function bestFood(inventory) {
@@ -354,7 +357,14 @@ export function toTheirs(skill, args, ctx) {
     case 'eat': {
       if ((ctx.food ?? 0) >= 20) return refuse(NOT_HUNGRY_TEXT, 'NOT_HUNGRY');
       const food = bestFood(inv);
-      if (!food) return refuse('no safe food in your inventory; kill a cow, pig or sheep and cook the meat', 'NEED_ITEMS');
+      if (!food) {
+        // nothing safe: food that may only cost hunger (never health) is eaten when food is low, with a warning (a
+        // production game, 2026-10-12, g0793f1: rotten flesh refused at food 6 and 3.4 health, nothing else carried)
+        const last = EMERGENCY_FOOD.find((f) => (inv[f] ?? 0) > 0);
+        if (last && (ctx.food ?? 20) <= EMERGENCY_AT) return { calls: [{ tool: 'eat_food', args: { food_name: last } }], note: `${last} was all you had: it may give Hunger for a while (food drains faster), but it adds food; cooked meat is better` };
+        if (last) return refuse(`no safe food in your inventory: ${last} may give Hunger, so eat takes it only at food ${EMERGENCY_AT} or less (now ${ctx.food}); kill a cow, pig or sheep and cook the meat`, 'NEED_ITEMS');
+        return refuse('no safe food in your inventory; kill a cow, pig or sheep and cook the meat', 'NEED_ITEMS');
+      }
       return { calls: [{ tool: 'eat_food', args: { food_name: food } }] };
     }
     case 'say': return { calls: [{ tool: 'send_message', args: { message: args.text } }] };
@@ -441,7 +451,21 @@ export function toTheirs(skill, args, ctx) {
       if (!Object.keys(changes).length) return { calls: [{ tool: 'set_survival_policy', args: { ...base, operation: 'reset' } }], care: 'reset' };
       return { calls: [{ tool: 'set_survival_policy', args: { ...base, operation: 'set', changes, lifetime: { kind: 'session' } } }], ...(care ? { care } : {}) };
     }
-    case 'pick_up': return { calls: [{ tool: 'pick_up_items', args: { ...(args.item ? { item: args.item } : {}), ...(args.death_items ? { recover_death_items: true } : {}) } }] };
+    case 'pick_up': {
+      const pick = { tool: 'pick_up_items', args: { ...(args.item ? { item: args.item } : {}), ...(args.death_items ? { recover_death_items: true } : {}) } };
+      // a death's items: walk to the death spot first (their pickup did not reach one underground within its 90 s: a
+      // production game, 2026-10-12, g0793f1), with time for the walk
+      const d = args.death_items ? ctx.lastDeath : null;
+      const here = String(ctx.dimension ?? 'overworld');
+      if (d?.position && ctx.position && String(d.dimension ?? 'overworld').replace(/^minecraft:/, '') === here) {
+        const at = { x: Math.floor(d.position.x), y: Math.floor(d.position.y), z: Math.floor(d.position.z) };
+        const far = dist(ctx.position, at);
+        if (far > 4 && far <= (ctx.maxTravel ?? 256)) {
+          return { calls: [{ tool: 'navigate', args: at, optional: true, quiet: true }, pick], timeoutMs: Math.min(300_000, 90_000 + 1_000 * Math.round(far)) };
+        }
+      }
+      return { calls: [pick] };
+    }
     // the item in hand may go too (the body holds whatever it last used); worn armor and the off-hand never do
     case 'drop': {
       if (args.junk) {
