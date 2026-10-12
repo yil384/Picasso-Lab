@@ -226,7 +226,7 @@ test('live_view\'s page: the player at the video\'s shape, as wide as the panel 
 test('config: the UI layout by default, square; the terminal (1080x1920 or 1080x1350) and landscape as before; the sound', () => {
   const c = loadConfig({});
   assert.deepEqual([c.stream.layout, c.stream.uiSize, c.stream.terminalSize], ['ui', '1080x1080', '1080x1920']);
-  assert.deepEqual([c.stream.gameAudio, c.stream.music, c.stream.musicDb, c.stream.gameDb], [true, true, -2, 12]);
+  assert.deepEqual([c.stream.gameAudio, c.stream.music, c.stream.musicDb, c.stream.gameDb], [true, true, -15, 12]);
   assert.deepEqual([loadConfig({ STREAM_MUSIC: 'off' }).stream.music, loadConfig({ STREAM_UI_SIZE: '1080x1350' }).stream.uiSize], [false, '1080x1350']);
   assert.throws(() => loadConfig({ STREAM_UI_SIZE: '1920x1080' }), /STREAM_UI_SIZE must be one of/);
   assert.deepEqual([loadConfig({ STREAM_LAYOUT: 'landscape' }).stream.layout, loadConfig({ STREAM_TERMINAL_SIZE: '1080x1350' }).stream.terminalSize], ['landscape', '1080x1350']);
