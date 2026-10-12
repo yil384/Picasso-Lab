@@ -1086,6 +1086,27 @@ echo STREAM_MUSIC=off >> camera.env && sh recreate.sh production
 Paper was not rebuilt (`pre-ui3` keeps its image too). The earlier rollbacks still apply. Remove the `pre-ui3` tags
 once this has held for a week.
 
+### On production (2026-10-12, the HUD and goals)
+
+Deployed with `deploy/push.sh --prod` while idle (the owner's ga13a88 had ended): main 4c6ec73 (the HUD, layout 2;
+the goal feed with set_goal; the one-line prompt; the camera's good spots, so Paper was recreated for its datapack),
+then main 4d10aaf (the ga13a88 log hunt; agent and camera recreated, Paper not). `PROD_LEASE_MS` taken out of
+deploy/.env: `WEB_LEASE_MS` is 1800000 again. Staging checks passed both times (wooden pickaxe in 18.2 s and 17.6 s).
+Smoke on production (g40e978, g5938b7): start_game with a goal, live_view (the Facebook live made on demand, deleted
+10 min after the game: seen for g40e978), a play_sequence with a why, set_goal "kill 3 pigs" (the HUD lit "New goal",
+"Pigs killed 0/3"), get_state ("Goal: kill 3 pigs: pigs killed 0 of 3"), end_game; 0 heartbeat misses. The HUD read in
+the camera container: `~/Downloads/muse-hud-prod.png`, `-running.png`, `-phone.png`.
+
+```sh
+cd ~/workspace/muse-minecraft/app/deploy
+# before the log-hunt follow-up (the HUD as first deployed)
+for s in agent camera; do docker tag muse-minecraft-$s:hud2 muse-minecraft-$s:latest; done; sh recreate.sh production
+# before the HUD (option A, the old datapack): Paper too
+for s in agent paper camera; do docker tag muse-minecraft-$s:pre-hud2 muse-minecraft-$s:latest; done; sh recreate.sh production all
+# the 2-hour lease of a long run back: PROD_LEASE_MS=7200000 in deploy/.env (.env.bak-pre-hud2-20261012-232644), then
+sh recreate.sh production
+```
+
 ## The stream UI (STREAM_LAYOUT=ui)
 
 The owner watched the vertical stream (2026-10-11): 9:16 left black bars in muse.ai's panel (about 1000x1050 on a
