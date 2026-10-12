@@ -19,7 +19,8 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { inventoryDelta } from '../contracts.js';
 import { renderState, describeCall, describeDelta } from '../state.js';
 import { NOTABLE_BLOCKS } from '../state.js';
-import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, SPAWN_GUARD, toTheirs, fromTheirs, doneSoFar, ownChange, splitError } from './skills.js';
+import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, SPAWN_GUARD, toTheirs, fromTheirs, doneSoFar, reflexTakeover, reflexWords, ownChange, splitError } from './skills.js';
+export { reflexTakeover };
 import { createCare, armorPlan, wearPlan, toolClassFor, toolOf, pickaxeTierFor, sparePlan, replacementFor, describeCare, describeReflexes, ARMOR_SLOTS, armorOf } from './care.js';
 
 /** Every call of ours says why in one sentence (their rationale is required and goes into their own log only). */
@@ -107,17 +108,6 @@ export function progressWords(cp) {
 
 /** Calls sent once more after one of their reflexes cut them short (sending them again repeats nothing). */
 export const RETRY_AFTER_REFLEX = new Set(['craft_item', 'smelt_item', 'equip', 'eat_food', 'place_block', 'use_bucket', 'navigate', 'build_structure', 'activate_portal']);
-/** A failure that is one of their reflexes taking the body over, in plain words, else null. */
-export function reflexTakeover(text) {
-  const t = String(text ?? '');
-  if (/Equip an available shield/i.test(t)) return 'it put a shield in the off-hand with hostile mobs near';
-  const m = /\b(fight|evade|hide|deflect|flee|retreat|avoid) response for ([a-z_]+)/i.exec(t);
-  if (m) return `${{ fight: 'it fought', evade: 'it got out of the way of', hide: 'it hid from', deflect: 'it blocked', flee: 'it fled from', retreat: 'it fled from', avoid: 'it kept away from' }[m[1].toLowerCase()]} a ${m[2]}`;
-  if (/\[BREATH\]|surface at air|air supply/i.test(t)) return 'it swam up for air';
-  if (/fire_reflex|\bin (fire|lava)\b.*\b(escape|leave)/i.test(t)) return 'it got out of fire or lava';
-  if (/recover_footing|External impulse threatens footing/i.test(t)) return 'it got its footing back';
-  return null;
-}
 /** collect obsidian makes it from lava within this many blocks of the bot, else it is refused. */
 export const LAVA_NEAR = 16;
 
@@ -685,6 +675,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     let built = null; // a build's structure (toTheirs), remembered below while it is incomplete
     let dismantling = false; // portal dismantle: its own frame's obsidian back
     let skipped = null; // the last optional call that did not work, in words
+    let refusedFirst = false; // refused before anything ran: not an action of the player's (F10 of the log hunt)
     const crashesBefore = crashes;
     // the runtime stopped during this step: the host starts it again once per game, and a second stop ends the game
     // (src/mineai/host.js). The step may be what stopped it (2026-10-08, before patch 0010: a build around the bot in a pocket in stone
@@ -714,7 +705,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         if (!care) r = { ok: false, result: `${tool}: the body's care is off on this server`, code: 'FAILED' };
         else { const p = await care.perform(plan.kind, ctl); r = { ok: p.ok, result: p.text, code: p.ok ? null : p.code ?? 'FAILED' }; }
       }
-      else if (plan.refused) r = plan.refused;
+      else if (plan.refused) { r = plan.refused; refusedFirst = true; }
       else if (!plan.calls?.length && plan.care) r = { ok: true, result: careText.replace(/^; /, ''), code: null };
       else {
         const deadline = t0 + (plan.timeoutMs ?? timeouts[tool] ?? 60_000);
@@ -757,6 +748,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped, call });
+          // their reflexes that acted during the call count as the body's own (F10 of the log hunt: in-step fights were in
+          // no count, and the share of Muse's actions read too high)
+          const inStep = [...new Set((out.output?.interruptions ?? []).map(String))];
+          if (inStep.length) care?.reflexesInStep(inStep, tool);
           // one of their reflexes took the body over in the middle of the call (a production game, 2026-10-11: a
           // shield craft at night "failed: Equip an available shield before nearby hostiles require a guard" with the
           // shield made, and the steps after it were cancelled for nothing)
@@ -873,7 +868,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     }
     if (yielded === 'recover') r = { ...r, result: `${r.result} (before it the body finished going back for the items it dropped when it died)` };
     const ms = Date.now() - t0;
-    if (!['get_state', 'policy'].includes(tool)) museActions += 1;
+    if (!['get_state', 'policy'].includes(tool) && !refusedFirst) museActions += 1;
     if (tool === 'pick_up' && v.args.death_items && r.ok) care?.recovered(status?.lastDeath?.observedAt ?? null);
     if (tool === 'pick_up' && v.args.death_items && r.code === 'DIED') care?.diedRecovering(status?.lastDeath?.observedAt ?? null);
     body.busy = false;

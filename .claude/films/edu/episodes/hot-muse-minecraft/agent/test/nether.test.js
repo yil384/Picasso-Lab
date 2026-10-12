@@ -229,6 +229,17 @@ test('a reflex takes a craft over: made means ok (with a note), cut short means 
     r = await body.run('collect', { block: 'oak_log', n: 6 });
     assert.equal(r.code, 'INTERRUPTED');
     assert.match(r.result, /a reflex took the body over \(it got out of the way of a zombie\) before collect block was done/);
+    // F10 of the log hunt: reflexes during a step count as the body's, a step refused before it ran is not Muse's action
+    const before = body.attribution();
+    fake.world.interruptionsFor = { collect_block: ['fight response for zombie#1 at 1,2,3 (2.0 blocks).', 'fight response for zombie#1 at 1,2,3 (2.0 blocks).', 'hide response for skeleton#4'] };
+    r = await body.run('collect', { block: 'oak_log', n: 2 });
+    fake.world.interruptionsFor = null;
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /\[meanwhile on its own: it fought a zombie, it hid from a skeleton\]$/);
+    await body.run('portal', { action: 'dismantle' }); // refused before it ran: no frame
+    const after = body.attribution();
+    assert.equal(after.reflex - before.reflex, 2, 'two distinct reflex responses in the step');
+    assert.equal(after.muse - before.muse, 1, 'the collect, not the refused dismantle');
     // a real failure stays a failure
     fake.world.fail.craft_item = '[CRAFT_MATERIALS_MISSING] not enough oak_planks';
     r = await body.run('craft', { item: 'stick', n: 4 });

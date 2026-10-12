@@ -667,6 +667,33 @@ export function plainer(tool, text, call = null) {
   return t;
 }
 
+/** A failure that is one of their reflexes taking the body over, in plain words, else null. */
+export function reflexTakeover(text) {
+  const t = String(text ?? '');
+  if (/Equip an available shield/i.test(t)) return 'it put a shield in the off-hand with hostile mobs near';
+  const m = /\b(fight|evade|hide|deflect|flee|retreat|avoid) response for ([a-z_]+)/i.exec(t);
+  if (m) return `${{ fight: 'it fought', evade: 'it got out of the way of', hide: 'it hid from', deflect: 'it blocked', flee: 'it fled from', retreat: 'it fled from', avoid: 'it kept away from' }[m[1].toLowerCase()]} a ${m[2]}`;
+  if (/\[BREATH\]|surface at air|air supply/i.test(t)) return 'it swam up for air';
+  if (/fire_reflex|\bin (fire|lava)\b.*\b(escape|leave)/i.test(t)) return 'it got out of fire or lava';
+  if (/recover_footing|External impulse threatens footing/i.test(t)) return 'it got its footing back';
+  return null;
+}
+/**
+ * Their reflexes that acted during a step, in plain words, once each (F11 of the log hunt: raw runtime text with entity
+ * ids, coordinates, floats and jargon, the same zombie five times, entries cut mid-word): "it fought a zombie, it hid
+ * from a skeleton and 2 more".
+ */
+export function reflexWords(list = []) {
+  const said = [];
+  for (const x of list) {
+    const t = String(x ?? '').replace(/^\s*\[[A-Z_]+\]\s*/, '');
+    const words = reflexTakeover(t) ?? (/fall|footing|water placement/i.test(t) ? 'it saved itself from a fall' : /eat|food/i.test(t) ? 'it ate' : null);
+    if (words && !said.includes(words)) said.push(words);
+  }
+  if (!said.length && list.length) said.push('one of its reflexes acted');
+  return said.length > 3 ? `${said.slice(0, 3).join(', ')} and ${said.length - 3} more` : said.join(', ');
+}
+
 /** What a call did so far, in words (their evidence), or null: what a reply leads with when a reflex cut it short. */
 export function doneSoFar(tool, output, call) {
   try { return describe(tool, output?.result ?? {}, call); } catch { return null; }
@@ -678,7 +705,7 @@ export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   const { code: theirs, text: raw } = splitError(r.error);
   const text = plainer(tool, raw, call);
   const said = describe(tool, r, call);
-  const extra = (output?.interruptions ?? []).length ? ` [on its own: ${output.interruptions.map((x) => clean(String(x).replace(/^\s*\[[A-Z_]+\]\s*/, ''), 80)).join(', ')}]` : '';
+  const extra = (output?.interruptions ?? []).length ? ` [meanwhile on its own: ${reflexWords(output.interruptions)}]` : '';
   if (status === 'succeeded') return { ok: true, result: `${said ?? 'done'}${extra}`, code: null, theirs: null };
   if (status === 'cancelled' && stopped) return { ok: false, result: `stopped: ${stopped}${said ? `; ${said}` : ''}${extra}`, code: /timed out after/.test(stopped) ? 'TIMED_OUT' : 'STOPPED', theirs };
   // the craft or smelt was done in full and only the table or furnace put down for it was not picked up again (their

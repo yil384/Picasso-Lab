@@ -257,6 +257,7 @@ export async function startFakeMineAi(opts = {}) {
         world.blocks = [...world.blocks.filter((b) => b.name !== 'crafting_table'), { name: 'crafting_table', found: 1, listed: [{ x: Math.floor(world.position.x) + 1, y: Math.floor(world.position.y), z: Math.floor(world.position.z) }] }];
       }
       const result = t ? { ...(done ?? {}), status: 'failed', error: t.error } : done;
+      // their reflexes that acted during the action, as their runner lists them (world.interruptionsFor[tool])
       // what else happened meanwhile (a walk's digging and scaffolding, a pickup): in the inventory, not in the evidence
       if (result.status !== 'cancelled') for (const [k, n] of Object.entries(world.side[tool] ?? {})) add(k, n);
       settle(act, result);
@@ -270,7 +271,7 @@ export async function startFakeMineAi(opts = {}) {
     if (act.state !== 'running') return;
     clearTimeout(act.timer);
     act.state = 'settled';
-    act.output = { action: act.tool, durationMs: Date.now() - act.t0, result };
+    act.output = { action: act.tool, durationMs: Date.now() - act.t0, result, ...(world.interruptionsFor?.[act.tool] ? { interruptions: [...world.interruptionsFor[act.tool]] } : {}) };
     if (active === act.id) active = null;
     unretrieved = act.id;
     for (const w of act.waiters.splice(0)) w();

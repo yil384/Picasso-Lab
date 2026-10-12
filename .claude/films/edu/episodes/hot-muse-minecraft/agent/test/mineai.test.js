@@ -205,7 +205,11 @@ test('mineai skills: their results become our text and typed codes', () => {
   assert.equal(fromTheirs('navigate', { result: { status: 'succeeded', navigation: { end: { x: 3.5, y: 64, z: -2.2 }, target: { x: 3, y: 64, z: -3 }, remainingDistance: 0.4 } } }).result, 'walked to 3 64 -3');
   assert.equal(fromTheirs('collect_mob_drop', { result: { status: 'succeeded', hunt: { mob: 'sheep', drop: 'white_wool', requested: 2, gained: 2, targetDeathsObserved: 2 } } }).result, 'hunted sheep: 2 killed, 2 white_wool picked up (2 wanted)');
   assert.equal(fromTheirs('navigate', { result: { status: 'cancelled' } }, { stopped: 'timed out after 120 s' }).code, 'TIMED_OUT');
-  assert.match(fromTheirs('navigate', { result: { status: 'succeeded' }, interruptions: ['hostile_contact'] }).result, /\[on its own: hostile_contact\]/);
+  assert.match(fromTheirs('navigate', { result: { status: 'succeeded' }, interruptions: ['hostile_contact'] }).result, /\[meanwhile on its own: one of its reflexes acted\]/);
+  // F11 of the log hunt: once each, in plain words, no entity ids, coordinates or floats
+  const busy = fromTheirs('collect_block', { result: { status: 'succeeded', collected: { requested: 14, gained: 14, gainedByItem: { obsidian: 14 }, blocksBroken: 14 } }, interruptions: ['fight response for zombie#5761 at 48,-43,-315 (3.7 blocks).', 'fight response for zombie#5814 at 44,-54,-320 (3.4 blocks).', 'fight response for zombie#5814 at 44,-54,-320 (3.4 blocks).', 'evade ended with capability_limit at health 7.166667938232422: Emergency evade s'] }, { call: { args: { block_name: 'obsidian', count: 14 } } });
+  assert.match(busy.result, / \[meanwhile on its own: it fought a zombie, one of its reflexes acted\]$|\[meanwhile on its own: it fought a zombie\]$/);
+  assert.doesNotMatch(busy.result, /#\d|\d+\.\d{3}|capability_limit/);
   assert.equal(codeFor('SMELT_FUEL_STARVED'), 'NEED_ITEMS');
   assert.equal(fromTheirs('build_structure', { result: { status: 'failed', error: '[BUILD_INCOMPLETE] 7 cells still wrong: 7 need a block the bot does not carry; short of 7 dirt.' } }).code, 'NEED_ITEMS', 'their words say what is not carried');
   assert.equal(codeFor('UNKNOWN_HUNT_MOB'), 'BAD_ARGS');

@@ -21,7 +21,7 @@
 import { createPlanner } from '../plan.js';
 import { registryFor } from '../mc.js';
 import { fuelPlan } from '../game.js';
-import { bestFood, CARE_DEFAULTS, CARE_KNOBS, junkOf } from './skills.js';
+import { bestFood, CARE_DEFAULTS, CARE_KNOBS, junkOf, reflexWords } from './skills.js';
 import { facingOf } from '../state.js';
 
 const reg = registryFor('1.21.4');
@@ -752,7 +752,7 @@ export function createCare(deps) {
       const out = await deps.act(call, deadline, ctl);
       results.push({ call, out });
       // their reflexes that interrupted it (a fight during a hunt): said with the care's own line
-      for (const x of out.output?.interruptions ?? []) (ctl.interruptions ??= []).push(String(x).replace(/^\s*\[[A-Z_]+\]\s*/, '').slice(0, 80));
+      for (const x of out.output?.interruptions ?? []) (ctl.interruptions ??= []).push(String(x));
       if (out.error || out.output?.result?.status !== 'succeeded') break;
     }
     return results;
@@ -1117,7 +1117,7 @@ export function createCare(deps) {
       // the status is read again once it is done, so the next decision never acts on what it just changed
       job.done = carry(d, ctl).catch((err) => add({ kind: d.kind, ok: false, text: `${d.why}: ${String(err?.message ?? err).slice(0, 200)}` }))
         .then((entry) => {
-          if (entry && ctl.interruptions?.length) entry.text = `${entry.text} [meanwhile its reflexes: ${[...new Set(ctl.interruptions)].join(', ')}]`;
+          if (entry && ctl.interruptions?.length) entry.text = `${entry.text} [meanwhile on its own: ${reflexWords(ctl.interruptions)}]`;
           return deps.refresh().catch(() => {});
         }).finally(() => { if (running === job) running = null; });
       await job.done;
@@ -1146,6 +1146,12 @@ export function createCare(deps) {
     },
     /** What the body did by itself this game: {reflex, care}. */
     counts() { return { ...counts }; },
+    /** Their reflexes that acted during a step of the player's: counted, and logged as reflex rows (not in the journal:
+     * the step's own reply says what they did). */
+    reflexesInStep(list, tool) {
+      counts.reflex += list.length;
+      for (const x of list) deps.event('care', { kind: 'in_step', source: 'reflex', step: tool, text: reflexWords([x]) });
+    },
     /** The player went back for a death's items (pick_up death_items): no more advice about that death. */
     recovered(key) { if (key) memory.recovered = key; },
     /** A portal frame was built (no more portal advice), or the body arrived in the Nether at pos (the way back). */
