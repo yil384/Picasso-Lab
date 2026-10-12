@@ -181,11 +181,15 @@ try {
     // the start's height was where the bot landed; the ground may be a few blocks off it
     for (const dy of [0, -4, 4, -8]) if ((await step('go_to', { x: start.x, y: start.y + dy, z: start.z })).ok) break;
   }
-  await phase('portal frame', 3, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async (i) => {
-    // a frame that did not work out: its obsidian back first (portal dismantle: its own frame, block by block)
+  await phase('portal frame', 6, async () => (await step('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, async (i) => {
+    // a frame that did not work out: its obsidian back first (portal dismantle: its own frame, block by block); a site
+    // refused (water or lava near, rock): somewhere else, farther each time, on whatever ground is there
     if (n('obsidian') < 14) await step('portal', { action: 'dismantle' });
     const p = positionOf(s);
-    if (p) await step('go_to', { x: p.x + 6, y: p.y, z: p.z + (i % 2 ? 6 : 0) });
+    if (!p) return;
+    const d = 10 + 5 * i;
+    const [dx, dz] = [[d, 0], [0, d], [-d, 0], [0, -d]][i % 4];
+    for (const dy of [0, 2, -2, 4, -4]) if ((await step('go_to', { x: p.x + dx, y: p.y + dy, z: p.z + dz })).ok) break;
   });
   await phase('portal lit', 2, async () => (await step('portal', { action: 'light' })).ok);
   await phase('in the Nether', 2, async () => { await step('portal', { action: 'enter', low_supplies: true }); await call('get_state'); return dimension() === 'the_nether'; });

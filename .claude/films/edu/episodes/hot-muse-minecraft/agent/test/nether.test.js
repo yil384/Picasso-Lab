@@ -97,11 +97,15 @@ test('nether: the portal site is read around the frame: water next to it, or not
     fake.world.boxAt = (x, y) => (y >= 64 ? 'deepslate' : 'stone');
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
     assert.match(r.result, /^the frame would be cut into rock \(10 of its cells hold deepslate\)/);
+    // two stone cells of a hillside on the surface: built as usual
+    fake.world.boxAt = (x, y) => (y === 64 && x % 2 === 0 ? 'stone' : y < 64 ? 'stone' : 'air');
+    r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.doesNotMatch(r.result, /cut into rock/);
     fake.world.boxAt = null;
     fake.world.viewFail = true;
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
     assert.match(r.result, /could not be read/);
-    assert.equal(fake.tools('build_structure').length, 0, 'nothing placed');
+    assert.equal(fake.tools('build_structure').length, 1, 'only the hillside frame was placed');
   } finally { await body.close(); }
 });
 

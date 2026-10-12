@@ -98,6 +98,8 @@ export const FRAME_GUARD = 160;
 export const PORTAL_SETTLE_MS = 10_000;
 /** Rock a nether_portal frame should not be cut into (their build may keep such a cell). */
 const ROCK = new Set(['stone', 'deepslate', 'tuff', 'granite', 'diorite', 'andesite', 'calcite', 'basalt', 'blackstone', 'netherrack', 'dripstone_block', 'smooth_basalt']);
+/** The rock of the deep, where their build kept frame cells (deepslate, tuff). */
+const DEEP_ROCK = new Set(['deepslate', 'tuff']);
 
 /** Their temporary station's verification hitches (a placed furnace or table not yet seen), worth one more try. */
 export const STATION_HITCH = /consumption of [a-z_]+ was not observed|NO_LOADED_MATCHING_TARGETS\] Observed 0 loaded (crafting_table|furnace) blocks/;
@@ -570,8 +572,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // to be in the ground
     if (!near) {
       const bottom = Math.min(...ys);
+      // inside rock: most of the frame's cells above the ground row are rock, or deep rock (deepslate, tuff) is in it; a
+      // frame against a hillside on the surface digs its stone cells as usual (a staging bench, 2026-10-12: two stone
+      // cells on a slope were refused)
       const rock = cells.filter((c) => c.block_name !== 'air' && c.y > bottom).map((c) => seen.get(`${c.x},${c.y},${c.z}`)).filter((n) => ROCK.has(n));
-      if (rock.length >= 2) return { ok: false, result: `the frame would be cut into rock (${rock.length} of its cells hold ${[...new Set(rock)].join(' and ')}): build it on open ground, where its sides and top stand in the air (go_to a spot with flat ground and open sky first)`, code: 'FAILED', delta: {} };
+      const above = cells.filter((c) => c.block_name !== 'air' && c.y > bottom).length;
+      if (rock.length * 2 > above || rock.filter((n) => DEEP_ROCK.has(n)).length >= 2) return { ok: false, result: `the frame would be cut into rock (${rock.length} of its cells hold ${[...new Set(rock)].join(' and ')}): build it on open ground, where its sides and top stand in the air (go_to a spot with flat ground and open sky first)`, code: 'FAILED', delta: {} };
       return null;
     }
     return { ok: false, result: `${near.name} at ${near.x} ${near.y} ${near.z} is next to where the portal frame would stand: build it on dry ground away from lava and water (go_to a spot with flat ground and open sky first)`, code: near.name === 'lava' ? 'LAVA' : 'FAILED', delta: {} };
