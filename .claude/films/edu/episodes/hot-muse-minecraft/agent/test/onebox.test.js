@@ -229,6 +229,12 @@ test('report.js: goals from words, the plan for each goal, the tracker on its ow
   assert.deepEqual(r.data.decisions.filter((d) => d.kind === 'advice').map((d) => [d.followed, d.text]), [[false, 'night in 1 min'], [true, 'night now']]);
   assert.match(r.text, /\n- 2:05 \(no why given\) -> collect dirt 4: ok\n/);
   assert.deepEqual(r.data.milestones.find((m) => m.key === 'wooden_pickaxe'), { key: 'wooden_pickaxe', name: 'wooden pickaxe', atS: 61 });
+  // a long game: the first 30 entries, a line for those left out, the latest
+  for (let i = 0; i < 200; i++) tr.onCall('play', { skill: 'eat', args: {}, why: `meal ${i}` }, { structuredContent: { steps: [{ skill: 'eat', status: 'confirmed' }], advice: [] } });
+  const long = tr.report({ gameId: 'g123' });
+  assert.equal(long.data.decisions.length, 160);
+  assert.equal(long.data.decisionsLeftOut, 46);
+  assert.match(long.text, /\n- 2:05 "dark now" -> shelter: ok\n[\s\S]*\n- \.\.\. 46 more entries left out here \.\.\.\n- 3:20 "meal 70" -> eat: ok\n[\s\S]*"meal 199" -> eat: ok$/);
   const p = tr.progress();
   assert.equal(p.reached, true);
   assert.equal(p.list.find((m) => m.k === 'portal').atS, 125);

@@ -69,7 +69,9 @@ const mmss = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); return `${M
 // a step in a few words: the names and counts as they are ("collect birch_log 12"), other arguments with their key
 const PLAIN = new Set(['block', 'item', 'n', 'mob', 'drop', 'blueprint', 'material', 'action', 'liquid', 'target', 'x', 'y', 'z', 'text']);
 const brief = (st) => `${st.skill}${st.args && Object.keys(st.args).length ? ` ${Object.entries(st.args).map(([k, v]) => (typeof v === 'object' ? `${k}=${JSON.stringify(v)}` : PLAIN.has(k) ? `${v}` : `${k}=${v}`)).join(' ')}` : ''}`;
-const DECISIONS_KEPT = 80;
+// a long game's log: the first entries and the latest, about 150 lines in all (a 2-hour game makes about 150 calls)
+const DECISIONS_KEPT = 160;
+const DECISIONS_HEAD = 30;
 
 /**
  * The tracker of one game.
@@ -81,6 +83,7 @@ export function createTracker({ goal: first = { key: 'free', text: null }, now =
   const reached = new Map(); // key -> ms since start
   const deaths = [];
   const decisions = []; // {at, kind: 'call'|'advice', ...}
+  let dropped = 0; // entries left out of a long game's log (between the first ones and the latest)
   let shown = []; // the advice the last reply showed: [{kind, text, hint}]
   const declined = new Set(); // advice kinds logged as declined while they stay shown
   const view = { inventory: {}, dim: 'overworld', dims: new Set(['overworld']), portalBuilt: false };
@@ -129,7 +132,7 @@ export function createTracker({ goal: first = { key: 'free', text: null }, now =
       const steps = sc.steps ?? [];
       const outcome = out?.isError ? `refused (${sc.code ?? 'error'})` : steps.some((st) => st.status === 'failed') ? `failed: ${steps.find((st) => st.status === 'failed').code ?? 'FAILED'}` : steps.every((st) => st.status === 'confirmed') ? 'ok' : 'running';
       decisions.push({ at, kind: 'call', why: typeof args?.why === 'string' && args.why.trim() ? args.why.trim().slice(0, 200) : null, steps: sent.map(brief).join(', ').slice(0, 300), outcome });
-      while (decisions.length > DECISIONS_KEPT) decisions.shift();
+      while (decisions.length > DECISIONS_KEPT) { decisions.splice(DECISIONS_HEAD, 1); dropped += 1; }
       for (const st of steps) if (st.skill === 'build' && st.args?.blueprint === 'nether_portal' && st.status === 'confirmed') view.portalBuilt = true;
       shown = sc.advice ?? [];
       // a kind no longer advised can be declined again when it comes back
@@ -172,9 +175,12 @@ export function createTracker({ goal: first = { key: 'free', text: null }, now =
         `Deaths: ${deaths.length ? deaths.map((d) => `${mmss(d.at)} ${d.cause ?? 'died'}${d.position ? ` at ${Math.floor(d.position.x)} ${Math.floor(d.position.y)} ${Math.floor(d.position.z)}` : ''}`).join('; ') : 'none'}.`,
         attribution?.text ? `${attribution.text}.` : null,
         decisions.length ? 'Decision log (your own why, and the advice you followed or declined):' : 'Decision log: no calls yet.',
-        ...decisions.map((d) => (d.kind === 'call'
-          ? `- ${mmss(d.at)} ${d.why ? `"${d.why}"` : '(no why given)'} -> ${d.steps}: ${d.outcome}`
-          : `- ${mmss(d.at)} advice ${d.followed ? 'followed' : 'declined'} (${d.skill}): ${d.text.slice(0, 160)}`)),
+        ...decisions.flatMap((d, i) => [
+          ...(dropped && i === DECISIONS_HEAD ? [`- ... ${dropped} more entries left out here ...`] : []),
+          d.kind === 'call'
+            ? `- ${mmss(d.at)} ${d.why ? `"${d.why}"` : '(no why given)'} -> ${d.steps}: ${d.outcome}`
+            : `- ${mmss(d.at)} advice ${d.followed ? 'followed' : 'declined'} (${d.skill}): ${d.text.slice(0, 160)}`,
+        ]),
       ].filter(Boolean);
       return {
         text: lines.join('\n'),
@@ -184,6 +190,7 @@ export function createTracker({ goal: first = { key: 'free', text: null }, now =
           deaths: deaths.map((d) => ({ atS: Math.round(d.at / 1000), cause: d.cause })),
           attribution: attribution ? { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } : null,
           decisions: decisions.map((d) => ({ atS: Math.round(d.at / 1000), ...d, at: undefined })),
+          decisionsLeftOut: dropped,
         },
       };
     },

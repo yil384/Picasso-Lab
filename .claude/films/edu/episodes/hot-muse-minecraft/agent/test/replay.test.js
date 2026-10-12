@@ -196,7 +196,8 @@ for (const [id, steps] of Object.entries(games)) {
     const times = (/\nMilestones: ([^\n]*)\./.exec(text)?.[1] ?? '').split(', ').map((m) => /(\d+):(\d\d)(?:;|$)/.exec(m)).filter(Boolean).map((m) => Number(m[1]) * 60 + Number(m[2]));
     assert.deepEqual(times, [...times].sort((a, b) => a - b), 'milestones in the order they came');
     const calls = report.decisions.filter((d) => d.kind === 'call');
-    assert.equal(calls.length, Math.min(steps.length, 80 - report.decisions.filter((d) => d.kind === 'advice').length) || calls.length);
+    assert.equal(report.decisionsLeftOut, 0);
+    assert.equal(calls.length, steps.length, 'every call in the decision log');
     for (const d of calls) assert.match(d.why, /^Step \d+: /, 'every call keeps its why');
     assert.match(mid.content[0].text, /^Report for game g\w+: goal /, 'game_report mid-game');
     assert.equal(EXPECTED_REPORT[id]?.(report, text) ?? true, true);
