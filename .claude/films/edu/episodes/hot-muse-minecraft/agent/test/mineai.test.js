@@ -124,6 +124,12 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   assert.equal(toTheirs('collect', { block: 'stone', n: 12 }, ctx).timeoutMs, undefined);
   assert.equal(toTheirs('go_to', { x: 0, y: 70, z: 0 }, { ...ctx, position: { x: 0, y: -50, z: 0 } }).timeoutMs, 240_000, 'a climb of 120 blocks: 2 minutes and 2 s a block past 60');
   assert.equal(toTheirs('go_to', { x: 10, y: 70, z: 0 }, { ...ctx, position: { x: 0, y: 70, z: 0 } }).timeoutMs, undefined);
+  // F5 of the log hunt: a walk's refusal names no argument we do not have, and says what y to send
+  const nav = fromTheirs('navigate', { result: { status: 'failed', error: '[NAVIGATION_NO_FOOTING] No usable footing was observed within 1 blocks of 9, 66, -25. The ground in that column is at y=61. Choose an observed supported height, or pass build: true to scaffold to this point deliberately.' } });
+  assert.equal(nav.result, 'failed: nothing to stand on at 9 66 -25: y is the height of your feet, one above the ground, and the ground there is at y=61, so go_to 9 62 -25');
+  const air = fromTheirs('navigate', { result: { status: 'failed', error: 'No usable footing was observed within 1 blocks of 9, 166, -25. No ground was found within 64 blocks below it. Choose an observed supported height, or pass build: true to scaffold to this point deliberately.' } });
+  assert.doesNotMatch(air.result, /build: true|1 blocks/);
+  assert.match(air.result, /nothing to stand on at 9 166 -25, and no ground within 64 blocks below it/);
   // their failures in our codes: lava in the way, no room in the inventory
   assert.equal(fromTheirs('collect_block', { result: { status: 'failed', error: '[MINE_TARGET_PROHIBITED] 2 lava faces, 0 blocks available for placement' } }).code, 'LAVA');
   assert.equal(fromTheirs('craft_item', { result: { status: 'failed', error: 'Mineflayer stopped while executing the selected recipe batch: This crafting execution needs inventory room to store 1 flint_and_steel' } }).code, 'INVENTORY_FULL');

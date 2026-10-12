@@ -19,7 +19,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { inventoryDelta } from '../contracts.js';
 import { renderState, describeCall, describeDelta } from '../state.js';
 import { NOTABLE_BLOCKS } from '../state.js';
-import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, SPAWN_GUARD, toTheirs, fromTheirs, ownChange, splitError } from './skills.js';
+import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, SPAWN_GUARD, toTheirs, fromTheirs, doneSoFar, ownChange, splitError } from './skills.js';
 import { createCare, armorPlan, wearPlan, toolClassFor, toolOf, pickaxeTierFor, sparePlan, replacementFor, describeCare, describeReflexes, ARMOR_SLOTS, armorOf } from './care.js';
 
 /** Every call of ours says why in one sentence (their rationale is required and goes into their own log only). */
@@ -753,8 +753,14 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
               res = { ok: true, code: null, result: `crafted ${gained} ${craftHad.item}${offHand ? '; it is in your off-hand' : ''}; a reflex took the body over meanwhile (${takeover})${table?.back ? '; the crafting table put down for the craft was picked up again' : table?.at ? `; the crafting table put down for the craft stands at ${table.at.x} ${table.at.y} ${table.at.z}` : ''}` };
             }
           }
+          // a collect whose blocks were all in when the reflex came (F4 of the log hunt: "failed: evade response" with
+          // all 6 logs in the bag): done
+          const collected = Number(out.output?.result?.collected?.gained) || 0;
+          if (!res.ok && takeover && call.tool === 'collect_block' && collected >= (Number(call.args?.count) || 1)) {
+            res = { ok: true, code: null, result: `${doneSoFar(call.tool, out.output, call) ?? `collected ${collected}`}; a reflex took the body over meanwhile (${takeover})` };
+          }
           // truly cut short: tried once more after the reflex let go (calls that can simply be sent again), else a
-          // plain INTERRUPTED instead of a failure
+          // plain INTERRUPTED, leading with what was done, instead of a failure
           if (!res.ok && takeover) {
             if (RETRY_AFTER_REFLEX.has(call.tool) && !retried.has(i) && deadline - Date.now() > 10_000) {
               retried.add(i);
@@ -762,7 +768,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
               if (!ctl.stopped) { parts.push({ ok: true, result: `a reflex took the body over (${takeover}); tried again once it let go`, code: null }); i -= 1; continue; }
             }
             own = null;
-            res = { ok: false, code: 'INTERRUPTED', result: `a reflex took the body over (${takeover}) before ${call.tool.replace(/_/g, ' ')} was done; nothing is wrong with the step: send it again once the mobs are dealt with` };
+            const sofar = doneSoFar(call.tool, out.output, call);
+            res = { ok: false, code: 'INTERRUPTED', result: `${sofar ? `${sofar}; ` : ''}a reflex took the body over (${takeover}) before ${call.tool.replace(/_/g, ' ')} was done; nothing is wrong with the step: send it again once the mobs are dealt with` };
           }
           const o = ownChange(call.tool, out.output, call);
           if (o === null) own = null;

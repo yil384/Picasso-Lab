@@ -108,7 +108,7 @@ export const EXTRA_DEFS = Object.freeze([
  * waits for the whole load in one furnace, and fuel goes one kind after another.
  */
 export const MINEAI_DESCRIPTIONS = Object.freeze({
-  go_to: 'Walk to a block position; the body finds its own way (it may dig, bridge, pillar or swim). The target must be within 256 blocks. Seconds to two minutes; a walk that finds no way ends and says why.',
+  go_to: 'Walk to a block position; the body finds its own way (it may dig, bridge, pillar or swim). y is the height of your feet: one above the ground block you want to stand on (get_state\'s position is your feet). The target must be within 256 blocks. Seconds for a short walk, a few minutes for a long one or a climb out of the deep (its time limit grows with the distance); a walk that finds no way ends and says why.',
   collect: 'Mine n blocks of one type and pick up the drops: the body searches every loaded chunk around you (not only the nearest 32 blocks), walks there and uses the best tool you carry. stone drops cobblestone (collect cobblestone mines stone for it); iron_ore drops raw_iron and needs a stone pickaxe or better; diamond_ore (deepslate_diamond_ore below y 0) drops diamond and needs an iron pickaxe: diamonds lie at y 16 and below, most near y -59. obsidian needs a diamond pickaxe, cobblestone to close off lava and a water bucket: with no obsidian loaded the body pours the water onto still lava, scoops it back and mines what formed. It walks to the nearest lava it knows of, which can be far away or on the surface (at night too): go near lava first (get_state lists lava among the nearby blocks; deep caves below y -54 have plenty). gravel drops flint now and then (about 1 in 10). Lava next to a target is closed off with a carried block before the dig; a target it cannot make safe is refused (code LAVA). The reply says what the step mined and picked up, and apart from that what changed on the way (blocks dug through, scaffolding placed).',
   craft: 'Craft n of an item from your inventory (rounded up to whole recipe batches; planks and sticks it lacks are made from what you carry). When the recipe needs a crafting table, the one you carry is put down for the craft and picked up again; carrying none, a table within reach is used, else one is made from 4 planks and left standing.',
   craft_batch: `Craft several items in order in ONE skill, one after another, each as craft: later items use what the earlier ones made, and a crafting table you carry (or one made earlier in the list) is put down for each item that needs it and picked up again. Up to ${CRAFT_BATCH_MAX} items; stops at the first item that cannot be made and says what is missing.`,
@@ -623,10 +623,35 @@ function doneInFull(r) {
  *   timeout); call: the call of theirs it answers (for the block a collect mined, the material a build placed)
  * @returns {{ok: boolean, result: string, code: string|null, theirs: string|null}}
  */
+/**
+ * Their words where they would mislead a player of ours (F5 of the log hunt: 76 go_to refusals asked for "build:
+ * true", an argument our go_to does not have, and never said that y is the feet's height).
+ */
+export function plainer(tool, text, call = null) {
+  let t = String(text ?? '');
+  if (tool === 'navigate') {
+    const at = /of (-?\d+), (-?\d+), (-?\d+)\./.exec(t);
+    const ground = /The ground in that column is at y=(-?\d+)/.exec(t);
+    if (/No usable footing was observed/.test(t) && at && ground) {
+      t = t.replace(/No usable footing was observed within \d+ blocks? of -?\d+, -?\d+, -?\d+\. The ground in that column is at y=-?\d+\. Choose an observed supported height, or pass build: true to scaffold to this point deliberately\./,
+        `nothing to stand on at ${at[1]} ${at[2]} ${at[3]}: y is the height of your feet, one above the ground, and the ground there is at y=${ground[1]}, so go_to ${at[1]} ${Number(ground[1]) + 1} ${at[3]}`);
+    }
+    t = t.replace(/No usable footing was observed within \d+ blocks? of (-?\d+), (-?\d+), (-?\d+)\. No ground was found within (\d+) blocks below it\.( Choose an observed supported height, or pass build: true to scaffold to this point deliberately\.)?/, 'nothing to stand on at $1 $2 $3, and no ground within $4 blocks below it (open air or a deep drop): pick a point just above the ground');
+    t = t.replace(/,? or pass build: true to scaffold to this point deliberately/g, '').replace(/within 1 blocks/g, 'within 1 block');
+  }
+  return t;
+}
+
+/** What a call did so far, in words (their evidence), or null: what a reply leads with when a reflex cut it short. */
+export function doneSoFar(tool, output, call) {
+  try { return describe(tool, output?.result ?? {}, call); } catch { return null; }
+}
+
 export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   const r = output?.result ?? {};
   const status = String(r.status ?? 'failed');
-  const { code: theirs, text } = splitError(r.error);
+  const { code: theirs, text: raw } = splitError(r.error);
+  const text = plainer(tool, raw, call);
   const said = describe(tool, r, call);
   const extra = (output?.interruptions ?? []).length ? ` [on its own: ${output.interruptions.map((x) => clean(String(x).replace(/^\s*\[[A-Z_]+\]\s*/, ''), 80)).join(', ')}]` : '';
   if (status === 'succeeded') return { ok: true, result: `${said ?? 'done'}${extra}`, code: null, theirs: null };

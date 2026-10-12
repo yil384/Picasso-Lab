@@ -207,6 +207,15 @@ test('a reflex takes a craft over: made means ok (with a note), cut short means 
     assert.equal(r.ok, false);
     assert.equal(r.code, 'INTERRUPTED');
     assert.match(r.result, /a reflex took the body over \(it fought a skeleton\) before craft item was done; nothing is wrong with the step: send it again/);
+    // F4 of the log hunt: a collect with all its blocks in when an evade took over: done; one cut short leads with what it got
+    fake.world.takeovers.push({ tool: 'collect_block', made: true, error: 'evade response for zombie#29420 at -11775,104,2346 (7.6 blocks) (hurt: health is below the engagement minimum).' });
+    r = await body.run('collect', { block: 'oak_log', n: 6 });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /^mined 6 oak_log and picked up 6 oak_log .*; a reflex took the body over meanwhile \(it got out of the way of a zombie\)$/);
+    fake.world.takeovers.push({ tool: 'collect_block', made: false, error: 'evade response for zombie#1 (hurt).' });
+    r = await body.run('collect', { block: 'oak_log', n: 6 });
+    assert.equal(r.code, 'INTERRUPTED');
+    assert.match(r.result, /a reflex took the body over \(it got out of the way of a zombie\) before collect block was done/);
     // a real failure stays a failure
     fake.world.fail.craft_item = '[CRAFT_MATERIALS_MISSING] not enough oak_planks';
     r = await body.run('craft', { item: 'stick', n: 4 });

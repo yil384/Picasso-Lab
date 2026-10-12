@@ -256,7 +256,7 @@ export async function startFakeMineAi(opts = {}) {
         add('crafting_table', -1);
         world.blocks = [...world.blocks.filter((b) => b.name !== 'crafting_table'), { name: 'crafting_table', found: 1, listed: [{ x: Math.floor(world.position.x) + 1, y: Math.floor(world.position.y), z: Math.floor(world.position.z) }] }];
       }
-      const result = t ? { status: 'failed', error: t.error } : done;
+      const result = t ? { ...(done ?? {}), status: 'failed', error: t.error } : done;
       // what else happened meanwhile (a walk's digging and scaffolding, a pickup): in the inventory, not in the evidence
       if (result.status !== 'cancelled') for (const [k, n] of Object.entries(world.side[tool] ?? {})) add(k, n);
       settle(act, result);
