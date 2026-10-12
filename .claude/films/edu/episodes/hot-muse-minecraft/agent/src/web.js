@@ -136,7 +136,10 @@ button.stop{background:var(--warn);border-color:var(--warn);color:var(--card)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .row form{margin:0}
 ol.log{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 12px 10px 2.4rem;margin:0;overflow-wrap:anywhere}
-footer{margin-top:2.5rem;padding-top:.8rem;border-top:1px solid var(--line)}`;
+footer{margin-top:2.5rem;padding-top:.8rem;border-top:1px solid var(--line)}
+ol.steps{margin:.4rem 0;padding-left:1.4rem}
+ol.steps li{margin:.25rem 0}
+pre.oneline{font-size:15px;font-weight:600;border:2px solid var(--accent);padding:14px;margin:.5rem 0}`;
 
 const STYLE_SRC = `'sha256-${crypto.createHash('sha256').update(CSS).digest('base64')}'`;
 const HTML_CSP = `default-src 'none'; style-src ${STYLE_SRC}; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`;
@@ -865,6 +868,9 @@ export function createWeb(opts = {}) {
 
   function landingPage(req) {
     const lease = leaseWords(web.leaseMs);
+    // the one-line prompt (the server's instructions carry the rest; src/mcp.js instructionsText)
+    const mcpUrl = `${base(req)}/mcp`;
+    const oneLine = `I'm 18 or older. Play Minecraft on ${mcpUrl} and get to the Nether and back.`;
     const closed = askClosedReason();
     const prompt = `Open ${base(req)}/ . In "Get a bot", tick "I am 18 or older" and press "Start a ${lease} session". `
       + 'On the page that opens, read "Game state", then use the action buttons to collect 10 logs of whatever tree is nearby, craft them into planks and build a hut_3x3 from those planks. '
@@ -882,6 +888,14 @@ agent.</p>
 drive, nothing in it is moderated, and none of it is made for children; we cannot check ages, so everyone who plays
 confirms they are 18 or older.</p></header>
 <main>
+<section aria-labelledby="h-muse"><h2 id="h-muse">Let Muse play: one line</h2>
+<p>In muse.ai, two steps:</p>
+<ol class="steps">
+<li>Add this server as a custom integration: in a chat, ask Muse to build a custom integration (an MCP connector) for <code>${mcpUrl}</code> (streamable HTTP, no sign-in). Once is enough.</li>
+<li>In a new conversation, send this one line (only if you are 18 or older):</li>
+</ol>
+<pre class="oneline">${oneLine}</pre>
+<p class="muted">Other goals: end the line with "get an iron pickaxe", "get diamonds" or "just play". Muse then plays by itself: it opens the live view, says why with every step, and at the end shows the server's report (the milestones with their times, deaths, who acted, its decision log). Any other MCP client: the same address, with the ready prompts play_to_the_nether and free_play.</p></section>
 <section aria-labelledby="h-start"><h2 id="h-start">Get a bot</h2>
 <p>You get a bot of your own for a ${lease} lease, then the slot goes to the next guest. Bots in use: ${sessions.size} of ${web.maxSessions}.</p>
 <form class="panel" method="post" action="/session" aria-labelledby="h-start" novalidate>

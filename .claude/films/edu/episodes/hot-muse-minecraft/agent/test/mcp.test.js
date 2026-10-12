@@ -34,11 +34,12 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
   const b = await connect(agent.url);
   try {
     const { tools } = await a.listTools();
-    assert.deepEqual(tools.map((t) => t.name).sort(), ['end_game', 'get_state', 'live_view', 'play', 'play_sequence', 'start_game', 'stop']);
+    assert.deepEqual(tools.map((t) => t.name).sort(), ['end_game', 'game_report', 'get_state', 'live_view', 'play', 'play_sequence', 'start_game', 'stop']);
     assert.equal(tools.find((t) => t.name === 'live_view').annotations?.readOnlyHint, true);
-    // no tool description and no server instruction asks the agent to open, show or watch anything
+    // no tool description and no server instruction carries a link or asks the agent to open one; the one thing the
+    // instructions ask to show is live_view's own HTML (the one-line prompt: the owner's rule since 2026-10-12)
     for (const t of tools) assert.doesNotMatch(t.description, /https?:|watch live|new tab|open (it|the|a) /i, t.name);
-    assert.doesNotMatch(a.getInstructions(), /https?:|watch|link|new tab/i);
+    assert.doesNotMatch(a.getInstructions(), /https?:|link|new tab|open (it|the|a) /i);
     const replies = [];
     const track = (c) => { const call = c.callTool.bind(c); c.callTool = async (...x) => { const r = await call(...x); if (x[0].name !== 'live_view') replies.push(text(r)); return r; }; };
     track(a);

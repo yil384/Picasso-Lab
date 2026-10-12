@@ -6,6 +6,9 @@
 // the right code here), only known codes, no runtime jargon (entity ids, raw floats, "build: true"), Body advice with
 // at most 5 items, one of each kind, every hint a valid call, and advice that changes with the game rather than the
 // same list on every reply. Every future change must pass it.
+// Since the one-line prompt (2026-10-12) each game is started with its goal and every call carries a why, as the
+// server's instructions ask, and the game ends with end_game: its report (milestones with times, deaths with causes,
+// who acted, the decision log from the whys and the advice followed or declined) is checked against the game.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -72,7 +75,7 @@ INCIDENTS.g0793f1 = {
   27: (w) => { w.food = 6; w.health = 3.4; for (const f of ['bread', 'cooked_beef', 'cooked_mutton', 'beef']) w.inventory.delete(f); w.inventory.set('rotten_flesh', 2); },
   28: (w) => { w.inventory.set('cobblestone', 20); },
   // shot by a skeleton during the hunt
-  29: (w) => { w.die = 'collect_mob_drop'; },
+  29: (w) => { w.die = 'collect_mob_drop'; w.dieCause = 'Tst_rv was shot by Skeleton'; },
   // the items back at the death spot (the fake runtime's pickup does not restore them)
   31: (w) => { for (const [k, n] of [['diamond_pickaxe', 1], ['iron_pickaxe', 1], ['water_bucket', 1], ['flint_and_steel', 1], ['shield', 1], ['cobblestone', 20], ['cooked_beef', 4]]) w.inventory.set(k, n); w.health = 12; w.food = 14; },
   34: (w) => { w.blocks = [{ name: 'lava', found: 9, listed: [{ x: 287, y: 84, z: 53, level: 0 }] }]; },
@@ -86,14 +89,42 @@ INCIDENTS.g0793f1 = {
 
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
-  // 1: raw_chicken is refused before a hunt; 18: production smelted the mutton again after its hitch, but here the
+  // 1: raw_chicken (refused before a hunt until 2026-10-12) is read as chicken now and hunted (src/tolerant.js); 18: production smelted the mutton again after its hitch, but here the
   // hitch was tried again within step 15, so the mutton is already cooked and the repeat is refused by the check;
   // 31: no lava pool within 16 blocks; 39: the full bag
-  g64e8c5: { 1: 'BAD_ARGS', 18: 'NEED_ITEMS', 31: 'LAVA', 39: 'INVENTORY_FULL' },
+  g64e8c5: { 18: 'NEED_ITEMS', 31: 'LAVA', 39: 'INVENTORY_FULL' },
   // 22: a second fill without an empty bucket (production's first fill had timed out; here it worked): not checked;
   // 24, 34: no pool within 16 blocks (the reply names the nearest); 26: a reflex took the collect over; 29: the death;
   // 39: lava next to the frame's site
   g0793f1: { 22: null, 24: 'LAVA', 26: 'INTERRUPTED', 29: 'DIED', 34: 'LAVA', 39: 'LAVA' },
+};
+
+/** The goal each game played for. */
+const GOALS = { gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back' };
+/** A why for a step, as Muse writes them (the fixtures predate why in the log). */
+const whyOf = (i, st) => `Step ${i}: ${[st.tool, ...Object.values(st.args ?? {}).filter((v) => typeof v !== 'object')].join(' ')} for the goal`;
+
+/** What each game's report must say. */
+const EXPECTED_REPORT = {
+  gb1cfe3: (r) => {
+    assert.equal(r.goalReached, true, 'the iron pickaxe');
+    assert.deepEqual(r.milestones.map((m) => m.key), ['wooden_pickaxe', 'stone_pickaxe', 'iron_ingot', 'iron_pickaxe']);
+    return true;
+  },
+  g0793f1: (r, text) => {
+    // the whole way: every milestone, back in the Overworld last
+    assert.deepEqual(r.milestones.filter((m) => m.atS === null).map((m) => m.key), [], text);
+    assert.equal(r.goalReached, true);
+    assert.match(text, /\nGoal: reached at \d+:\d\d\./);
+    // the death of step 29, with its cause
+    assert.equal(r.deaths.length, 1, text);
+    assert.match(text, /\nDeaths: \d+:\d\d was shot by Skeleton at 360 35 -78\./, 'the cause, without the bot\'s name');
+    assert.doesNotMatch(text, /\nDeaths: none/);
+    // advice that was followed (the pick_up after the death) and advice that was declined
+    assert.ok(r.decisions.some((d) => d.kind === 'advice' && d.followed), 'advice followed');
+    assert.ok(r.decisions.some((d) => d.kind === 'advice' && !d.followed), 'advice declined');
+    return true;
+  },
 };
 
 async function replay(id, steps) {
@@ -108,18 +139,22 @@ async function replay(id, steps) {
   await c.connect(new StreamableHTTPClientTransport(new URL(`${url}/mcp`)));
   const out = [];
   try {
-    const start = await c.callTool({ name: 'start_game', arguments: { adult: true } });
+    const start = await c.callTool({ name: 'start_game', arguments: { adult: true, goal: GOALS[id] } });
     assert.ok(!start.isError, start.content[0].text);
+    if (GOALS[id]) assert.match(start.content[0].text, /\nGoal: [^\n]+\. The plan, milestone by milestone/);
     const fake = hosts.started[0].fake;
     for (const [i, st] of steps.entries()) {
       INCIDENTS[id]?.[i]?.(fake.world);
-      const r = await c.callTool({ name: 'play', arguments: { skill: st.tool, args: st.args } });
+      const r = await c.callTool({ name: 'play', arguments: { skill: st.tool, args: st.args, why: whyOf(i, st) } });
       const text = r.content.map((x) => x.text).join('\n');
       const step = r.structuredContent?.steps?.at(-1) ?? null;
       out.push({ i, st, text, code: r.structuredContent?.code ?? null, status: step?.status ?? (r.isError ? 'refused' : null), result: step?.result ?? text.split('\n')[0], advice: r.structuredContent?.advice ?? [] });
     }
+    // the game's report, mid-game and at the end
+    const mid = await c.callTool({ name: 'game_report', arguments: {} });
+    const end = await c.callTool({ name: 'end_game', arguments: {} });
     // what the game's replies were, together: the advice must change with the game
-    return { out, rows: log.tail(2000) };
+    return { out, rows: log.tail(2000), mid, end };
   } finally {
     await c.close();
     await web.stop?.();
@@ -129,7 +164,7 @@ async function replay(id, steps) {
 
 for (const [id, steps] of Object.entries(games)) {
   test(`replay ${id}: Muse's ${steps.length} real steps, no false failures, right codes, clean words, sane advice`, async () => {
-    const { out, rows } = await replay(id, steps);
+    const { out, rows, mid, end } = await replay(id, steps);
     const expected = EXPECTED[id] ?? {};
     for (const o of out) {
       const want = o.i in expected ? expected[o.i] : 'ok';
@@ -148,5 +183,24 @@ for (const [id, steps] of Object.entries(games)) {
     for (const [text, n] of Object.entries(counts)) assert.ok(n <= Math.max(3, out.length * 0.6), `advice repeated on ${n} of ${out.length} replies: ${text}`);
     // the log has every call (F9)
     assert.equal(rows.filter((r) => r.kind === 'mcp_call' && r.tool === 'play').length, steps.length);
+
+    // the report: the goal, the milestones in time order, the deaths, who acted, the decision log with every why
+    const report = end.structuredContent?.report;
+    const text = end.content.map((x) => x.text).join('\n');
+    assert.ok(report, 'end_game returns the report');
+    assert.match(text, /^Game ended\.\n\nReport for game g\w+: goal /);
+    assert.doesNotMatch(text, JARGON);
+    assert.match(text, /\nThis game: \d+ actions? by Muse/, 'the attribution line');
+    assert.equal(report.goal, GOALS[id]);
+    // the text lists the milestones reached in the order they came
+    const times = (/\nMilestones: ([^\n]*)\./.exec(text)?.[1] ?? '').split(', ').map((m) => /(\d+):(\d\d)(?:;|$)/.exec(m)).filter(Boolean).map((m) => Number(m[1]) * 60 + Number(m[2]));
+    assert.deepEqual(times, [...times].sort((a, b) => a - b), 'milestones in the order they came');
+    const calls = report.decisions.filter((d) => d.kind === 'call');
+    assert.equal(report.decisionsLeftOut, 0);
+    assert.equal(calls.length, steps.length, 'every call in the decision log');
+    for (const d of calls) assert.match(d.why, /^Step \d+: /, 'every call keeps its why');
+    assert.match(mid.content[0].text, /^Report for game g\w+: goal /, 'game_report mid-game');
+    assert.equal(EXPECTED_REPORT[id]?.(report, text) ?? true, true);
+    if (process.env.REPLAY_SHOW) console.log(text);
   });
 }

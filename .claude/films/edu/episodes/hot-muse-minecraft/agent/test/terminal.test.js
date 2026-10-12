@@ -256,3 +256,18 @@ test('end to end: a camera stream in the vertical layout, fed terminal lines, to
   assert.ok(Number(probe.format.duration) > 1.5);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('term goal: the goal checklist from the tracker reaches the feed, and the caption endpoint keeps only its clean shape', () => {
+  const sent = [];
+  const feed = createTermFeed({ send: (id, u) => sent.push(u) });
+  const tracker = { progress: () => ({ key: 'nether_and_back', title: 'Nether and back', text: null, reached: false, list: [{ k: 'wooden_pickaxe', t: 'wooden pickaxe', atS: 61 }, { k: 'back', t: 'back', atS: null }] }) };
+  feed.call({ id: 'g1', tracker, body: {} }, 'play', { skill: 'eat', args: {} });
+  assert.deepEqual(sent.at(-1).goal.list, [{ k: 'wooden_pickaxe', t: 'wooden pickaxe', atS: 61 }, { k: 'back', t: 'back', atS: null }]);
+  // a game without a tracker (the web page's): no goal field
+  feed.call({ id: 'g2', body: {} }, 'play', { skill: 'eat', args: {} });
+  assert.equal('goal' in sent.at(-1), false);
+  // cleaned again at the caption endpoint: kinds checked, words ASCII and short, times whole seconds
+  const c = cleanTerm({ lines: [], goal: { key: 'Bad Key!', title: 'Nether  and back', text: 'x'.repeat(200), reached: 'yes', list: [{ k: 'iron', t: 'iron é', atS: 12.6 }, { k: 'BAD', t: 'x' }, { k: 'nether', t: 'Nether', atS: -5 }, { k: 'back', t: 'back', atS: 'soon' }, 'junk'] } });
+  assert.deepEqual(c.goal, { key: 'free', title: 'Nether and back', reached: false, text: 'x'.repeat(80), list: [{ k: 'iron', t: 'iron', atS: 13 }, { k: 'nether', t: 'Nether', atS: 0 }, { k: 'back', t: 'back', atS: null }] });
+  assert.equal('goal' in cleanTerm({ lines: [] }), false);
+});
