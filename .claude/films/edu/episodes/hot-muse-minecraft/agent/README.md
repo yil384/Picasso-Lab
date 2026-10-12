@@ -232,6 +232,24 @@ the Nether and back." The start page shows this line and the two steps for muse.
 - **The report:** end_game returns it in full (text and `structuredContent.report`). It has the goal, the milestones
   with their times, the deaths, the attribution line, and the decision log. `game_report` gives it during the game.
 - **Ready prompts:** `play_to_the_nether` and `free_play` (argument `goal`). Both still ask the user's age.
+- **Any goal, in the user's words, changed mid-game** (src/goals.js). `set_goal` takes the same `goal` as start_game,
+  and the instructions ask Muse to call it whenever the user gives a new goal. Goals the server can count are read
+  from the text where they mean one thing only (several may be joined with "and" or "then"):
+  - kill or hunt N <mob>: the body's kills, from hunt, attack and its reflexes;
+  - collect, mine or get N <item>: what the bot carries or has gained since the goal was set, whichever is more ("mine
+    64 stone" counts cobblestone);
+  - craft, make or smelt N <item>: what crafts and smelts made;
+  - reach y <Y>, <x> <z>, <x> <y> <z>, the Nether or the End;
+  - build a <blueprint>: hut_3x3, shelter, wall_5x2, platform_3x3, nether_portal;
+  - survive N nights or days: a night counts at dawn if the bot did not die in it.
+
+  Anything else (a name that could be several things, "build a castle") stays the goal as text and is never counted.
+  The plan names the caps a big goal meets: 64 a step (a hunt's n counts drops, not kills), 32 steps a call, 256 blocks
+  a go_to, the lease. Every reply's state ends with the goal's line ("Goal: kill 100 pigs: pigs killed 37 of 100."). The
+  feed's checklist follows the goal set last, with `{done, of}` for each counted part, and nothing for a plain text
+  goal. The report keeps every goal with its times and progress, plus the kills (with those of the reflexes). A hunt
+  that finds no mob left says so plainly, and until a hunt finds one again (or 10 minutes, or 48 blocks away) the Body
+  advice suggests exploring 2 chunks; no skill breeds animals.
 - **The stream feed** carries the goal checklist: `goal: {key, title, text, reached, list: [{k, t, atS}]}`, cleaned
   again by `cleanTerm`.
 - **Arguments read the way they were meant,** where they can be read only one way (src/tolerant.js; production game

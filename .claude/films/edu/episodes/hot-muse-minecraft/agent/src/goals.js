@@ -263,7 +263,7 @@ export function describePart(p) {
     case 'kill': return { k: `kill_${p.target}`.slice(0, 24), t: `${mobsWord(p.target)} killed`, title: `kill ${p.n} ${mobsWord(p.target, p.n)}` };
     case 'collect': return { k: `get_${p.item}`.slice(0, 24), t: `${itemsWord(p.item)} collected`, title: p.block ? `mine ${p.n} ${itemsWord(p.block, p.n)}` : `collect ${p.n} ${itemsWord(p.item, p.n)}` };
     case 'craft': return { k: `make_${p.item}`.slice(0, 24), t: `${itemsWord(p.item)} made`, title: `craft ${p.n} ${itemsWord(p.item, p.n)}` };
-    case 'build': return { k: `build_${p.blueprint}`.slice(0, 24), t: `${itemsWord(p.blueprint)} built`, title: `build ${p.n > 1 ? `${p.n} ${itemsWord(p.blueprint, p.n)}` : `a ${itemWord(p.blueprint)}`}` };
+    case 'build': return { k: `build_${p.blueprint}`.slice(0, 24), t: `${itemWord(p.blueprint)} built`, title: `build ${p.n > 1 ? `${p.n} ${itemsWord(p.blueprint, p.n)}` : `a ${itemWord(p.blueprint)}`}` };
     case 'survive': return { k: `survive_${p.unit}`, t: `${p.unit}s survived`, title: `survive ${p.n} ${p.unit}${p.n === 1 ? '' : 's'}` };
     case 'back': return { k: 'nether_back', t: 'Nether and back', title: 'the Nether and back' };
     case 'reach':

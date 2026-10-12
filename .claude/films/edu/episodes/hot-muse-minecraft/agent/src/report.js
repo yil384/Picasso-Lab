@@ -6,7 +6,7 @@
 // the deaths are recorded here, per goal while it was the goal; end_game and game_report return the report: the goal
 // and its progress, every goal of the game with its time, milestones with times, deaths with causes, who acted, and a
 // decision log built from the player's own why texts and the advice it followed or declined.
-import { GOALS, GOAL_TITLES, describePart, partHow, sameGoal } from './goals.js';
+import { GOALS, GOAL_TITLES, describePart, partHow, sameGoal, mobsWord } from './goals.js';
 
 /** The milestones the server watches, in the order of the way to the Nether and back. */
 export const MILESTONES = Object.freeze([
@@ -291,7 +291,7 @@ export function createTracker({ goal: first = { key: 'free', text: null, title: 
         `Goal: ${goal.key === 'free' ? (goal.text ? `"${goal.text}", not counted (no count could be read from it)` : 'none set') : `${r !== null ? `reached at ${mmss(r)}` : 'not reached'}${goal.key === 'custom' ? `: ${statusOf(current)}` : ''}`}.`,
         history.length > 1 ? `Goals this game: ${history.map((e) => { const st = e.goal.key === 'free' ? '' : `: ${statusOf(e)}`; return `${mmss(e.fromMs)} ${title(e)}${e.toMs !== null ? ` (until ${mmss(e.toMs)}${st}${reachedOf(e) !== null ? ', reached' : ''})` : ' (now)'}`; }).join('; ')}.` : null,
         `${preset ? 'Milestones' : 'Milestones along the way'}: ${done.length ? done.map((m) => `${m.name} ${mmss(reached.get(m.key))}`).join(', ') : 'none yet'}${todo.length ? `; still to do: ${todo.map((m) => m.name).join(', ')}` : ''}.`,
-        Object.keys(allKills).length ? `Kills: ${Object.entries(allKills).map(([m, n]) => `${n} ${m.replace(/_/g, ' ')}`).join(', ')}${Object.keys(kills.reflex).length ? ` (by reflexes: ${Object.entries(kills.reflex).map(([m, n]) => `${n} ${m.replace(/_/g, ' ')}`).join(', ')})` : ''}.` : null,
+        Object.keys(allKills).length ? `Kills: ${Object.entries(allKills).map(([m, n]) => `${n} ${mobsWord(m, n)}`).join(', ')}${Object.keys(kills.reflex).length ? ` (by reflexes: ${Object.entries(kills.reflex).map(([m, n]) => `${n} ${mobsWord(m, n)}`).join(', ')})` : ''}.` : null,
         `Deaths: ${deaths.length ? deaths.map((d) => `${mmss(d.at)} ${d.cause ?? 'died'}${d.position ? ` at ${Math.floor(d.position.x)} ${Math.floor(d.position.y)} ${Math.floor(d.position.z)}` : ''}`).join('; ') : 'none'}.`,
         attribution?.text ? `${attribution.text}.` : null,
         decisions.length ? 'Decision log (your own why, and the advice you followed or declined):' : 'Decision log: no calls yet.',

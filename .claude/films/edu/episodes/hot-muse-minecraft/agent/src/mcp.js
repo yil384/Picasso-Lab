@@ -992,7 +992,7 @@ export function createMcp(hooks) {
       const head = changed
         ? `Goal set: ${g.title ?? g.key} (it was: ${before.key === 'free' && !before.text ? 'free play' : before.title ?? before.key}; the report keeps both).`
         : `That is the goal already: ${g.title ?? g.key}; nothing changed.`;
-      return { ...text(`${head}\n${planText(s.tracker.goal, { lex, leaseMin })}\n${s.tracker.line()}`), structuredContent: { goal: s.tracker.progress() } };
+      return { ...text(`${head}\n${planText(s.tracker.goal, { lex, leaseMin })}\n${s.tracker.line()} This game has ${roughly(Math.max(0, s.expiresAt - now()))} left.`), structuredContent: { goal: s.tracker.progress() } };
     });
 
     server.registerTool('game_report', {
