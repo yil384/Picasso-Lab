@@ -143,8 +143,15 @@ test('feed: what is happening between calls: a skill running, a shelter at night
   clock += 60_000;
   feed.tick(game);
   assert.deepEqual(sent.at(-1).live, { mode: 'idle', reason: 'waiting', sinceS: 60 });
+  // the body sheltered on its own before Muse's own shelter: Muse's choice wins
+  feed.reply(game, 'play', {}, reply({ steps: [{ call: 2, n: 1, skill: 'shelter', args: {}, status: 'confirmed', result: 'built', ms: 5_000 }], state: { health: 20, food: 20, time: 14_000 }, onItsOwn: [{ seq: 9, agoS: 30, source: 'care', kind: 'shelter', text: 'shelter: climbed down and dug in' }] }));
+  assert.equal(sent.at(-1).live.reason, 'shelter');
+  clock += 5_000;
+  feed.reply(game, 'get_state', {}, reply({ steps: [], state: { health: 20, food: 20, time: 14_100 }, onItsOwn: [{ seq: 10, agoS: 0, source: 'care', kind: 'shelter', text: 'shelter: dug in again' }] }));
+  assert.equal(sent.at(-1).live.reason, 'shelter_body', 'the body sheltering after it: the body');
+  const before = sent.length;
   feed.tick({ id: 'unknown' });
-  assert.equal(sent.at(-1).live.reason, 'waiting', 'a game the feed has not seen: nothing sent');
+  assert.equal(sent.length, before, 'a game the feed has not seen: nothing sent');
   assert.deepEqual(cleanTerm({ lines: [], live: { mode: 'idle', reason: 'evil', sinceS: 1e9, dawnS: 30, step: 'x' } }).live, { mode: 'idle', reason: 'waiting', step: 'x', sinceS: 86_400, dawnS: 30 });
 });
 
