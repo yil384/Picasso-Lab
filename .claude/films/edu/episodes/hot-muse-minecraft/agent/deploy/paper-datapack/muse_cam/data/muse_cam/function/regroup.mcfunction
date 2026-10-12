@@ -4,6 +4,7 @@
 # and ask for the ride again. At most once every 2 s.
 kill @e[type=minecraft:item_display,tag=muse_cam_eye]
 kill @e[type=minecraft:marker,tag=muse_cam_yaw]
+kill @e[type=minecraft:marker,tag=muse_cam_orbit]
 execute as @a[tag=muse_cam] run spectate
 tag @a[tag=muse_cam] remove muse_cam_ineye
 tag @a[tag=muse_cam] remove muse_cam_inhead

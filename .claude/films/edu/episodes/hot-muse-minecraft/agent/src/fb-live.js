@@ -271,6 +271,8 @@ export function createLiveChannel(o) {
     }
     if (t.tail.length > TERM_TAIL) { t.tail.splice(0, t.tail.length - TERM_TAIL); t.cut = true; }
     if (typeof u?.status === 'string' && u.status) t.status = u.status;
+    if (u?.st) t.st = u.st; // the numbers, and what is happening now, for the UI panel
+    if (u?.live) t.live = u.live;
     t.updates += 1;
   };
   /** The game's terminal so far onto a stream that films it from now on. */
@@ -278,7 +280,7 @@ export function createLiveChannel(o) {
     const t = terms.get(id);
     if (!t || typeof stream?.term !== 'function') return;
     const lines = [...t.head, ...(t.cut ? [{ k: 'info', t: '...' }] : []), ...t.tail];
-    try { stream.term({ lines, status: t.status }); } catch { /* the video goes on without it */ }
+    try { stream.term({ lines, status: t.status, ...(t.st ? { st: t.st } : {}), ...(t.live ? { live: t.live } : {}) }); } catch { /* the video goes on without it */ }
   };
   const asked = new Map(); // id -> when live_view asked for a game the channel does not have yet
   let focus = null; // the game the camera films

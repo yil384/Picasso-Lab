@@ -113,10 +113,27 @@ export function createUiPanel(o) {
   let header = null;
   let rows = []; // newest first: {kind: 'action'|'reflex'|'milestone'|'note', text, state: {kind, text}|null, at, msSum, card}
   let shiftAt = -1e9; // when the list last moved down
+  let lastEventAt = -1e9; // the last row or result
+  let live = null; // what the agent says is happening: {mode, reason, step, sinceS, dawnS, at}
+  let anchor = null; // the game clock: {ticks, at, rate (ticks a ms)}, to keep it ticking between updates
+  let shownClock = '';
+  let statusShow = 0; // 0..1: the status line in the top slot, the rows a slot lower
+  let statusCard = null;
+  let statusKey = '';
   let frames = 0;
   let timer = null;
 
+  /** The clock as it is now: the last game time moved on at the rate it was seen moving (frozen when it was not). */
+  const clockNow = () => {
+    if (!st.clock || st.clock === 'NETHER' || st.clock === 'END' || !anchor) return st.clock;
+    const tk = (((anchor.ticks + anchor.rate * (now() - anchor.at)) % 24_000) + 24_000) % 24_000;
+    const h = Math.floor(tk / 1000 + 6) % 24;
+    const m = Math.floor(((tk % 1000) * 60) / 1000);
+    return `${tk >= 13_000 && tk < 23_000 ? 'NIGHT' : 'DAY'} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
   function drawHeader() {
+    shownClock = clockNow();
     const c = createCanvas(W, HEAD);
     const b = c.getContext('2d');
     b.textBaseline = 'middle';
@@ -134,7 +151,7 @@ export function createUiPanel(o) {
     item('food', Number.isFinite(st.food) ? `${st.food}/20` : '--');
     if (st.clock === 'NETHER') item('flame', 'Nether');
     else if (st.clock === 'END') item('star', 'The End');
-    else if (st.clock) item(st.clock.startsWith('NIGHT') ? 'moon' : 'sun', st.clock.replace(/^(?:DAY|NIGHT) /, ''));
+    else if (shownClock) item(shownClock.startsWith('NIGHT') ? 'moon' : 'sun', shownClock.replace(/^(?:DAY|NIGHT) /, ''));
     const pct = Number.isFinite(st.pct) ? st.pct : Number.isFinite(st.muse) && Number.isFinite(st.reflex) && st.muse + st.reflex > 0 ? Math.round((100 * st.muse) / (st.muse + st.reflex)) : null;
     if (pct !== null) {
       const right = W - PAD;
@@ -157,6 +174,32 @@ export function createUiPanel(o) {
   }
 
   const STATE_W = 430 * s; // the room on the right for the state
+  /** The status line between calls, drawn when its words change (the elapsed time: once a second). */
+  function drawStatus(text) {
+    const c = createCanvas(W, Math.round(ROW));
+    const b = c.getContext('2d');
+    b.textBaseline = 'middle';
+    b.font = font(500, BIG);
+    b.fillStyle = UI_COLORS.soft;
+    b.fillText(fit(b, text, W - 2 * PAD - 30 * s), PAD + 26 * s, ROW / 2 + 1 * s);
+    return c;
+  }
+  const mmss = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+  /** What the top row says when nothing runs: why, and for how long (or how long until dawn). */
+  function statusWords(t) {
+    if (live?.mode === 'run') return live.step ? `${live.step}` : 'Working';
+    const reason = live?.mode === 'idle' ? live.reason : 'waiting';
+    const since = live && Number.isFinite(live.sinceS) ? live.sinceS + (t - live.at) / 1000 : Math.max(0, (t - lastEventAt) / 1000);
+    if (['shelter', 'shelter_body', 'sleep'].includes(reason) && Number.isFinite(live?.dawnS)) {
+      const left = live.dawnS - (anchor?.rate === 0 ? 0 : (t - live.at) / 1000);
+      const dawn = left > 60 ? `night ends in ~${Math.ceil(left / 60)} min` : left > 0 ? 'night ends in under a minute' : 'morning is here';
+      if (reason === 'sleep') return `Sleeping until morning \u00b7 ${dawn}`;
+      return `Sheltering until morning (${reason === 'shelter' ? 'Muse\u2019s choice' : 'the body\u2019s reflex'}) \u00b7 ${dawn}`;
+    }
+    if (reason === 'checking') return `Muse is checking the situation \u00b7 ${mmss(since)}`;
+    if (reason === 'nether') return `In the Nether, waiting for Muse\u2019s next move \u00b7 ${mmss(since)}`;
+    return `Waiting for Muse\u2019s next move \u00b7 ${mmss(since)}`;
+  }
   /** A row's text, drawn once (its state is drawn on its own: the running dots move). */
   function drawRow(r) {
     const c = createCanvas(W, Math.round(ROW));
@@ -195,6 +238,7 @@ export function createUiPanel(o) {
     drawRow(rows[0]);
     rows = rows.slice(0, ROWS + 1); // one more, fading out
     shiftAt = now();
+    lastEventAt = now();
   }
 
   /** A result for the action it belongs to: the newest one, unless its words match an older one. */
@@ -242,6 +286,13 @@ export function createUiPanel(o) {
     /** The status numbers (st) for the header. */
     status(text, data) {
       if (!data) return;
+      if (Number.isFinite(data.ticks)) {
+        // the clock's pace as seen between two updates: about 20 ticks a second, 0 when the day is locked
+        const t = now();
+        let rate = anchor?.rate ?? 0.02;
+        if (anchor && t - anchor.at > 1_500) rate = Math.min(0.03, Math.max(0, ((((data.ticks - anchor.ticks) % 24_000) + 24_000) % 24_000) / (t - anchor.at)));
+        anchor = { ticks: data.ticks, at: t, rate };
+      }
       let changed = false;
       for (const k of ['hp', 'food', 'clock', 'muse', 'reflex', 'pct']) {
         const v = data[k] ?? null;
@@ -258,10 +309,13 @@ export function createUiPanel(o) {
       if (!u) return;
       if (Array.isArray(u.lines) && u.lines.length) api.push(u.lines);
       if (u.st) api.status(u.status, u.st);
+      if (u.live) live = { ...u.live, at: now() };
     },
     /** Another game on camera: an empty list, with a note. */
     reset(note = '') {
       rows = [];
+      live = null;
+      anchor = null;
       for (const k of Object.keys(st)) st[k] = k === 'clock' ? '' : null;
       drawHeader();
       if (note) addRow({ kind: 'note', text: note[0].toUpperCase() + note.slice(1) });
@@ -271,18 +325,41 @@ export function createUiPanel(o) {
     render(t = now()) {
       g.globalAlpha = 1;
       g.drawImage(bg, 0, 0);
-      if (!header) drawHeader();
+      if (!header || clockNow() !== shownClock) drawHeader(); // the clock ticks with the game
       g.drawImage(header, 0, 0);
       const moved = ease((t - shiftAt) / 380);
       const top = HEAD + 6 * s;
+      // nothing running for 2.5 s: the top row says what is happening, and the actions move a slot down
+      const runningRow = rows.some((r) => r.kind === 'action' && r.state?.kind === 'run');
+      const idle = rows.length > 0 && !runningRow && (live?.mode === 'run' || t - lastEventAt > 2_500);
+      statusShow += ((idle ? 1 : 0) - statusShow) * 0.16;
+      if (statusShow < 0.002) statusShow = 0;
+      if (statusShow > 0.998) statusShow = 1;
+      if (statusShow > 0) {
+        const words = statusWords(t);
+        if (words !== statusKey) { statusKey = words; statusCard = drawStatus(words); }
+        g.globalAlpha = statusShow;
+        g.drawImage(statusCard, 0, top - (1 - statusShow) * 10 * s);
+        // a gentle pulse: the dot breathes; dots in turn when the agent says a skill runs
+        const cy = top - (1 - statusShow) * 10 * s + ROW / 2;
+        const k = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin((t / 1000) * Math.PI * 2 / 2.4));
+        g.globalAlpha = statusShow * k;
+        g.fillStyle = live?.mode === 'run' ? UI_COLORS.muse : UI_COLORS.soft;
+        g.beginPath();
+        g.arc(PAD + 7 * s, cy, 6 * s, 0, Math.PI * 2);
+        g.fill();
+      }
+      const dims = [1, 0.62, 0.42, 0.26, 0, 0];
+      const dimAt = (x) => { const i = Math.floor(x); const f = x - i; return (dims[i] ?? 0) * (1 - f) + (dims[i + 1] ?? 0) * f; };
       rows.forEach((r, i) => {
-        // where it is going and where it came from: one row lower than before, the new one from just above its place
-        const yTo = top + i * ROW;
+        // where it is going and where it came from: one row lower than before, the new one from just above its place;
+        // a slot lower while the status line is shown
+        const yTo = top + (i + statusShow) * ROW;
         const yFrom = i === 0 ? yTo - 14 * s : yTo - ROW;
         const y = i === 0 ? yFrom + (yTo - yFrom) * ease((t - r.at) / 320) : yFrom + (yTo - yFrom) * moved;
-        const dim = [1, 0.62, 0.42, 0.26, 0][i] ?? 0;
-        const dimFrom = i === 0 ? 0 : [1, 0.62, 0.42, 0.26, 0][i - 1];
-        const a = i === 0 ? ease((t - r.at) / 320) : dimFrom + (dim - dimFrom) * moved;
+        const dim = dimAt(i + statusShow);
+        const dimFrom = i === 0 ? 0 : dimAt(i - 1 + statusShow);
+        const a = i === 0 ? ease((t - r.at) / 320) * dim : dimFrom + (dim - dimFrom) * moved;
         if (a <= 0.01) return;
         g.globalAlpha = a;
         g.drawImage(r.card, 0, y);
@@ -338,7 +415,7 @@ export function createUiPanel(o) {
     },
     stop() { clearInterval(timer); timer = null; },
     get frames() { return frames; },
-    state: () => ({ rows: rows.slice(0, ROWS).map((r) => ({ kind: r.kind, text: r.text, state: r.state })), st: { ...st } }),
+    state: () => ({ rows: rows.slice(0, ROWS).map((r) => ({ kind: r.kind, text: r.text, state: r.state })), st: { ...st }, status: statusShow > 0.5 ? statusKey : null, clock: shownClock }),
   };
 
   const bmpHeader = Buffer.alloc(54);

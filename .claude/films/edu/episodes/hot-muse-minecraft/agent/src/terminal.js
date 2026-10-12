@@ -5,6 +5,8 @@
 // only. Every line is ASCII, without tokens, keys, addresses or the names of other players.
 
 export const KINDS = Object.freeze(['call', 'ok', 'fail', 'advice', 'reflex', 'body', 'milestone', 'info']);
+/** Why nothing runs, for the stream's status line: Muse sheltering or asleep for the night, looking, thinking. */
+export const IDLE_REASONS = Object.freeze(['waiting', 'checking', 'shelter', 'shelter_body', 'sleep', 'nether']);
 
 /** A terminal update from outside (the camera service's caption endpoint): kinds checked, every text cleaned again. */
 export function cleanTerm(u) {
@@ -24,10 +26,19 @@ export function cleanTerm(u) {
   const out = { lines, status: typeof u?.status === 'string' ? clean(u.status, 120) : '' };
   if (u?.st && typeof u.st === 'object') {
     const st = {};
-    for (const [key, lo, hi] of [['hp', 0, 20], ['food', 0, 20], ['muse', 0, 1e6], ['reflex', 0, 1e6], ['pct', 0, 100]]) { const v = int(u.st[key], lo, hi); if (v !== undefined) st[key] = v; }
+    for (const [key, lo, hi] of [['hp', 0, 20], ['food', 0, 20], ['muse', 0, 1e6], ['reflex', 0, 1e6], ['pct', 0, 100], ['ticks', 0, 23_999]]) { const v = int(u.st[key], lo, hi); if (v !== undefined) st[key] = v; }
     const clock = typeof u.st.clock === 'string' ? clean(u.st.clock, 16) : '';
     if (/^(?:(?:DAY|NIGHT) \d\d:\d\d|NETHER|END)$/.test(clock)) st.clock = clock;
     out.st = st;
+  }
+  if (u?.live && typeof u.live === 'object') {
+    const l = u.live;
+    const live = { mode: l.mode === 'run' ? 'run' : 'idle' };
+    if (live.mode === 'idle') live.reason = IDLE_REASONS.includes(l.reason) ? l.reason : 'waiting';
+    const step = typeof l.step === 'string' ? clean(l.step, 120) : '';
+    if (step) live.step = step;
+    for (const [key, lo, hi] of [['sinceS', 0, 86_400], ['dawnS', 0, 1_200]]) { const v = int(l[key], lo, hi); if (v !== undefined) live[key] = v; }
+    out.live = live;
   }
   if (Array.isArray(u?.adv)) {
     out.adv = u.adv.slice(0, 6)
@@ -207,6 +218,7 @@ export function statusData(state, attribution) {
   const dim = String(state?.dimension ?? 'overworld').replace(/^minecraft:/, '');
   const clock = dim === 'the_nether' ? 'NETHER' : dim === 'the_end' ? 'END' : clockText(state?.time);
   if (clock) st.clock = clock;
+  if (Number.isFinite(state?.time) && clock !== 'NETHER' && clock !== 'END') st.ticks = ((Math.floor(state.time) % 24_000) + 24_000) % 24_000;
   if (attribution && Number.isFinite(attribution.muse)) {
     st.muse = attribution.muse;
     st.reflex = attribution.reflex ?? 0;
@@ -270,11 +282,33 @@ export function createTermFeed(o) {
   const adviceOf = (structured) => (Array.isArray(structured?.advice)
     ? structured.advice.slice(0, 4).map((a) => ({ k: /^[a-z_]{1,24}$/.test(String(a?.kind)) ? String(a.kind) : 'note', t: clean(a?.text, 160), sev: severityOf(a) })).filter((a) => a.t)
     : undefined);
+  /**
+   * What the bot is doing between calls, for the stream's status line: a skill running (its words), or why nothing
+   * runs: sheltering or asleep for the night (with the seconds to dawn), Muse looking (get_state), in the Nether, or
+   * waiting for Muse's next call; with the seconds since Muse's last call. From the MCP layer (o.liveOf: the queue, the
+   * last call) and the last state.
+   */
+  const liveInfo = (s, g) => {
+    let info = {};
+    try { info = o.liveOf?.(s) ?? {}; } catch { info = {}; }
+    const sinceS = Number.isFinite(info.lastCallAt) ? Math.max(0, Math.round((now() - info.lastCallAt) / 1000)) : undefined;
+    if (info.busy) return { mode: 'run', ...(info.running ? { step: plainStep(info.running) } : {}), ...(sinceS !== undefined ? { sinceS } : {}) };
+    const t = g.state?.time;
+    const tod = Number.isFinite(t) ? ((Math.floor(t) % 24_000) + 24_000) % 24_000 : null;
+    const night = tod !== null && tod >= 13_000 && tod < 23_000 && g.dim !== 'the_nether';
+    let reason = 'waiting';
+    if (night && g.lastSkill === 'sleep') reason = 'sleep';
+    else if (night && g.lastSkill === 'shelter') reason = g.lastSkillBy === 'body' ? 'shelter_body' : 'shelter';
+    else if (info.lastTool === 'get_state' && sinceS !== undefined && sinceS < 45) reason = 'checking';
+    else if (g.dim === 'the_nether') reason = 'nether';
+    const dawnS = ['sleep', 'shelter', 'shelter_body'].includes(reason) ? Math.round((23_000 - tod) / 20) : undefined;
+    return { mode: 'idle', reason, ...(sinceS !== undefined ? { sinceS } : {}), ...(dawnS !== undefined ? { dawnS } : {}) };
+  };
   const emit = (s, lines, structured) => {
     try {
       const { text, st } = statusOf(s, structured);
       const adv = adviceOf(structured);
-      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, ...(adv ? { adv } : {}) });
+      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, of(s)), ...(adv ? { adv } : {}) });
     } catch { /* the video goes on without it */ }
   };
   const PLACES = { the_nether: 'entered the Nether', the_end: 'entered the End', overworld: 'back in the Overworld' };
@@ -304,6 +338,9 @@ export function createTermFeed(o) {
         if (line && Number.isInteger(step.n)) Object.assign(line, { n: step.n }, total ? { of: total } : {});
         if (line) lines.push(line);
         if (step.status === 'confirmed') {
+          // the last thing done, for the status line between calls (a shelter at night, a bed)
+          const sk = step.skill === 'build' && step.args?.blueprint === 'shelter' ? 'shelter' : step.skill;
+          Object.assign(g, { lastSkill: sk, lastSkillBy: 'muse' });
           for (const [item, n] of Object.entries(step.gained ?? step.delta ?? {})) {
             if (n > 0 && MILESTONES[item] && !g.got.has(item)) { g.got.add(item); lines.push({ k: 'milestone', t: clean(`milestone: ${MILESTONES[item]} at ${elapsed(g)}`) }); }
           }
@@ -316,6 +353,7 @@ export function createTermFeed(o) {
       for (const e of st.onItsOwn ?? []) {
         if (!(e.seq > g.own)) continue;
         g.own = e.seq;
+        if (/shelter/i.test(`${e.kind} ${e.text}`)) Object.assign(g, { lastSkill: 'shelter', lastSkillBy: 'body' });
         const death = /death|died/i.test(`${e.kind} ${e.text}`);
         lines.push({ k: death ? 'fail' : e.source === 'reflex' ? 'reflex' : 'body', t: clean(`${death ? 'death' : e.source === 'reflex' ? 'reflex' : 'body'}: ${e.text}`) });
       }
@@ -338,6 +376,11 @@ export function createTermFeed(o) {
       if (dim) g.dim = dim;
       if (tool === 'end_game') { lines.push({ k: 'info', t: clean(`game over after ${elapsed(g)}`) }); emit(s, lines, st); games.delete(s.id); return; }
       emit(s, lines, st);
+    },
+    /** Every few seconds between calls: the status and what is happening now, with no lines (the picture lives). */
+    tick(s) {
+      if (!s?.id || !games.has(s.id)) return;
+      emit(s, [], null);
     },
     forget: (id) => games.delete(id),
   };

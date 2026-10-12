@@ -7,3 +7,5 @@ execute as @a[tag=muse_cam_target,limit=1] as @e[type=minecraft:item_display,tag
 execute as @a[tag=muse_cam_target,limit=1] at @s positioned ~ ~7 ~ if block ~ ~-2 ~ #muse_cam:open if block ~ ~-1 ~ #muse_cam:open if block ~ ~ ~ #muse_cam:open if block ~ ~1 ~ #muse_cam:open run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ~ ~0.5 ~ facing entity @s feet
 execute as @a[tag=muse_cam_target,limit=1] at @s positioned ~ ~10 ~ if block ~ ~-2 ~ #muse_cam:open if block ~ ~-1 ~ #muse_cam:open if block ~ ~ ~ #muse_cam:open if block ~ ~1 ~ #muse_cam:open run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ~ ~0.5 ~ facing entity @s feet
 execute as @a[tag=muse_cam_target,limit=1] at @s positioned ~-4 ~7 ~-4 if block ~ ~-2 ~ #muse_cam:open if block ~ ~-1 ~ #muse_cam:open if block ~ ~ ~ #muse_cam:open if block ~ ~1 ~ #muse_cam:open if block ~1 ~-2 ~1 #muse_cam:open run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ~ ~0.5 ~ facing entity @s feet
+# then, while it can, the slow orbit (muse_cam:orbit) instead of a still picture
+function muse_cam:orbit

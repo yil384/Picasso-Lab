@@ -12,3 +12,5 @@ scoreboard players set #100 muse_cam_y 100
 scoreboard objectives add muse_cam_cd dummy
 # the ticks since the last regroup, for the rides asked for again after it
 scoreboard objectives add muse_cam_rr dummy
+# the orbit around a shut-in bot turns back with this
+scoreboard players set #m1 muse_cam_y -1

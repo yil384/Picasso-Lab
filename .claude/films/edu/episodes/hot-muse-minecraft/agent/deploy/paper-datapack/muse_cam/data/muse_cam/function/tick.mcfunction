@@ -20,4 +20,6 @@ execute unless entity @e[type=minecraft:item_display,tag=muse_cam_eye] at @a[tag
 function muse_cam:yaw
 execute if entity @a[tag=muse_cam_target,tag=muse_cam_shut] run function muse_cam:outside
 execute unless entity @a[tag=muse_cam_target,tag=muse_cam_shut] run function muse_cam:shoulder
+# out of the shelter: the next one starts its orbit afresh
+execute unless entity @a[tag=muse_cam_target,tag=muse_cam_shut] run scoreboard players set #on muse_cam_y 0
 function muse_cam:view

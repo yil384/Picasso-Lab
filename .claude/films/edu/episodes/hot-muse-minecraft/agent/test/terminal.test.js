@@ -64,7 +64,7 @@ test('feed: a call, then its results once; advice when it changes; reflexes and 
   const game = { id: 'g1', body: { attribution: () => ({ muse: 3, reflex: 1, musePct: 75 }), snapshot: () => ({ dimension }) } };
   const reply = (st) => ({ content: [{ type: 'text', text: 'x' }], structuredContent: st });
   feed.reply(game, 'start_game', { adult: true }, reply({ steps: [], state: { health: 20, food: 20, time: 0 } }));
-  assert.deepEqual(sent.at(-1), { id: 'g1', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], status: 'HP 20/20  FOOD 20/20  DAY 06:00  |  Muse 3 | Reflex 1 | 75% Muse', st: { hp: 20, food: 20, clock: 'DAY 06:00', muse: 3, reflex: 1, pct: 75 } });
+  assert.deepEqual(sent.at(-1), { id: 'g1', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], status: 'HP 20/20  FOOD 20/20  DAY 06:00  |  Muse 3 | Reflex 1 | 75% Muse', st: { hp: 20, food: 20, clock: 'DAY 06:00', ticks: 0, muse: 3, reflex: 1, pct: 75 }, live: { mode: 'idle', reason: 'waiting' } });
   feed.call(game, 'play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 3 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] });
   assert.equal(sent.at(-1).lines[0].t, '> play_sequence: collect oak_log 3, craft wooden_pickaxe');
   assert.match(sent.at(-1).status, /^HP 20\/20/, 'the last state, though the call carries none');
@@ -150,7 +150,7 @@ test('feed: start_game\'s reply carries no state: the status line has health, fo
   const text = { content: [{ type: 'text', text: 'New game' }] };
   const bot = { id: 'g7', status: 'ready', body: { bot: { entity: {}, health: 19.6, food: 18, time: { timeOfDay: 1000 } }, attribution: () => ({ muse: 0, reflex: 0 }) } };
   feed.reply(bot, 'start_game', { adult: true }, text);
-  assert.deepEqual(sent.at(-1), { id: 'g7', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], status: 'HP 20/20  FOOD 18/20  DAY 07:00  |  Muse 0 | Reflex 0', st: { hp: 20, food: 18, clock: 'DAY 07:00', muse: 0, reflex: 0 } });
+  assert.deepEqual(sent.at(-1), { id: 'g7', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], status: 'HP 20/20  FOOD 18/20  DAY 07:00  |  Muse 0 | Reflex 0', st: { hp: 20, food: 18, clock: 'DAY 07:00', ticks: 1000, muse: 0, reflex: 0 }, live: { mode: 'idle', reason: 'waiting' } });
   const mineai = { id: 'g8', status: 'ready', body: { snapshot: () => ({ health: 20, food: 20, timeOfDay: 0, dimension: 'overworld' }) } };
   feed.reply(mineai, 'start_game', { adult: true }, text);
   assert.equal(sent.at(-1).status, 'HP 20/20  FOOD 20/20  DAY 06:00');

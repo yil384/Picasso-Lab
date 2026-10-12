@@ -39,7 +39,7 @@ test('plain words: a call as Muse would say it, counts and plurals, a sequence, 
   assert.ok(/^no usable footing/.test(why) && why.length <= 48, why);
   assert.ok(shortWhy('no iron_ore within 64 blocks; stone is 3 blocks down') === 'no iron ore within 64 blocks');
   assert.deepEqual([severityOf({ kind: 'food', text: 'starving: food 2' }), severityOf({ kind: 'night', text: 'night (time 13250): no closed shelter' }), severityOf({ kind: 'shield', text: 'no shield' })], [3, 2, 1]);
-  assert.deepEqual(statusData({ health: 17.6, food: 17, time: 2_250 }, { muse: 47, reflex: 4, musePct: 92 }), { hp: 18, food: 17, clock: 'DAY 08:15', muse: 47, reflex: 4, pct: 92 });
+  assert.deepEqual(statusData({ health: 17.6, food: 17, time: 2_250 }, { muse: 47, reflex: 4, musePct: 92 }), { hp: 18, food: 17, clock: 'DAY 08:15', ticks: 2250, muse: 47, reflex: 4, pct: 92 });
   assert.deepEqual(statusData({ health: 20, food: 20, dimension: 'the_nether' }, null), { hp: 20, food: 20, clock: 'NETHER' });
 });
 
@@ -112,6 +112,57 @@ test('panel: the last four actions, newest first, each with its state; reflexes 
   assert.deepEqual([b.readInt32LE(18), b.readInt32LE(22), b.readUInt16LE(28), b.length], [1080, -270, 32, 54 + 1080 * 270 * 4]);
   assert.equal(b[54 + 3], 255, 'opaque');
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('feed: what is happening between calls: a skill running, a shelter at night with the time to dawn, Muse looking, waiting; a tick every few seconds', () => {
+  const sent = [];
+  let clock = 1_000_000;
+  let q = { busy: false, running: null, lastCallAt: clock, lastTool: 'play' };
+  const feed = createTermFeed({ send: (id, u) => sent.push(u), now: () => clock, liveOf: () => q });
+  const game = { id: 'g1', body: { attribution: () => ({ muse: 1, reflex: 0 }) } };
+  const reply = (st) => ({ content: [{ type: 'text', text: '' }], structuredContent: st });
+  feed.reply(game, 'start_game', { adult: true }, reply({ steps: [], state: { health: 20, food: 20, time: 1_000 } }));
+  q = { busy: true, running: { skill: 'shelter', args: {} }, lastCallAt: clock, lastTool: 'play' };
+  feed.call(game, 'play', { skill: 'shelter' });
+  assert.deepEqual(sent.at(-1).live, { mode: 'run', step: 'Build a shelter for the night', sinceS: 0 });
+  clock += 8_000;
+  q = { busy: false, running: null, lastCallAt: clock - 8_000, lastTool: 'play' };
+  feed.reply(game, 'play', {}, reply({ steps: [{ call: 1, n: 1, skill: 'shelter', args: {}, status: 'confirmed', result: 'built a shelter', ms: 7_000 }], state: { health: 20, food: 20, time: 13_600 } }));
+  assert.deepEqual(sent.at(-1).live, { mode: 'idle', reason: 'shelter', sinceS: 8, dawnS: 470 }, 'night: (23000 - 13600) / 20 s to dawn');
+  clock += 60_000;
+  sent.length = 0;
+  feed.tick(game);
+  assert.deepEqual(sent.at(-1).lines, [], 'a tick: no lines');
+  assert.equal(sent.at(-1).live.sinceS, 68);
+  q = { busy: false, running: null, lastCallAt: clock, lastTool: 'get_state' };
+  feed.reply(game, 'get_state', {}, reply({ steps: [], state: { health: 20, food: 20, time: 1_000 } }));
+  assert.deepEqual(sent.at(-1).live, { mode: 'idle', reason: 'checking', sinceS: 0 }, 'morning: Muse looking around');
+  clock += 60_000;
+  feed.tick(game);
+  assert.deepEqual(sent.at(-1).live, { mode: 'idle', reason: 'waiting', sinceS: 60 });
+  feed.tick({ id: 'unknown' });
+  assert.equal(sent.at(-1).live.reason, 'waiting', 'a game the feed has not seen: nothing sent');
+  assert.deepEqual(cleanTerm({ lines: [], live: { mode: 'idle', reason: 'evil', sinceS: 1e9, dawnS: 30, step: 'x' } }).live, { mode: 'idle', reason: 'waiting', step: 'x', sinceS: 86_400, dawnS: 30 });
+});
+
+test('panel: the top row says what is happening when nothing runs (waiting with a ticking time, sheltering with the time to dawn, Muse looking), and the clock ticks with the game', () => {
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 270, now: () => t });
+  const at = (ms) => { t += ms; p.render(t); for (let i = 0; i < 40; i++) { t += 33; p.render(t); } return p.state().status; };
+  p.term({ lines: [{ k: 'call', t: '> start_game', say: 'Start a new game' }], st: { hp: 20, food: 20, clock: 'DAY 08:00', ticks: 2_000 }, live: { mode: 'idle', reason: 'waiting', sinceS: 0 } });
+  assert.equal(at(3_000), 'Waiting for Muse\u2019s next move \u00b7 0:04', 'nothing runs: what is happening, with the time ticking');
+  p.term({ lines: [{ k: 'call', t: '> play', say: 'Build a shelter for the night' }], live: { mode: 'run', step: 'Build a shelter for the night', sinceS: 0 } });
+  assert.equal(at(100), null, 'a skill runs: its row is on top');
+  p.term({ lines: [{ k: 'ok', t: 'ok', say: 'Build a shelter for the night', ms: 7_000 }], st: { ticks: 13_600, clock: 'NIGHT 19:36' }, live: { mode: 'idle', reason: 'shelter', sinceS: 0, dawnS: 470 } });
+  assert.equal(at(3_000), 'Sheltering until morning (Muse\u2019s choice) \u00b7 night ends in ~8 min');
+  p.term({ lines: [{ k: 'call', t: '> get_state' }], live: { mode: 'idle', reason: 'checking', sinceS: 0 } });
+  assert.equal(at(12_000), 'Muse is checking the situation \u00b7 0:13');
+  // the clock: 20 ticks a second between updates (seen from two updates), so the minutes move on their own
+  p.term({ st: { ticks: 2_000, clock: 'DAY 08:00' } });
+  t += 5_000;
+  p.term({ st: { ticks: 2_100, clock: 'DAY 08:06' } });
+  t += 10_000; p.render(t);
+  assert.equal(p.state().clock, 'DAY 08:18', '200 more ticks: 12 game minutes');
 });
 
 test('panel: a frame costs little (cached cards, sprites drawn at their size)', () => {
