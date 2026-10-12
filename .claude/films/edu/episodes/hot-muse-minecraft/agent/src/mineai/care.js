@@ -654,8 +654,15 @@ export function describeEvents(events = []) {
     const p = e.payload ?? {};
     const source = p.source;
     const ev = p.evidence ?? {};
-    if (ev.interrupted) continue; // a step of the player's (or of the care) was interrupted: its own result says so
     const o = ev.outcome ?? {};
+    if (ev.interrupted) {
+      // a step of the player's (or of the care) was interrupted: its own result says so; a kill in that fight still
+      // counts for a goal that counts kills (an entry for the count only, never told or logged)
+      const killed = {};
+      for (const id of o.killedTargetIds ?? []) { const name = (o.threats ?? []).find((t) => t.id === id)?.name; if (name) killed[name] = (killed[name] ?? 0) + 1; }
+      if (Object.keys(killed).length) out.push({ kind: 'kills', killed, countOnly: true, at: e.observedAt });
+      continue;
+    }
     if (source === 'hostile_reflex') {
       const resp = ev.response ?? o.response;
       if (ev.cancelled && !(o.healthBefore > o.healthAfter) && !(o.killedTargetIds ?? []).length) continue;
@@ -1145,6 +1152,7 @@ export function createCare(deps) {
     for (const e of describeEvents(events)) {
       // the kills go out before the journal (which may fold a repeated fight into the one before)
       if (e.killed) { try { deps.kills?.(e.killed); } catch { /* the count goes on without it */ } }
+      if (e.countOnly) continue;
       const { killed, ...entry } = e;
       add({ ...entry, reflex: entry.reflex ?? entry.kind !== 'death' });
     }

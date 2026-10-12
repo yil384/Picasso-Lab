@@ -127,6 +127,7 @@ export function callLine(tool, args = {}) {
     what = parts.slice(0, 4).join(', ') + (parts.length > 4 ? `, +${parts.length - 4} more` : '');
   } else if (tool === 'play') what = stepSummary(args);
   else if (tool === 'live_view') what = args?.format ?? '';
+  else if (tool === 'set_goal' && typeof args?.goal === 'string') what = clean(args.goal, 80); // the user's goal, as Muse passed it
   const words = typeof args?.why === 'string' ? clean(args.why, 140) : ''; // Muse's own words (why), cut at 140
   const of = tool === 'play_sequence' && Array.isArray(args?.steps) ? args.steps.length : tool === 'play' ? 1 : 0;
   return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args), ...(words ? { words } : {}), ...(of ? { of } : {}) };
@@ -174,7 +175,7 @@ const STEP_WORDS = {
   pick_up: () => 'Pick up the items',
   drop: (a) => `Drop ${countOf(a.n ?? 1, a.item)}`,
 };
-const TOOL_WORDS = { start_game: 'Start a new game', get_state: 'Look around', stop: 'Stop everything', end_game: 'End the game', live_view: 'Turn on the live view' };
+const TOOL_WORDS = { start_game: 'Start a new game', get_state: 'Look around', stop: 'Stop everything', end_game: 'End the game', live_view: 'Turn on the live view', game_report: 'Check the progress', set_goal: 'A new goal' };
 const capital = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 /** One step in plain words: "Mine 3 oak logs". */
 export function plainStep(st) {
@@ -193,6 +194,7 @@ export function plainCall(tool, args = {}) {
     const head = parts.slice(0, 2).map((p, i) => (i ? p[0].toLowerCase() + p.slice(1) : p)).join(', then ');
     return clean(parts.length > 2 ? `${head}, and ${parts.length - 2} more` : head, 120);
   }
+  if (tool === 'set_goal' && typeof args?.goal === 'string' && args.goal.trim()) return clean(`A new goal: ${args.goal.trim()}`, 120);
   return clean(TOOL_WORDS[tool] ?? capital(word(tool)), 120);
 }
 /** A failure's reason in a few words: "no iron ore within 64 blocks". */

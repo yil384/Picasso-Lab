@@ -17,7 +17,7 @@ import { createLogger } from '../src/log.js';
 import { createMineAiBody } from '../src/mineai/body.js';
 import { MINEAI_SKILLS, HUNT_DROPS, dropOf } from '../src/mineai/skills.js';
 import { describeEvents } from '../src/mineai/care.js';
-import { cleanTerm } from '../src/terminal.js';
+import { cleanTerm, callLine } from '../src/terminal.js';
 import { goalOf, lexiconFrom, planText, createTracker } from '../src/report.js';
 import { fakeHosts } from './fake-mineai.js';
 
@@ -154,6 +154,14 @@ test('reflex kills: the mobs a fight killed, by their ids among the threats', ()
   assert.equal(out.length, 1);
   assert.deepEqual(out[0].killed, { zombie: 1 });
   assert.match(out[0].text, /fought zombie, skeleton and killed one/);
+  // a fight that interrupted a step is told by the step's result, but its kills still count
+  const inStep = describeEvents([{ type: 'survival_outcome', observedAt: '2026-10-12T22:01:00Z', payload: { source: 'hostile_reflex', evidence: { interrupted: true, response: 'fight', outcome: { threats: [{ id: 3, name: 'skeleton' }], killedTargetIds: [3] } } } }]);
+  assert.deepEqual(inStep, [{ kind: 'kills', killed: { skeleton: 1 }, countOnly: true, at: '2026-10-12T22:01:00Z' }]);
+});
+
+test('the terminal: a set_goal call shows the new goal', () => {
+  assert.deepEqual(callLine('set_goal', { goal: 'kill 100 pigs' }), { k: 'call', t: '> set_goal: kill 100 pigs', say: 'A new goal: kill 100 pigs' });
+  assert.equal(callLine('game_report', {}).say, 'Check the progress');
 });
 
 async function mcpGame() {
