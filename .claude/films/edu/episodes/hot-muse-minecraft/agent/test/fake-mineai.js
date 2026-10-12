@@ -282,6 +282,7 @@ export async function startFakeMineAi(opts = {}) {
     if (act.state !== 'settled') {
       // their progress: request.evidence.checkpoint (a hunt counts the target deaths it saw)
       const killed = act.hunting && Date.now() - act.t0 >= world.huntKillAfterMs ? 1 : 0;
+      if (world.progressFor?.[act.tool]) return { state: 'pending', wakeReason: 'timeout', actionId: id, progress: { request: { evidence: { checkpoint: world.progressFor[act.tool] } } } };
       return { state: 'pending', wakeReason: 'timeout', actionId: id, progress: act.hunting ? { request: { evidence: { checkpoint: { phase: killed ? 'collecting' : 'fighting', attacks: 3, targetDeathsObserved: killed, gained: 0 } } } } : {} };
     }
     if (unretrieved === id) unretrieved = null;

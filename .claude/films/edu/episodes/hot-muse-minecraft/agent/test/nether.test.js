@@ -111,9 +111,22 @@ test('nether: collect obsidian runs only near lava, in the Overworld, with no ot
     a.fake.world.blocks = [];
     let r = await a.body.run('collect', { block: 'obsidian', n: 4 });
     assert.equal(r.code, 'LAVA', r.result);
-    assert.match(r.result, /^no lava within 16 blocks to make obsidian from/);
-    a.fake.world.blocks = [lava(-148, 60, 150)];
+    assert.match(r.result, /^no lava pool within 16 blocks to make obsidian from/);
+    // F2 of the log hunt: flowing lava near by is not a pool to make obsidian from
+    a.fake.world.blocks = [{ name: 'lava', found: 3, listed: [{ x: -148, y: 60, z: 150, level: 3 }, { x: -147, y: 60, z: 150, level: 5 }] }];
     r = await a.body.run('collect', { block: 'obsidian', n: 4 });
+    assert.equal(r.code, 'LAVA');
+    assert.match(r.result, /is flowing, not a pool/);
+    // a pool: it runs, and while it runs get_state says how far it got
+    a.fake.world.blocks = [{ name: 'lava', found: 2, listed: [{ x: -148, y: 60, z: 150, level: 3 }, { x: -149, y: 59, z: 151, level: 0 }] }];
+    a.fake.world.durations = { ...(a.fake.world.durations ?? {}), collect_block: 2_500 };
+    a.fake.world.progressFor = { collect_block: { broken: 3, gained: 3, requested: 4 } };
+    const running = a.body.run('collect', { block: 'obsidian', n: 4 });
+    await sleep(2_000);
+    assert.match(a.body.state(), /^doing now: collect obsidian 4 \(3 of 4 so far\)/m);
+    r = await running;
+    a.fake.world.durations.collect_block = 20;
+    a.fake.world.progressFor = null;
     assert.equal(r.ok, true, r.result);
     // another game builds a frame near by: a's collect obsidian could take it
     const built = await b.body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });

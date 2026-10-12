@@ -119,7 +119,7 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   // a failed portal action is never "went through"
   assert.equal(fromTheirs('enter_nether_portal', { result: { status: 'failed', error: '[NAVIGATION_PORTAL_NO_EDGE] No supported entry.' } }).result, 'failed: No supported entry.');
   // obsidian and diamonds get longer than a collect's 3 minutes; other blocks keep it
-  assert.equal(toTheirs('collect', { block: 'obsidian', n: 12 }, ctx).timeoutMs, 540_000);
+  assert.equal(toTheirs('collect', { block: 'obsidian', n: 12 }, ctx).timeoutMs, 360_000);
   assert.equal(toTheirs('collect', { block: 'deepslate_diamond_ore', n: 3 }, ctx).timeoutMs, 330_000);
   assert.equal(toTheirs('collect', { block: 'stone', n: 12 }, ctx).timeoutMs, undefined);
   assert.equal(toTheirs('go_to', { x: 0, y: 70, z: 0 }, { ...ctx, position: { x: 0, y: -50, z: 0 } }).timeoutMs, 240_000, 'a climb of 120 blocks: 2 minutes and 2 s a block past 60');

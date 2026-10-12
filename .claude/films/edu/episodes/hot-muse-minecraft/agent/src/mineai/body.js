@@ -95,6 +95,16 @@ export const FRAME_GUARD = 160;
  * has been read this long after the arrival (the chunks come in over seconds; an early scan missed the portal it
  * stood in: production, 2026-10-11, every camera trip). */
 export const PORTAL_SETTLE_MS = 10_000;
+/** A running action's checkpoint in words: "3 of 14 so far" (collect, build, craft, smelt, hunt). */
+export function progressWords(cp) {
+  const n = (x) => (Number.isFinite(Number(x)) ? Number(x) : null);
+  const got = n(cp.gained) ?? n(cp.produced) ?? n(cp.placed) ?? n(cp.collected);
+  const of = n(cp.requested);
+  const phase = typeof cp.phase === 'string' && cp.phase !== 'running' ? cp.phase.replace(/_/g, ' ') : null;
+  if (got === null && !phase) return null;
+  return [got !== null ? `${got}${of ? ` of ${of}` : ''} so far` : null, phase].filter(Boolean).join(', ');
+}
+
 /** Calls sent once more after one of their reflexes cut them short (sending them again repeats nothing). */
 export const RETRY_AFTER_REFLEX = new Set(['craft_item', 'smelt_item', 'equip', 'eat_food', 'place_block', 'use_bucket', 'navigate', 'build_structure', 'activate_portal']);
 /** A failure that is one of their reflexes taking the body over, in plain words, else null. */
@@ -187,6 +197,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   // the structure this game's last build left incomplete (its blueprint, material, cells, facing and where the bot
   // stood): a build of the same blueprint and material near it continues it (src/mineai/skills.js continuesLast)
   let lastBuild = null;
+  let progress = null; // the running step's progress in words (their checkpoint)
   let lastPortal = null; // the frame the last build nether_portal made: {dimension, frame, inside, cells}
   const arrivals = {}; // dimension -> {pos, at}: where the bot last came out of a portal there
   let current = null; // the action running now: {actionId, stop}
@@ -385,7 +396,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       mobs,
       goal,
       busy: body.busy,
-      doing,
+      doing: doing && progress ? `${doing} (${progress})` : doing,
       lastResult,
       ...(care ? { care: careNote() } : {}),
     };
@@ -473,6 +484,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const deaths = (d) => Number(d?.progress?.request?.evidence?.checkpoint?.targetDeathsObserved) || 0;
     while (data.state === 'accepted' || data.state === 'pending') {
       ctl.actionId ??= data.actionId;
+      // how far it got, as their checkpoint says (get_state shows it while a long step runs: F2 of the log hunt)
+      const cp = data.progress?.request?.evidence?.checkpoint;
+      if (cp && typeof cp === 'object') progress = progressWords(cp);
       if (ctl.attack && !cancelled && deaths(data) > 0) { ctl.killed = deaths(data); await cancel(KILLED, { self: true }); }
       else if (ctl.stopped) await cancel(ctl.stopped);
       else if (left() <= 0) await cancel(`timed out after ${Math.round((ctl.limitMs ?? timeouts[ctl.skill] ?? 60_000) / 1000)} s`);
@@ -572,10 +586,15 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (other) return refuse(`another player's obsidian (a portal frame) is at ${other.x} ${other.y} ${other.z}, within ${FRAME_GUARD} blocks: collect obsidian could take it. Go farther away first`);
     const lit = scan.blocks.find((b) => b.name === 'nether_portal');
     if (lit) return refuse(`a lit portal is loaded near by (at ${lit.nearest.x} ${lit.nearest.y} ${lit.nearest.z}): collect obsidian could take its frame. Go farther away first (portal dismantle takes back your own frame)`);
-    const data = await rpc('view_blocks', { find: { block_names: ['lava'], limit: 8 } }, 10_000).catch(() => null);
-    const lava = (data?.result?.blocks?.find?.[0]?.listed ?? []).map(floorPos).filter((l) => Math.hypot(l.x - p.x, l.y - p.y, l.z - p.z) <= LAVA_NEAR);
+    // still lava (a source, level 0) is what obsidian forms from: flowing lava near by does not count, and their collect
+    // would walk to the nearest source anywhere (F2 of the log hunt: accepted at the surface next to flowing lava, it
+    // walked 95 blocks out and 120 down for 315 s; refused deep down with no source near)
+    const data = await rpc('view_blocks', { find: { block_names: ['lava'], limit: 64 } }, 10_000).catch(() => null);
     if (!data?.result?.blocks) return refuse('the blocks around could not be read; try again in a moment');
-    if (!lava.length) return refuse(`no lava within ${LAVA_NEAR} blocks to make obsidian from: go near lava first (get_state lists it among the nearby blocks; deep caves below y -54 have plenty)`, 'LAVA');
+    const near = (data.result.blocks.find?.[0]?.listed ?? []).filter((l) => Math.hypot(l.x - p.x, l.y - p.y, l.z - p.z) <= LAVA_NEAR);
+    const lava = near.filter((l) => !Number.isFinite(l.level) || l.level === 0).map(floorPos);
+    if (!lava.length && near.length) return refuse(`the lava within ${LAVA_NEAR} blocks is flowing, not a pool: obsidian forms on still lava. Go next to a lava pool first (get_state lists lava among the nearby blocks)`, 'LAVA');
+    if (!lava.length) return refuse(`no lava pool within ${LAVA_NEAR} blocks to make obsidian from: go next to one first (get_state lists lava among the nearby blocks; deep caves below y -54 have the most)`, 'LAVA');
     if (spawnAt && lava.some((l) => Math.hypot(l.x - spawnAt.x, l.z - spawnAt.z) <= SPAWN_GUARD)) return refuse(`the lava near by is within ${SPAWN_GUARD} blocks of the world spawn, where new players arrive: make obsidian somewhere else`, 'LAVA');
     const players = (status?.nearby?.players ?? []).map((x) => x?.position).filter(Boolean);
     if (players.some((q) => lava.some((l) => Math.hypot(q.x - l.x, q.y - l.y, q.z - l.z) <= 8))) return refuse('another player is next to the lava near by: make obsidian somewhere else', 'LAVA');
@@ -647,6 +666,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (!v.ok) return { ok: false, result: `bad arguments: ${v.error}`, delta: {}, ms: 0, code: 'BAD_ARGS' };
     body.busy = true;
     doing = describeCall(tool, v.args);
+    progress = null;
     const ctl = { skill: tool, actionId: null, stopped: null, cancel: null, attack: null, killed: 0 };
     current = ctl;
     emit('skill', { phase: 'start', tool, args: v.args });
