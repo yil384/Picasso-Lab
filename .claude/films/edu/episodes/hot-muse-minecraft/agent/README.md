@@ -908,6 +908,51 @@ docker tag muse-minecraft-camera:pre-backfill muse-minecraft-camera:latest && sh
 The earlier rollbacks (live video off, landscape, `PAPER_NETHER=false`, `pre-terminal`) still apply. Remove the
 `pre-backfill` tags once this has held for a week.
 
+### On production (2026-10-12, the stream UI and its sound)
+
+The owner approved the new UI. Deployed with `deploy/push.sh --prod` from main a0da9fa (the UI layout, the sound, the
+portal fixes for the camera, and muse-fix2's log-hunt fixes with the way back from the Nether), production idle, 361
+tests passing. Before it: `deploy/.env` and `deploy/camera.env` backed up (`backups/*.bak-pre-ui-20261012-190128`), the
+files archived (`backups/app-pre-ui.tgz`), the images tagged `pre-ui` (agent, paper, camera). The camera image was
+rebuilt: PulseAudio, `assets/muse-ui`, and the game's sound files (not the soundtrack). Production's `camera.env` is
+unchanged (`FB_LIVE=on`, `FB_TARGET=me`, `CAMERA_VIEW=third`); the layout (`ui`, 1080x1080) and the sound (game
++12 dB, music bed -2 dB) are the defaults. Staging runs the same main, its camera stopped (no `camera.env`).
+
+Before it, on staging with the real client (the camera moved there while production was idle and back after): the
+first recording was silent (the client image had no sound files although OpenAL played into the sink); with the
+effects installed, a daylight trip measured -26.6 LUFS for the game alone, and the defaults were set from it (-16.5
+LUFS mixed, peak -1.0 dBFS). The same trip showed the eye in the bot's head while it stood in a portal facing along it,
+fixed (portal blocks are open air for the eye's spots too).
+
+Checks (all passed): the scripted game through `https://play.picasso-lab.com/mcp` (wooden pickaxe in 19.6 s, host closed
+with 0 restarts), 0 heartbeat misses, the datapack's rule in production's Paper, the client with its sound server.
+One natural game with `live_view` (g84bf7e): live after 13.0 s; Facebook's ingest health 1080x1080 at 30.6 fps, video
+3.52 Mb/s and audio 137 kb/s (the old stream's silence was 2.8 kb/s); the camera's stats 30 fps captured, 0 dropped,
+0 duplicated, speed 1x, ffmpeg 68 % of a core, no ffmpeg restart; the panel as the stream had it: Muse working with
+its pickaxe, "Mine 4 oak logs, then craft 8 oak planks", "collecting oak log (4)", "on it", the status row with
+hearts, food and the time. The page at a 1000x1050 panel: the square player fills the width, "Tap the video for
+sound" and "Reload video" over it. Facebook's autoplay: the plugin page a logged-out viewer gets with
+`autoplay=true&mute=true` carries `"should_autoplay":true` and `"muted":true`, and in a headless browser the player
+shows Facebook's LIVE badge and its loading spinner instead of the poster with a play button (playback itself cannot
+be seen in a headless browser). The game's sound: on staging with the same image; on production the sink is silent
+while the bot stands idle. The other sites answer: `picasso-hopper` and `autoresearch` now redirect (301) to
+`picasso-lab.com` behind a new edge Caddy (`picasso-edge-caddy`, not ours), `poker` 404 and `yichen` 502 as before.
+
+Rollbacks, on picasso in `~/workspace/muse-minecraft/app/deploy` (each `recreate.sh` stops when a game runs):
+
+```sh
+# no music bed, or no game sound, or other levels (camera.env, then the camera again)
+echo STREAM_MUSIC=off >> camera.env && sh recreate.sh production
+echo STREAM_GAME_AUDIO=off >> camera.env && sh recreate.sh production
+# the vertical terminal of before, or the game alone
+echo STREAM_LAYOUT=terminal >> camera.env && sh recreate.sh production
+# everything as before this deploy: the pre-ui images, Paper and the camera too
+docker tag muse-minecraft-agent:pre-ui muse-minecraft-agent:latest && docker tag muse-minecraft-paper:pre-ui muse-minecraft-paper:latest &&
+docker tag muse-minecraft-camera:pre-ui muse-minecraft-camera:latest && sh recreate.sh production all
+```
+
+Remove the `pre-ui` tags once this has held for a week.
+
 ## The stream UI (STREAM_LAYOUT=ui)
 
 The owner watched the vertical stream (2026-10-11): 9:16 left black bars in muse.ai's panel (about 1000x1050 on a
