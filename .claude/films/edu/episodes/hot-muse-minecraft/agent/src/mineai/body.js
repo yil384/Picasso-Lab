@@ -96,6 +96,12 @@ export const FRAME_GUARD = 160;
  * has been read this long after the arrival (the chunks come in over seconds; an early scan missed the portal it
  * stood in: production, 2026-10-11, every camera trip). */
 export const PORTAL_SETTLE_MS = 10_000;
+/** Rock a nether_portal frame should not be cut into (their build may keep such a cell). */
+const ROCK = new Set(['stone', 'deepslate', 'tuff', 'granite', 'diorite', 'andesite', 'calcite', 'basalt', 'blackstone', 'netherrack', 'dripstone_block', 'smooth_basalt']);
+
+/** Their temporary station's verification hitches (a placed furnace or table not yet seen), worth one more try. */
+export const STATION_HITCH = /consumption of [a-z_]+ was not observed|NO_LOADED_MATCHING_TARGETS\] Observed 0 loaded (crafting_table|furnace) blocks/;
+
 /** A running action's checkpoint in words: "3 of 14 so far" (collect, build, craft, smelt, hunt). */
 export function progressWords(cp) {
   const n = (x) => (Number.isFinite(Number(x)) ? Number(x) : null);
@@ -545,11 +551,13 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const xs = cells.map((c) => c.x); const zs = cells.map((c) => c.z); const ys = cells.map((c) => c.y);
     const mid = { x: Math.round((Math.min(...xs) + Math.max(...xs)) / 2), z: Math.round((Math.min(...zs) + Math.max(...zs)) / 2) };
     const liquid = [];
+    const seen = new Map(); // "x,y,z" -> block name, from the boxes
     for (const y of [Math.min(...ys), Math.max(...ys)]) {
       const data = await rpc('view_blocks', { box: { x: mid.x, y, z: mid.z, half_width: 4, half_height: 3 } }, 10_000).catch(() => null);
       const box = data?.result?.blocks?.box;
       if (!box?.layers) return { ok: false, result: 'the blocks where the portal frame would stand could not be read; try again in a moment, or a little way off', code: 'FAILED', delta: {} };
       for (const layer of box.layers) for (const row of layer.rows) row.blocks.forEach((name, i) => {
+        seen.set(`${box.center.x - box.halfWidth + i},${layer.y},${row.z}`, name);
         if (name === 'unloaded') liquid.push({ name, x: box.center.x - box.halfWidth + i, y: layer.y, z: row.z });
         else if (name === 'lava' || name === 'water') liquid.push({ name, x: box.center.x - box.halfWidth + i, y: layer.y, z: row.z });
       });
@@ -557,7 +565,15 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const unloaded = liquid.find((b) => b.name === 'unloaded');
     if (unloaded) return { ok: false, result: `the ground around where the portal frame would stand is not loaded yet (${unloaded.x} ${unloaded.y} ${unloaded.z}); try again in a moment`, code: 'FAILED', delta: {} };
     const near = liquid.sort((a, b) => (a.name === 'lava' ? -1 : 1) - (b.name === 'lava' ? -1 : 1))[0];
-    if (!near) return null;
+    // a frame cut into rock: their build keeps a frame cell its dig is refused, and the obsidian placed is spent (F7 of
+    // the log hunt: three frames in deepslate and tuff each used 10 or 11 obsidian for nothing); the bottom row is meant
+    // to be in the ground
+    if (!near) {
+      const bottom = Math.min(...ys);
+      const rock = cells.filter((c) => c.block_name !== 'air' && c.y > bottom).map((c) => seen.get(`${c.x},${c.y},${c.z}`)).filter((n) => ROCK.has(n));
+      if (rock.length >= 2) return { ok: false, result: `the frame would be cut into rock (${rock.length} of its cells hold ${[...new Set(rock)].join(' and ')}): build it on open ground, where its sides and top stand in the air (go_to a spot with flat ground and open sky first)`, code: 'FAILED', delta: {} };
+      return null;
+    }
     return { ok: false, result: `${near.name} at ${near.x} ${near.y} ${near.z} is next to where the portal frame would stand: build it on dry ground away from lava and water (go_to a spot with flat ground and open sky first)`, code: near.name === 'lava' ? 'LAVA' : 'FAILED', delta: {} };
   }
 
@@ -773,6 +789,17 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           const collected = Number(out.output?.result?.collected?.gained) || 0;
           if (!res.ok && takeover && call.tool === 'collect_block' && collected >= (Number(call.args?.count) || 1)) {
             res = { ok: true, code: null, result: `${doneSoFar(call.tool, out.output, call) ?? `collected ${collected}`}; a reflex took the body over meanwhile (${takeover})` };
+          }
+          // a hitch of their temporary station (F6 of the log hunt: "the block appeared, but consumption of furnace was
+          // not observed", "[WORKSTATION_NOT_RECOVERED] ... Observed 0 loaded crafting_table blocks" with nothing made; the
+          // same step sent again a little later worked): once more, after a moment
+          if (!res.ok && !takeover && !out.error && !ctl.stopped && ['craft_item', 'smelt_item'].includes(call.tool) && STATION_HITCH.test(String(out.output?.result?.error ?? '')) && !retried.has(i) && deadline - Date.now() > 15_000) {
+            retried.add(i);
+            await new Promise((r2) => { setTimeout(r2, 1_500); });
+            await refresh().catch(() => {});
+            parts.push({ ok: true, result: `the ${/furnace/.test(String(out.output?.result?.error)) ? 'furnace' : 'crafting table'} put down for it was not seen in place (a timing hitch); tried again`, code: null });
+            i -= 1;
+            continue;
           }
           // truly cut short: tried once more after the reflex let go (calls that can simply be sent again), else a
           // plain INTERRUPTED, leading with what was done, instead of a failure

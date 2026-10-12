@@ -93,6 +93,10 @@ test('nether: the portal site is read around the frame: water next to it, or not
     fake.world.boxAt = (x, y) => (y === 66 ? 'lava' : 'air');
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
     assert.equal(r.code, 'LAVA');
+    // F7 of the log hunt: a frame cut into rock is refused before any obsidian is spent
+    fake.world.boxAt = (x, y) => (y >= 64 ? 'deepslate' : 'stone');
+    r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.match(r.result, /^the frame would be cut into rock \(10 of its cells hold deepslate\)/);
     fake.world.boxAt = null;
     fake.world.viewFail = true;
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
@@ -240,6 +244,11 @@ test('a reflex takes a craft over: made means ok (with a note), cut short means 
     const after = body.attribution();
     assert.equal(after.reflex - before.reflex, 2, 'two distinct reflex responses in the step');
     assert.equal(after.muse - before.muse, 1, 'the collect, not the refused dismantle');
+    // F6 of the log hunt: their station hitch, then the same craft works: tried once more, ok
+    fake.world.takeovers.push({ tool: 'craft_item', made: false, error: 'The block appeared, but consumption of crafting_table was not observed (inventory 1 → 1).' });
+    r = await body.run('craft', { item: 'stick', n: 4 });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /^the crafting table put down for it was not seen in place \(a timing hitch\); tried again; crafted 4 stick/);
     // a real failure stays a failure
     fake.world.fail.craft_item = '[CRAFT_MATERIALS_MISSING] not enough oak_planks';
     r = await body.run('craft', { item: 'stick', n: 4 });
