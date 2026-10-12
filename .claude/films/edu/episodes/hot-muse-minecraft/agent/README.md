@@ -958,28 +958,18 @@ Remove the `pre-ui` tags once this has held for a week.
 The owner watched the vertical stream (2026-10-11): 9:16 left black bars in muse.ai's panel (about 1000x1050 on a
 desktop, narrower and taller on a phone), and the terminal looked like a terminal. The `ui` layout (the default) is
 square, 1080x1080, so the video fills the panel's width on a desktop and the top of it on a phone: the game on top
-(1080x720, the middle of the 16:9 picture: Minecraft's field of view is vertical, so this is what a 3:2 window shows)
-and Muse's panel under it (1080x360, a third):
+(1080x810, the middle of the 16:9 picture: Minecraft's field of view is vertical, so this is what a 4:3 window shows)
+and Muse's panel under it:
 
-- **Muse**, our own mascot (no Meta, muse.ai or Mojang art): a small lavender spirit with a miner's helmet, drawn with
-  Codex's image tool on a green screen (`../ui-art`: `gen.sh`, `character.txt`, `style.txt`, the sheets in `art/`)
-  and keyed by `ui-art/key.mjs` into `assets/muse-ui/sprites` (aligned on the helmet, so a cross-fade never jumps).
-  Poses: idle, thinking (between commands: Muse is deciding), commanding (pointing, when a call comes in), working (a
-  skill runs), cheering (done, a milestone), worried (new advice, a failure, health 6 or less), hurt (damage, a reflex,
-  a death), and fanning itself in the Nether. A gentle bob, blinks every few seconds (their own frames), a hop when it
-  cheers, a shake when hurt, 220 ms cross-fades, at 30 frames a second.
-- **The speech bubble**: the current command in plain words ("Mine 3 oak logs", "Walk to 6 67 -25", "Go through the
-  portal"; the agent's `plainCall`, never the raw call; chat text is never shown), what the body is doing under it
-  (its caption, which is no longer drawn on the game), and a chip: "on it", "step 2 of 4 done", "done in 14 s", or
-  "failed: no iron ore within 64 blocks". The last commands move up above it as small pills (a green dot done, a red
-  one failed) and fade under the status row. get_state and live_view are not commands.
-- **The advice**: one note card per kind (night, shield, food, the Nether...), most pressing first, at most two;
-  updated in place when its words change, highlighted only when the kind is new or more pressing (3: health, lava,
-  starving; 2: a night that has come; 1 else). The agent sends a terminal line for a kind only when its words change
-  beyond the numbers in it (the time of day changed on every get_state and repeated the same advice). Milestones (the
-  first wooden pickaxe, "Entered the Nether") as a gold card for 6 s, reflexes as small tags for 8 s.
-- **The status row**: our heart and food icons with the numbers, the sun or moon with the time, or "Nether", and a slim
-  "Muse 92%" meter (Muse's share of what was done, against the reflexes). Inter (SIL OFL, `assets/muse-ui/fonts`).
+- **The minimal panel** (2026-10-12, the owner: "remove the mascot, just show the last few actions"): a quarter of the
+  height (1080x270), the game gets 1080x810. One slim header line: our heart and food icons with the numbers, the sun
+  or moon with the time, or "Nether", and "Muse 88%" with a slim meter on the right. Under it the last four actions,
+  newest on top and brightest, older ones dimmer: each in plain words ("Mine 3 diamond ore", "Walk to 141 100 -174";
+  the agent's `plainCall`, never the raw call, chat text never shown) with its state on the right: three quiet dots
+  breathing while it runs ("2 of 4" before them in a sequence), "done 14 s", or "failed" and a few words. A reflex is
+  a small muted row ("Reflex: fought a zombie"), a milestone a gold one ("Entered the Nether", "Got a wooden pickaxe");
+  the advice is not shown. A new row slides in from above, the others move down, the fifth fades out. Inter (SIL OFL),
+  two sizes, no boxes. The mascot of the first version (`../ui-art`, `assets/muse-ui/sprites`) is kept but not drawn.
 - **How it is drawn**: `src/ui-panel.js` with node-canvas, 30 frames a second while live: the sprites pre-scaled, every
   text card drawn into its own canvas only when it changes, so a frame is a few image copies (about 1.3 ms on the Mac).
   Each frame is an uncompressed 32-bit BMP renamed over `/dev/shm/muse-ui-*/panel.bmp`; ffmpeg reads it again for

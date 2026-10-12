@@ -58,14 +58,16 @@ export function liveViewHtml(v) {
   const src = live ? `${v.embedUrl}&autoplay=true&mute=true` : '';
   const player = live
     ? `<div id="v" data-src="${esc(src)}"><iframe src="${esc(src)}" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe>`
-      + '<b id="h">Tap the video for sound</b><button id="r" type="button">Reload video</button></div>'
+      + '<b id="h">Tap the video for sound</b></div>'
     : '';
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
     + '<title>Minecraft live</title><style>html,body{margin:0;background:#0c0e10;color:#e8e4dc;font:13px/1.4 system-ui,sans-serif}'
     + `#v{position:relative;aspect-ratio:${aw}/${ah};width:min(100%,calc((100vh - 28px)*${ratio}));margin:0 auto;background:#000;overflow:hidden}`
     + 'iframe{position:absolute;inset:0;width:100%;height:100%;border:0;transition:opacity .8s}'
-    + '#h{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);padding:6px 14px;border-radius:99px;background:rgba(12,14,16,.78);color:#fff;font-weight:600;pointer-events:none;white-space:nowrap}'
-    + '#r{position:absolute;top:8px;right:8px;padding:3px 9px;border:0;border-radius:99px;background:rgba(12,14,16,.6);color:#e8e4dc;font:12px system-ui,sans-serif;cursor:pointer;opacity:.7}#r:hover{opacity:1}'
-    + `p{margin:0;padding:5px 12px}</style></head><body>${player}<p>${esc(statusLine(v))}</p>`
+    // the hint at the top, under Facebook's own title bar and over the game's sky: never over the panel of actions
+    + '#h{position:absolute;left:50%;top:max(52px,9%);transform:translateX(-50%);padding:3px 10px;border-radius:99px;background:rgba(12,14,16,.55);color:#fff;font:600 11px system-ui,sans-serif;pointer-events:none;white-space:nowrap}'
+    // "Reload video" in the status line under the player: it covers nothing
+    + '#s{display:flex;align-items:center;justify-content:space-between;gap:10px}#r{flex:none;margin-right:10px;padding:1px 9px;border:1px solid #3a3f47;border-radius:99px;background:none;color:#c9c5bd;font:12px system-ui,sans-serif;cursor:pointer}#r:hover{color:#fff}'
+    + `p{margin:0;padding:5px 12px}</style></head><body>${player}${live ? `<div id="s"><p>${esc(statusLine(v))}</p><button id="r" type="button">Reload video</button></div>` : `<p>${esc(statusLine(v))}</p>`}`
     + `${live ? `<script>${SCRIPT}</script>` : ''}</body></html>`;
 }

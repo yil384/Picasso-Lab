@@ -21,7 +21,7 @@ const { values: v } = parseArgs({ options: {
   pulse: { type: 'boolean' }, tone: { type: 'boolean' },
 } });
 if (!v.clip || !v.out) { console.error('usage: node scripts/ui-sample.mjs --clip game.mp4 --out sample.mp4 [--seconds 30] [--size 1080x1080] [--music off]'); process.exit(2); }
-const seconds = Number(v.seconds ?? 30);
+const seconds = Number(v.seconds ?? 20);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // a camera rig that is always in the world (no sound server here)
@@ -62,39 +62,19 @@ const nether = (pos) => ({ kind: 'nether', text: `in the Nether: beds explode he
 
 const script = [
   [0.3, () => feed.reply(game, 'start_game', { adult: true }, reply({ steps: [], state: state(20, 20, 2_250) }))],
-  [2.0, () => { feed.call(game, 'play', { skill: 'portal', args: { action: 'enter', pos: { x: -3, y: 75, z: -197 } } }); att = { muse: 1, reflex: 0, musePct: 100 }; }],
-  [4.5, () => { stream.caption('Muse: walking into the portal'); }],
-  [9.5, () => { stream.caption('Muse: entering a portal'); }],
+  [0.9, () => { feed.call(game, 'play', { skill: 'collect', args: { block: 'oak_log', n: 2 } }); att = { muse: 1, reflex: 0, musePct: 100 }; }],
+  [3.6, () => feed.reply(game, 'play', {}, reply({ steps: [step(1, 1, 'collect', { block: 'oak_log', n: 2 }, 'confirmed', 'mined 2 oak_log', 2_600)], state: state(20, 20, 2_400) }))],
+  [4.4, () => { feed.call(game, 'play', { skill: 'portal', args: { action: 'enter', pos: { x: -3, y: 75, z: -197 } } }); att = { muse: 2, reflex: 0, musePct: 100 }; }],
   [15.0, () => {
     dim = 'the_nether';
-    feed.reply(game, 'play', {}, reply({
-      steps: [step(1, 1, 'portal', { action: 'enter' }, 'confirmed', 'went through the portal at 1 68 -25', 5_100)],
-      state: state(20, 20, 2_900), advice: [nether('1 68 -25')],
-    }));
+    feed.reply(game, 'play', {}, reply({ steps: [step(2, 1, 'portal', { action: 'enter' }, 'confirmed', 'went through the portal at 1 68 -25', 5_100)], state: state(20, 20, 2_900), advice: [nether('1 68 -25')] }));
   }],
-  [17.0, () => { feed.call(game, 'play', { skill: 'go_to', args: { x: 6, y: 67, z: -25 } }); att = { muse: 2, reflex: 0, musePct: 100 }; }],
-  [17.4, () => { stream.caption('Muse: walking to 6 67 -25'); }],
-  [19.0, () => feed.reply(game, 'play', {}, reply({ steps: [step(2, 1, 'go_to', { x: 6, y: 67, z: -25 }, 'confirmed', 'walked to 5 67 -25', 1_100)], state: state(20, 20, 3_050), advice: [nether('1 68 -25')] }))],
-  [20.5, () => feed.call(game, 'get_state', {})],
-  [20.8, () => {
-    att = { muse: 2, reflex: 1, musePct: 67 };
-    feed.reply(game, 'get_state', {}, reply({
-      steps: [], state: state(17, 19, 3_200),
-      advice: [nether('1 68 -25'), { kind: 'food', text: 'food 19 and no food carried; nothing to hunt in sight' }],
-      onItsOwn: [{ seq: 1, agoS: 1, source: 'reflex', kind: 'defend', ok: true, text: 'defending itself (piglin), then back to walking' }],
-    }));
-  }],
-  [23.0, () => { feed.call(game, 'play_sequence', { steps: [{ skill: 'go_to', args: { x: 1, y: 68, z: -17 } }, { skill: 'go_to', args: { x: 1, y: 68, z: -24 } }] }); att = { muse: 3, reflex: 1, musePct: 75 }; }],
-  [23.3, () => { stream.caption('Muse: walking to 1 68 -17'); }],
-  [25.5, () => feed.reply(game, 'play_sequence', {}, reply({
-    steps: [
-      step(3, 1, 'go_to', { x: 1, y: 68, z: -17 }, 'confirmed', 'walked to 1 67 -17', 1_400),
-      step(3, 2, 'go_to', { x: 1, y: 68, z: -24 }, 'confirmed', 'walked to 1 68 -23', 1_600),
-    ],
-    state: state(17, 19, 3_400), advice: [nether('1 68 -25'), { kind: 'food', text: 'food 19 and no food carried; nothing to hunt in sight' }],
-  }))],
-  [27.0, () => { feed.call(game, 'play', { skill: 'portal', args: { action: 'enter' } }); att = { muse: 4, reflex: 1, musePct: 80 }; }],
-  [27.4, () => { stream.caption('Muse: entering a portal'); }],
+  [16.0, () => { feed.call(game, 'play', { skill: 'go_to', args: { x: 6, y: 67, z: -25 } }); att = { muse: 3, reflex: 0, musePct: 100 }; }],
+  [17.6, () => feed.reply(game, 'play', {}, reply({ steps: [step(3, 1, 'go_to', { x: 6, y: 67, z: -25 }, 'confirmed', 'walked to 5 67 -25', 1_100)], state: state(20, 20, 3_050), advice: [nether('1 68 -25')] }))],
+  [18.0, () => { att = { muse: 3, reflex: 1, musePct: 75 }; feed.reply(game, 'get_state', {}, reply({ steps: [], state: state(17, 19, 3_200), advice: [nether('1 68 -25')], onItsOwn: [{ seq: 1, agoS: 1, source: 'reflex', kind: 'defend', ok: true, text: 'fought a piglin, then back to walking' }] })); }],
+  [18.6, () => { feed.call(game, 'play', { skill: 'collect', args: { block: 'obsidian', n: 4 } }); att = { muse: 4, reflex: 1, musePct: 80 }; }],
+  [19.4, () => feed.reply(game, 'play', {}, reply({ code: 'NEED_ITEMS', steps: [step(4, 1, 'collect', { block: 'obsidian', n: 4 }, 'failed', 'needs a diamond pickaxe; obsidian drops nothing without one', 300)], state: state(17, 19, 3_300) }))],
+  [21.0, () => { feed.call(game, 'play', { skill: 'shelter', args: {} }); }],
 ];
 
 const keepAlive = setInterval(() => {}, 1_000); // the stream's own timers do not hold the process open
