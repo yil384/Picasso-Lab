@@ -250,6 +250,12 @@ export async function startFakeMineAi(opts = {}) {
       // (made) or before it, the action failing with the reflex's reason
       const t = world.takeovers[0]?.tool === tool ? world.takeovers.shift() : null;
       const done = !t || t.made ? perform(tool, a, () => act.cancel) : null;
+      // the guard reflex's way with a fresh shield: into the off-hand; the temporary table left standing
+      if (t?.offHand && have(t.offHand) > 0) { add(t.offHand, -1); world.equipment.set('off-hand', { name: t.offHand, count: 1 }); }
+      if (t?.tableLeft && have('crafting_table') > 0) {
+        add('crafting_table', -1);
+        world.blocks = [...world.blocks.filter((b) => b.name !== 'crafting_table'), { name: 'crafting_table', found: 1, listed: [{ x: Math.floor(world.position.x) + 1, y: Math.floor(world.position.y), z: Math.floor(world.position.z) }] }];
+      }
       const result = t ? { status: 'failed', error: t.error } : done;
       // what else happened meanwhile (a walk's digging and scaffolding, a pickup): in the inventory, not in the evidence
       if (result.status !== 'cancelled') for (const [k, n] of Object.entries(world.side[tool] ?? {})) add(k, n);

@@ -601,6 +601,18 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     return [{ kind: 'portal', text: `the portal back at ${a.pos.x} ${a.pos.y} ${a.pos.z} is not lit any more${flint ? '' : ': flint_and_steel lights it again (1 iron_ingot and 1 flint)'}`, ...(flint ? { hint: { skill: 'portal', args: { action: 'light', pos: a.pos } } } : {}) }];
   }
 
+  /** The crafting table a cut-short craft left standing next to the bot (within 5 blocks): mined back. */
+  async function tableBack() {
+    const data = await rpc('view_blocks', { find: { block_names: ['crafting_table'], limit: 1 } }, 10_000).catch(() => null);
+    const at = data?.result?.blocks?.find?.[0]?.listed?.[0];
+    const p = latest.position;
+    if (!at || !p || Math.hypot(at.x - p.x, at.y - p.y, at.z - p.z) > 5) return null;
+    const pos = floorPos(at);
+    const out = await act({ tool: 'collect_block', args: { block_name: 'crafting_table', ...pos } }, Date.now() + 30_000, { stopped: null, actionId: null }).catch(() => null);
+    await refresh().catch(() => {});
+    return { at: pos, back: out?.output?.result?.status === 'succeeded' };
+  }
+
   /** Wait (up to ms) until none of their reflexes holds the body. */
   async function reflexSettled(ms) {
     const end = Date.now() + Math.max(0, ms);
@@ -707,7 +719,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           if (call.tool === 'craft_item' && call.args?.items?.[0]) {
             await refresh().catch(() => {});
             const { item_name: item, count } = call.args.items[0];
-            craftHad = { item, count: Number(count) || 1, have: latest.inventory?.[item] ?? 0, tables: latest.inventory?.crafting_table ?? 0 };
+            // carried and worn: a fresh shield goes to the off-hand when their guard reflex takes it (F1 of the log hunt)
+            craftHad = { item, count: Number(count) || 1, have: allItems(latest.inventory, latest.equipment)[item] ?? 0, tables: latest.inventory?.crafting_table ?? 0 };
           }
           let out = await act(call, deadline, ctl);
           // a call with alternatives (a way out of a portal: one side, else the other): the next when this one failed
@@ -730,11 +743,14 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           const takeover = !res.ok && !out.error && !ctl.stopped ? reflexTakeover(res.result) : null;
           if (takeover && craftHad) {
             await refresh().catch(() => {});
-            const gained = (latest.inventory?.[craftHad.item] ?? 0) - craftHad.have;
+            const gained = (allItems(latest.inventory, latest.equipment)[craftHad.item] ?? 0) - craftHad.have;
             if (gained >= craftHad.count) {
               own = null; // their evidence of the craft is cut short: the step's whole change is shown
-              const table = (latest.inventory?.crafting_table ?? 0) < craftHad.tables;
-              res = { ok: true, code: null, result: `crafted ${gained} ${craftHad.item}; then a reflex took the body over (${takeover})${table ? ', and the crafting table put down for the craft stayed where it stands (collect crafting_table takes it back)' : ''}` };
+              const offHand = latest.equipment?.['off-hand']?.name === craftHad.item;
+              // the crafting table put down for the craft and left standing: taken back (it is the bot's own, a block
+              // or two away), else said where it stands
+              const table = (latest.inventory?.crafting_table ?? 0) < craftHad.tables ? await tableBack() : null;
+              res = { ok: true, code: null, result: `crafted ${gained} ${craftHad.item}${offHand ? '; it is in your off-hand' : ''}; a reflex took the body over meanwhile (${takeover})${table?.back ? '; the crafting table put down for the craft was picked up again' : table?.at ? `; the crafting table put down for the craft stands at ${table.at.x} ${table.at.y} ${table.at.z}` : ''}` };
             }
           }
           // truly cut short: tried once more after the reflex let go (calls that can simply be sent again), else a

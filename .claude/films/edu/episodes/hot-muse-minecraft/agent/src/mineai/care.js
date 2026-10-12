@@ -900,9 +900,15 @@ export function createCare(deps) {
         if (!calls) return fail('the shield did not add up after all');
         const c = await run(calls, LIMITS.tools, ctl);
         await deps.refresh();
-        if (!(inv().shield > 0)) return fail(`could not craft it (${errOf(c) ?? 'stopped'})`);
-        const w = await run([{ tool: 'equip', args: { items: [{ item_name: 'shield', destination: 'off-hand' }] } }], LIMITS.wear, ctl);
-        parts.push(okOf(w) ? 'crafted a shield and put it in its off-hand (its fight reflex raises it against arrows)' : 'crafted a shield');
+        // the shield may already be in the off-hand: their guard reflex puts a fresh one there when hostiles are near
+        // (F1 of the log hunt: six "could not craft it" with the shield made, the check saw only the main inventory)
+        const worn = () => Object.values(deps.latest().equipment ?? {}).some((e) => e?.name === 'shield');
+        if (!(inv().shield > 0) && !worn()) return fail(`could not craft it (${errOf(c) ?? 'stopped'})`);
+        if (worn()) parts.push('crafted a shield; it is in its off-hand already (its fight reflex raises it against arrows)');
+        else {
+          const w = await run([{ tool: 'equip', args: { items: [{ item_name: 'shield', destination: 'off-hand' }] } }], LIMITS.wear, ctl);
+          parts.push(okOf(w) ? 'crafted a shield and put it in its off-hand (its fight reflex raises it against arrows)' : 'crafted a shield');
+        }
         return add({ kind: 'shield', ok: true, ms: ms(), text: `${d.why}: ${parts.join(', ')}` });
       }
       case 'gather': {

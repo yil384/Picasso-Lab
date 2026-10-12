@@ -187,11 +187,14 @@ test('a reflex takes a craft over: made means ok (with a note), cut short means 
   await body.ready;
   try {
     // the production case (g64e8c5): the shield made, then their guard reflex took the body to equip it
-    fake.world.takeovers.push({ tool: 'craft_item', made: true, error: 'Equip an available shield before nearby hostiles require a guard.' });
+    // the reflex put the fresh shield in the off-hand (the main inventory has none: F1 of the log hunt) and the
+    // temporary table stayed standing: ok, said so, the table taken back
+    fake.world.takeovers.push({ tool: 'craft_item', made: true, offHand: 'shield', tableLeft: true, error: 'Equip an available shield before nearby hostiles require a guard.' });
     let r = await body.run('craft', { item: 'shield', n: 1 });
     assert.equal(r.ok, true, r.result);
-    assert.match(r.result, /^crafted 1 shield; then a reflex took the body over \(it put a shield in the off-hand with hostile mobs near\)/);
+    assert.match(r.result, /^crafted 1 shield; it is in your off-hand; a reflex took the body over meanwhile \(it put a shield in the off-hand with hostile mobs near\); the crafting table put down for the craft was picked up again/);
     assert.equal(r.delta.shield, 1);
+    assert.equal(fake.tools('collect_block').at(-1).args.block_name, 'crafting_table', 'mined back at its place');
     // cut short before the craft: sent once more once the reflex let go, and done
     fake.world.takeovers.push({ tool: 'craft_item', made: false, error: '[ACTION_PREEMPTED] fight response for zombie#12 at 1,64,2 (2.5 blocks).' });
     r = await body.run('craft', { item: 'stick', n: 4 });

@@ -170,7 +170,7 @@ function careRig({ situation: sit, inventory = {}, stacks = [], results = {}, id
   const state = { situation: sit, inventory, stacks, idle, idleSince: NOW - 10_000, clock: NOW, events: [] };
   const deps = {
     situation: () => state.situation,
-    latest: () => ({ inventory: state.inventory }),
+    latest: () => ({ inventory: state.inventory, equipment: state.equipment ?? {} }),
     stacks: () => state.stacks,
     refresh: async () => {},
     act: async (call, deadline, ctl) => {
@@ -634,4 +634,15 @@ test('advise: a pickaxe gone (broken or lost) gets the best one what is carried 
   assert.equal(a.text, 'you carry no pickaxe');
   assert.deepEqual(a.hint, { skill: 'craft', args: { item: 'stone_pickaxe', n: 1 } });
   assert.equal(advise(situation(), { ...base, stacks: [shield, stack('wooden_pickaxe', 1, 'hand')], canCraft: () => true }).find((x) => x.kind === 'tools'), undefined);
+});
+
+test('care shield (F1 of the log hunt): a shield their guard reflex put straight into the off-hand counts as made', async () => {
+  const rig = careRig({
+    mode: 'advise', situation: situation(), inventory: { iron_ingot: 4, oak_planks: 8 },
+    results: { craft_item: () => { rig.state.equipment = { 'off-hand': { name: 'shield', count: 1 } }; return { status: 'failed', error: 'Equip an available shield before nearby hostiles require a guard.' }; } },
+  });
+  const r = await rig.care.perform('shield', { stopped: null });
+  assert.equal(r.ok, true, r.text);
+  assert.match(r.text, /crafted a shield; it is in its off-hand already/);
+  assert.equal(rig.calls.filter((c) => c.tool === 'equip').length, 0, 'nothing more to equip');
 });
