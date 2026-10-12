@@ -276,6 +276,9 @@ export function createUiPanel(o) {
         } else if (l.k === 'reflex' || l.k === 'body') {
           const t = `${l.k === 'reflex' ? 'Reflex' : 'Body'}: ${reflexGist(l.t)}`;
           if (!rows.some((r) => r.text === t && now() - r.at < 10_000)) addRow({ kind: 'reflex', text: t });
+        } else if (l.k === 'checked' || l.k === 'follow') {
+          // what Muse saw when it looked, and whether its command took the body's advice: quiet rows
+          addRow({ kind: 'reflex', text: l.t });
         } else if (l.k === 'milestone') {
           addRow({ kind: 'milestone', text: milestoneWords(l.t) });
         } else if (l.k === 'info' && /^game over/i.test(l.t)) {

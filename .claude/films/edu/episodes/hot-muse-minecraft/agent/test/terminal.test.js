@@ -84,12 +84,13 @@ test('feed: a call, then its results once; advice when it changes; reflexes and 
   assert.deepEqual(sent.at(-1).lines.map(({ k, t }) => ({ k, t })), [
     { k: 'ok', t: 'ok  crafted 1 wooden pickaxe (2 s)' }, { k: 'milestone', t: 'milestone: a wooden pickaxe at 0:41' },
     { k: 'reflex', t: 'reflex: defending itself (zombie)' }, { k: 'fail', t: 'death: died: slain by a zombie at 10 64 -3' },
-  ], 'the first step not twice, the same advice not again');
+    { k: 'checked', t: 'Muse checked: HP 20, food 20, dawn in 8 min' },
+  ], 'the first step not twice, the same advice not again; what Muse saw when it looked');
   assert.match(sent.at(-1).status, /NIGHT 19:06/);
   // a portal: the line, and NETHER in the status bar
   dimension = 'minecraft:the_nether';
   feed.reply(game, 'get_state', {}, reply({ steps: [], advice: [], onItsOwn: [{ seq: 5, source: 'reflex', kind: 'death', text: 'old' }], state: { health: 20, food: 20, time: 13_200 } }));
-  assert.deepEqual(sent.at(-1).lines, [{ k: 'milestone', t: 'entered the Nether at 0:41' }], 'a reply adds no call line (only start_game\'s)');
+  assert.deepEqual(sent.at(-1).lines, [{ k: 'checked', t: 'Muse checked: HP 20, food 20, in the Nether' }, { k: 'milestone', t: 'entered the Nether at 0:41' }], 'a reply adds no call line (only start_game\'s)');
   assert.match(sent.at(-1).status, /  NETHER  \|/);
   // a refused call, and the end
   feed.call(game, 'play', { skill: 'craft', args: { item: 'iron_pickaxe' } });

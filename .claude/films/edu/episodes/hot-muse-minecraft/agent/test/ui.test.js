@@ -62,7 +62,7 @@ test('sub-steps: the body carrying out a command, from the runtime\'s checkpoint
   assert.equal(subStepOf('use_bucket', { liquid: 'water' }, { phase: 'approaching_and_pouring', targetBlock: 'lava' }).text, 'pouring water on lava');
   assert.equal(subStepOf('smelt_item', { count: 5 }, { phase: 'smelting_or_collecting', produced: 2, requested: 5 }).text, 'smelting 2 of 5');
   assert.equal(subStepOf('smelt_item', {}, { phase: 'loading_furnace' }).text, 'loading the furnace');
-  assert.equal(subStepOf('hunt_mob', { entity_name: 'zombie' }, { attacks: 3 }).text, 'fighting a zombie \u00b7 3 hits');
+  assert.equal(subStepOf('hunt_mob', { entity_name: 'zombie' }, { attacks: 3 }).text, 'fighting a zombie, 3 hits');
   assert.equal(subStepOf('craft_item', {}, {}), null);
   // the feed: the body's progress events go out as sub, throttled, and with every update
   const sent = [];
@@ -89,18 +89,35 @@ test('sub-steps: the body carrying out a command, from the runtime\'s checkpoint
   assert.equal(cleanTerm({ lines: [], sub: null }).sub, null);
 });
 
+test('what Muse saw and whether it took the advice: a line after a get_state, and one when the next command takes (or leaves) it', () => {
+  const sent = [];
+  const feed = createTermFeed({ send: (id, u) => sent.push(u) });
+  const game = { id: 'g1', body: { attribution: () => null } };
+  const reply = (st) => ({ content: [{ type: 'text', text: '' }], structuredContent: st });
+  feed.reply(game, 'get_state', {}, reply({ steps: [], state: { health: 19.6, food: 14, time: 21_000, inventory: { obsidian: 14, water_bucket: 1, dirt: 30 } },
+    advice: [{ kind: 'night', text: 'night (time 21000): no closed shelter around you; 13 blocks for one', hint: { skill: 'shelter', args: {} } }] }));
+  assert.equal(sent.at(-1).lines.find((l) => l.k === 'checked').t, 'Muse checked: HP 20, food 14, 14 obsidian, 1 water bucket, dawn in 2 min');
+  feed.call(game, 'play_sequence', { steps: [{ skill: 'shelter', args: {} }, { skill: 'smelt', args: { item: 'raw_iron', n: 3 } }] });
+  assert.deepEqual(sent.at(-1).lines.find((l) => l.k === 'follow'), { k: 'follow', t: 'Followed the body\'s advice: night: no closed shelter around you', ok: 1 });
+  feed.reply(game, 'get_state', {}, reply({ steps: [], state: { health: 20, food: 14, time: 21_000 }, advice: [{ kind: 'night', text: 'night (time 21000): no closed shelter around you', hint: { skill: 'shelter', args: {} } }] }));
+  feed.call(game, 'play', { skill: 'collect', args: { block: 'iron_ore', n: 3 } });
+  assert.equal(sent.at(-1).lines.find((l) => l.k === 'follow').t, 'Went on without the body\'s advice: night: no closed shelter around you');
+  feed.call(game, 'play', { skill: 'eat', args: {} });
+  assert.equal(sent.at(-1).lines.some((l) => l.k === 'follow'), false, 'judged once, for the next command only');
+});
+
 test('feed: the advice once per kind and change of words (the time in it is not news), the list as it stands with each update', () => {
   const sent = [];
   const feed = createTermFeed({ send: (id, u) => sent.push(u) });
   const game = { id: 'g1', body: { attribution: () => ({ muse: 1, reflex: 0 }) } };
   const reply = (advice) => ({ content: [{ type: 'text', text: '' }], structuredContent: { steps: [], advice, state: { health: 20, food: 20, time: 13_100 } } });
   feed.reply(game, 'get_state', {}, reply([{ kind: 'night', text: 'night (time 13100): no closed shelter around you, no shield' }, { kind: 'shield', text: 'no shield; you can make one' }]));
-  assert.deepEqual(sent.at(-1).lines.map((l) => l.ak), ['night', 'shield']);
+  assert.deepEqual(sent.at(-1).lines.filter((l) => l.k === 'advice').map((l) => l.ak), ['night', 'shield']);
   feed.reply(game, 'get_state', {}, reply([{ kind: 'night', text: 'night (time 13350): no closed shelter around you, no shield' }, { kind: 'shield', text: 'no shield; you can make one' }]));
-  assert.deepEqual(sent.at(-1).lines, [], 'only the number changed: no line');
+  assert.deepEqual(sent.at(-1).lines.filter((l) => l.k === 'advice'), [], 'only the number changed: no line');
   assert.equal(sent.at(-1).adv[0].t, 'night (time 13350): no closed shelter around you, no shield', 'the card gets the new words');
   feed.reply(game, 'get_state', {}, reply([{ kind: 'night', text: 'night (time 13400): no closed shelter around you' }]));
-  assert.deepEqual(sent.at(-1).lines.map((l) => l.t), ['advice: night (time 13400): no closed shelter around you'], 'the words changed');
+  assert.deepEqual(sent.at(-1).lines.filter((l) => l.k === 'advice').map((l) => l.t), ['advice: night (time 13400): no closed shelter around you'], 'the words changed');
   assert.deepEqual(sent.at(-1).adv.map((a) => a.k), ['night'], 'the shield advice is gone');
   // cleaned again by the service: the new fields too
   const u = cleanTerm({

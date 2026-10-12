@@ -155,7 +155,7 @@ export function subStepOf(tool, args = {}, cp = {}) {
     }
     case 'hunt_mob': {
       const hits = n(c.attacks);
-      return { kind: 'fight', text: `fighting a ${name(a.entity_name ?? a.mob ?? a.target) || 'mob'}${hits ? ` \u00b7 ${hits} hits` : ''}` };
+      return { kind: 'fight', text: `fighting a ${name(a.entity_name ?? a.mob ?? a.target) || 'mob'}${hits ? `, ${hits} hits` : ''}` };
     }
     case 'eat_food': return { kind: 'eat', text: `eating ${name(c.item ?? a.food_name ?? a.item_name)}`.trim() };
     case 'sleep': return { kind: 'sleep', text: c.asleep ? 'sleeping' : 'finding a bed' };
