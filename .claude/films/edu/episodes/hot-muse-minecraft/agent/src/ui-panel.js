@@ -238,7 +238,7 @@ export function createUiPanel(o) {
     drawRow(rows[0]);
     rows = rows.slice(0, ROWS + 1); // one more, fading out
     shiftAt = now();
-    lastEventAt = now();
+    if (r.kind === 'action' || r.kind === 'note') lastEventAt = now(); // a reflex or a milestone is not Muse acting
   }
 
   /** A result for the action it belongs to: the newest one, unless its words match an older one. */

@@ -970,6 +970,18 @@ and Muse's panel under it:
   a small muted row ("Reflex: fought a zombie"), a milestone a gold one ("Entered the Nether", "Got a wooden pickaxe");
   the advice is not shown. A new row slides in from above, the others move down, the fifth fades out. Inter (SIL OFL),
   two sizes, no boxes. The mascot of the first version (`../ui-art`, `assets/muse-ui/sprites`) is kept but not drawn.
+- **Never a picture that looks hung** (the owner took a quiet night shelter for a frozen stream): when nothing runs for
+  2.5 s the top row becomes a live status line with a breathing dot and a ticking time, and the actions move a slot
+  down: "Waiting for Muse's next move · 0:45", "Muse is checking the situation · 0:12" (after a get_state),
+  "In the Nether, waiting for Muse's next move · 0:30", "Sheltering until morning (Muse's choice) · night ends in
+  ~3 min" (a shelter at night; "the body's reflex" when the body built it), "Sleeping until morning · ...". The agent
+  sends it with every update and every 5 s for each filmed game (`live`: what runs in plain words, or the reason, the
+  seconds since Muse's last call, the seconds to dawn from the game time; `st.ticks` for the clock), and the header's
+  clock moves on with the game between updates at the pace it was seen moving (still when the day is locked).
+- **The camera around a shut-in bot**: instead of a still picture of its shelter the eye circles it slowly (5 blocks
+  out, 3.5 up, a round a minute, turned to the bot), only through open air (the spot and a block above and below it),
+  turning back at a wall (`muse_cam:orbit`; checked on a local Paper: a circle of radius 5 that turned back at a
+  pillar in its way).
 - **How it is drawn**: `src/ui-panel.js` with node-canvas, 30 frames a second while live: the sprites pre-scaled, every
   text card drawn into its own canvas only when it changes, so a frame is a few image copies (about 1.3 ms on the Mac).
   Each frame is an uncompressed 32-bit BMP renamed over `/dev/shm/muse-ui-*/panel.bmp`; ffmpeg reads it again for
