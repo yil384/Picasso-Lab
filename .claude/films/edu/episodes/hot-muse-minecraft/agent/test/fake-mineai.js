@@ -318,6 +318,8 @@ export async function startFakeMineAi(opts = {}) {
       if (!act) return { state: 'refused', code: 'ACTION_NOT_FOUND', error: 'no such action' };
       if (act.state === 'settled') return { state: 'settled', actionId: id };
       act.cancel = true;
+      // an action that does not stop on request (world.ignoreCancel: as a runtime collect stuck in a fight)
+      if (world.ignoreCancel) return { state: 'cancellation_requested', actionId: id, cancellation: { kind: 'cancellation_requested', action: act.tool, startedAt: '', reason: 'x' } };
       const hunt = act.hunting ? { hunt: { mob: act.args.mob_name, drop: act.args.drop_name, requested: act.args.count ?? 1, gained: 0, targetDeathsObserved: Date.now() - act.t0 >= world.huntKillAfterMs ? 1 : 0 } } : {};
       setTimeout(() => settle(act, { status: 'cancelled', error: 'cancelled on request', ...hunt }), 10);
       return { state: 'cancellation_requested', actionId: id, cancellation: { kind: 'cancellation_requested', action: act.tool, startedAt: '', reason: 'x' } };
