@@ -110,12 +110,12 @@ export function audioArgs(a = {}) {
     ? ['-thread_queue_size', '1024', '-f', 'pulse', '-sample_rate', '48000', '-channels', '2', '-fragment_size', '3840', '-i', String(a.pulse)]
     : ['-re', '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000'];
   const db = (v, d) => (Number.isFinite(v) ? v : d).toFixed(1);
-  const game = `aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${db(a?.gameDb, 0)}dB`;
+  const game = `aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${db(a?.gameDb, 12)}dB`;
   const limit = 'alimiter=limit=0.891:attack=5:release=80:level=disabled';
   if (!a?.music) return { inputs, maps: ['-map', '1:a', '-af', `${game},${limit}`] };
   inputs.push('-re', '-stream_loop', '-1', '-i', String(a.music));
   const graph = `[1:a]${game},asplit=2[g][key];`
-    + `[2:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${db(a.musicDb, 0)}dB[bed];`
+    + `[2:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${db(a.musicDb, -2)}dB[bed];`
     + '[bed][key]sidechaincompress=threshold=0.05:ratio=3:attack=20:release=450:knee=6[ducked];'
     + `[g][ducked]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,${limit}[aout]`;
   return { inputs, maps: ['-filter_complex', graph, '-map', '[aout]'] };
