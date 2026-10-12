@@ -2122,6 +2122,16 @@ actions, with no runtime patch.
   - the portal's site is read as two boxes around the frame, and refused when it cannot be read;
   - in the Nether, a portal skill without pos means the portal it came out of there (never the Overworld frame), and
     it steps out only right after coming out of that portal.
+- **A step one of the body's reflexes takes over** (production game g64e8c5, 2026-10-11): a shield craft at night was
+  reported "failed: Equip an available shield before nearby hostiles require a guard". The log shows the shield was
+  made (+1 shield, -1 iron ingot, -6 planks, and the crafting table left standing), and the queued collect was
+  cancelled for nothing.
+  - Runtime patch 0013 makes their shield preparation wait for a short action of the player's (craft, smelt, equip,
+    eat, place, drop, a container, a pickup).
+  - A craft that a reflex cuts short, but whose item was made, is reported ok with a note.
+  - Any call a reflex cuts short is sent once more after the reflex lets go: crafts, smelts, equips, meals, placing,
+    buckets, walks, builds and lighting a portal.
+  - After that, the step ends with the new code `INTERRUPTED`, saying the step itself was fine, instead of FAILED.
 - **Paper**: `PAPER_NETHER=false` (allow-nether) is the Nether's kill switch, and `PAPER_BORDER` sets the world
   borders at every start (the Overworld 64000 wide, the Nether 8000). `deploy/push.sh` refuses with less than 10 GB
   free on picasso (`MIN_FREE_GB`). See `docs/SWITCH.md` section 9.
