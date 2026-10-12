@@ -504,7 +504,8 @@ test('advise: the facts and the skill that would do it, most urgent first; nothi
   assert.deepEqual(n[0].hint, { skill: 'shelter', args: {} });
   assert.deepEqual(advise(night, { ...base, inventory: { red_bed: 1 } })[0].hint, { skill: 'sleep', args: {} });
   const inside = { cool: {}, night: 1, shelter: { feet: { x: 10, y: 64, z: -4 }, night: 1 } };
-  assert.deepEqual(advise(night, { ...base, memory: inside, stacks: [stack('shield', 1, 'off-hand')] }), []);
+  // inside its shelter at night: no "shelter" advice, but how long until dawn and what can be done meanwhile
+  assert.deepEqual(advise(night, { ...base, memory: inside, stacks: [stack('shield', 1, 'off-hand')] }).map((a) => a.kind), ['waiting']);
   // no food, an animal near: hunt; a shield it can make: the shield skill
   const h = advise(situation({ vitals: { food: 9 }, nearby: { mobs: [{ name: 'cow', kind: 'passive', nearest: { distance: 12.4 } }] } }), { ...base, inventory: { iron_ingot: 5, oak_planks: 8 } });
   assert.deepEqual(h.map((x) => [x.kind, x.hint?.skill]), [['hunt', 'hunt'], ['shield', 'shield']]);
@@ -540,7 +541,7 @@ test('advise loop: no plan carried out by itself, advice instead; its reflexes s
   assert.match(p.text, /closed itself in at 10 64 -4/);
   assert.deepEqual(r2.care.since(0), []);
   assert.equal(r2.events.find((e) => e.kind === 'shelter').source, 'muse');
-  assert.deepEqual(r2.care.advice(), [], 'inside its shelter: no night advice');
+  assert.deepEqual(r2.care.advice().map((a) => a.kind), ['waiting'], 'inside its shelter: no night advice, the wait instead');
   const s = await r2.care.perform('shield', { stopped: null });
   assert.equal(s.code, 'NEED_ITEMS');
 });
@@ -662,4 +663,20 @@ test('advise (F17 of the log hunt): before the player\'s first call a new bot sh
   const calm = careRig({ mode: 'advise', situation: situation(), inventory: { cobblestone: 20 }, results });
   await calm.care.tick();
   assert.deepEqual(calm.calls, [], 'a calm day: nothing');
+});
+
+test('advise: waiting out the night in a shelter says when dawn comes, what can be done meanwhile, and the idle rule', () => {
+  const base = { now: NOW, canCraft: () => false };
+  const night = situation({ clock: { timeOfDay: 18000 } });
+  const memory = { cool: {}, night: 1, shelter: { feet: { x: 10, y: 64, z: -4 }, night: 1 } };
+  const stacks = [stack('shield', 1, 'off-hand'), stack('stone_pickaxe', 1, 'hand')];
+  const w = advise(night, { ...base, memory, stacks, inventory: { raw_iron: 5, coal: 2, stone_pickaxe: 1 } }).find((a) => a.kind === 'waiting');
+  assert.equal(w.text, 'night, inside your shelter: dawn in about 4 min 25 s. Meanwhile you can smelt the 5 raw_iron you carry; or craft what you need from what you carry (the shelter has a pocket for a crafting table or furnace); or dig straight down from here (go_to 10 52 -4: the body digs in its own column, so the ground stays around you, unless the shaft opens into a cave). A game with no call for 5 minutes ends: call get_state at least every 4 minutes while you wait');
+  assert.deepEqual(w.hint, { skill: 'smelt', args: { item: 'raw_iron', n: 5 } });
+  // dug down in its own column: still walled in, still the wait (not "no closed shelter")
+  const below = advise(situation({ clock: { timeOfDay: 18000 } }), { ...base, memory, stacks, inventory: {} });
+  const down = advise({ ...night, position: { ...night.position, y: 52 } }, { ...base, memory, stacks, inventory: {} });
+  assert.deepEqual(below.map((a) => a.kind), ['waiting']);
+  assert.deepEqual(down.map((a) => a.kind), ['waiting']);
+  assert.equal(down[0].hint, undefined, 'nothing to smelt: no hint');
 });

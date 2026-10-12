@@ -280,3 +280,26 @@ test('nether: out of the portal a step off it, the way back aims at the portal b
     assert.match(body.state(), /in the overworld/);
   } finally { await body.close(); }
 });
+
+test('a step of the player\'s never runs beside an action of the body\'s own that would not let go (a local check)', async () => {
+  const hosts = fakeHosts(() => ({ inventory: { cobblestone: 2, oak_planks: 8 } }));
+  const body = createMineAiBody({ config, log, hosts, gameId: 'gyield', username: 'Tst_rv_gyield', careTickMs: 30, careIdleMs: 50, careYieldMs: 300 });
+  await until(() => hosts.started[0]);
+  const fake = hosts.started[0].fake;
+  await body.ready;
+  try {
+    // before the first call, at night: the body shelters on its own; its dig does not stop when asked
+    fake.world.durations = { ...(fake.world.durations ?? {}), navigate: 2_500 };
+    fake.world.ignoreCancel = true;
+    fake.world.timeOfDay = 15000;
+    assert.ok(await until(() => fake.tools('navigate').length > 0, 6000), 'the body started its own shelter');
+    const r = await body.run('craft', { item: 'stick', n: 4 });
+    assert.equal(r.ok, false);
+    assert.match(r.result, /^busy: the body is still finishing what it did on its own \(sheltering for the night\); send the step again in a few seconds$/);
+    assert.equal(fake.tools('craft_item').length, 0, 'nothing ran beside it');
+    fake.world.ignoreCancel = false;
+    await sleep(2_600);
+    const again = await body.run('craft', { item: 'stick', n: 4 });
+    assert.equal(again.ok, true, again.result);
+  } finally { await body.close(); }
+});
