@@ -376,7 +376,7 @@ export function createPlanner({ version = '1.21.4' } = {}) {
     }
     // the extra skills of BODY=mineai (src/mineai/skills.js): what they bring or take, where it is known
     else if (skill === 'hunt') add(st, args.drop, args.n);
-    else if (skill === 'drop') add(st, args.item, -Math.min(args.n, have(st, args.item)));
+    else if (skill === 'drop') { if (args.item && args.n) add(st, args.item, -Math.min(args.n, have(st, args.item))); }
     else if (skill === 'chest') {
       if (args.action !== 'inspect') for (const { item, n } of args.items ?? []) add(st, item, args.action === 'withdraw' ? n : -Math.min(n, have(st, item)));
     } else if (skill === 'bucket') {

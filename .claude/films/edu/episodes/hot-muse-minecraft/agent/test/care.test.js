@@ -617,12 +617,12 @@ test('advise on the way to the Nether: what the frame still needs, a death in la
   assert.equal(nl[0].text, 'in the Nether: beds explode here and water boils away; the portal back is at 3 70 4 (portal enter with that pos)');
 });
 
-test('advise: a full inventory names the cheapest stack to drop', () => {
+test('advise: a full inventory says what fills it and drops every junk stack in one skill', () => {
   const base = { now: NOW, memory: { cool: {}, night: 0 }, canCraft: () => false };
   const stacks = [stack('shield', 1, 'off-hand'), ...Array.from({ length: 33 }, (_, i) => stack(`oak_planks`, 1, 'main')), stack('gravel', 64, 'main'), stack('gravel', 20, 'main'), stack('cobblestone', 40, 'hotbar')];
   const a = advise(situation(), { ...base, stacks, inventory: { gravel: 84, cobblestone: 40, oak_planks: 33 } }).find((x) => x.kind === 'inventory');
-  assert.equal(a.text, 'your inventory is full (36 of 36 slots): a craft, smelt or pickup needs room');
-  assert.deepEqual(a.hint, { skill: 'drop', args: { item: 'gravel', n: 84 } });
+  assert.equal(a.text, 'your inventory is full (36 of 36 slots; most: 84 gravel, 40 cobblestone, 33 oak_planks): a craft, smelt, hunt or pickup needs room; 2 junk stacks can go');
+  assert.deepEqual(a.hint, { skill: 'drop', args: { junk: true } }, 'every junk stack in one skill (F3 of the log hunt)');
   assert.equal(advise(situation(), { ...base, stacks: stacks.slice(0, 20), inventory: {} }).find((x) => x.kind === 'inventory'), undefined);
 });
 

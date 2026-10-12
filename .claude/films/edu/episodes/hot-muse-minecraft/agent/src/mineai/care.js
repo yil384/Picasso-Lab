@@ -21,7 +21,7 @@
 import { createPlanner } from '../plan.js';
 import { registryFor } from '../mc.js';
 import { fuelPlan } from '../game.js';
-import { bestFood, CARE_DEFAULTS, CARE_KNOBS } from './skills.js';
+import { bestFood, CARE_DEFAULTS, CARE_KNOBS, junkOf } from './skills.js';
 import { facingOf } from '../state.js';
 
 const reg = registryFor('1.21.4');
@@ -432,11 +432,6 @@ export function shieldPath(inventory = {}, stacks = [], furnace = false) {
 export const WARN_BEFORE_NIGHT = 2_700;
 /** Inventory slots (main and hotbar) and what to drop first when they are full, keeping some of each. */
 export const INVENTORY_SLOTS = 36;
-const JUNK = Object.freeze([
-  { item: 'gravel', keep: 0 }, { item: 'andesite', keep: 0 }, { item: 'diorite', keep: 0 }, { item: 'granite', keep: 0 },
-  { item: 'tuff', keep: 0 }, { item: 'rotten_flesh', keep: 0 }, { item: 'netherrack', keep: 16 }, { item: 'dirt', keep: 16 },
-  { item: 'cobbled_deepslate', keep: 32 }, { item: 'cobblestone', keep: 32 },
-]);
 /** Obsidian for a nether_portal build: its 12, and 2 more for the blocks it puts under a frame on uneven ground. */
 export const PORTAL_OBSIDIAN = 14;
 /** At most this many advice items a reply. */
@@ -542,8 +537,10 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
   // flint_and_steel could not be crafted); the cheapest stack to drop
   const slots = stacks.filter((x) => x?.name && (!x.location || x.location === 'main' || x.location === 'hotbar')).length;
   if (slots >= INVENTORY_SLOTS - 1) {
-    const junk = JUNK.map((j) => ({ ...j, have: inventory[j.item] ?? 0 })).find((j) => j.have > j.keep);
-    say('inventory', `your inventory is ${slots >= INVENTORY_SLOTS ? 'full' : 'almost full'} (${slots} of ${INVENTORY_SLOTS} slots): a craft, smelt or pickup needs room`, junk ? { skill: 'drop', args: { item: junk.item, n: junk.have - junk.keep } } : null);
+    // every junk stack in one skill (F3 of the log hunt: one stack a reply took five calls), and what fills the bag
+    const junk = junkOf(inventory);
+    const top = Object.entries(inventory).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, n]) => `${n} ${k}`).join(', ');
+    say('inventory', `your inventory is ${slots >= INVENTORY_SLOTS ? 'full' : 'almost full'} (${slots} of ${INVENTORY_SLOTS} slots; most: ${top}): a craft, smelt, hunt or pickup needs room${junk.length ? `; ${junk.length} junk stack${junk.length > 1 ? 's' : ''} can go` : ''}`, junk.length ? { skill: 'drop', args: { junk: true } } : null);
   }
   // armor it could craft
   const pieces = armorPlan(inventory, stacks).filter((p) => canCraft(p.item));

@@ -124,6 +124,14 @@ test('mineai skills: our 10 skills and craft_batch become their actions', () => 
   assert.equal(toTheirs('collect', { block: 'stone', n: 12 }, ctx).timeoutMs, undefined);
   assert.equal(toTheirs('go_to', { x: 0, y: 70, z: 0 }, { ...ctx, position: { x: 0, y: -50, z: 0 } }).timeoutMs, 240_000, 'a climb of 120 blocks: 2 minutes and 2 s a block past 60');
   assert.equal(toTheirs('go_to', { x: 10, y: 70, z: 0 }, { ...ctx, position: { x: 0, y: 70, z: 0 } }).timeoutMs, undefined);
+  // F3 of the log hunt: every junk stack beyond its reserve in one drop; a full bag's refusal says so
+  const junk = toTheirs('drop', { junk: true }, { ...ctx, inventory: { cobbled_deepslate: 314, tuff: 73, cobblestone: 20, gravel: 9, iron_ingot: 3, clay_ball: 16 } });
+  assert.deepEqual(junk.calls[0].args.items, [{ item_name: 'cobbled_deepslate', count: 282 }, { item_name: 'tuff', count: 73 }, { item_name: 'clay_ball', count: 16 }, { item_name: 'gravel', count: 9 }]);
+  assert.equal(toTheirs('drop', { junk: true }, { ...ctx, inventory: { iron_ingot: 3 } }).refused.code, 'BAD_ARGS');
+  assert.equal(toTheirs('drop', {}, ctx).refused.code, 'BAD_ARGS');
+  const full = fromTheirs('collect_mob_drop', { result: { status: 'failed', error: 'No free slot or matching stack space for mutton.' } });
+  assert.equal(full.code, 'INVENTORY_FULL');
+  assert.match(full.result, /drop \{"junk": true\} drops the stacks no skill uses in one go$/);
   // F5 of the log hunt: a walk's refusal names no argument we do not have, and says what y to send
   const nav = fromTheirs('navigate', { result: { status: 'failed', error: '[NAVIGATION_NO_FOOTING] No usable footing was observed within 1 blocks of 9, 66, -25. The ground in that column is at y=61. Choose an observed supported height, or pass build: true to scaffold to this point deliberately.' } });
   assert.equal(nav.result, 'failed: nothing to stand on at 9 66 -25: y is the height of your feet, one above the ground, and the ground there is at y=61, so go_to 9 62 -25');

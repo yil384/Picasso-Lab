@@ -98,8 +98,8 @@ export const EXTRA_DEFS = Object.freeze([
     'Pick up items lying within 8 blocks (only item if given); death_items: true walks back to where you died and picks up what you dropped (within 5 minutes).',
     obj({ item: NAME('only this item'), death_items: { type: 'boolean', description: 'true: recover what you dropped when you died' } }, [])],
   ['drop',
-    'Throw n of an item on the ground where you stand (to make room in the inventory). Never worn armor.',
-    obj({ item: NAME('a carried item'), n: int('how many, 1 to 2304', 1, 2304) })],
+    'Throw n of an item on the ground where you stand (to make room in the inventory), or with junk: true every stack of what digging fills the bag with and no skill here uses (gravel, tuff, granite, diorite, andesite, moss, clay balls, flowers and the like, and cobblestone, cobbled deepslate, dirt and netherrack beyond a reserve) in one go. Never worn armor.',
+    obj({ item: NAME('a carried item'), n: int('how many, 1 to 2304', 1, 2304), junk: { type: 'boolean', description: 'true: drop every junk stack at once (item and n not needed)' } }, [])],
 ]);
 
 /**
@@ -193,6 +193,23 @@ export function blueprintCells(blueprint, material, feet, headingDegrees) {
     cells.push({ x: feet.x + f.dx * a + right.dx * b, y: feet.y + k + (bp.base ?? 0), z: feet.z + f.dz * a + right.dz * b, block_name: ch === '#' ? material : 'air' });
   })));
   return { cells, facing: f.name };
+}
+
+/**
+ * What digging walks fill the bag with and no skill here uses, with the reserve kept of each (F3 of the log hunt: one
+ * 37-minute game picked up 314 cobbled deepslate, 73 tuff and more, and a hunt then found no free slot).
+ */
+export const JUNK = Object.freeze([
+  ['gravel', 0], ['andesite', 0], ['diorite', 0], ['granite', 0], ['tuff', 0], ['calcite', 0], ['deepslate', 0],
+  ['dripstone_block', 0], ['pointed_dripstone', 0], ['smooth_basalt', 0], ['moss_block', 0], ['moss_carpet', 0],
+  ['azalea', 0], ['flowering_azalea', 0], ['clay_ball', 0], ['glow_lichen', 0], ['rotten_flesh', 0], ['wheat_seeds', 0],
+  ['poppy', 0], ['dandelion', 0], ['azure_bluet', 0], ['oxeye_daisy', 0], ['cornflower', 0], ['short_grass', 0],
+  ['raw_copper', 0], ['copper_ingot', 0], ['redstone', 0], ['lapis_lazuli', 0], ['netherrack', 16], ['dirt', 16],
+  ['sand', 16], ['cobbled_deepslate', 32], ['cobblestone', 32],
+].map(([item, keep]) => Object.freeze({ item, keep })));
+/** The junk stacks over their reserve in an inventory: [{item, n}], the biggest first. */
+export function junkOf(inventory = {}) {
+  return JUNK.map(({ item, keep }) => ({ item, n: (inventory[item] ?? 0) - keep })).filter((j) => j.n > 0).sort((a, b) => b.n - a.n);
 }
 
 /** How close (blocks) another player may be to an obsidian frame being placed, built or lit. */
@@ -409,7 +426,15 @@ export function toTheirs(skill, args, ctx) {
     }
     case 'pick_up': return { calls: [{ tool: 'pick_up_items', args: { ...(args.item ? { item: args.item } : {}), ...(args.death_items ? { recover_death_items: true } : {}) } }] };
     // the item in hand may go too (the body holds whatever it last used); worn armor and the off-hand never do
-    case 'drop': return { calls: [{ tool: 'drop_item', args: { items: [{ item_name: args.item, count: args.n }], allow_equipped: true } }] };
+    case 'drop': {
+      if (args.junk) {
+        const items = junkOf(inv);
+        if (!items.length) return refuse('nothing to drop as junk: your inventory holds none beyond its reserve', 'BAD_ARGS');
+        return { calls: [{ tool: 'drop_item', args: { items: items.map(({ item, n }) => ({ item_name: item, count: n })) } }], note: `dropped ${items.map(({ item, n }) => `${n} ${item}`).join(', ')}` };
+      }
+      if (!args.item || !args.n) return refuse('drop needs item and n, or junk: true', 'BAD_ARGS');
+      return { calls: [{ tool: 'drop_item', args: { items: [{ item_name: args.item, count: args.n }], allow_equipped: true } }] };
+    }
     default: return refuse(`${skill} is not a skill of this body`, 'BAD_ARGS');
   }
 }
@@ -676,6 +701,7 @@ export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   if (code === 'FAILED' && /\blava\b/i.test(why)) code = 'LAVA';
   // no room for what a craft, smelt or pickup makes (a local run: a full inventory of gravel stopped flint_and_steel)
   if (code === 'FAILED' && /\binventory room\b|\binventory is full\b|\bno (free|empty) (inventory )?slot/i.test(why)) code = 'INVENTORY_FULL';
+  if (code === 'INVENTORY_FULL') return { ok: false, result: `failed: ${why}${said ? ` (${said})` : ''}${extra}; your inventory is full: drop {"junk": true} drops the stacks no skill uses in one go`, code, theirs };
   // partial counts as failed: the steps queued after it were planned on all of it
   return { ok: false, result: `${status === 'partial' ? 'only partly done' : 'failed'}: ${why}${said ? ` (${said})` : ''}${extra}`, code, theirs };
 }
