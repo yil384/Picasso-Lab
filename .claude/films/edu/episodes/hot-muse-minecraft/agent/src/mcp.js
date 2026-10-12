@@ -649,7 +649,25 @@ export function createMcp(hooks) {
   const queueText = `Steps run in order in a queue: what does not finish within ${Math.round(callMs / 1000)} s keeps running after the reply (a later reply, or get_state, reports it); a step that fails cancels the steps queued after it (except eat's NOT_HUNGRY, which changes nothing: the steps after it still run); stop clears the queue. Before anything runs, a check simulates your inventory through the steps: if an ingredient, fuel, tool or station is missing, the call is refused with the list (code NEED_ITEMS) and nothing runs; planks, sticks, a crafting table or a furnace that can be made from what you carry are added as crafts. Replies carry structuredContent: each step's status (pending, confirmed, failed, cancelled) and code (${RESULT_CODES.join(', ')}), what changed, and a short state.`;
 
   // the terminal under the live video (src/terminal.js): each call and what its reply says, for the camera service
-  const feed = typeof hooks.term === 'function' ? createTermFeed({ send: (id, u) => hooks.term(id, u), now }) : null;
+  const entryOf = (s) => { for (const e of sessions.values()) if (safely(() => game(e), null) === s) return e; return null; };
+  const feed = typeof hooks.term === 'function' ? createTermFeed({
+    send: (id, u) => hooks.term(id, u), now,
+    // what runs and when Muse last called, for the stream's status line between calls
+    liveOf: (s) => {
+      const q = queues.get(s);
+      const e = entryOf(s);
+      return { busy: Boolean(q?.busy), running: q?.running ?? null, lastCallAt: e?.lastToolAt, lastTool: e?.lastTool };
+    },
+  }) : null;
+  // every 5 s the status of every game with a stream, without lines: the panel's clock and status line stay current
+  // while Muse thinks or the bot shelters (the remote stream manager sends only for games the service films)
+  const ticker = feed ? setInterval(() => {
+    for (const e of sessions.values()) {
+      const s = safely(() => game(e), null);
+      if (s && s.status === 'ready' && !s.ended) safely(() => feed.tick(s));
+    }
+  }, 5_000) : null;
+  ticker?.unref?.();
 
   function build(entry) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
@@ -676,6 +694,7 @@ export function createMcp(hooks) {
       // not changed); end_game's game is gone after it, so the one from before the call is used
       const register = server.registerTool.bind(server);
       server.registerTool = (name, def, handler) => register(name, def, async (args, extra) => {
+        Object.assign(entry, { lastTool: name, lastToolAt: now() });
         const before = safely(() => game(entry), null);
         if (before) feed.call(before, name, args);
         const out = await handler(args, extra);

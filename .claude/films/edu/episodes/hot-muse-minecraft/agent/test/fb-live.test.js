@@ -546,7 +546,8 @@ test('live page: small, no request of its own, only Facebook\'s player (autoplay
   const urls = live.match(/https?:\/\/[^"\s<]+/g);
   assert.deepEqual([...new Set(urls.map((u) => u.replace(/&amp;/g, '&')))], [player], 'one URL: the player, starting by itself and muted');
   assert.ok(live.includes(`<iframe src="${player.replace(/&/g, '&amp;')}"`));
-  assert.match(live, /<b id="h">Tap the video for sound<\/b><button id="r" type="button">Reload video<\/button>/);
+  assert.match(live, /<b id="h">Tap the video for sound<\/b><\/div><div id="s"><p>Live: [^<]*<\/p><button id="r" type="button">Reload video<\/button><\/div>/, 'the hint over the game, the button under the player');
+  assert.match(live, /#h\{position:absolute;left:50%;top:max\(52px,9%\)/, 'the hint at the top: never over the panel');
   const script = live.match(/<script>([\s\S]*)<\/script>/)[1];
   assert.match(script, /setInterval\(\(\)=>\{if\(!touched\)swap\(\);\},300000\)/, 'a fresh player every 5 min while untouched');
   assert.match(script, /if\(next\)next\.remove\(\)/, 'never more than two players');

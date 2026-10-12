@@ -769,10 +769,10 @@ export function createCameraStream(o) {
   let size = { width: opt.width, height: opt.height };
   if (opt.layout === 'ui') {
     // the UI layout (STREAM_LAYOUT=ui, square by default): the game on top, cut to its shape, and Muse's panel under
-    // it, about a third of the height (src/ui-panel.js), redrawn 30 times a second
+    // it, 30 % of the height (src/ui-panel.js: the last actions), redrawn 30 times a second
     try {
       const [uw, uh] = String(opt.uiSize ?? '1080x1080').split('x').map(Number);
-      const ph = Math.round(uh / 3 / 2) * 2;
+      const ph = Math.round((uh * 0.3) / 2) * 2; // 30 %: the header, the status line and six earlier actions
       try { shm = fs.mkdtempSync(path.join(opt.shmDir ?? '/dev/shm', 'muse-ui-')); } catch { shm = null; }
       panel = createUiPanel({ width: uw, height: ph, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS });
       panel.top = uh - ph;
