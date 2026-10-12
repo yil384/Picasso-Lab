@@ -6,14 +6,19 @@
 // here, so no game sound). No Minecraft, no Facebook.
 //
 //   node scripts/ui-sample.mjs --clip game.mp4 --out sample.mp4 [--seconds 30] [--size 1080x1080] [--music off]
+//        [--pulse] [--tone]   (in the camera image: its own PulseAudio sink as the game's sound, as the rig makes it;
+//                             --tone plays short beeps into it, standing in for the game's sound effects)
 
 import { EventEmitter } from 'node:events';
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import { parseArgs } from 'node:util';
-import { createCameraStream } from '../src/camera.js';
+import { createCameraStream, pulseScript, pulsePaths, PULSE_SOURCE } from '../src/camera.js';
 import { createTermFeed } from '../src/terminal.js';
 
 const { values: v } = parseArgs({ options: {
   clip: { type: 'string' }, out: { type: 'string' }, seconds: { type: 'string' }, size: { type: 'string' }, music: { type: 'string' },
+  pulse: { type: 'boolean' }, tone: { type: 'boolean' },
 } });
 if (!v.clip || !v.out) { console.error('usage: node scripts/ui-sample.mjs --clip game.mp4 --out sample.mp4 [--seconds 30] [--size 1080x1080] [--music off]'); process.exit(2); }
 const seconds = Number(v.seconds ?? 30);
@@ -26,6 +31,19 @@ const rig = {
   start() {}, waitReady: async () => true, follow: async () => true, keepFollowing: async () => true, park: async () => {},
   stats: async () => ({ state: 'ready' }), on: (e, fn) => { em.on(e, fn); return () => em.off(e, fn); },
 };
+// the game's sound as the camera rig records it: a PulseAudio server of our own with one null sink
+const kids = [];
+if (v.pulse) {
+  const p = pulsePaths(fs.mkdtempSync('/tmp/muse-sample-'));
+  fs.mkdirSync(p.runtime, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(p.script, pulseScript(p.socket));
+  kids.push(spawn('pulseaudio', ['-n', `--file=${p.script}`, '--daemonize=no', '--exit-idle-time=-1', '--use-pid-file=no', '--realtime=no', '--high-priority=no', '--disable-shm=yes', '--log-target=stderr', '--log-level=error'], { env: { ...process.env, XDG_RUNTIME_DIR: p.runtime, PULSE_RUNTIME_PATH: p.runtime }, stdio: ['ignore', 'ignore', 'inherit'] }));
+  for (let i = 0; i < 50 && !fs.existsSync(p.socket); i++) await sleep(100);
+  rig.sound = { server: `unix:${p.socket}`, source: PULSE_SOURCE };
+  if (v.tone) { // a beep of 0.3 s every 2 s into the sink
+    kids.push(spawn('ffmpeg', ['-v', 'error', '-re', '-f', 'lavfi', '-i', 'sine=f=660:sample_rate=48000:duration=0.3,volume=4,apad=whole_dur=2,aloop=loop=-1:size=96000', '-ac', '2', '-f', 'pulse', 'tone'], { env: { ...process.env, PULSE_SERVER: rig.sound.server }, stdio: ['ignore', 'ignore', 'inherit'] }));
+  }
+}
 const stream = createCameraStream({
   rig, player: 'Muse_sample1', output: v.out, fileSource: v.clip, settleMs: 10, layout: 'ui', uiSize: v.size ?? '1080x1080',
   music: v.music !== 'off', shmDir: '/tmp',
@@ -92,4 +110,5 @@ const left = t0 + seconds * 1000 - Date.now();
 if (left > 0) await sleep(left);
 await stream.stop('sample done');
 clearInterval(keepAlive);
+for (const k of kids) k.kill('SIGTERM');
 console.log(`wrote ${v.out}`);

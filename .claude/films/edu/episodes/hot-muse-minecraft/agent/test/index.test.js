@@ -340,7 +340,7 @@ test('startAgent: live_view embed follows the game\'s stream and STREAM_VIDEO_UR
     const page = await c.callTool({ name: 'live_view', arguments: {} });
     assert.match(page.content[0].text, new RegExp(`^Live view of game ${game}: live on Facebook\\.\nVideo \\(plain link\\): ${VIDEO.replace(/[.?/]/g, '\\$&')}\n`));
     assert.equal(page.structuredContent.live, true);
-    assert.ok(page.structuredContent.html.includes(`src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(VIDEO)}&amp;show_text=false&amp;width=1280"`));
+    assert.ok(page.structuredContent.html.includes(`src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(VIDEO)}&amp;show_text=false&amp;width=1280&amp;autoplay=true&amp;mute=true"`));
     await until(() => agent.log.tail(200).some((r) => r.kind === 'loop_delay'));
     const row = agent.log.tail(200).find((r) => r.kind === 'loop_delay');
     for (const k of ['p50Ms', 'p99Ms', 'maxMs']) assert.ok(Number.isFinite(row[k]) && row[k] >= 0, `${k} ${row[k]}`);

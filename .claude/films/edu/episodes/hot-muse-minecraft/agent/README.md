@@ -189,8 +189,9 @@ client has received them (section "MCP calls"). start_game returns a resume hand
 never the control token) that resumes the game, with its queue, from a new MCP session while the game lives; the game
 then counts for that session. Replies and the server
 instructions carry no links and never tell the agent to open, show or watch anything. `live_view` (read-only for the
-game) returns where to watch: `{format: "html"}` (the default) a page under 1 KB for muse.ai's artifact panel
-(Facebook's video player and a status line, no script, no request of its own) and a plain link to the video, in the
+game) returns where to watch: `{format: "html"}` (the default) a page of about 2 KB for muse.ai's artifact panel
+(Facebook's video player, starting muted, a status line and a few lines of script; no request of its own) and a plain
+link to the video, in the
 text and in `structuredContent` (`state`, `live`, `camera_game`, `video_url`, `embed_url`, `html`); with the Facebook
 live channel it points the one camera at the game and waits up to about 40 s for Facebook to show it live (section
 "Live on a Facebook Page"); `{format: "link"}` gives `first_person_url` and `behind_url`; `{format: "embed"}` gives
@@ -706,7 +707,8 @@ bench never creates a live video.
   state (live since, or starting with the last error and when it tries again, or "call live_view again in about 20 s"),
   `Video (plain link): <the video>`, the one-camera sentence, then the page: the player (only Facebook's
   `plugins/video.php`, escaped) above "Live: game g... One camera films the game that asked for the live view last.",
-  "Joining: ...", or "Waiting for the next game." (`src/live-page.js`, under 1 KB, no script).
+  "Joining: ...", or "Waiting for the next game." (`src/live-page.js`, about 2 KB; section "The stream UI" for its
+  script).
 - Log rows: `fb_game`, `fb_game_end`, `fb_live_created`, `fb_status`, `fb_live`, `fb_camera` (the camera moved),
   `fb_live_failed`, `fb_stream_lost`, `fb_live_stop`, `fb_live_ended`, `fb_orphan`, `fb_error` (the Graph call, its
   HTTP status and code, scrubbed).
@@ -903,6 +905,71 @@ docker tag muse-minecraft-camera:pre-backfill muse-minecraft-camera:latest && sh
 The earlier rollbacks (live video off, landscape, `PAPER_NETHER=false`, `pre-terminal`) still apply. Remove the
 `pre-backfill` tags once this has held for a week.
 
+## The stream UI (STREAM_LAYOUT=ui)
+
+The owner watched the vertical stream (2026-10-11): 9:16 left black bars in muse.ai's panel (about 1000x1050 on a
+desktop, narrower and taller on a phone), and the terminal looked like a terminal. The `ui` layout (the default) is
+square, 1080x1080, so the video fills the panel's width on a desktop and the top of it on a phone: the game on top
+(1080x720, the middle of the 16:9 picture: Minecraft's field of view is vertical, so this is what a 3:2 window shows)
+and Muse's panel under it (1080x360, a third):
+
+- **Muse**, our own mascot (no Meta, muse.ai or Mojang art): a small lavender spirit with a miner's helmet, drawn with
+  Codex's image tool on a green screen (`../ui-art`: `gen.sh`, `character.txt`, `style.txt`, the sheets in `art/`)
+  and keyed by `ui-art/key.mjs` into `assets/muse-ui/sprites` (aligned on the helmet, so a cross-fade never jumps).
+  Poses: idle, thinking (between commands: Muse is deciding), commanding (pointing, when a call comes in), working (a
+  skill runs), cheering (done, a milestone), worried (new advice, a failure, health 6 or less), hurt (damage, a reflex,
+  a death), and fanning itself in the Nether. A gentle bob, blinks every few seconds (their own frames), a hop when it
+  cheers, a shake when hurt, 220 ms cross-fades, at 30 frames a second.
+- **The speech bubble**: the current command in plain words ("Mine 3 oak logs", "Walk to 6 67 -25", "Go through the
+  portal"; the agent's `plainCall`, never the raw call; chat text is never shown), what the body is doing under it
+  (its caption, which is no longer drawn on the game), and a chip: "on it", "step 2 of 4 done", "done in 14 s", or
+  "failed: no iron ore within 64 blocks". The last commands move up above it as small pills (a green dot done, a red
+  one failed) and fade under the status row. get_state and live_view are not commands.
+- **The advice**: one note card per kind (night, shield, food, the Nether...), most pressing first, at most two;
+  updated in place when its words change, highlighted only when the kind is new or more pressing (3: health, lava,
+  starving; 2: a night that has come; 1 else). The agent sends a terminal line for a kind only when its words change
+  beyond the numbers in it (the time of day changed on every get_state and repeated the same advice). Milestones (the
+  first wooden pickaxe, "Entered the Nether") as a gold card for 6 s, reflexes as small tags for 8 s.
+- **The status row**: our heart and food icons with the numbers, the sun or moon with the time, or "Nether", and a slim
+  "Muse 92%" meter (Muse's share of what was done, against the reflexes). Inter (SIL OFL, `assets/muse-ui/fonts`).
+- **How it is drawn**: `src/ui-panel.js` with node-canvas, 30 frames a second while live: the sprites pre-scaled, every
+  text card drawn into its own canvas only when it changes, so a frame is a few image copies (about 1.3 ms on the Mac).
+  Each frame is an uncompressed 32-bit BMP renamed over `/dev/shm/muse-ui-*/panel.bmp`; ffmpeg reads it again for
+  every frame through the same single-input `movie` source as the terminal (no second input: ffmpeg 5.1). Measured
+  in the camera image on picasso (ffmpeg 5.1, a recorded clip as the picture, 2026-10-12): real time, no restart,
+  the whole container about 75-80 % of one core (ffmpeg about 65 % with the clip's decoding and x264, node 14 %).
+- **Privacy**: every text is cleaned by the agent and again by the service (`cleanTerm`: no tokens, addresses, links
+  or other players' names; the new fields too).
+- Sample: `node scripts/ui-sample.mjs --clip game.mp4 --out sample.mp4` (a recorded clip, a scripted session through
+  the real formatter; `--pulse --tone` in the camera image adds the rig's sound server with beeps standing in for the
+  game). `~/Downloads/muse-stream-ui.mp4` and `-1.png` to `-3.png` (2026-10-12).
+
+The sound (the stream had only silence: Facebook reported 2.8 kb/s of audio):
+
+- The game's own: the camera rig starts a PulseAudio server of its own (`pulseaudio -n`, `pulseScript`: one null sink
+  `muse` at 48 kHz stereo, the native protocol on a unix socket in the rig's folder, mode 700; no hardware, network,
+  discovery or X11 modules, so nothing else on the machine can play into it or listen), points the client's OpenAL
+  at it (`PULSE_SERVER`, `ALSOFT_DRIVERS=pulse`), and ffmpeg records its monitor (`-f pulse -i muse.monitor`). The
+  client's options: the effects, ambience, weather and mobs at full, Minecraft's music and records at 0 (the
+  soundtrack risks copyright claims on Facebook). The camera rides the eye entity, so the listener is where the
+  camera is, next to the bot. Without pulseaudio (or `STREAM_GAME_AUDIO=off`) the game's part is silence.
+- A soft music bed (`STREAM_MUSIC`, on): "Etirwer" by Kistol (opengameart.org/content/etirwer), CC0 1.0, a seamless
+  guitar loop levelled at -20 LUFS (`assets/muse-ui/music`, `assets/muse-ui/CREDITS.txt`), looped in real time,
+  ducked by a side-chain compressor whenever the game is loud (threshold -26 dB, ratio 3, 450 ms release), mixed with
+  the game and limited at -1 dBFS; AAC 128 kb/s stereo. The bed alone measures -19.8 LUFS; with the stand-in beeps
+  -15.7 LUFS, no clipping. UNVERIFIED with the real client (the one camera account was in the owner's run): the game's
+  gain (`STREAM_GAME_DB`) is set on the first camera test.
+
+live_view's page, for the square video and Facebook's player:
+
+- The player at the video's shape, as wide as the panel and no taller than it (`min(100%, (100vh - 28px) * ratio)`).
+- It starts by itself, muted (`autoplay=true&mute=true`: browsers allow autoplay only without sound; the owner's
+  "frozen" player was Facebook's poster waiting for a click). "Tap the video for sound" over it, letting clicks
+  through, until the viewer taps the player (focus moves into its frame).
+- A watchdog: while the viewer has not touched the player, a fresh player of the same live video is loaded in the
+  background every 5 minutes and cross-faded in once loaded; "Reload video" does it at once. At most two frames, no
+  black flash, no request of its own (only iframes of the same Facebook URL). About 2.4 KB.
+
 ## The terminal under the video (STREAM_LAYOUT=terminal)
 
 muse.ai's panel is tall and narrow, and showed the 16:9 player at the top with black below it. So the camera's video
@@ -1054,7 +1121,8 @@ X display) and feeds the terminal a scripted session through the real formatter
 | `CAMERA_AUTH`, `CAMERA_AUTH_DIR`, `CAMERA_NAME` | `msa`, (none), (none) | the camera account: `msa` (the login in the auth folder) or `offline` (tests on our own server only, as `CAMERA_NAME`, default MuseCam) |
 | `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
 | `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `5`, `30`, `fast`, `0.75` | the client's video settings (the tuned ones); it draws at 1280x720 times the scale and ffmpeg scales up |
-| `STREAM_LAYOUT`, `STREAM_TERMINAL_SIZE` | `terminal`, `1080x1920` | the camera's video: vertical with the terminal of Muse's calls under the game (or `1080x1350`), or `landscape`, the game alone at 1280x720 (section "The terminal under the video") |
+| `STREAM_LAYOUT`, `STREAM_UI_SIZE`, `STREAM_TERMINAL_SIZE` | `ui`, `1080x1080`, `1080x1920` | the camera's video: `ui`, square (or `1080x1200`, `1080x1350`), the game over Muse's panel (section "The stream UI"); `terminal`, vertical with the terminal of Muse's calls (or `1080x1350`); `landscape`, the game alone at 1280x720 |
+| `STREAM_GAME_AUDIO`, `STREAM_MUSIC`, `STREAM_MUSIC_FILE`, `STREAM_MUSIC_DB`, `STREAM_GAME_DB` | on, on, (Etirwer), 0, 0 | the camera's sound: the game's own effects and ambience (the client's music at 0), a CC0 music bed under it ducked while the game is loud, the gains in dB, then a limiter at -1 dBFS (section "The stream UI") |
 | `CAMERA_VIEW` | `third` | `third`: over the bot's shoulder (its arm, tool and swing in view), outside its shelter while it is enclosed; `first`: in its head (outside too while enclosed). The Paper datapack does it (section "Real-client camera") |
 | `CAMERA_MODS`, `CAMERA_CHUNK_THREADS`, `CAMERA_JVM_ARGS` | `sodium`, `0`, (none) | client mods from the image (`deploy/camera/mods.json`; `off` = vanilla); Sodium's chunk builder threads (0: its own choice); extra JVM flags (a collector given here replaces G1) |
 | `STREAM_CLOCK`, `STREAM_CLOCK_TZ` | `false`, `America/Los_Angeles` | test only: the wall clock burned into the video |

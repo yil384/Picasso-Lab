@@ -473,7 +473,7 @@ export function createCameraRig(o = {}) {
     fs.writeFileSync(p.script, pulseScript(p.socket));
     try { fs.rmSync(p.socket, { force: true }); } catch { /* none */ }
     const env = { ...childEnv({ HOME: c.home }), XDG_RUNTIME_DIR: p.runtime, PULSE_RUNTIME_PATH: p.runtime };
-    const child = spawn(bin, ['-n', `--file=${p.script}`, '--daemonize=no', '--exit-idle-time=-1', '--use-pid-file=no', '--disallow-exit', '--log-target=stderr', '--log-level=error'], { env, stdio: ['ignore', 'ignore', 'pipe'] });
+    const child = spawn(bin, ['-n', `--file=${p.script}`, '--daemonize=no', '--exit-idle-time=-1', '--use-pid-file=no', '--realtime=no', '--high-priority=no', '--disable-shm=yes', '--disallow-exit', '--log-target=stderr', '--log-level=error'], { env, stdio: ['ignore', 'ignore', 'pipe'] });
     pulse = child;
     let err = '';
     child.stderr.on('data', (d) => { err = (err + d).slice(-2_000); });
