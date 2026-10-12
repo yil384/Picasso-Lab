@@ -34,7 +34,7 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
   const b = await connect(agent.url);
   try {
     const { tools } = await a.listTools();
-    assert.deepEqual(tools.map((t) => t.name).sort(), ['end_game', 'game_report', 'get_state', 'live_view', 'play', 'play_sequence', 'start_game', 'stop']);
+    assert.deepEqual(tools.map((t) => t.name).sort(), ['end_game', 'game_report', 'get_state', 'live_view', 'play', 'play_sequence', 'set_goal', 'start_game', 'stop']);
     assert.equal(tools.find((t) => t.name === 'live_view').annotations?.readOnlyHint, true);
     // no tool description and no server instruction carries a link or asks the agent to open one; the one thing the
     // instructions ask to show is live_view's own HTML (the one-line prompt: the owner's rule since 2026-10-12)

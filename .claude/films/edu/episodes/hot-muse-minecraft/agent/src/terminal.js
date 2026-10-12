@@ -55,15 +55,22 @@ export function cleanTerm(u) {
     }
   }
   if (u?.goal && typeof u.goal === 'object') {
-    // the goal from start_game and its milestones with the time each was reached (src/report.js progress), for the
-    // stream's checklist
+    // the goal set last (start_game, set_goal) and its checklist (src/report.js progress): a preset's milestones with
+    // the time each was reached, a counted goal's parts with their counts ({done, of}), none for a goal of plain text
     const g = u.goal;
     const goal = { key: /^[a-z_]{1,24}$/.test(String(g.key)) ? String(g.key) : 'free', title: clean(g.title, 40) || 'Goal', reached: g.reached === true };
     const words = typeof g.text === 'string' ? clean(g.text, 80) : '';
     if (words) goal.text = words;
     goal.list = (Array.isArray(g.list) ? g.list : []).slice(0, 16)
-      .filter((m) => typeof m?.k === 'string' && /^[a-z_]{1,24}$/.test(m.k) && typeof m.t === 'string')
-      .map((m) => ({ k: m.k, t: clean(m.t, 32), atS: int(m.atS, 0, 86_400) ?? null })).filter((m) => m.t);
+      .filter((m) => typeof m?.k === 'string' && /^[a-z0-9_]{1,24}$/.test(m.k) && typeof m.t === 'string')
+      .map((m) => {
+        const item = { k: m.k, t: clean(m.t, 32), atS: int(m.atS, 0, 86_400) ?? null };
+        // a counted part ("pigs killed 37 of 100"): both numbers, or neither
+        const of = int(m.of, 1, 1_000_000);
+        const done = int(m.done, 0, 1_000_000);
+        if (of !== undefined && done !== undefined) Object.assign(item, { done: Math.min(done, of), of });
+        return item;
+      }).filter((m) => m.t);
     out.goal = goal;
   }
   if (Array.isArray(u?.adv)) {

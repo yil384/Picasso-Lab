@@ -703,6 +703,12 @@ function doneInFull(r) {
  */
 export function plainer(tool, text, call = null) {
   let t = String(text ?? '');
+  if (tool === 'collect_mob_drop') {
+    // the mobs ran out near the bot (a big hunt goal): said plainly, with the way on (no skill breeds animals)
+    const mob = String(call?.args?.mob_name ?? 'mob').replace(/_/g, ' ');
+    t = t.replace(/No loaded ([a-z_]+) remained after observing ([a-z_]+) (\d+)\/(\d+)\./, (m, mb, drop, got, wanted) => `no ${mb.replace(/_/g, ' ')} left near you (${got} of ${wanted} ${drop} so far): the ones around here are gone; explore 1 to 3 chunks (explore {heading, chunks}) to reach land with more, then hunt again`);
+    t = t.replace(/No loaded quarry or requested inventory gain was observed (before the requested observation window ended|within the requested wait at the spawner)\./, `no ${mob} came near you: explore 1 to 3 chunks (explore {heading, chunks}) to find some, then hunt again`);
+  }
   if (tool === 'navigate') {
     const at = /of (-?\d+), (-?\d+), (-?\d+)\./.exec(t);
     const ground = /The ground in that column is at y=(-?\d+)/.exec(t);
