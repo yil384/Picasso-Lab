@@ -21,10 +21,20 @@ export function cleanTerm(u) {
       if (say) out.say = say;
       const why = typeof l.why === 'string' ? clean(l.why, 80) : '';
       if (why) out.why = why;
-      const words = typeof l.words === 'string' ? clean(l.words, 140) : ''; // Muse's own words with a call
+      const words = typeof l.words === 'string' ? cutWords(clean(l.words, 600), WORDS_MAX) : ''; // Muse's own words with a call
       if (words) out.words = words;
-      for (const [key, lo, hi] of [['ms', 0, 86_400_000], ['n', 1, 64], ['of', 1, 64]]) { const v = int(l[key], lo, hi); if (v !== undefined) out[key] = v; }
+      // ms; the step's number in the reply (n of of); its call's number in the game (c) and Muse's own step number (s),
+      // pre: a craft the check added before Muse's step s, pt of pts: a part of a step split in parts
+      for (const [key, lo, hi] of [['ms', 0, 86_400_000], ['n', 1, 64], ['of', 1, 64], ['c', 1, 100_000], ['s', 1, 64], ['pt', 1, 64], ['pts', 1, 64]]) { const v = int(l[key], lo, hi); if (v !== undefined) out[key] = v; }
+      if (l.pre) out.pre = 1;
+      if (l.ok) out.ok = 1;
       if (typeof l.ak === 'string' && /^[a-z_]{1,24}$/.test(l.ak)) out.ak = l.ak;
+      if (typeof l.tool === 'string' && /^[a-z_]{1,24}$/.test(l.tool)) out.tool = l.tool;
+      if (Array.isArray(l.steps)) {
+        // a call's steps, each in plain words and as Muse wrote it
+        out.steps = l.steps.slice(0, 16).filter((x) => x && typeof x === 'object')
+          .map((x) => ({ say: clean(x.say, 80), raw: clean(x.raw, 64) })).filter((x) => x.say || x.raw);
+      }
       return out;
     }).filter((l) => l.t);
   const out = { lines, status: typeof u?.status === 'string' ? clean(u.status, 120) : '' };
@@ -53,6 +63,41 @@ export function cleanTerm(u) {
       out.sub = { kind: SUB_KINDS.includes(sb.kind) ? sb.kind : 'other', text };
       for (const [key, lo, hi] of [['done', 0, 100_000], ['of', 1, 100_000], ['left', 0, 100_000]]) { const v = int(sb[key], lo, hi); if (v !== undefined) out.sub[key] = v; }
     }
+  }
+  if (u?.goal && typeof u.goal === 'object') {
+    // the goal from start_game and its milestones with the time each was reached (src/report.js progress), for the
+    // stream's checklist
+    const g = u.goal;
+    const goal = { key: /^[a-z_]{1,24}$/.test(String(g.key)) ? String(g.key) : 'free', title: clean(g.title, 40) || 'Goal', reached: g.reached === true };
+    const words = typeof g.text === 'string' ? clean(g.text, 80) : '';
+    if (words) goal.text = words;
+    goal.list = (Array.isArray(g.list) ? g.list : []).slice(0, 16)
+      .filter((m) => typeof m?.k === 'string' && /^[a-z_]{1,24}$/.test(m.k) && typeof m.t === 'string')
+      .map((m) => ({ k: m.k, t: clean(m.t, 32), atS: int(m.atS, 0, 86_400) ?? null })).filter((m) => m.t);
+    out.goal = goal;
+  }
+  // the call a reply answered: its number in the game (the steps' results name it)
+  { const v = int(u?.bind, 1, 100_000); if (v !== undefined) out.bind = v; }
+  if (u?.inv && typeof u.inv === 'object') {
+    // the items that matter on the way, as counts; the best pickaxe by its material
+    const inv = {};
+    for (const k of INV_KEYS) { const v = int(u.inv[k], 0, 100_000); if (v !== undefined) inv[k] = v; }
+    if (PICKS.includes(u.inv.pick)) inv.pick = u.inv.pick;
+    out.inv = inv;
+  }
+  if (u?.pos && typeof u.pos === 'object') {
+    const pos = {};
+    const y = int(u.pos.y, -64, 320);
+    if (y !== undefined) pos.y = y;
+    const place = typeof u.pos.place === 'string' ? clean(u.pos.place, 40) : '';
+    if (place) pos.place = place;
+    out.pos = pos;
+  }
+  if (u?.game && typeof u.game === 'object') {
+    // the game on camera and how long it has run, for the header
+    const id = typeof u.game.id === 'string' && /^[A-Za-z0-9_-]{1,16}$/.test(u.game.id) ? u.game.id : '';
+    const el = int(u.game.s, 0, 864_000);
+    out.game = { ...(id ? { id } : {}), ...(el !== undefined ? { s: el } : {}) };
   }
   if (Array.isArray(u?.adv)) {
     out.adv = u.adv.slice(0, 6)
@@ -89,6 +134,55 @@ export function clean(text, max = 240) {
     .slice(0, max);
 }
 
+/** Muse's own words with a call, at most this long on the stream. */
+export const WORDS_MAX = 140;
+/** At most max characters: cut at a word, with "...", when longer (never mid-word). */
+export function cutWords(text, max) {
+  const t = String(text ?? '').trim();
+  if (t.length <= max) return t;
+  const room = t.slice(0, max - 3);
+  const at = room.lastIndexOf(' ');
+  return `${(at > max / 2 ? room.slice(0, at) : room).replace(/[\s,;:.-]+$/, '')}...`;
+}
+
+/** The inventory counts the stream's HUD shows (src/ui-panel.js) and the pickaxes, best first. */
+export const INV_KEYS = Object.freeze(['diamond', 'iron', 'raw_iron', 'obsidian', 'flint_and_steel', 'water_bucket', 'lava_bucket', 'bucket', 'food', 'shield']);
+export const PICKS = Object.freeze(['diamond', 'iron', 'stone', 'wooden']);
+const FOOD = /^(?:bread|apple|golden_apple|carrot|baked_potato|potato|cooked_[a-z_]+|beef|porkchop|chicken|mutton|rabbit|cod|salmon|melon_slice|sweet_berries|glow_berries|cookie|pumpkin_pie|beetroot|mushroom_stew|rabbit_stew|beetroot_soup|dried_kelp)$/;
+/** The HUD's items from an inventory ({name: count}) and what is worn or held in the off-hand ({slot: "name n"}). */
+export function invOf(inventory, equipment) {
+  const inv = inventory && typeof inventory === 'object' ? inventory : {};
+  const n = (k) => Math.max(0, Math.round(Number(inv[k]) || 0));
+  const out = { diamond: n('diamond'), iron: n('iron_ingot'), raw_iron: n('raw_iron'), obsidian: n('obsidian'), flint_and_steel: n('flint_and_steel'), water_bucket: n('water_bucket'), lava_bucket: n('lava_bucket'), bucket: n('bucket') };
+  out.food = Object.entries(inv).filter(([k]) => FOOD.test(k)).reduce((a, [, v]) => a + Math.max(0, Math.round(Number(v) || 0)), 0);
+  out.shield = n('shield') + (Object.values(equipment && typeof equipment === 'object' ? equipment : {}).some((x) => /^shield\b/.test(String(x))) ? 1 : 0);
+  const pick = PICKS.find((m) => n(`${m}_pickaxe`) > 0);
+  if (pick) out.pick = pick;
+  return out;
+}
+const WOODS = { birch: 'birch forest', oak: 'oak woods', spruce: 'spruce forest', dark_oak: 'dark forest', jungle: 'jungle', acacia: 'savanna', mangrove: 'swamp', cherry: 'cherry grove', pale_oak: 'pale garden' };
+/**
+ * Where the bot is, in a few plain words, from what the body knows cheaply: its dimension, its y and the trees around
+ * (the body's block scan): "the Nether", "deep caves" (below y 0), "caves", "surface, birch forest", "underground,
+ * under a birch forest" (well below the trees), "mountains".
+ */
+export function placeOf(dim, y, blocks) {
+  if (dim === 'the_nether') return 'the Nether';
+  if (dim === 'the_end') return 'the End';
+  if (!Number.isFinite(y)) return '';
+  if (y < 0) return 'deep caves';
+  if (y < 40) return 'caves';
+  const logs = (Array.isArray(blocks) ? blocks : []).filter((b) => /_log$/.test(String(b?.name)) && Number.isFinite(b?.nearest?.y) && Math.abs(b.nearest.y - y) <= 16);
+  const log = logs.sort((a, b) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+  if (log) {
+    const w = String(log.name).replace(/_log$/, '');
+    const wood = WOODS[w] ?? `${w.replace(/_/g, ' ')} trees`;
+    return log.nearest.y - y > 4 ? `underground, under a ${wood}` : `surface, ${wood}`;
+  }
+  if (y > 110) return 'mountains';
+  return y < 56 ? 'underground' : 'surface';
+}
+
 const word = (v) => String(v ?? '').replace(/_/g, ' ');
 const argText = (args) => Object.values(args ?? {}).filter((v) => v !== null && v !== undefined && typeof v !== 'object').map((v) => String(v)).join(' ');
 
@@ -96,7 +190,7 @@ const argText = (args) => Object.values(args ?? {}).filter((v) => v !== null && 
 export function stepSummary(st) {
   if (!st || typeof st !== 'object') return '';
   const skill = st.skill ?? st.name ?? '';
-  const args = st.args && typeof st.args === 'object' ? st.args : Object.fromEntries(Object.entries(st).filter(([k]) => !['skill', 'name', 'request_id'].includes(k)));
+  const args = st.args && typeof st.args === 'object' ? st.args : Object.fromEntries(Object.entries(st).filter(([k]) => !['skill', 'name', 'request_id', 'why'].includes(k)));
   return `${skill}${argText(args) ? ` ${argText(args)}` : ''}`;
 }
 
@@ -108,9 +202,12 @@ export function callLine(tool, args = {}) {
     what = parts.slice(0, 4).join(', ') + (parts.length > 4 ? `, +${parts.length - 4} more` : '');
   } else if (tool === 'play') what = stepSummary(args);
   else if (tool === 'live_view') what = args?.format ?? '';
-  const words = typeof args?.why === 'string' ? clean(args.why, 140) : ''; // Muse's own words (why), cut at 140
-  const of = tool === 'play_sequence' && Array.isArray(args?.steps) ? args.steps.length : tool === 'play' ? 1 : 0;
-  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args), ...(words ? { words } : {}), ...(of ? { of } : {}) };
+  const words = typeof args?.why === 'string' ? cutWords(clean(args.why, 600), WORDS_MAX) : ''; // Muse's own words (why), cut at a word
+  const list = tool === 'play_sequence' && Array.isArray(args?.steps) ? args.steps : tool === 'play' ? [args] : [];
+  const of = list.length;
+  // every step in plain words and as Muse wrote it (the stream's trace never hides one)
+  const steps = list.slice(0, 16).map((st) => ({ say: plainStep(st), raw: clean(stepSummary(st), 64) }));
+  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args), tool, ...(words ? { words } : {}), ...(of ? { of, steps } : {}) };
 }
 
 // ----- plain words for the stream's speech bubble ("Mine 3 oak logs"), never the raw call
@@ -161,7 +258,7 @@ const capital = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 export function plainStep(st) {
   if (!st || typeof st !== 'object') return '';
   const skill = st.skill ?? st.name ?? '';
-  const args = st.args && typeof st.args === 'object' ? st.args : Object.fromEntries(Object.entries(st).filter(([k]) => !['skill', 'name', 'request_id'].includes(k)));
+  const args = st.args && typeof st.args === 'object' ? st.args : Object.fromEntries(Object.entries(st).filter(([k]) => !['skill', 'name', 'request_id', 'why'].includes(k)));
   let t = '';
   try { t = STEP_WORDS[skill]?.(args) ?? ''; } catch { t = ''; }
   return clean(t || capital(word(skill)), 120);
@@ -355,15 +452,38 @@ export function createTermFeed(o) {
     const dawnS = ['sleep', 'shelter', 'shelter_body'].includes(reason) ? Math.round((23_000 - tod) / 20) : undefined;
     return { mode: 'idle', reason, ...(sinceS !== undefined ? { sinceS } : {}), ...(dawnS !== undefined ? { dawnS } : {}) };
   };
-  const emit = (s, lines, structured) => {
+  /** The HUD's items, y and place, and the game's id and age, from the body now (else the last state a reply carried). */
+  const hudOf = (s, g, structured) => {
+    let snap = null;
+    try { snap = s.body?.snapshot?.() ?? null; } catch { snap = null; }
+    const state = structured?.state && !structured.state.joining ? structured.state : null;
+    const inventory = snap?.inventory ?? state?.inventory ?? structured?.inventory ?? null;
+    const equipment = snap?.equipment ?? structured?.equipment ?? state?.equipment ?? null;
+    const out = { game: { id: String(s.id ?? ''), s: Math.max(0, Math.round((now() - g.startedAt) / 1000)) } };
+    if (inventory) out.inv = invOf(inventory, equipment);
+    const p = snap?.position ?? state?.position ?? null;
+    const y = Number.isFinite(p?.y) ? Math.floor(p.y) : null;
+    if (y !== null || g.dim) out.pos = { ...(y !== null ? { y } : {}), place: placeOf(g.dim ?? snap?.dimension ?? 'overworld', y, snap?.nearbyBlocks ?? state?.nearbyBlocks) };
+    return out;
+  };
+  const emit = (s, lines, structured, extra = null) => {
     try {
       const { text, st } = statusOf(s, structured);
       const adv = adviceOf(structured);
       const g = of(s);
-      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}) });
+      // the goal and its milestones, as the game's tracker has them (src/report.js; MCP games only)
+      let goal = null;
+      try { goal = s.tracker?.progress?.() ?? null; } catch { goal = null; }
+      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}), ...(goal ? { goal } : {}), ...hudOf(s, g, structured), ...(extra ?? {}) });
     } catch { /* the video goes on without it */ }
   };
   const PLACES = { the_nether: 'entered the Nether', the_end: 'entered the End', overworld: 'back in the Overworld' };
+  /** A result line's place in its call: the call's number (c), Muse's step (s; a craft the check added: pre), a part. */
+  const stepRef = (step) => [
+    Number.isInteger(step.call) ? { c: step.call } : {},
+    Number.isInteger(step.step) ? { s: step.step } : Number.isInteger(step.before) ? { s: step.before, pre: 1 } : {},
+    step.parts > 1 && Number.isInteger(step.part) ? { pt: step.part, pts: step.parts } : {},
+  ];
   const elapsed = (g) => {
     const sec = Math.max(0, Math.round((now() - g.startedAt) / 1000));
     return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
@@ -400,6 +520,7 @@ export function createTermFeed(o) {
         const line = resultLine(step);
         const total = (st.steps ?? []).some((x) => x === step) ? (st.steps ?? []).length : null;
         if (line && Number.isInteger(step.n)) Object.assign(line, { n: step.n }, total ? { of: total } : {});
+        if (line) Object.assign(line, ...stepRef(step));
         if (line) lines.push(line);
         if (step.status === 'confirmed') {
           // the last thing done, for the status line between calls (a shelter at night, a bed)
@@ -448,7 +569,9 @@ export function createTermFeed(o) {
       if (dim && g.dim && dim !== g.dim) lines.push({ k: 'milestone', t: clean(`${PLACES[dim] ?? `entered ${word(dim)}`} at ${elapsed(g)}`) });
       if (dim) g.dim = dim;
       if (tool === 'end_game') { lines.push({ k: 'info', t: clean(`game over after ${elapsed(g)}`) }); emit(s, lines, st); drop(s.id); return; }
-      emit(s, lines, st);
+      // the call this reply answered, by its number in the game (its steps' results name it)
+      const bind = (tool === 'play' || tool === 'play_sequence') ? (st.steps ?? []).find((x) => Number.isInteger(x?.call))?.call : undefined;
+      emit(s, lines, st, bind !== undefined ? { bind } : null);
     },
     /** Every few seconds between calls: the status and what is happening now, with no lines (the picture lives). */
     tick(s) {
