@@ -257,7 +257,7 @@ export function createLiveChannel(o) {
   // to it, begins with the game's start (start_game and what came with it), its last lines and its status
   const terms = new Map(); // id -> {head: [{k, t}], tail: [{k, t}], cut: boolean, status: string, updates: number}
   const TERM_HEAD = 4;
-  const TERM_TAIL = 20;
+  const TERM_TAIL = 36; // with the 4 first lines, within the 40 a term update carries
   const keepTerm = (id, u) => {
     let t = terms.get(id);
     if (!t) {

@@ -777,7 +777,7 @@ export function createCameraStream(o) {
       const top = Math.round((uw * 9) / 16 / 2) * 2;
       const ph = uh - top;
       try { shm = fs.mkdtempSync(path.join(opt.shmDir ?? '/dev/shm', 'muse-ui-')); } catch { shm = null; }
-      panel = createUiPanel({ width: uw, height: ph, over: 72, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS });
+      panel = createUiPanel({ width: uw, height: ph, over: 72, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS, ...(opt.uiNow ? { now: opt.uiNow } : {}) });
       panel.top = top;
       panel.kind = 'ui';
       panel.write(); // ffmpeg opens the file at its start

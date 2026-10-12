@@ -51,7 +51,7 @@ export function cleanTerm(u) {
     if (live.mode === 'idle') live.reason = IDLE_REASONS.includes(l.reason) ? l.reason : 'waiting';
     const step = typeof l.step === 'string' ? clean(l.step, 120) : '';
     if (step) live.step = step;
-    for (const [key, lo, hi] of [['sinceS', 0, 86_400], ['dawnS', 0, 1_200]]) { const v = int(l[key], lo, hi); if (v !== undefined) live[key] = v; }
+    for (const [key, lo, hi] of [['sinceS', 0, 86_400], ['dawnS', 0, 1_200], ['c', 1, 100_000], ['s', 1, 64]]) { const v = int(l[key], lo, hi); if (v !== undefined) live[key] = v; }
     out.live = live;
   }
   if (u && 'sub' in u) {
@@ -390,7 +390,7 @@ export function createTermFeed(o) {
           const t = now();
           if (sub && t - (g.subSentAt ?? 0) < 500) return;
           g.subSentAt = t;
-          try { o.send(s.id, { lines: [], sub }); } catch { /* the video goes on without it */ }
+          try { o.send(s.id, { lines: [], sub, live: liveInfo(s, g), ...hudOf(s, g, null) }); } catch { /* the video goes on without it */ }
         }) ?? (() => {});
       } catch { g.offProgress = () => {}; }
     }
@@ -440,7 +440,14 @@ export function createTermFeed(o) {
     let info = {};
     try { info = o.liveOf?.(s) ?? {}; } catch { info = {}; }
     const sinceS = Number.isFinite(info.lastCallAt) ? Math.max(0, Math.round((now() - info.lastCallAt) / 1000)) : undefined;
-    if (info.busy) return { mode: 'run', ...(info.running ? { step: plainStep(info.running) } : {}), ...(sinceS !== undefined ? { sinceS } : {}) };
+    if (info.busy) {
+      // the step running now: its words, its call's number in the game and Muse's own step number (a craft the check
+      // added runs for the step after it), so the stream's trace knows the steps before it are done before a reply says so
+      const r = info.running;
+      const c = Number.isInteger(r?.call?.no) ? r.call.no : undefined;
+      const sn = Number.isInteger(r?.step) ? r.step : Number.isInteger(r?.before) ? r.before : undefined;
+      return { mode: 'run', ...(r ? { step: plainStep(r) } : {}), ...(c !== undefined ? { c } : {}), ...(sn !== undefined ? { s: sn } : {}), ...(sinceS !== undefined ? { sinceS } : {}) };
+    }
     const t = g.state?.time;
     const tod = Number.isFinite(t) ? ((Math.floor(t) % 24_000) + 24_000) % 24_000 : null;
     const night = tod !== null && tod >= 13_000 && tod < 23_000 && g.dim !== 'the_nether';
@@ -463,7 +470,8 @@ export function createTermFeed(o) {
     if (inventory) out.inv = invOf(inventory, equipment);
     const p = snap?.position ?? state?.position ?? null;
     const y = Number.isFinite(p?.y) ? Math.floor(p.y) : null;
-    if (y !== null || g.dim) out.pos = { ...(y !== null ? { y } : {}), place: placeOf(g.dim ?? snap?.dimension ?? 'overworld', y, snap?.nearbyBlocks ?? state?.nearbyBlocks) };
+    const place = placeOf(g.dim ?? snap?.dimension ?? 'overworld', y, snap?.nearbyBlocks ?? state?.nearbyBlocks);
+    if (y !== null || place) out.pos = { ...(y !== null ? { y } : {}), ...(place ? { place } : {}) };
     return out;
   };
   const emit = (s, lines, structured, extra = null) => {
@@ -533,7 +541,10 @@ export function createTermFeed(o) {
       }
       if (out?.isError && !(st.steps ?? []).length) {
         const first = String(out.content?.[0]?.text ?? '').split('\n')[0];
-        lines.push({ k: 'fail', t: clean(`FAIL ${st.code ?? ''} ${first}`) });
+        // the reason in words: "bad arguments: go_to.pos is not allowed" (not the step's number or the code)
+        const bad = /bad arguments?:\s*([^;]+)/i.exec(first);
+        const why = bad ? clean(`bad arguments: ${bad[1].trim()}`, 80) : shortWhy(first.replace(/^\d+\.\s*/, ''), 60);
+        lines.push({ k: 'fail', t: clean(`FAIL ${st.code ?? ''} ${first}`), ...(why ? { why } : {}) });
       }
       for (const e of st.onItsOwn ?? []) {
         if (!(e.seq > g.own)) continue;

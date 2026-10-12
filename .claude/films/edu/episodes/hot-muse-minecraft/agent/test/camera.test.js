@@ -12,6 +12,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   clientOptions, clientLaunch, modJars, sodiumOptions, offlineUuid, consoleCommand, followCommands, keepFollowingCommands, parkCommands, validName,
@@ -365,4 +366,22 @@ test('client mods: Fabric first on the class path, its ASM instead of the game\'
   const cfg = loadConfig({}).stream.camera;
   assert.deepEqual([cfg.mods, cfg.chunkThreads, cfg.jvmArgs], ['sodium', 0, []]);
   assert.deepEqual(loadConfig({ CAMERA_JVM_ARGS: '-XX:+UseZGC  -Xss2m' }).stream.camera.jvmArgs, ['-XX:+UseZGC', '-Xss2m']);
+});
+
+test('datapack: every function the camera\'s datapack calls is there, and every spot the eye goes to while the bot is enclosed is checked first (muse_cam:good)', () => {
+  const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'deploy', 'paper-datapack', 'muse_cam', 'data', 'muse_cam', 'function');
+  const files = new Map(fs.readdirSync(dir).filter((f) => f.endsWith('.mcfunction')).map((f) => [f.replace(/\.mcfunction$/, ''), fs.readFileSync(path.join(dir, f), 'utf8')]));
+  for (const [name, text] of files) {
+    for (const m of text.matchAll(/function muse_cam:([a-z_]+)/g)) assert.ok(files.has(m[1]), `${name} calls muse_cam:${m[1]}`);
+  }
+  // while enclosed, the eye is moved only to a spot muse_cam:good accepted (to_spot), or kept where good says it may stay
+  for (const name of ['outside', 'choose', 'ring', 'ring_at', 'near', 'near_dirs', 'near_at', 'above', 'hold', 'orbit', 'orbit_step', 'deep']) {
+    const tps = [...files.get(name).matchAll(/run tp @e\[type=minecraft:item_display,tag=muse_cam_eye[^\n]*/g)].map((m) => m[0]);
+    for (const l of tps) assert.fail(`${name} moves the eye without muse_cam:good: ${l}`);
+    const kept = [...files.get(name).matchAll(/\n[^\n]*tp @s ~ ~ ~ facing[^\n]*/g)].map((m) => m[0]);
+    for (const l of kept) assert.match(l, /if score #g muse_cam_y matches 1/, `${name}: the eye stays only on a good spot`);
+  }
+  assert.match(files.get('good'), /unless block ~0\.4 ~ ~ #muse_cam:open/, 'room around the eye');
+  assert.match(files.get('enclosure'), /unless block ~1 ~1 ~ #muse_cam:open unless block ~-1 ~1 ~ #muse_cam:open/, 'enclosed: walls on all four sides too');
+  assert.match(files.get('view'), /muse_cam_deep[^\n]*to_head/, 'no spot outside: the bot\'s own eyes');
 });
