@@ -118,7 +118,11 @@ export function createTracker({ goal: first = { key: 'free', text: null }, now =
         return;
       }
       if (args?.dry_run === true) return; // only a check: nothing was decided
-      const sent = tool === 'play' ? [{ skill: args?.skill, args: args?.args ?? {} }] : (args?.steps ?? []).map((st) => ({ skill: st?.skill, args: st?.args ?? {} }));
+      const sc = out?.structuredContent ?? {};
+      const steps = sc.steps ?? [];
+      // the steps as they ran (the arguments as the server read them, crafts it added), else as they were sent
+      const sent = steps.length && steps.every((st) => st.args && typeof st.args === 'object') ? steps.map((st) => ({ skill: st.skill, args: st.args }))
+        : tool === 'play' ? [{ skill: args?.skill, args: args?.args ?? {} }] : (args?.steps ?? []).map((st) => ({ skill: st?.skill, args: st?.args ?? {} }));
       const at = now() - t0;
       // the advice the player saw before this call: followed when a step does what its hint said, else declined
       for (const a of shown) {
@@ -128,9 +132,11 @@ export function createTracker({ goal: first = { key: 'free', text: null }, now =
         if (did) { declined.delete(k); decisions.push({ at, kind: 'advice', followed: true, text: a.text, skill: a.hint.skill }); }
         else if (!declined.has(k)) { declined.add(k); decisions.push({ at, kind: 'advice', followed: false, text: a.text, skill: a.hint.skill }); }
       }
-      const sc = out?.structuredContent ?? {};
-      const steps = sc.steps ?? [];
-      const outcome = out?.isError ? `refused (${sc.code ?? 'error'})` : steps.some((st) => st.status === 'failed') ? `failed: ${steps.find((st) => st.status === 'failed').code ?? 'FAILED'}` : steps.every((st) => st.status === 'confirmed') ? 'ok' : 'running';
+      const failed = steps.find((st) => st.status === 'failed');
+      const words = (r) => String(r ?? '').replace(/^failed:\s*/i, '').split(/[;:(]|\. /)[0].trim().slice(0, 90);
+      const outcome = out?.isError && !failed ? `refused (${sc.code ?? 'error'})`
+        : failed ? `failed${failed.code && failed.code !== 'FAILED' ? ` (${failed.code})` : ''}${words(failed.result) ? `: ${words(failed.result)}` : ''}`
+          : steps.length && steps.every((st) => st.status === 'confirmed') ? 'ok' : 'running';
       decisions.push({ at, kind: 'call', why: typeof args?.why === 'string' && args.why.trim() ? args.why.trim().slice(0, 200) : null, steps: sent.map(brief).join(', ').slice(0, 300), outcome });
       while (decisions.length > DECISIONS_KEPT) { decisions.splice(DECISIONS_HEAD, 1); dropped += 1; }
       for (const st of steps) if (st.skill === 'build' && st.args?.blueprint === 'nether_portal' && st.status === 'confirmed') view.portalBuilt = true;

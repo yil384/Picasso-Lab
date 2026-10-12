@@ -190,6 +190,10 @@ test('ga13a88: the go_to {pos} call refused in production runs now (logged as re
     assert.deepEqual(last.goal.list.map((m) => m.k), ['wooden_pickaxe', 'stone_pickaxe', 'iron_ingot', 'iron_pickaxe', 'diamond', 'diamond_pickaxe', 'water_bucket', 'obsidian', 'flint_and_steel', 'portal', 'nether', 'back']);
     assert.deepEqual(last.goal.list.at(-1), { k: 'back', t: 'back', atS: null });
     assert.equal(Number.isInteger(last.goal.list[0].atS), true, 'the wooden pickaxe, with its time');
+    // the decision log has the steps as they ran: go_to in its preferred shape
+    const rep = await c.callTool({ name: 'game_report', arguments: {} });
+    assert.match(text(rep), /\n- \d+:\d\d "No path from the dug-in hole to the trees: [^"]*" -> go_to -20 78 236, collect birch_log 8, /);
+    assert.match(text(rep), /\n- \d+:\d\d "planks for a table" -> craft birch_planks 4: ok/);
   } finally {
     await c.close();
     await web.stop?.();
