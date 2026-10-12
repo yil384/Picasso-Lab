@@ -21,7 +21,8 @@
 import crypto from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { z } from 'zod';
-import { createTracker, goalOf, planText, GOAL_NAMES } from './report.js';
+import { createTracker, goalOf, planText, lexiconFrom, GOAL_NAMES } from './report.js';
+import { HUNT_DROPS, dropOf } from './mineai/skills.js';
 import { tolerate } from './tolerant.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -235,14 +236,15 @@ export function instructionsText({ callMs = 90_000, leaseMin = 30, idleMin = 5, 
     'Muse plays Minecraft: you play your own bot in a survival Minecraft world, by yourself: once the game has started, play on without asking your user anything. Use only these tools, not the server\'s web pages.',
     'Rules:',
     '1. Adults (18+) only: start_game needs adult: true. Set it only when your user has said in this conversation that they are 18 or older; never assume it, and if they have not said it, ask them first.',
-    `2. Start: start_game, with goal when your user named one (${GOAL_NAMES.join(', ')}, or a short text); its reply has the plan, milestone by milestone, with how to do each${live ? '. Then call live_view and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, so your user sees the game' : ''}.`,
-    `3. Play: play_sequence for several steps in a row (play for one); each reply carries the results and the state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running.`,
-    '4. why: pass why on every play and play_sequence call, one short sentence in plain words, what you are doing and why; viewers of the live stream see it as your own words, and the report keeps it.',
-    `5. ${care ? care.trim() : 'You make every plan: the body runs the skills you send.'}`,
-    `6. Time: call at least every 4 minutes; a game with no calls for ${idleMin} minutes ends. A game lasts ${leaseMin} min.`,
-    '7. Deaths: after a death, either pick_up with death_items: true within 5 minutes (the items despawn) or start over where you respawned.',
-    '8. Failures: if the same step fails 3 times, change your plan instead of sending it again.',
-    '9. The end: when the goal is reached, the game ends or you stop, call end_game: its reply is the full report (the goal, milestones with times, deaths with causes, who acted, and a decision log from your why texts and the advice you followed or declined); show it to your user as it is. game_report gives the same during the game.',
+    `2. Start: start_game, with goal when your user named one (${GOAL_NAMES.join(', ')}, or their words: the server counts goals like "kill 100 pigs", "collect 64 cobblestone", "craft 20 torches", "reach y -59", "build a hut", "survive 2 nights"); its reply has the plan, with how to do each part${live ? '. Then call live_view and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, so your user sees the game' : ''}.`,
+    '3. A new goal: whenever your user gives a new or changed goal during the game, call set_goal with it (their words, or a preset) before you play on; the stream, every reply\'s state and the report follow the goal set last, and the report keeps every goal with its time.',
+    `4. Play: play_sequence for several steps in a row (play for one); each reply carries the results and the state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A big count (100 pigs, 500 blocks) takes many steps: a step takes at most 64, so split it across calls and watch the goal's count in each reply.`,
+    '5. why: pass why on every play and play_sequence call, one short sentence in plain words, what you are doing and why; viewers of the live stream see it as your own words, and the report keeps it.',
+    `6. ${care ? care.trim() : 'You make every plan: the body runs the skills you send.'}`,
+    `7. Time: call at least every 4 minutes; a game with no calls for ${idleMin} minutes ends. A game lasts ${leaseMin} min.`,
+    '8. Deaths: after a death, either pick_up with death_items: true within 5 minutes (the items despawn) or start over where you respawned.',
+    '9. Failures: if the same step fails 3 times, change your plan instead of sending it again.',
+    '10. The end: when the goal is reached, the game ends or you stop, call end_game: its reply is the full report (the goal, milestones with times, deaths with causes, who acted, and a decision log from your why texts and the advice you followed or declined); show it to your user as it is. game_report gives the same during the game.',
     `The skills this server offers (${skillCount}): ${skillNames}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.`,
   ].join('\n');
 }
@@ -341,14 +343,21 @@ export function createMcp(hooks) {
   const busy = (s) => Boolean(queues.get(s)?.busy);
   const safely = (fn, fallback = null) => { try { return fn(); } catch { return fallback; } };
   /** What the game's tracker (src/report.js) reads from the body: inventory, what it wears, the dimension. */
-  const observed = (s) => ({ inventory: safely(() => s.body?.inventory?.() ?? null), equipment: safely(() => s.body?.equipment?.() ?? null), dimension: safely(() => s.body?.snapshot?.()?.dimension ?? null) });
+  const observed = (s) => {
+    const snap = safely(() => s.body?.snapshot?.() ?? null);
+    return { inventory: safely(() => s.body?.inventory?.() ?? null), equipment: safely(() => s.body?.equipment?.() ?? null), dimension: snap?.dimension ?? null, position: snap?.position ?? null, timeOfDay: Number.isFinite(snap?.timeOfDay) ? snap.timeOfDay : null };
+  };
+  // the names a goal may use (src/goals.js): this server's skills, the game's items, what mobs drop and blocks give
+  const lex = lexiconFrom(skills, { huntDrops: HUNT_DROPS, dropOf });
+  /** A goal from start_game's or set_goal's words, read with what the bot carries (the wood of its planks). */
+  const readGoal = (raw, s) => goalOf(raw, lex, { inventory: safely(() => s?.body?.inventory?.() ?? null) });
 
   /** ": ok: crafted 4 stick [+4 stick, -2 oak_planks]" for a skill result. */
   const outcome = (r, skill) => {
     const change = changeText(r, skill);
     return `: ${r.ok ? 'ok' : 'FAILED'}: ${r.result}${change ? ` [${change}]` : ''}`;
   };
-  const stateBlock = (s) => `State (game ${s.id}, ${roughly(Math.max(0, s.expiresAt - now()))} left; it also ends after ${IDLE_MS / 60_000} min without calls):\n${hooks.stateText(s)}`;
+  const stateBlock = (s) => `State (game ${s.id}, ${roughly(Math.max(0, s.expiresAt - now()))} left; it also ends after ${IDLE_MS / 60_000} min without calls):\n${hooks.stateText(s)}${s.tracker ? `\n${safely(() => s.tracker.line(), '')}` : ''}`;
 
   /** Wait for a promise at most ms, and not past the client cancelling the call: the value, or hooks.TIMEOUT. */
   function wait(promise, ms, signal) {
@@ -795,7 +804,7 @@ export function createMcp(hooks) {
       inputSchema: {
         adult: z.boolean().describe('true only when your user has said in this conversation that they are 18 or older'),
         game: z.string().max(64).optional().describe('the handle of a game to resume (from an earlier start_game reply)'),
-        goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')} (default free), or a short text; the reply gives the plan`),
+        goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')} (default free), or your user's words ("kill 100 pigs"); the reply gives the plan`),
       },
     }, async ({ adult, game: handle, goal: goalRaw }, extra) => {
       if (adult !== true) return fail('This game is for adults (18+) only. Ask your user to confirm they are 18 or older, then call start_game with adult: true.');
@@ -830,17 +839,20 @@ export function createMcp(hooks) {
       // the goal and its plan (src/report.js): a new game gets its tracker; a resumed one keeps it (a goal given on
       // resume replaces the old goal)
       if (!s.tracker) {
-        s.tracker = createTracker({ goal: goalOf(goalRaw) });
+        s.tracker = createTracker({ goal: readGoal(goalRaw, s) });
         const tracker = s.tracker;
+        safely(() => tracker.observe(observed(s)));
         safely(() => s.body?.on?.('death', (d) => safely(() => tracker.death({ cause: d?.at?.cause ?? d?.cause ?? null, position: d?.at?.position ?? d?.position ?? null }))));
-        // a milestone counts when the step that made it ends, also between calls
+        // milestones and counts as the step that made them ends, also between calls: what it made, built, killed
         safely(() => s.body?.on?.('skill', (e) => {
           if (e?.phase !== 'end') return;
-          safely(() => tracker.onStepDone({ skill: e.tool, args: e.args, status: e.ok ? 'confirmed' : 'failed' }));
+          safely(() => tracker.onSkillEnd(e));
           safely(() => tracker.observe(observed(s)));
         }));
-      } else if (goalRaw) s.tracker.setGoal(goalOf(goalRaw));
-      const plan = planText(s.tracker.goal);
+        // the kills of the body's reflexes (a zombie the defend reflex killed counts for "kill 10 zombies")
+        safely(() => s.body?.on?.('kill', (k) => safely(() => tracker.onKills(k?.mobs, k?.by ?? 'reflex'))));
+      } else if (goalRaw) s.tracker.setGoal(readGoal(goalRaw, s), 'start_game');
+      const plan = planText(s.tracker.goal, { lex, leaseMin });
       return text(`${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\n${plan}\nTo resume this game from a new connection, call start_game with adult: true and game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
     });
 
@@ -965,6 +977,22 @@ export function createMcp(hooks) {
         ...(report ? { report: report.data } : {}),
       };
       return Object.keys(sc).length ? { ...out, structuredContent: sc } : out;
+    });
+
+    server.registerTool('set_goal', {
+      description: 'Change your game\'s goal when your user gives a new one: a preset or their words, as start_game\'s goal. Counted goals: kill or hunt N <mob>, collect, mine or get N <item>, craft, make or smelt N <item>, reach y <Y> or <x> <z> or the Nether, build a <blueprint>, survive N nights or days, several joined with "and". Other words stay your goal as text, not counted. The reply has the plan and how the server counts it; the report keeps every goal with its time.',
+      inputSchema: { goal: z.string().min(1).max(120).describe(`a preset (${GOAL_NAMES.join(', ')}) or your user's words, e.g. "kill 100 pigs"`) },
+    }, async ({ goal: raw }) => {
+      const s = game(entry);
+      if (!s?.tracker) return fail('no game yet: call start_game with this goal');
+      const before = s.tracker.goal;
+      const g = readGoal(raw, s);
+      safely(() => s.tracker.observe(observed(s)));
+      const changed = s.tracker.setGoal(g, 'set_goal');
+      const head = changed
+        ? `Goal set: ${g.title ?? g.key} (it was: ${before.key === 'free' && !before.text ? 'free play' : before.title ?? before.key}; the report keeps both).`
+        : `That is the goal already: ${g.title ?? g.key}; nothing changed.`;
+      return { ...text(`${head}\n${planText(s.tracker.goal, { lex, leaseMin })}\n${s.tracker.line()} This game has ${roughly(Math.max(0, s.expiresAt - now()))} left.`), structuredContent: { goal: s.tracker.progress() } };
     });
 
     server.registerTool('game_report', {

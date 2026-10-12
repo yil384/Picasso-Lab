@@ -590,6 +590,14 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
   if (dim(s.dimension) === 'the_nether') {
     say('nether', `in the Nether: beds explode here and water boils away; ${memory.netherArrival ? `the portal back is at ${xyz(memory.netherArrival)} (portal enter with that pos)` : 'the portal back is where you arrived'}`);
   }
+  // the mobs a hunt went for are gone from around here (a goal like "kill 100 pigs" runs them out): new land has more;
+  // no skill breeds animals, so exploring is the way
+  const empty = memory.huntEmpty;
+  if (empty && now - empty.at < HUNT_EMPTY_MS && (!s.position || !empty.pos || Math.hypot(s.position.x - empty.pos.x, s.position.z - empty.pos.z) < 48)) {
+    const h = Number(s.position?.headingDegrees);
+    const heading = Number.isFinite(h) ? (Math.round((((h % 360) + 360) % 360) / 90) * 90) % 360 : 0;
+    say('scarce', `no ${String(empty.mob).replace(/_/g, ' ')} left near you (your last hunt found none); explore 2 chunks (${['north', 'east', 'south', 'west'][heading / 90]}, the way you face) to reach land with more, then hunt again; no skill here breeds animals`, { skill: 'explore', args: { heading, chunks: 2 } });
+  }
   return out.slice(0, ADVICE_MAX);
 }
 
@@ -630,7 +638,7 @@ export function describeEvents(events = []) {
     if (fight.deflect) parts.push('blocked arrows with its shield');
     if (fight.explosions) parts.push(`${plural(fight.explosions, 'explosion')} near it`);
     const hp = fight.before !== null && fight.after !== null ? `; health ${round(fight.before)} -> ${round(fight.after)}` : '';
-    out.push({ kind: fight.evade && !fight.fight ? 'flee' : fight.hide && !fight.fight ? 'hide' : 'fight', text: `${parts.join('; ') || 'kept hostile mobs off'}${hp}`, ok: true, at: fight.at, reflex: true });
+    out.push({ kind: fight.evade && !fight.fight ? 'flee' : fight.hide && !fight.fight ? 'hide' : 'fight', text: `${parts.join('; ') || 'kept hostile mobs off'}${hp}`, ok: true, at: fight.at, reflex: true, ...(Object.keys(fight.killed).length ? { killed: fight.killed } : {}) });
     fight = null;
   };
   for (const e of events) {
@@ -646,20 +654,32 @@ export function describeEvents(events = []) {
     const p = e.payload ?? {};
     const source = p.source;
     const ev = p.evidence ?? {};
-    if (ev.interrupted) continue; // a step of the player's (or of the care) was interrupted: its own result says so
     const o = ev.outcome ?? {};
+    if (ev.interrupted) {
+      // a step of the player's (or of the care) was interrupted: its own result says so; a kill in that fight still
+      // counts for a goal that counts kills (an entry for the count only, never told or logged)
+      const killed = {};
+      for (const id of o.killedTargetIds ?? []) { const name = (o.threats ?? []).find((t) => t.id === id)?.name; if (name) killed[name] = (killed[name] ?? 0) + 1; }
+      if (Object.keys(killed).length) out.push({ kind: 'kills', killed, countOnly: true, at: e.observedAt });
+      continue;
+    }
     if (source === 'hostile_reflex') {
       const resp = ev.response ?? o.response;
       if (ev.cancelled && !(o.healthBefore > o.healthAfter) && !(o.killedTargetIds ?? []).length) continue;
       const names = (o.threats ?? []).map((t) => t.name).filter(Boolean);
       const changed = (o.attacks ?? 0) > 0 || (o.killedTargetIds ?? []).length || (o.healthBefore ?? 0) !== (o.healthAfter ?? 0) || resp === 'hide' || o.explosions;
       if (!changed) continue;
-      fight ??= { at: e.observedAt, fight: 0, evade: 0, hide: 0, deflect: 0, kills: 0, explosions: 0, walled: 0, ate: null, before: null, after: null, fightMobs: new Set(), evadeMobs: new Set(), hideMobs: new Set() };
+      fight ??= { at: e.observedAt, fight: 0, evade: 0, hide: 0, deflect: 0, kills: 0, killed: {}, explosions: 0, walled: 0, ate: null, before: null, after: null, fightMobs: new Set(), evadeMobs: new Set(), hideMobs: new Set() };
       if (resp === 'fight') { fight.fight += 1; names.forEach((n) => fight.fightMobs.add(n)); }
       else if (resp === 'evade') { fight.evade += 1; names.forEach((n) => fight.evadeMobs.add(n)); }
       else if (resp === 'hide') { fight.hide += 1; names.forEach((n) => fight.hideMobs.add(n)); fight.walled += Number(o.hide?.walled) || 0; fight.ate ??= o.hide?.ate ?? null; }
       else if (resp === 'deflect') fight.deflect += 1;
       fight.kills += (o.killedTargetIds ?? []).length;
+      // which mobs died: their ids among the threats (for a goal that counts kills)
+      for (const id of o.killedTargetIds ?? []) {
+        const name = (o.threats ?? []).find((t) => t.id === id)?.name;
+        if (name) fight.killed[name] = (fight.killed[name] ?? 0) + 1;
+      }
       fight.explosions += Number(o.explosions) || 0;
       if (Number.isFinite(o.healthBefore)) fight.before ??= o.healthBefore;
       if (Number.isFinite(o.healthAfter)) fight.after = o.healthAfter;
@@ -684,6 +704,8 @@ export function describeEvents(events = []) {
 // The care loop
 
 const TICK_MS = 2_000;
+/** How long advice to explore stands after a hunt found no mob of its kind (or until the bot is 48 blocks away). */
+const HUNT_EMPTY_MS = 10 * 60_000;
 const JOURNAL_KEPT = 60;
 /** Each kind of care action's time limit. */
 const LIMITS = { mine: 90_000, recover: 150_000, wear: 20_000, eat: 15_000, hunt: 120_000, cook: 90_000, tools: 60_000, armor: 90_000, sleep: 50_000, shelter: 45_000, dig: 30_000, gather: 40_000, pickbed: 20_000 };
@@ -1127,7 +1149,13 @@ export function createCare(deps) {
     const data = await deps.rpc('read_recent_events', { limit: 100 }, 10_000);
     const events = data?.result?.events;
     if (!Array.isArray(events) || !events.length) return;
-    for (const e of describeEvents(events)) add({ ...e, reflex: e.reflex ?? e.kind !== 'death' });
+    for (const e of describeEvents(events)) {
+      // the kills go out before the journal (which may fold a repeated fight into the one before)
+      if (e.killed) { try { deps.kills?.(e.killed); } catch { /* the count goes on without it */ } }
+      if (e.countOnly) continue;
+      const { killed, ...entry } = e;
+      add({ ...entry, reflex: entry.reflex ?? entry.kind !== 'death' });
+    }
   }
 
   async function tick() {
@@ -1200,6 +1228,9 @@ export function createCare(deps) {
     },
     /** The player's first call came: no more sheltering of its own before it (advise mode). */
     playerCalled() { memory.playerCalled = true; },
+    /** A hunt found no mob of its kind left near the bot (advice: explore), or found some again (no more advice). */
+    huntFoundNone(mob, pos) { memory.huntEmpty = { mob, at: now(), pos: pos ? { x: pos.x, y: pos.y, z: pos.z } : null }; },
+    huntFound(mob) { if (memory.huntEmpty?.mob === mob) memory.huntEmpty = null; },
     /** What the body did by itself this game: {reflex, care}. */
     counts() { return { ...counts }; },
     /** Their reflexes that acted during a step of the player's: counted, and logged as reflex rows (not in the journal:
