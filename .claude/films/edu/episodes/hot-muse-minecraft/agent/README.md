@@ -987,6 +987,40 @@ docker tag muse-minecraft-camera:pre-ui2 muse-minecraft-camera:latest && sh recr
 The earlier rollbacks (`STREAM_MUSIC=off`, `STREAM_GAME_AUDIO=off`, `STREAM_LAYOUT=terminal`, `pre-ui`) still apply.
 Remove the `pre-ui2` tags once this has held for a week.
 
+### On production (2026-10-12, option A)
+
+The owner picked option A of three designs (`../ui-art/mockups.mjs`, `~/Downloads/muse-panel-A.png`). Deployed with
+`deploy/push.sh --prod` from main 30946a5 (option A, the call's `why`, the body's sub-steps, what Muse checked and
+whether it took the advice, the music bed at -15 dB, caddy-proxy-line.py for the new edge Caddy; main's 1be0cb9 with
+the run-4 fixes and the g0793f1 replay), production idle, 374 tests passing (377 with 3 skipped), the replay included.
+The first try stopped at the staging check (a zombie's reflex cut a craft short at night: strict, no retries); with
+staging's time set to day the second passed. Before it: `deploy/.env` and `deploy/camera.env` backed up
+(`backups/*.bak-pre-ui3-20261012-221208`), the files archived (`backups/app-pre-ui3.tgz`), the images tagged `pre-ui3`.
+Staging runs the same main, its camera stopped. The still the coordinator saw: `~/Downloads/muse-panel-A-final.png`.
+
+Checks (all passed): the scripted game (wooden pickaxe in 23.2 s), 0 heartbeat misses, hosts closed with 0 restarts;
+one natural game with `live_view` (gc23718) and a play_sequence with a `why`, the panel read in the camera container:
+running, "Muse's command · step 1 of 3 · 0:05", the command, Muse's words as a quote, "The body is carrying it out:
+Mining oak log, 0 of 4"; then nothing running, "Muse is checking the situation · 0:07" over the last command, its
+words, "done in 19 s" and its steps (16 s, 2.5 s), "Muse checked: HP 20, food 20". The `why` in the `mcp_call` row;
+the sound with the game and the music bed; no ffmpeg restart, 30 fps captured, 0 dropped. picasso's load was about
+285 on 256 cores then (other users' jobs): the client drew 8 fps while ffmpeg kept 30. The other sites as before
+(`picasso-hopper` and `autoresearch` redirect to `picasso-lab.com`, `poker` 404, `yichen` 502).
+
+Rollbacks, on picasso in `~/workspace/muse-minecraft/app/deploy` (each `recreate.sh` stops when a game runs):
+
+```sh
+# the minimal panel of before (pre-ui3), the agent too
+docker tag muse-minecraft-agent:pre-ui3 muse-minecraft-agent:latest && docker tag muse-minecraft-camera:pre-ui3 muse-minecraft-camera:latest &&
+sh recreate.sh production
+# the music as before: a little louder, or off
+echo STREAM_MUSIC_DB=-2 >> camera.env && sh recreate.sh production
+echo STREAM_MUSIC=off >> camera.env && sh recreate.sh production
+```
+
+Paper was not rebuilt (`pre-ui3` keeps its image too). The earlier rollbacks still apply. Remove the `pre-ui3` tags
+once this has held for a week.
+
 ## The stream UI (STREAM_LAYOUT=ui)
 
 The owner watched the vertical stream (2026-10-11): 9:16 left black bars in muse.ai's panel (about 1000x1050 on a
