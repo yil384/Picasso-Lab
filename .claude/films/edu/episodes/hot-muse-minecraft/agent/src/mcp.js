@@ -691,7 +691,7 @@ export function createMcp(hooks) {
   const callShape = { skill: z.enum(skills.names), args: z.record(z.string(), z.any()).optional().describe("the skill's arguments, e.g. {\"block\": \"oak_log\", \"n\": 3} for collect") };
   // what Muse is doing and why, in its own words: shown live on the stream, ignored by the body, logged
   // (longer words are cut, never a reason to refuse the call)
-  const whyShape = z.string().optional().describe('give it on every call: one short sentence, what you do and why; shown live to viewers as your own words, and kept in the decision log of the game report');
+  const whyShape = z.string().optional().describe('give it on every call: one short sentence, what you do and why; shown live as your own words');
   const requestIdShape = z.string().min(1).max(64).optional().describe(`any id of yours for this call (1 to 64 characters): if the call is sent again with the same request_id (a retry after a broken connection), nothing runs twice and the reply carries the first call's results. Without one, the same call within ${REPEAT_MS / 1000} s counts as a repeat; give a new request_id to repeat a call on purpose`);
   const queueText = `Steps run in order in a queue: what does not finish within ${Math.round(callMs / 1000)} s keeps running after the reply (a later reply, or get_state, reports it); a step that fails cancels the steps queued after it (except eat's NOT_HUNGRY, which changes nothing: the steps after it still run); stop clears the queue. Before anything runs, a check simulates your inventory through the steps: if an ingredient, fuel, tool or station is missing, the call is refused with the list (code NEED_ITEMS) and nothing runs; planks, sticks, a crafting table or a furnace that can be made from what you carry are added as crafts. Replies carry structuredContent: each step's status (pending, confirmed, failed, cancelled) and code (${RESULT_CODES.join(', ')}), what changed, and a short state.`;
 
@@ -795,7 +795,7 @@ export function createMcp(hooks) {
       inputSchema: {
         adult: z.boolean().describe('true only when your user has said in this conversation that they are 18 or older'),
         game: z.string().max(64).optional().describe('the handle of a game to resume (from an earlier start_game reply)'),
-        goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')} (free is the default), or a short text; the reply gives the plan, and end_game reports on it`),
+        goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')} (default free), or a short text; the reply gives the plan`),
       },
     }, async ({ adult, game: handle, goal: goalRaw }, extra) => {
       if (adult !== true) return fail('This game is for adults (18+) only. Ask your user to confirm they are 18 or older, then call start_game with adult: true.');
@@ -845,13 +845,13 @@ export function createMcp(hooks) {
     });
 
     server.registerTool('play', {
-      description: `Run ONE skill: {skill, args}, with that skill's arguments in args. Replies within ${Math.round(callMs / 1000)} s with the result and the new state; a skill still running then keeps going, and get_state waits for it and reports its result. ${queueText} Positions are whole block coordinates as {"x": 10, "y": 64, "z": -3}: go_to takes x, y and z themselves, the other skills a pos. Skills and their arguments:\n${SKILLS}`,
+      description: `Run ONE skill: {skill, args}, with that skill's arguments in args. Replies within ${Math.round(callMs / 1000)} s with the result and the new state; a skill still running then keeps going, and get_state waits for it and reports its result. ${queueText} Positions are block coordinates {"x": 10, "y": 64, "z": -3}: go_to takes x, y, z themselves, other skills a pos. Skills and their arguments:\n${SKILLS}`,
       inputSchema: z.object({ ...callShape, request_id: requestIdShape, why: whyShape }).loose(),
       outputSchema: REPLY_OUT,
     }, async ({ request_id: requestId, why, ...raw }, extra) => runCall(entry, 'play', { steps: [raw], request_id: requestId, why }, extra));
 
     server.registerTool('play_sequence', {
-      description: `Run up to ${MAX_STEPS} skills in order, sent in ONE call, e.g. steps [{"skill": "collect", "args": {"block": "oak_log", "n": 3}}, {"skill": "craft_batch", "args": {"items": [{"item": "oak_planks", "n": 12}, {"item": "crafting_table", "n": 1}, {"item": "wooden_pickaxe", "n": 1}]}}]. Same skills and arguments as play (its description gives each skill's arguments; craft_batch crafts a list in one step); the ${skills.names.length} skills: ${SKILL_NAMES_TEXT}. Positions as in play: go_to {x, y, z}, the others pos: {x, y, z}. Replies within ${Math.round(callMs / 1000)} s with every step's result or status and the final state. ${queueText} dry_run: true only checks the steps and shows them as they would run. Saves many round trips.`,
+      description: `Run up to ${MAX_STEPS} skills in order, sent in ONE call, e.g. steps [{"skill": "collect", "args": {"block": "oak_log", "n": 3}}, {"skill": "craft_batch", "args": {"items": [{"item": "oak_planks", "n": 12}, {"item": "crafting_table", "n": 1}, {"item": "wooden_pickaxe", "n": 1}]}}]. Same skills and arguments as play (its description gives each skill's arguments; craft_batch crafts a list in one step); the ${skills.names.length} skills: ${SKILL_NAMES_TEXT}. Positions as in play. Replies within ${Math.round(callMs / 1000)} s with every step's result or status and the final state. ${queueText} dry_run: true only checks the steps and shows them as they would run. Saves many round trips.`,
       inputSchema: {
         steps: z.array(z.object(callShape).loose()).min(1).max(MAX_STEPS),
         request_id: requestIdShape,
@@ -949,7 +949,7 @@ export function createMcp(hooks) {
       };
     });
 
-    server.registerTool('end_game', { description: 'End the game and free the bot. The reply is the full report of the game (milestones with times, deaths with causes, who acted, and a decision log from your why texts and the advice you followed or declined): show it to your user as it is.', inputSchema: {} }, async () => {
+    server.registerTool('end_game', { description: 'End the game and free the bot. The reply is the full report of the game: show it to your user as it is.', inputSchema: {} }, async () => {
       const s = game(entry);
       const attribution = s && typeof s.body?.attribution === 'function' ? safely(() => s.body.attribution(), null) : null;
       if (s) safely(() => s.tracker?.observe(observed(s)));
@@ -968,7 +968,7 @@ export function createMcp(hooks) {
     });
 
     server.registerTool('game_report', {
-      description: 'The report of your game so far, as end_game gives it at the end: the goal, the milestones reached with their times and the ones still to do, deaths with causes, who acted, and the decision log from your why texts and the advice you followed or declined.',
+      description: 'The report of your game so far: the goal, milestones with times, deaths, who acted, and the decision log from your why texts and the advice you followed or declined.',
       inputSchema: {},
       annotations: { readOnlyHint: true },
     }, async () => {

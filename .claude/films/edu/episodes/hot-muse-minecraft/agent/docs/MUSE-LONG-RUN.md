@@ -1,4 +1,4 @@
-<!-- docs/MUSE-LONG-RUN.md - a long autonomous Muse run on staging in advise mode (iron, then diamonds, then the Nether): the prompt to paste into muse.ai, how staging is set for it, and what our logs measure afterwards. -->
+<!-- docs/MUSE-LONG-RUN.md - a long autonomous Muse run on staging in advise mode (iron, then diamonds, then the Nether and back): the one-line prompt to paste into muse.ai, what the server carries instead of a long prompt, how staging is set for it, and what our logs measure afterwards. -->
 # A long Muse run (advise mode)
 
 The claim on X is "Muse plays Minecraft". This run backs it up: Muse, in muse.ai, plays one staging bot through our
@@ -38,55 +38,46 @@ The body runs in advise mode (`MINEAI_CARE=advise`, the default since the advise
    `https://play.picasso-lab.com/`). Note the clock time.
 3. A game ends after 5 minutes without a call. Answer any approval question from muse.ai within 5 minutes.
 
-## The prompt (paste into a new muse.ai chat)
+## The prompt: one line (paste into a new muse.ai chat)
 
 ```
-I am 18 or older, and I confirm it for this game.
-
-You are going to play Minecraft yourself, for a long time, through my MCP server at
-https://play-staging.picasso-lab.com/mcp (streamable HTTP, no authentication; update an existing custom integration
-for a Minecraft server to this URL, or build a new one). Use only this MCP server, not its web pages.
-
-Call start_game with adult: true. The game lasts up to 2 hours. Then, without asking me anything, play toward these
-goals in order:
-  1. an iron pickaxe;
-  2. diamonds (collect deepslate_diamond_ore or diamond_ore with the iron pickaxe; they lie deep, most near
-     y -59), then a diamond pickaxe;
-  3. the Nether:
-     - 14 obsidian (12 for the frame, 2 for uneven ground): carry a water bucket (craft a bucket, then bucket fill water) and some cobblestone, then
-       collect obsidian with the diamond pickaxe; the body pours the water onto lava itself and mines what forms;
-     - flint (collect gravel; it drops flint now and then) and flint_and_steel;
-     - the frame: build nether_portal from obsidian, on open dry ground;
-     - the portal skill to light it and to enter; in the Nether, look around, then enter the portal again to come
-       back.
-
-You make every plan. The body does not look after itself: it only fights back or flees when attacked, eats when
-starving, and gets itself out of water, fire, lava or a fall. Every reply has a "Body advice" block, for example
-night coming with no shelter or shield, low food, a tool about to break, or items to recover after a death. Each item
-has the facts and the skill that would do it (shelter, shield, eat, hunt, collect, craft, armor, pick_up, sleep).
-Decide each time whether to follow it, and say why. You may switch a reflex off with the policy skill if you want
-full control.
-
-Rules:
-- Use play_sequence for several steps in a row, and get_state when a reply says a skill is still running.
-- With every play and play_sequence, add why: one short sentence in plain words (at most 140 characters) saying what
-  you are doing and why, e.g. "Night in 2 min and no shield: digging in, then smelting the iron while I wait". The
-  people watching the live stream see it as your own words.
-- Keep calling at least every 4 minutes: a game with no calls for 5 minutes ends.
-- If you die, decide whether to go back for your items (pick_up with death_items: true within 5 minutes) or to start
-  over where you respawned.
-- If the same step fails 3 times, change your plan instead of sending it again.
-- Stop when you reach the Nether, when the game ends, or after 2 hours. Then call get_state once more (it counts who
-  acted) and end_game.
-
-Then report:
-1. A decision log: every survival decision you made. For each one: the time in the game, what you saw (the advice
-   or the state), what you decided, and why. Include the advice you chose not to follow.
-2. Each goal: reached or not, and the time from start_game.
-3. Deaths: when, what killed you, what you did next.
-4. The attribution line from your last get_state or end_game ("This game: ... by Muse, ... reflexes").
-5. The game id.
+I'm 18 or older. Play Minecraft on https://play-staging.picasso-lab.com/mcp and get to the Nether and back.
 ```
+
+On production the address is `https://play.picasso-lab.com/mcp`. If muse.ai has no integration for the address yet,
+ask Muse first, in a chat, to build a custom integration (an MCP connector) for it: streamable HTTP, no
+authentication. Once is enough.
+
+The long prompt this line replaces (until 2026-10-12) is no longer needed: the server carries all of it.
+
+- **The rules, in the MCP server's `instructions`** (sent with `initialize`; src/mcp.js `instructionsText`):
+  - adult only from the user's own statement;
+  - start_game with the goal, then live_view, its HTML shown as a web artifact;
+  - play_sequence, and get_state while a skill runs;
+  - a why on every play and play_sequence call (shown live, kept in the report);
+  - the body has only reflexes, and the Body advice is Muse's to follow or not;
+  - a call at least every 4 minutes;
+  - after a death, pick_up within 5 minutes or start over;
+  - a new plan after 3 failures of the same step;
+  - end_game at the end, and its report shown to the user.
+- **The plan, in start_game's reply.** start_game takes an optional `goal`: `free` (the default), `iron_pickaxe`,
+  `diamonds`, `nether`, `nether_and_back`, or a short text (read for these words). The reply lists the milestones
+  with how to do each:
+  - diamonds: most lie near y -59;
+  - obsidian: a water bucket and a still lava pool;
+  - the frame: build nether_portal on open, dry ground;
+  - flint: from gravel;
+  - the way back: portal light, enter, then enter again.
+
+  The server tracks each milestone as the bot reaches it (src/report.js).
+- **The report, from the server.** end_game returns it (game_report gives it during the game):
+  - the goal, and the milestones with their times;
+  - deaths with their causes;
+  - the attribution line;
+  - a decision log built from Muse's own why texts and the Body advice it followed or declined.
+- **Ready prompts** for MCP clients that list them: `play_to_the_nether` and `free_play` (argument `goal`). Both still
+  have Muse ask the user's age.
+- **Other goals:** end the line with "get an iron pickaxe", "get diamonds" or "just play".
 
 ## After: what our logs measure
 
@@ -115,8 +106,9 @@ What the report measures:
   - The Muse share is Muse's steps over all actions. The same numbers are in `session_end`'s attribution.
 - **Steps that failed:** `viewer_action` rows with `ok: false`.
 
-What the logs do not measure: whether Muse's decisions were good, or what it says it decided. Its decision log is
-its own account. To set each decision against what happened, match it to the step rows by time.
+What the logs do not measure: whether Muse's decisions were good. The decision log in end_game's report is built by
+the server from Muse's own why texts (also in the `mcp_call` rows) and the advice each reply showed, so each decision
+sits next to the step it came with.
 
 ## Afterwards
 

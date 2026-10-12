@@ -66,7 +66,9 @@ export function planText(goal) {
 }
 
 const mmss = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-const brief = (st) => `${st.skill}${st.args && Object.keys(st.args).length ? ` ${Object.entries(st.args).map(([k, v]) => (typeof v === 'object' ? `${k}=${JSON.stringify(v)}` : `${v}`)).join(' ')}` : ''}`;
+// a step in a few words: the names and counts as they are ("collect birch_log 12"), other arguments with their key
+const PLAIN = new Set(['block', 'item', 'n', 'mob', 'drop', 'blueprint', 'material', 'action', 'liquid', 'target', 'x', 'y', 'z', 'text']);
+const brief = (st) => `${st.skill}${st.args && Object.keys(st.args).length ? ` ${Object.entries(st.args).map(([k, v]) => (typeof v === 'object' ? `${k}=${JSON.stringify(v)}` : PLAIN.has(k) ? `${v}` : `${k}=${v}`)).join(' ')}` : ''}`;
 const DECISIONS_KEPT = 80;
 
 /**

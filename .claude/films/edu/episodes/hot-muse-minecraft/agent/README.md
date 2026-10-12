@@ -188,7 +188,8 @@ steps still running or queued then go on, and a later reply (get_state waits for
 client has received them (section "MCP calls"). start_game returns a resume handle (22 characters, 128 random bits,
 never the control token) that resumes the game, with its queue, from a new MCP session while the game lives; the game
 then counts for that session. Replies and the server
-instructions carry no links and never tell the agent to open, show or watch anything. `live_view` (read-only for the
+instructions carry no links and never tell the agent to open one; the one thing the instructions ask the agent to show
+is live_view's own HTML, as a web artifact (the one-line prompt, below). `live_view` (read-only for the
 game) returns where to watch: `{format: "html"}` (the default) a page of about 2 KB for muse.ai's artifact panel
 (Facebook's video player, starting muted, a status line and a few lines of script; no request of its own) and a plain
 link to the video, in the
@@ -202,6 +203,45 @@ sessions: 64 KB per request, 20 per address and 200 in all (the one called longe
 1200 new ones per address an hour, dropped after 10 minutes without a game; a game ends after 5 minutes without calls.
 Live views: per address 4 open WebSockets, 32 requests in flight and 120 new views an hour, 12 WebSockets per bot; a
 WebSocket idle for 90 s, or whose reader lets 8 MB pile up, is dropped.
+
+One line is enough (2026-10-12): "I'm 18 or older. Play Minecraft on https://play.picasso-lab.com/mcp and get to
+the Nether and back." The start page shows this line and the two steps for muse.ai. The server carries the rest:
+
+- **The rules, in the server `instructions`** (src/mcp.js `instructionsText`). They are the long prompt's rules:
+  - the age only from the user's own statement;
+  - start_game with the goal, then live_view shown as an artifact;
+  - play_sequence, and get_state while a skill runs;
+  - a why on every call;
+  - the Body advice is Muse's to follow or not;
+  - a call every 4 minutes;
+  - after a death, pick_up within 5 minutes or start over;
+  - a new plan after 3 failures;
+  - end_game's report shown to the user.
+- **start_game's optional `goal`:** `free` (the default), `iron_pickaxe`, `diamonds`, `nether`, `nether_and_back`,
+  or a short text, read for these words. The reply has the milestone plan with the how-tos:
+  - diamonds near y -59;
+  - a water bucket and a still lava pool for obsidian;
+  - the frame on open, dry ground;
+  - flint from gravel;
+  - portal light, enter, and enter again to come back.
+- **The tracker** (src/report.js) records, per game:
+  - the milestones, as the body's steps end;
+  - the deaths, with the game's cause;
+  - every call's why;
+  - the advice each reply showed, followed or declined.
+- **The report:** end_game returns it in full (text and `structuredContent.report`). It has the goal, the milestones
+  with their times, the deaths, the attribution line, and the decision log. `game_report` gives it during the game.
+- **Ready prompts:** `play_to_the_nether` and `free_play` (argument `goal`). Both still ask the user's age.
+- **The stream feed** carries the goal checklist: `goal: {key, title, text, reached, list: [{k, t, atS}]}`, cleaned
+  again by `cleanTerm`.
+- **Arguments read the way they were meant,** where they can be read only one way (src/tolerant.js; production game
+  ga13a88 had go_to {pos: {...}} refused). Each such reading is logged as `mcp_args_read`.
+  - Positions as {x, y, z}, {pos: ...}, [x, y, z] or "x y z", with a fraction taken as its block.
+  - Numbers and booleans as strings, and a count as count, amount or quantity.
+  - Names in any case, with "minecraft:", spaces or plurals.
+  - Common names: "table", raw_beef, wood_pickaxe.
+  - The wood kind the bot carries: "planks" with only birch logs is birch_planks. This is not used for collect.
+  - What could mean several things stays refused, and the reply names the candidates.
 
 Other players' chat never reaches a guest: not the session's lines, `/play`, the API or MCP replies (strangers' text is
 abuse and prompt injection, and the guest did not ask for it). On `/ask` a request's text is shown only to the address
