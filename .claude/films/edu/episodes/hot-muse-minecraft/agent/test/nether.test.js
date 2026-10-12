@@ -178,3 +178,35 @@ test('nether: the portal back went out: said only away from it and after a settl
     assert.equal(body.advice().find((x) => x.kind === 'portal'), undefined, 'a partly unreadable scan says nothing');
   } finally { await body.close(); }
 });
+
+test('a reflex takes a craft over: made means ok (with a note), cut short means once more after it lets go, then INTERRUPTED', async () => {
+  const hosts = fakeHosts(() => ({ inventory: { iron_ingot: 3, oak_planks: 20, crafting_table: 1 } }));
+  const body = createMineAiBody({ config, log, hosts, gameId: 'gtakeover', username: 'Tst_rv_gtakeover', careTickMs: 30, careIdleMs: 50 });
+  await until(() => hosts.started[0]);
+  const fake = hosts.started[0].fake;
+  await body.ready;
+  try {
+    // the production case (g64e8c5): the shield made, then their guard reflex took the body to equip it
+    fake.world.takeovers.push({ tool: 'craft_item', made: true, error: 'Equip an available shield before nearby hostiles require a guard.' });
+    let r = await body.run('craft', { item: 'shield', n: 1 });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /^crafted 1 shield; then a reflex took the body over \(it put a shield in the off-hand with hostile mobs near\)/);
+    assert.equal(r.delta.shield, 1);
+    // cut short before the craft: sent once more once the reflex let go, and done
+    fake.world.takeovers.push({ tool: 'craft_item', made: false, error: '[ACTION_PREEMPTED] fight response for zombie#12 at 1,64,2 (2.5 blocks).' });
+    r = await body.run('craft', { item: 'stick', n: 4 });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /a reflex took the body over \(it fought a zombie\); tried again once it let go; crafted 4 stick/);
+    assert.equal(fake.tools('craft_item').filter((c) => c.args.items[0].item_name === 'stick').length, 2);
+    // cut short twice: a plain INTERRUPTED, never a bare failure
+    fake.world.takeovers.push({ tool: 'craft_item', made: false, error: 'fight response for skeleton#3' }, { tool: 'craft_item', made: false, error: 'fight response for skeleton#3' });
+    r = await body.run('craft', { item: 'stick', n: 4 });
+    assert.equal(r.ok, false);
+    assert.equal(r.code, 'INTERRUPTED');
+    assert.match(r.result, /a reflex took the body over \(it fought a skeleton\) before craft item was done; nothing is wrong with the step: send it again/);
+    // a real failure stays a failure
+    fake.world.fail.craft_item = '[CRAFT_MATERIALS_MISSING] not enough oak_planks';
+    r = await body.run('craft', { item: 'stick', n: 4 });
+    assert.notEqual(r.code, 'INTERRUPTED');
+  } finally { await body.close(); }
+});

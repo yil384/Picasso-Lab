@@ -16,6 +16,7 @@
     "patches/0009-placement-around-a-mob.patch",
     "patches/0010-build-never-stalls-the-event-loop.patch",
     "patches/0011-build-on-rough-ground.patch",
-    "patches/0012-reflex-toggles.patch"
+    "patches/0012-reflex-toggles.patch",
+    "patches/0013-shield-waits-for-short-actions.patch"
   ]
 }
