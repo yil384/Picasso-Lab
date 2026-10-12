@@ -43,7 +43,9 @@ test('one line is enough: the instructions carry every standing rule; tools, goa
       ['age only from the user', /Adults \(18\+\) only: start_game needs adult: true\. Set it only when your user has said in this conversation that they are 18 or older; never assume it/],
       ['by itself', /once the game has started, play on without asking your user anything/],
       ['only this server', /Use only these tools, not the server's web pages/],
-      ['the goal', /start_game, with goal when your user named one \(free, iron_pickaxe, diamonds, nether, nether_and_back, or a short text\)/],
+      ['the goal', /start_game, with goal when your user named one \(free, iron_pickaxe, diamonds, nether, nether_and_back, or their words: the server counts goals like "kill 100 pigs"/],
+      ['a new goal mid-game', /whenever your user gives a new or changed goal during the game, call set_goal with it/],
+      ['big counts split', /A big count \(100 pigs, 500 blocks\) takes many steps: a step takes at most 64, so split it across calls/],
       ['live view first, as an artifact', /Then call live_view and show the HTML it returns, exactly as returned, as a web artifact/],
       ['play_sequence and get_state', /play_sequence for several steps in a row \(play for one\)[^\n]*get_state waits for a skill still running/],
       ['why on every call', /pass why on every play and play_sequence call[^\n]*viewers of the live stream see it/],
@@ -134,7 +136,8 @@ test('back-compat: a client sending the old long prompt (no goal, why on some ca
     assert.match(text(await c.callTool({ name: 'start_game', arguments: { adult: true } })), /^Resumed game g\w+\.\nGoal: free play/);
     assert.match(text(await c.callTool({ name: 'start_game', arguments: { adult: true, goal: 'get some diamonds please' } })), /^Resumed game g\w+\.\nGoal: Diamonds \(get some diamonds please\)\./);
     const end = await c.callTool({ name: 'end_game', arguments: {} });
-    assert.match(text(end), /^Game ended\.\n\nReport for game g\w+: goal diamonds \(get some diamonds please\);/);
+    assert.match(text(end), /^Game ended\.\n\nReport for game g\w+: goal Diamonds \(get some diamonds please\);/);
+    assert.match(text(end), /\nGoals this game: 0:00 free play \(until 0:00\); 0:00 Diamonds \(now\)\.\n/);
     assert.match(text(end), /\n- \d+:\d\d \(no why given\) -> collect oak_log 1: ok\n- \d+:\d\d "planks" -> craft oak_planks 4: ok/);
     // the old adult rule: no adult, no game
     const minor = await c.callTool({ name: 'start_game', arguments: { adult: false, goal: 'nether' } });
@@ -202,11 +205,12 @@ test('ga13a88: the go_to {pos} call refused in production runs now (logged as re
 });
 
 test('report.js: goals from words, the plan for each goal, the tracker on its own', () => {
-  assert.deepEqual(goalOf('Nether and back'), { key: 'nether_and_back', text: null });
-  assert.deepEqual(goalOf('nether-and-back'), { key: 'nether_and_back', text: null });
-  assert.deepEqual(goalOf('get to the Nether and come back'), { key: 'nether_and_back', text: 'get to the Nether and come back' });
-  assert.deepEqual(goalOf('build a house by the lake'), { key: 'free', text: 'build a house by the lake' });
-  assert.deepEqual(goalOf(''), { key: 'free', text: null });
+  const keyText = (g) => ({ key: g.key, text: g.text });
+  assert.deepEqual(keyText(goalOf('Nether and back')), { key: 'nether_and_back', text: null });
+  assert.deepEqual(keyText(goalOf('nether-and-back')), { key: 'nether_and_back', text: null });
+  assert.deepEqual(keyText(goalOf('get to the Nether and come back')), { key: 'nether_and_back', text: 'get to the Nether and come back' });
+  assert.deepEqual(keyText(goalOf('build a house by the lake')), { key: 'free', text: 'build a house by the lake' });
+  assert.deepEqual(goalOf(''), { key: 'free', text: null, title: 'Free play', parts: null });
   for (const g of GOAL_NAMES) assert.match(planText(goalOf(g)), /^Goal: /);
   assert.match(planText(goalOf('iron_pickaxe')), /\n4\. iron pickaxe: craft an iron_pickaxe \(3 iron ingots\)\nNights:/);
   assert.match(promptText('nether_and_back'), /18 or older/);

@@ -782,6 +782,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // what the step's actions themselves used and made, from their evidence (ownChange); null: it cannot be told apart
     // from what else changed meanwhile (then the reply shows only the whole change)
     let own = null;
+    const killed = {}; // mob -> kills of this step (hunt, attack), for the step's result and the goal's count
     let deathBefore = lastDeath;
     let built = null; // a build's structure (toTheirs), remembered below while it is incomplete
     let dismantling = false; // portal dismantle: its own frame's obsidian back
@@ -944,6 +945,14 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           }
           // an attack is a hunt for one drop, ended once the mob died: a fight won without that drop still counts
           const kills = Math.max(ctl.killed, Number(out.output?.result?.hunt?.targetDeathsObserved) || 0);
+          const victim = out.output?.result?.hunt?.mob ?? plan.attack ?? null;
+          // the mobs ran out near the bot (advice to explore), or a hunt found some again
+          if (call.tool === 'collect_mob_drop') {
+            if (!res.ok && /^HUNT_(TARGET_NOT_LOADED|OBSERVATION_EXHAUSTED)$/.test(res.theirs ?? '')) care?.huntFoundNone?.(call.args.mob_name, latest.position);
+            else if (kills > 0) care?.huntFound?.(call.args.mob_name);
+          }
+          if (kills > 0 && victim && /^[a-z_]{1,40}$/.test(victim)) killed[victim] = (killed[victim] ?? 0) + kills;
+          ctl.killed = 0;
           if (!res.ok && plan.attack && kills > 0) {
             const got = Number(out.output?.result?.hunt?.gained) || 0;
             res = { ok: true, result: `fought the ${plan.attack} and killed it${got > 0 ? `; picked up ${got} ${out.output.result.hunt.drop ?? ''}`.trimEnd() : ''}`, code: null };
@@ -1030,7 +1039,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     current = null;
     lastResult = `${describeCall(tool, v.args)} -> ${r.ok ? 'ok' : 'failed'}: ${r.result}${Object.keys(delta).length ? ` (inventory: ${describeDelta(delta)})` : ''}`.slice(0, 600);
     const ownNonZero = own ? Object.fromEntries(Object.entries(own).filter(([, n]) => n)) : null;
-    const out = { ok: Boolean(r.ok), result: r.result, delta, ms, ...(ownNonZero ? { own: ownNonZero } : {}), ...(r.ok ? {} : { code: r.code ?? 'FAILED' }) };
+    const out = { ok: Boolean(r.ok), result: r.result, delta, ms, ...(ownNonZero ? { own: ownNonZero } : {}), ...(Object.keys(killed).length ? { kills: killed } : {}), ...(r.ok ? {} : { code: r.code ?? 'FAILED' }) };
     emit('skill', { phase: 'end', tool, args: v.args, ...out });
     scanSoon();
     return out;
@@ -1106,6 +1115,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         idle: () => body.connected && !ended && !closed && !body.busy && !host?.restarting,
         idleSince: () => idleSince,
         furnaceNear: () => body.stationNear('furnace'), tableNear: () => body.stationNear('crafting_table'),
+        // the mobs its reflexes killed (a "kill 10 zombies" goal counts them)
+        kills: (mobs) => emit('kill', { mobs, by: 'reflex' }),
         event, tickMs: careTickMs, idleBeforeMs: careIdleMs, mode: careMode,
       });
       care.start();

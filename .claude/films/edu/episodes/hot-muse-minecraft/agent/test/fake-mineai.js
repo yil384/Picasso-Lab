@@ -139,6 +139,8 @@ export async function startFakeMineAi(opts = {}) {
     // a failure before anything went into the furnace carries their smelt evidence as the runtime sends it: requested
     // as asked, nothing inserted, produced or recovered (smelt-item.ts evidence(), and the temporary-workstation wrapper)
     const unloaded = () => ({ smelt: { furnace: a.temporary_workstation ? null : { x: a.x, y: a.y, z: a.z }, inputItem: a.item_name, fuelItem: a.fuel_item_name, requested: a.count, fuelInserted: 0, outputItem: null, produced: 0, inputInventoryBefore: have(a.item_name), inputInventoryAfter: have(a.item_name), rawRecovered: 0, fuelRecovered: 0 } });
+    // a failure: its error text, or {error, ...evidence} (a hunt that ran out of mobs after some kills)
+    if (world.fail[tool] && typeof world.fail[tool] === 'object') return { status: 'failed', ...world.fail[tool] };
     if (world.fail[tool]) return { status: 'failed', error: world.fail[tool], ...(tool === 'smelt_item' ? unloaded() : {}) };
     if (cancelled()) return { status: 'cancelled', error: 'cancelled on request' };
     switch (tool) {

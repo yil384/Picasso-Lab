@@ -139,6 +139,26 @@ const GOAL_WORDS = {
   nether: 'Into the Nether', back: 'Back to Overworld',
 };
 const GOAL_ICONS = { iron_ingot: 'iron_ingot', portal: 'portal', nether: 'flame', back: 'house' };
+/** A counted goal's part by its key (src/goals.js): kill_pig, get_diamond, make_torch, build_hut_3x3, survive_night, reach_y. */
+const ITEM_ICONS = new Set(['wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'diamond_pickaxe', 'diamond', 'iron_ingot', 'raw_iron', 'coal', 'obsidian', 'flint_and_steel', 'water_bucket', 'lava_bucket', 'cobblestone', 'bread', 'ender_pearl', 'shield', 'bucket']);
+function partIcon(k) {
+  const key = String(k ?? '');
+  const item = key.replace(/^(?:get|make)_/, '');
+  if (/^(?:get|make)_/.test(key) && ITEM_ICONS.has(item)) return item;
+  if (/_log$/.test(item)) return 'log';
+  if (/^kill_/.test(key)) return 'sword';
+  if (/^get_/.test(key)) return 'pickaxe';
+  if (/^make_/.test(key)) return 'hammer';
+  if (/^build_/.test(key)) return 'house';
+  if (/^survive_/.test(key)) return 'moon';
+  if (/nether|^reach_the_end/.test(key)) return 'portal';
+  if (key === 'reach_y') return 'depth';
+  if (/^reach_/.test(key)) return 'compass';
+  return 'star';
+}
+/** How long a new goal (set_goal) is lit in the HUD. */
+const NEW_GOAL_MS = 10_000;
+
 /** The milestone a stream milestone line names (src/terminal.js MILESTONES and its places). */
 const LINE_GOALS = [
   [/wooden pickaxe/, 'wooden_pickaxe'], [/stone pickaxe/, 'stone_pickaxe'], [/the first iron\b/, 'iron_ingot'], [/iron pickaxe/, 'iron_pickaxe'],
@@ -287,7 +307,8 @@ export function createUiPanel(o) {
   let toast = null; // {text, at}
   let anchor = null; // the game clock: {ticks, at, rate}
   let game = null; // {id, s, at}
-  let goal = null; // the server's: {key, title, text, reached, list: [{k, t, atS}]}
+  let goal = null; // the server's: {key, title, text, reached, list: [{k, t, atS, done?, of?}]}
+  let newGoalAt = null; // when the goal last changed to another (set_goal)
   const reachedLocal = new Map(); // milestone key -> game seconds, from milestone lines (while no goal came)
   let inv = null;
   let pos = null;
@@ -370,8 +391,16 @@ export function createUiPanel(o) {
     if (reason === 'nether') return `In the Nether, waiting for Muse’s next move · ${mmss(since)}`;
     return `Waiting for Muse’s next move · ${mmss(since)}`;
   }
+  /** The goal in a line: "Goal: Nether and back · 0 of 12 milestones · next: wooden pickaxe", "Goal: kill 100 pigs · pigs killed 37 of 100". */
+  const goalWords = (gl) => {
+    if (!gl.list.length) return `Goal: ${gl.text || gl.title}`;
+    if (gl.list.some((m) => Number.isFinite(m.of))) return `Goal: ${gl.title} · ${gl.list.map((m) => `${m.t} ${m.done ?? 0} of ${m.of ?? 1}`).join(', ')}`;
+    const reached = gl.list.filter((m) => m.atS != null).length;
+    const next = gl.list.find((m) => m.atS == null);
+    return `Goal: ${gl.title}${gl.text ? ` (${gl.text})` : ''} · ${reached} of ${gl.list.length} milestones${next ? ` · next: ${(GOAL_WORDS[next.k] ?? capital(next.t)).toLowerCase()}` : ''}`;
+  };
   const goalNow = () => {
-    if (goal?.list?.length) return goal;
+    if (goal) return goal; // the server's (a goal of plain words has no list)
     // no goal from the server (yet): the way to the Nether and back, with what the stream saw reached
     return { ...DEFAULT_GOAL, list: DEFAULT_GOAL.list.map((k) => ({ k, t: GOAL_WORDS[k], atS: reachedLocal.get(k) ?? null })) };
   };
@@ -391,11 +420,8 @@ export function createUiPanel(o) {
       const l = fitText(b, statusWords(t), QW - 20 * s, 1);
       put(b, l[0], QX + 20 * s, top + 22 * s, { size: 20, weight: 600, color: UI_COLORS.soft });
       dyn.pulse = { x: QX + 6 * s, y: top + 15 * s };
-      const gl = goalNow();
-      const reached = gl.list.filter((m) => m.atS != null).length;
-      const next = gl.list.find((m) => m.atS == null);
       b.font = font(500, 17);
-      const words = `Goal: ${gl.title}${gl.text ? ` (${gl.text})` : ''} · ${reached} of ${gl.list.length} milestones${next ? ` · next: ${(GOAL_WORDS[next.k] ?? capital(next.t)).toLowerCase()}` : ''}`;
+      const words = goalWords(goalNow());
       put(b, fitText(b, words, QW, 1)[0], QX, top + 56 * s, { color: UI_COLORS.muted });
       b.font = font(500, 16);
       put(b, fitText(b, 'Muse’s own words with each command appear here', QW, 1)[0], QX, top + 84 * s, { size: 16, color: UI_COLORS.muted });
@@ -582,46 +608,85 @@ export function createUiPanel(o) {
     let y = 23 * s;
     const gl = goalNow();
     const list = gl.list;
-    const done = list.filter((m) => m.atS != null).length;
-    label(b, `Goal · ${gl.title}`, 0, y, { sq: UI_COLORS.gold });
-    label(b, `${done}/${list.length}`, SW, y, { align: 'right' });
-    y += 10 * s;
-    // 8 cells, 2 by 4, row by row: the milestones reached last (with their times), the next (marked), those after it
-    const nextAt = list.findIndex((m) => m.atS == null);
-    const SLOTS = 8;
-    let from = 0;
-    if (list.length > SLOTS) {
-      const last = nextAt < 0 ? list.length : nextAt;
-      from = Math.max(0, Math.min(last - 2, list.length - SLOTS));
+    const top = y;
+    const GOAL_H = 4 * 23 * s; // the goal's room, the same for every kind of goal (the items under it never move)
+    const fresh = newGoalAt !== null && now() - newGoalAt < NEW_GOAL_MS;
+    if (fresh) {
+      // a new goal (set_goal): the block lit for a few seconds
+      b.fillStyle = 'rgba(255,209,100,0.10)';
+      rr(b, -8 * s, top - 18 * s, SW + 16 * s, GOAL_H + 34 * s, 7 * s); b.fill();
     }
-    const cells = list.slice(from, from + SLOTS);
-    const CW = (SW - 10 * s) / 2;
-    cells.forEach((m, i) => {
-      const cx = (i % 2) * (CW + 10 * s);
-      const cy = y + Math.floor(i / 2) * 23 * s;
-      const idx = from + i;
-      const isNext = idx === nextAt;
-      const isDone = m.atS != null;
-      if (isNext) {
-        b.fillStyle = 'rgba(255,209,100,0.12)'; rr(b, cx, cy, CW, 23 * s, 5 * s); b.fill();
-        b.fillStyle = UI_COLORS.gold; b.fillRect(cx, cy + 2 * s, 2 * s, 19 * s);
+    const counted = list.some((m) => Number.isFinite(m.of));
+    const doneN = list.filter((m) => m.atS != null || (counted && Number.isFinite(m.of) && (m.done ?? 0) >= m.of)).length;
+    const right = gl.reached ? 'reached' : list.length ? `${doneN}/${list.length}` : '';
+    const rw = right ? labelWidth(b, right) + 16 * s : 0;
+    // the label: "Goal" (or "New goal") and its title, whole words to the room
+    const head = fresh ? 'New goal' : 'Goal';
+    let title = list.length || !gl.text ? capital(gl.title || '') : ''; // a goal of plain words: its words are under the label
+    const words = title.split(' ');
+    while (words.length > 1 && labelWidth(b, `${head} · ${title}`) + 16 * s > SW - rw) { words.pop(); title = `${words.join(' ')}...`; }
+    label(b, title ? `${head} · ${title}` : head, 0, y, { sq: UI_COLORS.gold, color: fresh ? UI_COLORS.gold : UI_COLORS.muted });
+    if (right) label(b, right, SW, y, { align: 'right', color: gl.reached ? UI_COLORS.ok : UI_COLORS.muted });
+    y += 10 * s;
+    if (!list.length) {
+      // a goal of plain words: the words, nothing counted
+      b.font = font(500, 17);
+      fitText(b, capital(gl.text || gl.title), SW, 3).forEach((l, i) => put(b, l, 0, y + 20 * s + i * 24 * s, { size: 17, color: UI_COLORS.text }));
+      b.font = font(500, 15);
+      put(b, fitText(b, 'A goal in words: nothing to count', SW, 1)[0], 0, y + GOAL_H - 2 * s, { size: 15, color: UI_COLORS.muted });
+    } else if (counted) {
+      // a counted goal: each part with its count and a bar ("Pigs killed 37/100"), at most 3, the unfinished first
+      const parts = list.length > 3 ? [...list.filter((m) => !((m.done ?? 0) >= (m.of ?? 1))), ...list.filter((m) => (m.done ?? 0) >= (m.of ?? 1))].slice(0, 3) : list;
+      parts.forEach((m, i) => {
+        const cy = y + i * 30 * s;
+        const full = (m.done ?? 0) >= (m.of ?? 1);
+        icon(b, partIcon(m.k), 6 * s, cy + 2 * s);
+        const cnt = full && m.atS != null ? `${m.of}/${m.of} \u00b7 ${mmss(m.atS)}` : `${m.done ?? 0}/${m.of ?? 1}`;
+        b.font = mono(14, 500);
+        const cw = b.measureText(cnt).width;
+        put(b, cnt, SW - 4 * s, cy + 17 * s, { face: mono(14, 500), color: full ? UI_COLORS.ok : UI_COLORS.gold, align: 'right' });
+        b.font = font(600, 16);
+        put(b, fitText(b, capital(m.t), SW - 40 * s - cw - 12 * s, 1)[0], 34 * s, cy + 17 * s, { size: 16, weight: 600, color: full ? UI_COLORS.soft : UI_COLORS.text });
+        bar(b, 34 * s, cy + 23 * s, SW - 38 * s, 4 * s, clamp01((m.done ?? 0) / (m.of ?? 1)), full ? UI_COLORS.ok : UI_COLORS.gold);
+      });
+      if (list.length > 3) put(b, `+${list.length - 3} more`, 34 * s, y + 3 * 30 * s + 14 * s, { size: 15, color: UI_COLORS.muted });
+    } else {
+      // milestones: 8 cells, 2 by 4, row by row: those reached last (with their times), the next (marked), those after it
+      const nextAt = list.findIndex((m) => m.atS == null);
+      const SLOTS = 8;
+      let from = 0;
+      if (list.length > SLOTS) {
+        const last = nextAt < 0 ? list.length : nextAt;
+        from = Math.max(0, Math.min(last - 2, list.length - SLOTS));
       }
-      icon(b, GOAL_ICONS[m.k] ?? m.k, cx + 6 * s, cy + 1.5 * s, 20, isDone || isNext ? 1 : 0.4);
-      let right = '';
-      let rc = UI_COLORS.muted;
-      if (isDone) { right = mmss(m.atS); rc = UI_COLORS.ok; }
-      else if (isNext) { right = 'next'; rc = UI_COLORS.gold; }
-      if (!isDone && m.k === 'obsidian' && inv) right = `${Math.min(inv.obsidian ?? 0, 14)}/14${isNext ? '' : ''}`;
-      if (!isDone && m.k === 'diamond' && inv && (inv.diamond ?? 0) > 0) right = `${inv.diamond}/3`;
-      if (isNext && right !== 'next' && right) rc = UI_COLORS.gold;
-      b.font = mono(13);
-      const rw = right ? b.measureText(right).width + 8 * s : 0;
-      b.font = font(isNext ? 600 : 500, 16);
-      const words = GOAL_WORDS[m.k] ?? capital(m.t);
-      put(b, fitText(b, words, CW - 36 * s - rw, 1)[0], cx + 34 * s, cy + 16.5 * s, { size: 16, weight: isNext ? 600 : 500, color: isNext ? UI_COLORS.text : isDone ? UI_COLORS.soft : UI_COLORS.muted });
-      if (right) put(b, right, cx + CW - 6 * s, cy + 16 * s, { face: mono(13), color: rc, align: 'right' });
-    });
-    y += Math.ceil(cells.length / 2) * 23 * s + 18 * s;
+      const cells = list.slice(from, from + SLOTS);
+      const CW = (SW - 10 * s) / 2;
+      cells.forEach((m, i) => {
+        const cx = (i % 2) * (CW + 10 * s);
+        const cy = y + Math.floor(i / 2) * 23 * s;
+        const idx = from + i;
+        const isNext = idx === nextAt && !gl.reached;
+        const isDone = m.atS != null;
+        if (isNext) {
+          b.fillStyle = 'rgba(255,209,100,0.12)'; rr(b, cx, cy, CW, 23 * s, 5 * s); b.fill();
+          b.fillStyle = UI_COLORS.gold; b.fillRect(cx, cy + 2 * s, 2 * s, 19 * s);
+        }
+        icon(b, GOAL_ICONS[m.k] ?? (icons[20][m.k] ? m.k : partIcon(m.k)), cx + 6 * s, cy + 1.5 * s, 20, isDone || isNext ? 1 : 0.4);
+        let r = '';
+        let rc = UI_COLORS.muted;
+        if (isDone) { r = mmss(m.atS); rc = UI_COLORS.ok; }
+        else if (isNext) { r = 'next'; rc = UI_COLORS.gold; }
+        if (!isDone && m.k === 'obsidian' && inv) r = `${Math.min(inv.obsidian ?? 0, 14)}/14`;
+        if (!isDone && m.k === 'diamond' && inv && (inv.diamond ?? 0) > 0) r = `${inv.diamond}/3`;
+        if (isNext && r) rc = UI_COLORS.gold;
+        b.font = mono(13);
+        const w2 = r ? b.measureText(r).width + 8 * s : 0;
+        b.font = font(isNext ? 600 : 500, 16);
+        put(b, fitText(b, GOAL_WORDS[m.k] ?? capital(m.t), CW - 36 * s - w2, 1)[0], cx + 34 * s, cy + 16.5 * s, { size: 16, weight: isNext ? 600 : 500, color: isNext ? UI_COLORS.text : isDone ? UI_COLORS.soft : UI_COLORS.muted });
+        if (r) put(b, r, cx + CW - 6 * s, cy + 16 * s, { face: mono(13), color: rc, align: 'right' });
+      });
+    }
+    y = top + 10 * s + GOAL_H + 18 * s;
     // the items that matter: icon and count, dimmed at none
     label(b, 'Inventory', 0, y, { sq: UI_COLORS.look });
     y += 9 * s;
@@ -788,7 +853,12 @@ export function createUiPanel(o) {
     term(u) {
       if (!u) return;
       if (u.game && typeof u.game === 'object') game = { id: u.game.id ?? game?.id ?? '', s: Number.isFinite(u.game.s) ? u.game.s : game?.s, at: now() };
-      if (u.goal && Array.isArray(u.goal.list)) goal = u.goal;
+      if (u.goal && Array.isArray(u.goal.list)) {
+        // another goal than the one shown (set_goal): lit for a while, and a toast
+        const sig = (x) => (x ? `${x.key}|${x.title}|${x.text ?? ''}` : '');
+        if (goal && sig(goal) !== sig(u.goal)) { newGoalAt = now(); toast = { text: `New goal: ${capital(u.goal.title || u.goal.text || 'set')}`, at: now() }; }
+        goal = u.goal;
+      }
       if (Number.isInteger(u.bind) && !calls.some((x) => x.no === u.bind)) bind(calls.find((x) => PLAY.test(x.tool) && x.no === null), u.bind);
       if (Array.isArray(u.lines) && u.lines.length) api.push(u.lines);
       if (u.st) api.status(u.status, u.st);
@@ -821,7 +891,7 @@ export function createUiPanel(o) {
     /** Another game on camera: an empty HUD, with a note. */
     reset(note = '') {
       calls = []; events = []; thoughts = [];
-      sub = null; live = null; follow = null; toast = null; anchor = null; game = null; goal = null; inv = null; pos = null; over = null;
+      sub = null; live = null; follow = null; toast = null; anchor = null; game = null; goal = null; inv = null; pos = null; over = null; newGoalAt = null;
       advice.clear();
       reachedLocal.clear();
       for (const k of Object.keys(st)) st[k] = k === 'clock' ? '' : null;
@@ -847,7 +917,7 @@ export function createUiPanel(o) {
         cur?.state?.kind === 'run' ? sec : statusWords(t)]);
       if (tk !== keys.trace || !layers.trace) { keys.trace = tk; layers.trace = drawTrace(t); }
       g.drawImage(layers.trace.c, TX, T + LOW);
-      const sk = JSON.stringify([goal, [...reachedLocal], inv, pos, [...advice.entries()], follow && [follow.text, t - follow.at < 300_000]]);
+      const sk = JSON.stringify([goal, [...reachedLocal], inv, pos, [...advice.entries()], follow && [follow.text, t - follow.at < 300_000], newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS]);
       if (sk !== keys.state || !layers.state) { keys.state = sk; layers.state = drawState(); }
       g.drawImage(layers.state, SX, T + LOW);
       // the moving parts: the running step's bar, a breathing dot by the words of what is happening, the toast
@@ -938,7 +1008,7 @@ export function createUiPanel(o) {
         events: events.map((e) => ({ kind: e.kind, text: e.text })),
         sub, follow: follow?.text ?? null, advice: [...advice.entries()].map(([k, a]) => ({ k, text: a.text, sev: a.sev })),
         toast: toast?.text ?? null, st: { ...st }, clock: clockNow(), status: running() ? null : statusWords(now()),
-        goal: goalNow(), inv, pos, game: game ? { id: game.id, s: gameS() === null ? null : Math.floor(gameS()) } : null,
+        goal: goalNow(), newGoal: newGoalAt !== null && now() - newGoalAt < NEW_GOAL_MS, inv, pos, game: game ? { id: game.id, s: gameS() === null ? null : Math.floor(gameS()) } : null,
       };
     },
   };

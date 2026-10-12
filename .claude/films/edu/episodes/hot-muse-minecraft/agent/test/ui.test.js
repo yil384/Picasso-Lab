@@ -259,6 +259,17 @@ test('HUD: the state (the server\'s goal with its times and the next one, the it
   assert.equal(p.state().clock, 'DAY 08:18', '200 more ticks: 12 game minutes');
   p.term({ lines: [{ k: 'info', t: 'game over after 42:10' }] });
   assert.equal(at(10).status, 'Game over after 42:10');
+  // set_goal: a counted goal (its parts with counts), lit as new for a while, with a toast; then a goal of plain words
+  p.term({ lines: [{ k: 'call', t: '> set_goal: kill 100 pigs', say: 'A new goal: kill 100 pigs', tool: 'set_goal' }],
+    goal: { key: 'custom', title: 'kill 100 pigs', text: 'kill 100 pigs', reached: false, list: [{ k: 'kill_pig', t: 'pigs killed', done: 37, of: 100, atS: null }] } });
+  st = at(100);
+  assert.deepEqual([st.goal.title, st.goal.list[0].done, st.goal.list[0].of, st.newGoal, st.toast, st.calls[0].say], ['kill 100 pigs', 37, 100, true, 'New goal: Kill 100 pigs', 'A new goal: kill 100 pigs']);
+  p.term({ goal: { key: 'custom', title: 'kill 100 pigs', text: 'kill 100 pigs', reached: false, list: [{ k: 'kill_pig', t: 'pigs killed', done: 38, of: 100, atS: null }] } });
+  assert.equal(at(100).goal.list[0].done, 38, 'a count moving on is not a new goal');
+  assert.equal(at(10_000).newGoal, false, 'lit for 10 s');
+  p.term({ goal: { key: 'free', title: 'Free play', text: 'build a cozy base by the lake', reached: false, list: [] } });
+  st = at(100);
+  assert.deepEqual([st.goal.text, st.goal.list.length, st.newGoal], ['build a cozy base by the lake', 0, true], 'a goal of plain words: its words, no checklist');
   p.reset('waiting for the next game');
   st = at(10);
   assert.deepEqual([st.calls.length, st.goal.title, st.inv, st.status], [0, DEFAULT_GOAL.title, null, 'Waiting for the next game']);
