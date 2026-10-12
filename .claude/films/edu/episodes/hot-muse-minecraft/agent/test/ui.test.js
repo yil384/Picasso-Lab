@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { plainCall, plainStep, countOf, shortWhy, severityOf, statusData, createTermFeed, cleanTerm, cutWords, invOf, placeOf } from '../src/terminal.js';
-import { createUiPanel, milestoneWords, adviceGist, shortReason, iconFor, DEFAULT_GOAL } from '../src/ui-panel.js';
+import { createUiPanel, milestoneWords, adviceGist, shortReason, iconFor, actionGist, DEFAULT_GOAL } from '../src/ui-panel.js';
 import { ffmpegArgs, audioArgs, findFfmpeg, streamAspect } from '../src/stream.js';
 import { createCameraStream, pulseScript, pulsePaths, PULSE_SOURCE } from '../src/camera.js';
 import { callRow } from '../src/mcp.js';
@@ -217,6 +217,12 @@ test('HUD: the trace (every step in plain words and raw: done with its time, run
   st = at(100);
   assert.deepEqual([st.events[0], st.toast, st.goal.list[0].atS], [{ kind: 'reflex', text: 'defending itself (zombie)' }, 'Got a wooden pickaxe', 272]);
   assert.equal(at(6_500).toast, null);
+  // the body's own actions lead with the action, not the reason they share (g40e978: two rows read the same)
+  p.term({ lines: [{ k: 'body', t: 'body: waiting for your first call with hostile mobs near or at night: dug two blocks down to wait there (no blocks carried to close it over)' },
+    { k: 'body', t: 'body: waiting for your first call with hostile mobs near or at night: stopped before its shelter was closed (your call came)' }] });
+  st = at(100);
+  assert.deepEqual(st.events.slice(0, 2).map((e) => e.text), ['stopped before its shelter was closed (your call came)', 'dug two blocks down to wait there (no blocks carried to close it over)']);
+  assert.equal(actionGist('reflex: night: closed itself in at 1 2 3; it stays inside'), 'night: closed itself in at 1 2 3', 'a short lead stays');
   // frames: a top-down 32-bit BMP with the toast's see-through band
   p.write(t);
   const b = fs.readFileSync(path.join(dir, 'panel.bmp'));

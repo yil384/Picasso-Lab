@@ -112,6 +112,17 @@ const mmss = (sec) => {
 const secs = (ms) => (ms >= 60_000 ? mmss(ms / 1000) : ms >= 10_000 ? `${Math.round(ms / 1000)} s` : `${Math.max(0.1, Math.round(ms / 100) / 10)} s`);
 /** "reflex: defending itself (zombie), then back to collecting" -> "defending itself (zombie)". */
 const reflexGist = (text) => String(text ?? '').replace(/^(?:reflex|body|Reflex|Body):\s*/, '').split(/,|;| then /)[0].trim();
+/**
+ * The body's own action in a few words, the action itself, not the reason it shares with others: "waiting for your
+ * first call with hostile mobs near or at night: dug two blocks down to wait there" -> "dug two blocks down to wait
+ * there"; two actions with the same reason never read the same.
+ */
+export function actionGist(text) {
+  const t = String(text ?? '').replace(/^(?:reflex|body|Reflex|Body):\s*/, '').trim();
+  const m = /^([^:]{12,}?):\s+(.+)$/.exec(t);
+  if (!m || m[1].split(/\s+/).length <= 3) return reflexGist(t);
+  return m[2].split(/;| then /)[0].trim();
+}
 /** The advice in a few words: "night: no closed shelter around you". */
 export function adviceGist(text) {
   let t = String(text ?? '').replace(/^advice:\s*/i, '').replace(/\s*\((?:time|at) [^)]*\)/g, '').split(/;\s*/)[0].trim();
@@ -609,16 +620,22 @@ export function createUiPanel(o) {
     const gl = goalNow();
     const list = gl.list;
     const top = y;
-    const GOAL_H = 4 * 23 * s; // the goal's room, the same for every kind of goal (the items under it never move)
     const fresh = newGoalAt !== null && now() - newGoalAt < NEW_GOAL_MS;
+    const counted = list.some((m) => Number.isFinite(m.of));
+    // the goal's room is what it shows (the items under it move up): milestone rows, counted parts, or its words
+    b.font = font(500, 17);
+    const plain = list.length ? [] : fitText(b, capital(gl.text || gl.title), SW, 3);
+    const GOAL_H = !list.length ? plain.length * 24 * s + 26 * s
+      : counted ? Math.min(3, list.length) * 30 * s + (list.length > 3 ? 22 * s : 0)
+        : Math.ceil(Math.min(8, list.length) / 2) * 23 * s;
     if (fresh) {
       // a new goal (set_goal): the block lit for a few seconds
       b.fillStyle = 'rgba(255,209,100,0.10)';
       rr(b, -8 * s, top - 18 * s, SW + 16 * s, GOAL_H + 34 * s, 7 * s); b.fill();
     }
-    const counted = list.some((m) => Number.isFinite(m.of));
     const doneN = list.filter((m) => m.atS != null || (counted && Number.isFinite(m.of) && (m.done ?? 0) >= m.of)).length;
-    const right = gl.reached ? 'reached' : list.length ? `${doneN}/${list.length}` : '';
+    // the count in the label: for a list (milestones, several counted parts); one counted part has its own on its row
+    const right = gl.reached ? 'reached' : list.length > 1 || (list.length === 1 && !counted) ? `${doneN}/${list.length}` : '';
     const rw = right ? labelWidth(b, right) + 16 * s : 0;
     // the label: "Goal" (or "New goal") and its title, whole words to the room
     const head = fresh ? 'New goal' : 'Goal';
@@ -630,8 +647,7 @@ export function createUiPanel(o) {
     y += 10 * s;
     if (!list.length) {
       // a goal of plain words: the words, nothing counted
-      b.font = font(500, 17);
-      fitText(b, capital(gl.text || gl.title), SW, 3).forEach((l, i) => put(b, l, 0, y + 20 * s + i * 24 * s, { size: 17, color: UI_COLORS.text }));
+      plain.forEach((l, i) => put(b, l, 0, y + 20 * s + i * 24 * s, { size: 17, color: UI_COLORS.text }));
       b.font = font(500, 15);
       put(b, fitText(b, 'A goal in words: nothing to count', SW, 1)[0], 0, y + GOAL_H - 2 * s, { size: 15, color: UI_COLORS.muted });
     } else if (counted) {
@@ -686,7 +702,7 @@ export function createUiPanel(o) {
         if (r) put(b, r, cx + CW - 6 * s, cy + 16 * s, { face: mono(13), color: rc, align: 'right' });
       });
     }
-    y = top + 10 * s + GOAL_H + 18 * s;
+    y = top + 10 * s + GOAL_H + 24 * s;
     // the items that matter: icon and count, dimmed at none
     label(b, 'Inventory', 0, y, { sq: UI_COLORS.look });
     y += 9 * s;
@@ -804,7 +820,7 @@ export function createUiPanel(o) {
           if (l.k === 'fail' && /^death\b/i.test(l.t)) { events.unshift({ kind: 'death', text: `died (${reflexGist(l.t.replace(/^death:\s*(?:died:\s*)?/i, ''))})`, at: now(), gs: gameS() }); continue; }
           result(l);
         } else if (l.k === 'reflex' || l.k === 'body') {
-          const r = reflexGist(l.t);
+          const r = actionGist(l.t);
           if (events[0]?.text !== r) events.unshift({ kind: l.k, text: r, at: now(), gs: gameS() });
           events = events.slice(0, 12);
         } else if (l.k === 'milestone') {
