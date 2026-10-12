@@ -95,6 +95,19 @@ export const FRAME_GUARD = 160;
  * has been read this long after the arrival (the chunks come in over seconds; an early scan missed the portal it
  * stood in: production, 2026-10-11, every camera trip). */
 export const PORTAL_SETTLE_MS = 10_000;
+/** Calls sent once more after one of their reflexes cut them short (sending them again repeats nothing). */
+export const RETRY_AFTER_REFLEX = new Set(['craft_item', 'smelt_item', 'equip', 'eat_food', 'place_block', 'use_bucket', 'navigate', 'build_structure', 'activate_portal']);
+/** A failure that is one of their reflexes taking the body over, in plain words, else null. */
+export function reflexTakeover(text) {
+  const t = String(text ?? '');
+  if (/Equip an available shield/i.test(t)) return 'it put a shield in the off-hand with hostile mobs near';
+  const m = /\b(fight|evade|hide|deflect|flee|retreat|avoid) response for ([a-z_]+)/i.exec(t);
+  if (m) return `${{ fight: 'it fought', evade: 'it got out of the way of', hide: 'it hid from', deflect: 'it blocked', flee: 'it fled from', retreat: 'it fled from', avoid: 'it kept away from' }[m[1].toLowerCase()]} a ${m[2]}`;
+  if (/\[BREATH\]|surface at air|air supply/i.test(t)) return 'it swam up for air';
+  if (/fire_reflex|\bin (fire|lava)\b.*\b(escape|leave)/i.test(t)) return 'it got out of fire or lava';
+  if (/recover_footing|External impulse threatens footing/i.test(t)) return 'it got its footing back';
+  return null;
+}
 /** collect obsidian makes it from lava within this many blocks of the bot, else it is refused. */
 export const LAVA_NEAR = 16;
 
@@ -588,6 +601,17 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     return [{ kind: 'portal', text: `the portal back at ${a.pos.x} ${a.pos.y} ${a.pos.z} is not lit any more${flint ? '' : ': flint_and_steel lights it again (1 iron_ingot and 1 flint)'}`, ...(flint ? { hint: { skill: 'portal', args: { action: 'light', pos: a.pos } } } : {}) }];
   }
 
+  /** Wait (up to ms) until none of their reflexes holds the body. */
+  async function reflexSettled(ms) {
+    const end = Date.now() + Math.max(0, ms);
+    while (Date.now() < end) {
+      await refresh().catch(() => {});
+      if (!['takeover', 'yielding'].includes(status?.activity?.owner)) return true;
+      await new Promise((r) => { setTimeout(r, 500); });
+    }
+    return false;
+  }
+
   /** Wait (up to ms) until their view of these cells (at most 32) holds no unloaded one. */
   async function loadedCells(cells, ms) {
     const end = Date.now() + ms;
@@ -673,10 +697,18 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         const spare = tool === 'collect' && careMode === 'full' ? spareFirst(calls[0]?.args) : null;
         if (spare) { calls.unshift(...spare.calls.map((c) => ({ ...c, quiet: true }))); parts.push({ ok: true, result: `on its own first: ${spare.text}`, code: null }); }
         let replaced = 0;
+        const retried = new Set(); // calls tried again once after a reflex took the body over
         for (let i = 0; i < calls.length; i++) {
           const call = calls[i];
           if (ctl.stopped) break;
           ctl.actionId = null;
+          // a craft's item counted before it: a craft a reflex cuts short may have made the item all the same
+          let craftHad = null;
+          if (call.tool === 'craft_item' && call.args?.items?.[0]) {
+            await refresh().catch(() => {});
+            const { item_name: item, count } = call.args.items[0];
+            craftHad = { item, count: Number(count) || 1, have: latest.inventory?.[item] ?? 0, tables: latest.inventory?.crafting_table ?? 0 };
+          }
           let out = await act(call, deadline, ctl);
           // a call with alternatives (a way out of a portal: one side, else the other): the next when this one failed
           for (const alt of call.alts ?? []) {
@@ -692,6 +724,30 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped, call });
+          // one of their reflexes took the body over in the middle of the call (a production game, 2026-10-11: a
+          // shield craft at night "failed: Equip an available shield before nearby hostiles require a guard" with the
+          // shield made, and the steps after it were cancelled for nothing)
+          const takeover = !res.ok && !out.error && !ctl.stopped ? reflexTakeover(res.result) : null;
+          if (takeover && craftHad) {
+            await refresh().catch(() => {});
+            const gained = (latest.inventory?.[craftHad.item] ?? 0) - craftHad.have;
+            if (gained >= craftHad.count) {
+              own = null; // their evidence of the craft is cut short: the step's whole change is shown
+              const table = (latest.inventory?.crafting_table ?? 0) < craftHad.tables;
+              res = { ok: true, code: null, result: `crafted ${gained} ${craftHad.item}; then a reflex took the body over (${takeover})${table ? ', and the crafting table put down for the craft stayed where it stands (collect crafting_table takes it back)' : ''}` };
+            }
+          }
+          // truly cut short: tried once more after the reflex let go (calls that can simply be sent again), else a
+          // plain INTERRUPTED instead of a failure
+          if (!res.ok && takeover) {
+            if (RETRY_AFTER_REFLEX.has(call.tool) && !retried.has(i) && deadline - Date.now() > 10_000) {
+              retried.add(i);
+              await reflexSettled(Math.min(20_000, deadline - Date.now() - 5_000));
+              if (!ctl.stopped) { parts.push({ ok: true, result: `a reflex took the body over (${takeover}); tried again once it let go`, code: null }); i -= 1; continue; }
+            }
+            own = null;
+            res = { ok: false, code: 'INTERRUPTED', result: `a reflex took the body over (${takeover}) before ${call.tool.replace(/_/g, ' ')} was done; nothing is wrong with the step: send it again once the mobs are dealt with` };
+          }
           const o = ownChange(call.tool, out.output, call);
           if (o === null) own = null;
           else if (own) for (const [k, n] of Object.entries(o)) own[k] = (own[k] ?? 0) + n;
