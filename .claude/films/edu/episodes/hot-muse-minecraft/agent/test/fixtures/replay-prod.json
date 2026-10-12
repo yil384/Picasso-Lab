@@ -1,5 +1,5 @@
 {
- "about": "Muse's real steps in production games gb1cfe3 (2026-10-11), g64e8c5 and g0793f1 (2026-10-12), from the agent's viewer_action rows: the skill, its arguments, whether it was ok and the first 120 characters of what production said (test/replay.test.js)",
+ "about": "Muse's real steps in production games gb1cfe3 (2026-10-11), g64e8c5, g0793f1 and ga13a88 (2026-10-12), from the agent's viewer_action rows: the skill, its arguments, whether it was ok and the first 120 characters of what production said (test/replay.test.js)",
  "games": {
   "gb1cfe3": [
    {
@@ -278,7 +278,7 @@
      "n": 2
     },
     "ok": false,
-    "result": "failed: The block appeared, but consumption of furnace was not observed (inventory 1 \u2192 1). (nothing was put into a furna"
+    "result": "failed: The block appeared, but consumption of furnace was not observed (inventory 1 → 1). (nothing was put into a furna"
    },
    {
     "tool": "craft",
@@ -1017,6 +1017,617 @@
     },
     "ok": true,
     "result": "went through the portal; you came out in the overworld at 397 92 -65 (stepped out of the portal first)"
+   }
+  ],
+  "ga13a88": [
+   {
+    "tool": "collect",
+    "args": {
+     "block": "birch_log",
+     "n": 8
+    },
+    "ok": false,
+    "result": "failed: no path found after 0 ms compute; visited 2 nodes, generated 2; closest node was -24,57,235 Broke 0 matching blocks; inventory gained 0/8 requested item"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "pos": {
+      "x": -20,
+      "y": 78,
+      "z": 236
+     }
+    },
+    "ok": false,
+    "result": "refused in production: go_to.pos is not allowed (sent again as x, y, z)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "birch_log",
+     "n": 8
+    },
+    "ok": true,
+    "result": "mined 8 birch_log and picked up 8 birch_log (8 of 8 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "birch_planks",
+     "n": 12
+    },
+    "ok": true,
+    "result": "crafted 12 birch_planks"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "crafting_table",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 crafting_table"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "wooden_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 wooden_pickaxe at a crafting table put down at -11 77 238 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "cobblestone",
+     "n": 12
+    },
+    "ok": true,
+    "result": "mined 12 stone (stone drops cobblestone) and picked up 12 cobblestone (12 of 12 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stone_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 stone_pickaxe at a crafting table put down at -12 70 238 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "iron_ore",
+     "n": 5
+    },
+    "ok": true,
+    "result": "mined 5 iron_ore (iron_ore drops raw_iron) and picked up 5 raw_iron (5 of 5 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "furnace",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 furnace at a crafting table put down at -4 71 233 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "coal_ore",
+     "n": 4
+    },
+    "ok": true,
+    "result": "mined 4 coal_ore (coal_ore drops coal) and picked up 4 coal (4 of 4 wanted)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 5
+    },
+    "ok": true,
+    "result": "smelted 5 iron_ingot from 5 raw_iron with coal in the furnace at -4 64 233 (the furnace was picked up again)"
+   },
+   {
+    "tool": "shield",
+    "args": {},
+    "ok": true,
+    "result": "crafted a shield and put it in its off-hand (its fight reflex raises it against arrows)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "iron_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 iron_pickaxe at a crafting table put down at -4 64 233 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate",
+     "n": 48
+    },
+    "ok": true,
+    "result": "mined 32 deepslate (deepslate drops cobbled_deepslate) and picked up 32 cobbled_deepslate (32 of 32 wanted); mined 15 deepslate (deepslate drops cobbled_deepsla"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate_diamond_ore",
+     "n": 5
+    },
+    "ok": true,
+    "result": "mined 5 deepslate_diamond_ore (deepslate_diamond_ore drops diamond) and picked up 5 diamond (5 of 5 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "diamond_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 diamond_pickaxe at a crafting table put down at -4 -12 262 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate_iron_ore",
+     "n": 2
+    },
+    "ok": true,
+    "result": "mined 2 deepslate_iron_ore (deepslate_iron_ore drops raw_iron) and picked up 2 raw_iron (2 of 2 wanted)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 2
+    },
+    "ok": true,
+    "result": "smelted 2 iron_ingot from 2 raw_iron with coal in the furnace at 1 -12 263 (the furnace was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "bucket",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 bucket at a crafting table put down at 1 -12 263 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "gravel",
+     "n": 20
+    },
+    "ok": true,
+    "result": "mined 20 gravel and picked up 3 flint, 17 gravel (20 of 20 wanted)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate_iron_ore",
+     "n": 1
+    },
+    "ok": true,
+    "result": "mined 1 deepslate_iron_ore (deepslate_iron_ore drops raw_iron) and picked up 1 raw_iron (1 of 1 wanted)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 1
+    },
+    "ok": true,
+    "result": "smelted 1 iron_ingot from 1 raw_iron with coal in the furnace at -8 -11 261 (the furnace was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "flint_and_steel",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 flint_and_steel"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -1,
+     "y": 0,
+     "z": 272
+    },
+    "ok": true,
+    "result": "walked to -1 0 272"
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill",
+     "liquid": "water",
+     "pos": {
+      "x": -1,
+      "y": 0,
+      "z": 272
+     }
+    },
+    "ok": false,
+    "result": "failed: The named cell holds water, not a water source; a bucket only scoops sources."
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill",
+     "liquid": "water"
+    },
+    "ok": false,
+    "result": "a reflex took the body over (it fought a skeleton); tried again once it let go; failed: Pathfinder could not reach the target: search timed out after 2000 ms co"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -1,
+     "y": 0,
+     "z": 272
+    },
+    "ok": false,
+    "result": "a reflex took the body over (it got out of the way of a skeleton); tried again once it let go; a reflex took the body over (it got out of the way of a skeleton)"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -1,
+     "y": 0,
+     "z": 272
+    },
+    "ok": true,
+    "result": "walked to -2 0 272"
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill",
+     "liquid": "water"
+    },
+    "ok": false,
+    "result": "failed: Pathfinder could not reach the target: planning_stalled: Path planning stalled for 20004 ms without a route commitment or meaningful displacement (1 blo"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -3,
+     "y": 64,
+     "z": 233
+    },
+    "ok": true,
+    "result": "walked to -3 64 234"
+   },
+   {
+    "tool": "shelter",
+    "args": {},
+    "ok": true,
+    "result": "closed itself in at -3 64 234 (placed 5 blocks, 8 wall cells already solid); it stays inside until your next call"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -7,
+     "y": 75,
+     "z": 237
+    },
+    "ok": true,
+    "result": "walked to -7 75 236"
+   },
+   {
+    "tool": "hunt",
+    "args": {
+     "mob": "pig",
+     "drop": "porkchop",
+     "n": 2
+    },
+    "ok": true,
+    "result": "hunted pig: 2 killed, 4 porkchop picked up (2 wanted)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "porkchop",
+     "n": 2
+    },
+    "ok": true,
+    "result": "smelted 2 cooked_porkchop from 2 porkchop with coal in the furnace at -11 88 154 (the furnace was picked up again)"
+   },
+   {
+    "tool": "eat",
+    "args": {},
+    "ok": true,
+    "result": "ate cooked_porkchop: food 10 -> 18"
+   },
+   {
+    "tool": "eat",
+    "args": {},
+    "ok": true,
+    "result": "ate cooked_porkchop: food 18 -> 20"
+   },
+   {
+    "tool": "shelter",
+    "args": {},
+    "ok": true,
+    "result": "closed itself in at -11 88 154 (placed 10 blocks, 3 wall cells already solid); it stays inside until your next call"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -4,
+     "y": 62,
+     "z": 155
+    },
+    "ok": false,
+    "result": "failed: Pathfinder stopped: search timed out after 2000 ms compute (limit 2000 ms); no path or usable partial route found; visited 14327 nodes, generated 30134;"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -30,
+     "y": 60,
+     "z": 122
+    },
+    "ok": false,
+    "result": "failed: Pathfinder stopped: Full air was not observed at the breathing stop. (walked to -25 62 124, 6 blocks short of -30 60 122); you are now at -25 62 124"
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill",
+     "liquid": "water"
+    },
+    "ok": false,
+    "result": "a reflex took the body over (it hid from a drowned); tried again once it let go; a reflex took the body over (it hid from a drowned) before use bucket was done;"
+   },
+   {
+    "tool": "eat",
+    "args": {},
+    "ok": true,
+    "result": "ate porkchop: food 17 -> 20"
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill",
+     "liquid": "water"
+    },
+    "ok": true,
+    "result": "filled a bucket with water"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate",
+     "n": 64
+    },
+    "ok": true,
+    "result": "mined 32 deepslate (deepslate drops cobbled_deepslate) and picked up 32 cobbled_deepslate (32 of 32 wanted) [meanwhile on its own: it fought a zombie]; mined 32"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate",
+     "n": 64
+    },
+    "ok": false,
+    "result": "mined 32 deepslate (deepslate drops cobbled_deepslate) and picked up 32 cobbled_deepslate (32 of 32 wanted); stopped: stopped through MCP"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -5,
+     "y": -22,
+     "z": 152
+    },
+    "ok": false,
+    "result": "failed: Pathfinder stopped: search timed out after 2000 ms compute (limit 2000 ms); no path or usable partial route found; visited 25291 nodes, generated 47617;"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 14
+    },
+    "ok": true,
+    "result": "mined 14 obsidian and picked up 14 obsidian (14 of 14 wanted) [meanwhile on its own: it fought a zombie]"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -24,
+     "y": 63,
+     "z": 123
+    },
+    "ok": true,
+    "result": "walked to -24 62 123 [meanwhile on its own: it fought a skeleton]"
+   },
+   {
+    "tool": "shelter",
+    "args": {},
+    "ok": true,
+    "result": "closed itself in at -24 62 123 (placed 5 blocks, 8 wall cells already solid); it stays inside until your next call"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -20,
+     "y": 63,
+     "z": 123
+    },
+    "ok": true,
+    "result": "walked to -21 63 123"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": false,
+    "result": "placed 11 obsidian and dug 17 cells clear (17 of 18 cells as the blueprint; 1 cell kept the stone already there (solid, and it could not be dug out)); not a por"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "dismantle"
+    },
+    "ok": true,
+    "result": "took back 11 obsidian from your last frame (not every cell: failed: The requested cell at -20,66,121 is stone, not obsidian. Broke 0 matching blocks; inventory "
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -15,
+     "y": 64,
+     "z": 125
+    },
+    "ok": true,
+    "result": "walked to -15 64 124"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": false,
+    "result": "the frame would be cut into rock (10 of its cells hold stone): build it on open ground, where its sides and top stand in the air (go_to a spot with flat ground "
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -11,
+     "y": 88,
+     "z": 154
+    },
+    "ok": true,
+    "result": "walked to -11 88 153"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": false,
+    "result": "placed 10 obsidian and dug 14 cells clear (16 of 18 cells as the blueprint; 2 cells kept the birch_leaves already there (solid, and it could not be dug out)); n"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "dismantle"
+    },
+    "ok": true,
+    "result": "took back 10 obsidian from your last frame (not every cell: failed: The requested cell at -10,91,154 is birch_leaves, not obsidian. Broke 0 matching blocks; inv"
+   },
+   {
+    "tool": "drop",
+    "args": {
+     "junk": true
+    },
+    "ok": true,
+    "result": "dropped 325 cobbled_deepslate, 218 cobblestone, 55 granite, 30 tuff, 21 gravel, 21 diorite, 10 andesite, 3 raw_copper, 2 rotten_flesh"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "birch_log",
+     "n": 12
+    },
+    "ok": true,
+    "result": "mined 11 birch_log and picked up 12 birch_log (12 of 12 wanted; 1 of them from blocks dug or items picked up on the way)"
+   },
+   {
+    "tool": "hunt",
+    "args": {
+     "mob": "pig",
+     "drop": "porkchop",
+     "n": 2
+    },
+    "ok": true,
+    "result": "hunted pig: 1 killed, 3 porkchop picked up (2 wanted)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "porkchop",
+     "n": 2
+    },
+    "ok": true,
+    "result": "smelted 2 cooked_porkchop from 2 porkchop with coal in the furnace at 48 93 161 (the furnace was picked up again)"
+   },
+   {
+    "tool": "eat",
+    "args": {},
+    "ok": true,
+    "result": "ate cooked_porkchop: food 10 -> 18"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": true,
+    "result": "placed 12 obsidian and dug 2 cells clear (18 of 18 cells as the blueprint; put 1 dirt and 2 cobblestone under walls that had nothing to place against) (built fa"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "light"
+    },
+    "ok": true,
+    "result": "lit the Nether portal (6 portal blocks)"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "enter"
+    },
+    "ok": true,
+    "result": "went through the portal; you came out in the Nether at 12 58 18"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "enter",
+     "pos": {
+      "x": 12,
+      "y": 58,
+      "z": 18
+     }
+    },
+    "ok": true,
+    "result": "went through the portal; you came out in the overworld at 49 93 161 (stepped out of the portal first)"
    }
   ]
  }

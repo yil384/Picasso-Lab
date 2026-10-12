@@ -703,6 +703,17 @@ function doneInFull(r) {
  */
 export function plainer(tool, text, call = null) {
   let t = String(text ?? '');
+  // their path search in plain words, for every skill that walks (ga13a88: "search timed out after 2000 ms compute
+  // (limit 2000 ms); no path or usable partial route found; visited 14327 nodes, generated 30134; closest node was
+  // -19,62,140", "planning_stalled", "Full air was not observed at the breathing stop")
+  const near = (x, y, z) => (x !== undefined ? `; the nearest it got to a way there was ${x} ${y} ${z}` : '');
+  t = t.replace(/(?:Pathfinder (?:could not reach the target|stopped): )?search timed out after \d+ ms compute \(limit \d+ ms\); no path or usable partial route found; visited \d+ nodes, generated \d+(?:; closest node was (-?\d+),(-?\d+),(-?\d+))?\.?/g,
+    (m, x, y, z) => `no way there was found (the path search gave up)${near(x, y, z)}.`);
+  t = t.replace(/no path found after \d+ ms compute; visited \d+ nodes, generated \d+(?:; closest node was (-?\d+),(-?\d+),(-?\d+))?\.?/g,
+    (m, x, y, z) => `no way there from where you stand${near(x, y, z)}.`);
+  t = t.replace(/(?:Pathfinder could not reach the target: )?planning_stalled: Path planning stalled for \d+ ms without a route commitment or meaningful displacement[^.]*\.(?: Repeated search invalidation does not renew this limit\.*)?/g,
+    'the walk there got stuck (no way forward for 20 s).');
+  t = t.replace(/(?:Pathfinder stopped: )?Full air was not observed at the breathing stop\./g, 'it stopped to breathe on the way and found no open air there.');
   if (tool === 'collect_mob_drop') {
     // the mobs ran out near the bot (a big hunt goal): said plainly, with the way on (no skill breeds animals)
     const mob = String(call?.args?.mob_name ?? 'mob').replace(/_/g, ' ');
@@ -763,6 +774,10 @@ export function fromTheirs(tool, output, { stopped = null, call = null } = {}) {
   const extra = (output?.interruptions ?? []).length ? ` [meanwhile on its own: ${reflexWords(output.interruptions)}]` : '';
   if (status === 'succeeded') return { ok: true, result: `${said ?? 'done'}${extra}`, code: null, theirs: null };
   if (status === 'cancelled' && stopped) return { ok: false, result: `stopped: ${stopped}${said ? `; ${said}` : ''}${extra}`, code: /timed out after/.test(stopped) ? 'TIMED_OUT' : 'STOPPED', theirs };
+  // a walk that ended within 2 blocks of its target (a target next to lava, in a wall) is as near as a path goes: done
+  // (ga13a88: "walked to -6 -22 150, 2 blocks short of -5 -22 152" was a failure, and the obsidian was mined from there)
+  const nav = tool === 'navigate' ? r.navigation : null;
+  if (nav && Number.isFinite(nav.remainingDistance) && nav.remainingDistance <= 2.5 && status !== 'cancelled') return { ok: true, result: `${said} (as near as a path goes)${extra}`, code: null, theirs };
   // the craft or smelt was done in full and only the table or furnace put down for it was not picked up again (their
   // WORKSTATION_NOT_RECOVERED, e.g. no path back to it): the step did what was asked, so it is ok (sending it again
   // would craft or smelt twice); the station stays where it was, as our own body leaves its stations, and the result

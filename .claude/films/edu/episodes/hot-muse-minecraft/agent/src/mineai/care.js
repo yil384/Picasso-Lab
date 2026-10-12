@@ -991,6 +991,10 @@ export function createCare(deps) {
           if (ctl.stopped) return stopped();
           if (okOf(g)) await run([{ tool: 'pick_up_items', args: {} }], LIMITS.pickbed, ctl);
           await deps.refresh();
+          // dug in once: it waits there (a production game, 2026-10-12, ga13a88: it dug two blocks deeper every 8 s for
+          // 2.5 minutes, 24 blocks down, and Muse's first collect found no path out)
+          memory.cool = { ...(memory.cool ?? {}), shelter: now() };
+          if (okOf(g)) memory.dugIn = here();
           return add({ kind: 'shelter', ok: okOf(g), ms: ms(), text: okOf(g) ? `${d.why}: dug two blocks down to wait there (no blocks carried to close it over)` : `${d.why}: could not dig in where it stands (${errOf(g) ?? 'stopped'})` });
         }
         // in water no wall holds and nothing can be dug: to the shore first (their navigate takes a column on water to
@@ -1082,7 +1086,10 @@ export function createCare(deps) {
             ({ r, v } = await build(cells));
           } else parts.push(`could not collect dirt for walls (${errOf(g) ?? 'stopped'})`);
         }
-        memory.shelter = v.closed ? { feet: { ...feet }, cells, at: same ? memory.shelter.at : now(), checked: now(), night: memory.night } : null;
+        // a shelter closed before dark is the coming night's (ga13a88: closed at dusk, then "no closed shelter around
+        // you" all night, as the night counter moved on at nightfall)
+        const forNight = isNight(deps.situation()?.clock?.timeOfDay) ? memory.night : memory.night + 1;
+        memory.shelter = v.closed ? { feet: { ...feet }, cells, at: same ? memory.shelter.at : now(), checked: now(), night: forNight } : null;
         if (d.check && v.closed && !v.placed) return null; // still standing: nothing to tell
         if (fights) parts.push(`went on building through ${plural(fights, 'fight')}`);
         parts.push(v.closed
@@ -1204,6 +1211,9 @@ export function createCare(deps) {
     const p = situation.position;
     const sh = memory.shelter;
     if (sh && p && sh.feet.x === Math.floor(p.x) && sh.feet.z === Math.floor(p.z) && Math.abs(sh.feet.y - Math.floor(p.y)) <= 1) return null;
+    // already dug in where it stands: it stays
+    const dug = memory.dugIn;
+    if (dug && p && dug.x === Math.floor(p.x) && dug.z === Math.floor(p.z) && Math.abs(dug.y - Math.floor(p.y)) <= 1) return null;
     return { kind: 'shelter', why: 'waiting for your first call with hostile mobs near or at night', blocks: shelterBlocks(deps.latest().inventory ?? {}).total, check: false, prePlay: true };
   }
   const cool = (kind, ms) => memory.cool?.[kind] && now() - memory.cool[kind] < ms;
@@ -1266,7 +1276,8 @@ export function createCare(deps) {
       performing = true;
       try {
         const entry = await carry(d, ctl);
-        if (kind === 'shelter' && memory.shelter) memory.shelter.night = memory.night;
+        // the player's shelter is the night's it was made for: this one, or before dark the coming one (ga13a88)
+        if (kind === 'shelter' && memory.shelter) memory.shelter.night = isNight(deps.situation()?.clock?.timeOfDay) ? memory.night : memory.night + 1;
         return entry ? { ok: Boolean(entry.ok), text: String(entry.text).replace(/^(shelter|shield): /, ''), code: entry.ok ? null : 'FAILED' } : { ok: true, text: 'its shelter stands', code: null };
       } finally { performing = false; }
     },
