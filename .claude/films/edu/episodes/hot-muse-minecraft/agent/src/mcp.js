@@ -220,6 +220,29 @@ const REPLY_OUT = z.object({
  *   skills (contracts.skillSet(): the skills play and play_sequence take; default the 10 tools and craft_batch)
  * @returns {(req, res) => Promise<void>} the /mcp handler
  */
+/**
+ * One logged MCP call (F9 of the log hunt), scrubbed: never a resume handle, a token or free text longer than 80
+ * characters; a skill's arguments as sent (they are names and numbers), the reply's code, each step's outcome and the
+ * Body advice the reply showed.
+ */
+export function callRow(tool, args, out, game, ms, session = null) {
+  const a = args && typeof args === 'object' ? args : {};
+  const brief = (x) => JSON.stringify(x ?? {}, (k, v) => (typeof v === 'string' && v.length > 80 ? `${v.slice(0, 77)}...` : v)).slice(0, 300);
+  const summary = tool === 'play' ? { skill: a.skill ?? null, args: brief(a.args) }
+    : tool === 'play_sequence' ? { steps: (a.steps ?? []).slice(0, 16).map((st) => `${st?.skill ?? '?'} ${brief(st?.args)}`) }
+      : tool === 'start_game' ? { adult: a.adult === true, resume: Boolean(a.game) }
+        : tool === 'get_state' ? { full: a.full === true } : {};
+  const sc = out?.structuredContent ?? {};
+  const text = (out?.content ?? []).map((c) => c?.text ?? '').join('\n');
+  return {
+    session, game, tool, ...summary,
+    code: sc.code ?? null, isError: Boolean(out?.isError), ms,
+    ...(Array.isArray(sc.steps) && sc.steps.length ? { stepsOut: sc.steps.slice(0, 16).map((st) => ({ skill: st.skill, status: st.status, code: st.code ?? null })) } : {}),
+    ...(Array.isArray(sc.advice) && sc.advice.length ? { advice: sc.advice.map((x) => ({ kind: x.kind, text: String(x.text ?? '').slice(0, 160), hint: x.hint?.skill ?? null })) } : {}),
+    ...(out?.isError ? { lead: text.split('\n')[0].slice(0, 200) } : {}),
+  };
+}
+
 export function createMcp(hooks) {
   const sessions = new Map(); // MCP session id -> entry {address, base, transport, token, handle, client, key, endedWhy, lastCall}
   const handles = new Map(); // resume handle -> the game's control token, while that game lives
@@ -632,6 +655,22 @@ export function createMcp(hooks) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
       instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot. The skills this server offers (${skills.names.length}): ${SKILL_NAMES_TEXT}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.${CARE_TEXT}`,
     });
+    {
+      // every call in the log (F9 of the log hunt: refusals, calls and the advice shown were in no log): the game, the
+      // tool, a short and scrubbed summary of its arguments, the reply's code, its steps' outcomes and the advice
+      const register = server.registerTool.bind(server);
+      server.registerTool = (name, def, handler) => register(name, def, async (args, extra) => {
+        const t0 = Date.now();
+        const before = safely(() => game(entry), null);
+        let out = null;
+        try {
+          out = await handler(args, extra);
+          return out;
+        } finally {
+          safely(() => hooks.log.event('mcp_call', callRow(name, args, out, (safely(() => game(entry), null) ?? before)?.id ?? null, Date.now() - t0, String(entry.transport.sessionId ?? '').slice(0, 8))));
+        }
+      });
+    }
     if (feed) {
       // every tool: the call goes to the terminal as it comes in, its results as the reply goes out (the replies are
       // not changed); end_game's game is gone after it, so the one from before the call is used
@@ -653,6 +692,7 @@ export function createMcp(hooks) {
       server.createToolError = (message) => {
         const m = /^(?:MCP error -32602: )?Input validation error: (.*)$/s.exec(String(message));
         if (!m) return toolError(message);
+        safely(() => hooks.log.event('mcp_refused', { session: sid8(), game: safely(() => game(entry)?.id, null) ?? null, code: 'BAD_ARGS', message: clean(m[1], 200) }));
         try {
           return refuse(game(entry), undefined, 'BAD_ARGS', `${clean(m[1], 600)}\nNothing was run: fix the call and send it again.`);
         } catch { return toolError(message); }
