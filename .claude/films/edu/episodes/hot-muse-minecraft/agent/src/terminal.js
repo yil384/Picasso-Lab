@@ -8,10 +8,33 @@ export const KINDS = Object.freeze(['call', 'ok', 'fail', 'advice', 'reflex', 'b
 
 /** A terminal update from outside (the camera service's caption endpoint): kinds checked, every text cleaned again. */
 export function cleanTerm(u) {
+  const int = (v, lo, hi) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : undefined);
   const lines = (Array.isArray(u?.lines) ? u.lines : []).slice(-40)
     .filter((l) => KINDS.includes(l?.k) && typeof l.t === 'string')
-    .map((l) => ({ k: l.k, t: clean(l.t) })).filter((l) => l.t);
-  return { lines, status: typeof u?.status === 'string' ? clean(u.status, 120) : '' };
+    .map((l) => {
+      const out = { k: l.k, t: clean(l.t) };
+      const say = typeof l.say === 'string' ? clean(l.say, 120) : '';
+      if (say) out.say = say;
+      const why = typeof l.why === 'string' ? clean(l.why, 80) : '';
+      if (why) out.why = why;
+      for (const [key, lo, hi] of [['ms', 0, 86_400_000], ['n', 1, 64], ['of', 1, 64]]) { const v = int(l[key], lo, hi); if (v !== undefined) out[key] = v; }
+      if (typeof l.ak === 'string' && /^[a-z_]{1,24}$/.test(l.ak)) out.ak = l.ak;
+      return out;
+    }).filter((l) => l.t);
+  const out = { lines, status: typeof u?.status === 'string' ? clean(u.status, 120) : '' };
+  if (u?.st && typeof u.st === 'object') {
+    const st = {};
+    for (const [key, lo, hi] of [['hp', 0, 20], ['food', 0, 20], ['muse', 0, 1e6], ['reflex', 0, 1e6], ['pct', 0, 100]]) { const v = int(u.st[key], lo, hi); if (v !== undefined) st[key] = v; }
+    const clock = typeof u.st.clock === 'string' ? clean(u.st.clock, 16) : '';
+    if (/^(?:(?:DAY|NIGHT) \d\d:\d\d|NETHER|END)$/.test(clock)) st.clock = clock;
+    out.st = st;
+  }
+  if (Array.isArray(u?.adv)) {
+    out.adv = u.adv.slice(0, 6)
+      .filter((a) => typeof a?.k === 'string' && /^[a-z_]{1,24}$/.test(a.k) && typeof a.t === 'string')
+      .map((a) => ({ k: a.k, t: clean(a.t, 160), sev: int(a.sev, 1, 3) ?? 1 })).filter((a) => a.t);
+  }
+  return out;
 }
 
 /** Items whose first appearance in a game is a milestone line. */
@@ -60,7 +83,76 @@ export function callLine(tool, args = {}) {
     what = parts.slice(0, 4).join(', ') + (parts.length > 4 ? `, +${parts.length - 4} more` : '');
   } else if (tool === 'play') what = stepSummary(args);
   else if (tool === 'live_view') what = args?.format ?? '';
-  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`) };
+  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args) };
+}
+
+// ----- plain words for the stream's speech bubble ("Mine 3 oak logs"), never the raw call
+
+const nounOf = (id) => word(String(id ?? '').replace(/^minecraft:/, '')).trim();
+/** Mass nouns that take a number without a plural: "3 iron ore", "5 cobblestone". */
+const MASS = /(?:ore|stone|dirt|sand|gravel|clay|obsidian|deepslate|andesite|diorite|granite|grass|leaves|planks|wool|glass|iron|gold|copper|coal|netherrack|quartz|wheat|beef|porkchop|mutton|cod|salmon|bread|charcoal|flint|string|leather|gunpowder|flesh|cane|bamboo|sheep|lava|water|food)$/;
+const pluralOf = (w) => (/(?:s|x|ch|sh)$/.test(w) ? `${w}es` : /[^aeiou]y$/.test(w) ? `${w.slice(0, -1)}ies` : `${w}s`);
+/** "a wooden pickaxe", "3 oak logs", "2 iron ore". */
+export function countOf(n, id) {
+  const w = nounOf(id);
+  if (!w) return '';
+  const k = Number.isFinite(Number(n)) ? Math.max(1, Math.round(Number(n))) : 1;
+  if (MASS.test(w)) return `${k} ${w}`;
+  if (k === 1) return `${/^[aeiou]/.test(w) ? 'an' : 'a'} ${w}`;
+  return `${k} ${pluralOf(w)}`;
+}
+const listOf = (parts) => (parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`);
+const STEP_WORDS = {
+  get_state: () => 'Look around',
+  go_to: (a) => `Walk to ${[a.x, a.y, a.z].map((v) => Math.round(Number(v))).filter(Number.isFinite).join(' ')}`,
+  collect: (a) => `Mine ${countOf(a.n, a.block)}`,
+  craft: (a) => `Craft ${countOf(a.n ?? 1, a.item)}`,
+  craft_batch: (a) => `Craft ${listOf((Array.isArray(a.items) ? a.items : []).slice(0, 3).map((i) => countOf(i?.n ?? 1, i?.item)).filter(Boolean))}`,
+  smelt: (a) => `Smelt ${countOf(a.n ?? 1, a.item)}`,
+  place: (a) => `Place ${countOf(1, a.block)}`,
+  build: (a) => ({ hut_3x3: 'Build a small hut', shelter: 'Build a shelter', wall_5x2: 'Build a wall', platform_3x3: 'Build a platform', nether_portal: 'Build a Nether portal frame' }[a.blueprint] ?? 'Build something'),
+  attack: (a) => (a.target && a.target !== 'nearest_hostile' ? `Fight the ${nounOf(a.target)}` : 'Fight the nearest monster'),
+  eat: () => 'Eat something',
+  say: () => 'Say something in chat',
+  equip: (a) => `Equip the ${nounOf(a.item) || 'item'}`,
+  hunt: (a) => (a.mob ? `Hunt ${countOf(a.n ?? 1, a.mob)}` : 'Hunt for food'),
+  sleep: () => 'Sleep in a bed',
+  bucket: (a) => (a.action === 'pour' ? `Pour out the ${nounOf(a.liquid) || 'bucket'}` : `Fill a bucket with ${nounOf(a.liquid) || 'water'}`),
+  chest: (a) => ({ inspect: 'Look in the chest', deposit: 'Put items in the chest', withdraw: 'Take items from the chest' }[a.action] ?? 'Use the chest'),
+  explore: (a) => (a.biome ? `Explore to find a ${nounOf(a.biome)}` : a.heading ? `Explore ${nounOf(a.heading)}` : 'Explore'),
+  policy: () => 'Adjust the body\'s reflexes',
+  shelter: () => 'Build a shelter for the night',
+  shield: () => 'Make a shield',
+  portal: (a) => ({ light: 'Light the portal', enter: 'Go through the portal', dismantle: 'Take the portal frame down' }[a.action] ?? 'Use the portal'),
+  armor: () => 'Make and wear armor',
+  pick_up: () => 'Pick up the items',
+  drop: (a) => `Drop ${countOf(a.n ?? 1, a.item)}`,
+};
+const TOOL_WORDS = { start_game: 'Start a new game', get_state: 'Look around', stop: 'Stop everything', end_game: 'End the game', live_view: 'Turn on the live view' };
+const capital = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
+/** One step in plain words: "Mine 3 oak logs". */
+export function plainStep(st) {
+  if (!st || typeof st !== 'object') return '';
+  const skill = st.skill ?? st.name ?? '';
+  const args = st.args && typeof st.args === 'object' ? st.args : Object.fromEntries(Object.entries(st).filter(([k]) => !['skill', 'name', 'request_id'].includes(k)));
+  let t = '';
+  try { t = STEP_WORDS[skill]?.(args) ?? ''; } catch { t = ''; }
+  return clean(t || capital(word(skill)), 120);
+}
+/** A call in plain words: "Mine 3 oak logs, then craft a wooden pickaxe" (longer sequences: "and 2 more"). */
+export function plainCall(tool, args = {}) {
+  if (tool === 'play') return plainStep(args);
+  if (tool === 'play_sequence' && Array.isArray(args?.steps)) {
+    const parts = args.steps.map(plainStep).filter(Boolean);
+    const head = parts.slice(0, 2).map((p, i) => (i ? p[0].toLowerCase() + p.slice(1) : p)).join(', then ');
+    return clean(parts.length > 2 ? `${head}, and ${parts.length - 2} more` : head, 120);
+  }
+  return clean(TOOL_WORDS[tool] ?? capital(word(tool)), 120);
+}
+/** A failure's reason in a few words: "no iron ore within 64 blocks". */
+export function shortWhy(result, max = 48) {
+  const t = gist(result, max).replace(/\.\.\.$/, '').replace(/^failed:?\s*/i, '').trim();
+  return clean(t ? t[0].toLowerCase() + t.slice(1) : '', 80);
 }
 
 const secs = (ms) => (Number.isFinite(ms) ? ` (${ms >= 10_000 ? Math.round(ms / 1000) : Math.round(ms / 100) / 10} s)` : '');
@@ -76,8 +168,9 @@ function gist(result, max = 44) {
 export function resultLine(st) {
   const what = word(stepSummary(st));
   const first = gist(st.result);
-  if (st.status === 'confirmed') return { k: 'ok', t: clean(`ok  ${first || what}${secs(st.ms)}`) };
-  if (st.status === 'failed') return { k: 'fail', t: clean(`FAIL ${what}${st.code ? ` ${st.code}` : ''}${first ? `: ${word(first)}` : ''}${secs(st.ms)}`) };
+  const extra = { say: plainStep(st), ...(Number.isFinite(st.ms) ? { ms: st.ms } : {}) };
+  if (st.status === 'confirmed') return { k: 'ok', t: clean(`ok  ${first || what}${secs(st.ms)}`), ...extra };
+  if (st.status === 'failed') return { k: 'fail', t: clean(`FAIL ${what}${st.code ? ` ${st.code}` : ''}${first ? `: ${word(first)}` : ''}${secs(st.ms)}`), ...extra, why: shortWhy(st.result) };
   if (st.status === 'cancelled') return { k: 'info', t: clean(`skip ${what}${st.why ? `: ${st.why}` : ''}`) };
   return null;
 }
@@ -106,6 +199,30 @@ export function statusText(state, attribution) {
   return clean([parts.join('  '), who].filter(Boolean).join('  |  '), 120);
 }
 
+/** The status line as numbers for the stream's status row: {hp, food, clock, muse, reflex, pct}. */
+export function statusData(state, attribution) {
+  const st = {};
+  if (Number.isFinite(state?.health)) st.hp = Math.round(state.health);
+  if (Number.isFinite(state?.food)) st.food = Math.round(state.food);
+  const dim = String(state?.dimension ?? 'overworld').replace(/^minecraft:/, '');
+  const clock = dim === 'the_nether' ? 'NETHER' : dim === 'the_end' ? 'END' : clockText(state?.time);
+  if (clock) st.clock = clock;
+  if (attribution && Number.isFinite(attribution.muse)) {
+    st.muse = attribution.muse;
+    st.reflex = attribution.reflex ?? 0;
+    if (Number.isFinite(attribution.musePct)) st.pct = attribution.musePct;
+  }
+  return st;
+}
+
+/** How pressing an advice is, 1 to 3: 3 for health, lava, drowning or starving, 2 for a night that has come, else 1. */
+export function severityOf(a) {
+  const t = String(a?.text ?? '').toLowerCase();
+  if (/starving|lava|drown|low health|health \d|dying|burning|fire/.test(t) || /^(?:health|lava|air|fire)$/.test(String(a?.kind))) return 3;
+  if (/^night \(|^night:|creeper|skeleton|zombie/.test(t)) return 2;
+  return 1;
+}
+
 /**
  * The feed of one agent: call(game, tool, args) when a call comes in, reply(game, tool, result) when its reply goes
  * out. Each produces {lines: [{k, t}], status} for send(gameId, update), the lines new since the last update of that
@@ -114,10 +231,10 @@ export function statusText(state, attribution) {
  */
 export function createTermFeed(o) {
   const now = o.now ?? Date.now;
-  const games = new Map(); // id -> {seen: Set, own: number, advice: string, got: Set, startedAt, state, dim}
+  const games = new Map(); // id -> {seen: Set, own: number, advice: Map(kind -> words), got: Set, startedAt, state, dim}
   const of = (s) => {
     let g = games.get(s.id);
-    if (!g) { g = { seen: new Set(), own: -1, advice: '', got: new Set(), startedAt: now(), state: null, dim: null }; games.set(s.id, g); }
+    if (!g) { g = { seen: new Set(), own: -1, advice: new Map(), got: new Set(), startedAt: now(), state: null, dim: null }; games.set(s.id, g); }
     return g;
   };
   /** Health, food and the clock as the body knows them now, without a reply: the bot's, else the body's snapshot. */
@@ -146,10 +263,19 @@ export function createTermFeed(o) {
     else g.state = liveState(s) ?? g.state;
     let attribution = null;
     try { attribution = typeof s.body?.attribution === 'function' ? s.body.attribution() : null; } catch { /* none */ }
-    return statusText(g.state ? { ...g.state, dimension: g.dim ?? undefined } : null, attribution);
+    const state = g.state ? { ...g.state, dimension: g.dim ?? undefined } : null;
+    return { text: statusText(state, attribution), st: statusData(state, attribution) };
   };
+  /** The Body advice as it stands, one entry per kind (the stream's note cards update in place). */
+  const adviceOf = (structured) => (Array.isArray(structured?.advice)
+    ? structured.advice.slice(0, 4).map((a) => ({ k: /^[a-z_]{1,24}$/.test(String(a?.kind)) ? String(a.kind) : 'note', t: clean(a?.text, 160), sev: severityOf(a) })).filter((a) => a.t)
+    : undefined);
   const emit = (s, lines, structured) => {
-    try { o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: statusOf(s, structured) }); } catch { /* the video goes on without it */ }
+    try {
+      const { text, st } = statusOf(s, structured);
+      const adv = adviceOf(structured);
+      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, ...(adv ? { adv } : {}) });
+    } catch { /* the video goes on without it */ }
   };
   const PLACES = { the_nether: 'entered the Nether', the_end: 'entered the End', overworld: 'back in the Overworld' };
   const elapsed = (g) => {
@@ -174,6 +300,8 @@ export function createTermFeed(o) {
         if (!['confirmed', 'failed', 'cancelled'].includes(step.status) || g.seen.has(key)) continue;
         g.seen.add(key);
         const line = resultLine(step);
+        const total = (st.steps ?? []).some((x) => x === step) ? (st.steps ?? []).length : null;
+        if (line && Number.isInteger(step.n)) Object.assign(line, { n: step.n }, total ? { of: total } : {});
         if (line) lines.push(line);
         if (step.status === 'confirmed') {
           for (const [item, n] of Object.entries(step.gained ?? step.delta ?? {})) {
@@ -191,12 +319,19 @@ export function createTermFeed(o) {
         const death = /death|died/i.test(`${e.kind} ${e.text}`);
         lines.push({ k: death ? 'fail' : e.source === 'reflex' ? 'reflex' : 'body', t: clean(`${death ? 'death' : e.source === 'reflex' ? 'reflex' : 'body'}: ${e.text}`) });
       }
-      const advice = (st.advice ?? []).map((a) => clean(a.text, 160)).filter(Boolean);
-      const key = advice.join('|');
-      if (key !== g.advice) {
-        g.advice = key;
-        for (const a of advice.slice(0, 3)) lines.push({ k: 'advice', t: `advice: ${a}` });
+      // the advice: a line only for a kind that is new or whose words changed (the numbers in it, the time of day,
+      // change on every reply and are not news), at most 3
+      const kinds = new Map();
+      let told = 0;
+      for (const a of st.advice ?? []) {
+        const k = /^[a-z_]{1,24}$/.test(String(a?.kind)) ? String(a.kind) : 'note';
+        const t = clean(a?.text, 160);
+        if (!t) continue;
+        const shape = t.replace(/\d+/g, '#');
+        kinds.set(k, shape);
+        if (g.advice.get(k) !== shape && told < 3) { lines.push({ k: 'advice', t: `advice: ${t}`, ak: k }); told += 1; }
       }
+      if (Array.isArray(st.advice)) g.advice = kinds;
       // a portal: the first line of the new world
       const dim = dimOf(s);
       if (dim && g.dim && dim !== g.dim) lines.push({ k: 'milestone', t: clean(`${PLACES[dim] ?? `entered ${word(dim)}`} at ${elapsed(g)}`) });
