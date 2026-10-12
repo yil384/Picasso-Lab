@@ -32,11 +32,15 @@ const RECIPES = {
 for (const w of WOODS) RECIPES[`${w}_planks`] = { out: 4, need: { [`${w}_log`]: 1 } };
 RECIPES.stone_sword = { out: 1, need: { cobblestone: 2, stick: 1 }, table: true };
 RECIPES.shield = { out: 1, need: { iron_ingot: 1, $planks: 6 }, table: true };
+RECIPES.torch = { out: 4, need: { stick: 1, coal: 1 } };
+RECIPES.bucket = { out: 1, need: { iron_ingot: 3 }, table: true };
+RECIPES.flint_and_steel = { out: 1, need: { iron_ingot: 1, flint: 1 } };
+RECIPES.diamond_pickaxe = { out: 1, need: { diamond: 3, stick: 2 }, table: true };
 for (const [m, unit] of [['iron', 'iron_ingot'], ['leather', 'leather']]) {
   for (const [piece, n] of [['helmet', 5], ['chestplate', 8], ['leggings', 7], ['boots', 4]]) RECIPES[`${m}_${piece}`] = { out: 1, need: { [unit]: n }, table: true };
 }
-const DROPS = { stone: 'cobblestone', coal_ore: 'coal', iron_ore: 'raw_iron', logs: 'oak_log' };
-const SMELTS = { raw_iron: 'iron_ingot', cobblestone: 'stone', oak_log: 'charcoal', beef: 'cooked_beef' };
+const DROPS = { stone: 'cobblestone', coal_ore: 'coal', iron_ore: 'raw_iron', logs: 'oak_log', deepslate_iron_ore: 'raw_iron', deepslate_diamond_ore: 'diamond', diamond_ore: 'diamond', deepslate: 'cobbled_deepslate' };
+const SMELTS = { raw_iron: 'iron_ingot', cobblestone: 'stone', oak_log: 'charcoal', beef: 'cooked_beef', mutton: 'cooked_mutton', chicken: 'cooked_chicken', porkchop: 'cooked_porkchop' };
 const FUELS = { coal: 8, charcoal: 8, oak_planks: 1.5, birch_planks: 1.5, oak_log: 1.5, birch_log: 1.5 };
 
 /**
