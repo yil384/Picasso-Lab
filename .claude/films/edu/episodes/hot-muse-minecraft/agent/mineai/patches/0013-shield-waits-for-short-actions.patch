@@ -1,0 +1,59 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0013: the hostile reflex's shield preparation (equip a carried shield while hostiles are near) waits for a short
+foreground action of the player's (craft, smelt, equip, eat, place, drop, a container, a pickup) to finish instead of
+taking the body over in the middle of it. A production game (2026-10-11) crafted a shield at night with two hostiles
+near: the reflex preempted the craft right after the shield appeared, before its temporary crafting table was picked
+up again, and the craft was reported failed. Responses to real threats are unchanged. With a test (hostile).
+
+diff --git a/src/survival/reflexes/hostile.test.ts b/src/survival/reflexes/hostile.test.ts
+index dc64624..16261fa 100644
+--- a/src/survival/reflexes/hostile.test.ts
++++ b/src/survival/reflexes/hostile.test.ts
+@@ -1367,3 +1367,14 @@ for (const inUse of [false, true]) {
+     }
+   });
+ }
++
++test("Patched for Muse plays Minecraft (picasso-lab), 0013: shield preparation waits for a short action of the player's", async () => {
++  const { deferShieldPreparation } = await import("./hostile.js");
++  const at = (action: string | null, owner = "foreground") => ({ owner, activeAction: action ? { action, startedAt: "" } : null });
++  assert.equal(deferShieldPreparation(at("craft_item")), true, "a craft finishes first (its temporary table back)");
++  assert.equal(deferShieldPreparation(at("equip")), true);
++  assert.equal(deferShieldPreparation(at("collect_block")), false, "a long walk or mine: the shield goes on at once");
++  assert.equal(deferShieldPreparation(at("navigate")), false);
++  assert.equal(deferShieldPreparation(at(null, "idle")), false, "an idle body: at once");
++  assert.equal(deferShieldPreparation(at("craft_item", "takeover")), false, "a reflex holds the body: not ours to defer");
++});
+diff --git a/src/survival/reflexes/hostile.ts b/src/survival/reflexes/hostile.ts
+index bea2575..9f7feeb 100644
+--- a/src/survival/reflexes/hostile.ts
++++ b/src/survival/reflexes/hostile.ts
+@@ -46,6 +46,18 @@ export interface HostileReflex extends AsyncDisposable {
+ }
+ 
+ /** Hostile observations and execution; admission, cancellation and failure retention belong to the driver. */
++/**
++ * Patched for Muse plays Minecraft (picasso-lab), 0013: equipping a carried shield is a preparation, not a response
++ * to a threat, so it waits for a short foreground action of the player's to finish instead of taking the body over
++ * in the middle of it (a production game, 2026-10-11: a shield craft at night with two hostiles near was preempted
++ * right after the shield appeared, before its temporary crafting table was picked up again, and reported failed).
++ * Real threats are not affected: a contact or a directive still gets its response at once.
++ */
++export const SHIELD_WAITS_FOR = new Set(["craft_item", "smelt_item", "equip", "eat_food", "place_block", "drop_item", "use_container", "pick_up_items"]);
++export function deferShieldPreparation(status: { owner: string; activeAction: { action: string } | null }): boolean {
++  return status.owner === "foreground" && status.activeAction !== null && SHIELD_WAITS_FOR.has(status.activeAction.action);
++}
++
+ export function attachHostileReflex(
+   bot: Bot,
+   driver: ReflexDriver,
+@@ -139,6 +151,7 @@ export function attachHostileReflex(
+       const directive = decideCombatResponse(facts, purpose);
+       const prepareShield = policy.combat.shield && bot.inventory.slots[45]?.name !== "shield" &&
+         !bot.usingHeldItem && !bot.currentWindow && bot.inventory.items().some((item) => item.name === "shield") &&
++        !deferShieldPreparation(driver.runner.status()) &&
+         Object.values(bot.entities).some((entity) => isHostile(entity) &&
+           entity.position.distanceTo(bot.entity.position) < HOSTILE_OBSERVATION_RANGE);
+       if (!prepareShield && !facts.contacts.length && directive.kind === "none" && !incomingFireball(bot, 16)) return null;

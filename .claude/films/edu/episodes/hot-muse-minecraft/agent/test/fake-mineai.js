@@ -31,6 +31,7 @@ const RECIPES = {
 };
 for (const w of WOODS) RECIPES[`${w}_planks`] = { out: 4, need: { [`${w}_log`]: 1 } };
 RECIPES.stone_sword = { out: 1, need: { cobblestone: 2, stick: 1 }, table: true };
+RECIPES.shield = { out: 1, need: { iron_ingot: 1, $planks: 6 }, table: true };
 for (const [m, unit] of [['iron', 'iron_ingot'], ['leather', 'leather']]) {
   for (const [piece, n] of [['helmet', 5], ['chestplate', 8], ['leggings', 7], ['boots', 4]]) RECIPES[`${m}_${piece}`] = { out: 1, need: { [unit]: n }, table: true };
 }
@@ -80,6 +81,7 @@ export async function startFakeMineAi(opts = {}) {
     buildKept: 0,
     viewFail: false,
     viewFailEvery: 0,
+    takeovers: [], // [{tool, made, error}]: a reflex takes the next such action over
     viewReads: 0,
     boxAt: null,
     netherAt: { x: 3.5, y: 70, z: 4.5 },
@@ -244,7 +246,11 @@ export async function startFakeMineAi(opts = {}) {
     active = id;
     const hunting = tool === 'collect_mob_drop' && world.huntKillAfterMs !== null;
     act.timer = setTimeout(() => {
-      const result = perform(tool, a, () => act.cancel);
+      // one of their reflexes taking the body over in the middle (world.takeovers, in order): after the work was done
+      // (made) or before it, the action failing with the reflex's reason
+      const t = world.takeovers[0]?.tool === tool ? world.takeovers.shift() : null;
+      const done = !t || t.made ? perform(tool, a, () => act.cancel) : null;
+      const result = t ? { status: 'failed', error: t.error } : done;
       // what else happened meanwhile (a walk's digging and scaffolding, a pickup): in the inventory, not in the evidence
       if (result.status !== 'cancelled') for (const [k, n] of Object.entries(world.side[tool] ?? {})) add(k, n);
       settle(act, result);
