@@ -216,10 +216,12 @@ export async function startFakeMineAi(opts = {}) {
       case 'enter_nether_portal': {
         // their entry refuses a bot still standing in the portal it came out of
         if (world.inPortal && Math.hypot(world.position.x - world.inPortal.x - 0.5, world.position.z - world.inPortal.z - 0.5) < 1.5) return { status: 'failed', error: '[PORTAL_ALREADY_INSIDE] The bot already occupies this nether_portal after a recent arrival.' };
+        // world.netherPortalAt: the Nether portal's block when the bot comes out a step off it; entering aims there
+        if (world.dimension !== 'overworld' && world.netherPortalAt && (a.x !== world.netherPortalAt.x || a.z !== world.netherPortalAt.z)) return { status: 'failed', error: `Expected active nether_portal at (${a.x}, ${a.y}, ${a.z}); observed air.` };
         const back = world.dimension !== 'overworld';
         world.dimension = back ? 'overworld' : 'the_nether';
         world.position = back ? { x: a.x + 0.5, y: a.y, z: a.z + 0.5 } : { ...world.netherAt };
-        world.inPortal = { x: Math.floor(world.position.x), y: Math.floor(world.position.y), z: Math.floor(world.position.z) };
+        world.inPortal = !back && world.netherPortalAt ? { ...world.netherPortalAt } : { x: Math.floor(world.position.x), y: Math.floor(world.position.y), z: Math.floor(world.position.z) };
         return { status: 'succeeded', navigation: { end: { ...world.position } } };
       }
       case 'collect_mob_drop': add(a.drop_name, a.count ?? 1); return { status: 'succeeded', hunt: { mob: a.mob_name, drop: a.drop_name, requested: a.count ?? 1, gained: a.count ?? 1, targetDeathsObserved: a.count ?? 1 } };

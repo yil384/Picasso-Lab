@@ -263,3 +263,20 @@ test('a reflex takes a craft over: made means ok (with a note), cut short means 
     assert.notEqual(r.code, 'INTERRUPTED');
   } finally { await body.close(); }
 });
+
+test('nether: out of the portal a step off it, the way back aims at the portal block itself (a staging bench)', async () => {
+  const { body, fake } = await netherBody({ obsidian: 14, flint_and_steel: 1 }, { gameId: 'gnether_off', at: { x: 150, z: -150 } });
+  try {
+    fake.world.netherAt = { x: 5.5, y: 70, z: 4.5 }; // where it is seen after the trip: two blocks off the portal
+    fake.world.netherPortalAt = { x: 3, y: 70, z: 4 };
+    for (const step of [['build', { blueprint: 'nether_portal', material: 'obsidian' }], ['portal', { action: 'light' }], ['portal', { action: 'enter' }]]) {
+      const r = await body.run(...step);
+      assert.equal(r.ok, true, r.result);
+    }
+    fake.world.blocks = [{ name: 'nether_portal', found: 6, listed: [{ x: 3, y: 70, z: 4 }] }];
+    const r = await body.run('portal', { action: 'enter' });
+    assert.equal(r.ok, true, r.result);
+    assert.deepEqual([fake.tools('enter_nether_portal').at(-1).args.x, fake.tools('enter_nether_portal').at(-1).args.z], [3, 4]);
+    assert.match(body.state(), /in the overworld/);
+  } finally { await body.close(); }
+});

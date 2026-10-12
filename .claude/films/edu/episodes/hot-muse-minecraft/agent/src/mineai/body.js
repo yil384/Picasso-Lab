@@ -360,6 +360,16 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         from: latest.position,
         blocks: found.filter((f) => f.listed?.[0]).map((f) => ({ name: f.name, count: Math.min(64, f.found ?? 1), capped: (f.found ?? 0) > 64 || undefined, nearest: floorPos(f.listed[0]) })),
       };
+      // the portal it came out of, as a real portal block: where it stood when the change of dimension was seen may be a
+      // step off it (a staging bench, 2026-10-12: the way back aimed at air)
+      const here = dimension ?? 'overworld';
+      const a = arrivals[here];
+      const lit = scan.blocks.find((b) => b.name === 'nether_portal');
+      if (a && lit && !a.portal && Math.hypot(lit.nearest.x - a.pos.x, lit.nearest.y - a.pos.y, lit.nearest.z - a.pos.z) <= 6) {
+        a.pos = { ...lit.nearest };
+        a.portal = true;
+        care?.arrived(here, a.pos);
+      }
     })().catch(() => {}).finally(() => { scanning = null; });
     return scanning;
   }
@@ -714,6 +724,13 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       await refresh();
       before = allItems(latest.inventory, latest.equipment);
       deathBefore = lastDeath;
+      // the way back without a pos: the nearest portal block itself (never a cell next to it)
+      if (tool === 'portal' && v.args.action === 'enter' && !v.args.pos && (dimension ?? 'overworld') !== 'overworld' && arrivals[dimension] && !arrivals[dimension].portal) {
+        const data = await rpc('view_blocks', { find: { block_names: ['nether_portal'], limit: 1 } }, 10_000).catch(() => null);
+        const b = data?.result?.blocks?.find?.[0]?.listed?.[0];
+        const a = arrivals[dimension];
+        if (b && Math.hypot(b.x - a.pos.x, b.y - a.pos.y, b.z - a.pos.z) <= 6) { a.pos = floorPos(b); a.portal = true; care?.arrived(dimension, a.pos); }
+      }
       const plan = toTheirs(tool, v.args, context());
       built = plan.build ?? null;
       dismantling = Boolean(plan.dismantle);
