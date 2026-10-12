@@ -569,9 +569,12 @@ profile `camera`, `deploy/Dockerfile.camera`).
   player's own view (full red in the Nether, the sky in the Overworld) before the ride; over the shoulder under the
   Nether ceiling with piglins and lava, night vision kept (the fog stays dark red while the camera rides the eye; it is
   full red only for that moment the camera player itself is the camera), no ffmpeg restart, and the terminal shows
-  "entered the Nether" and "back in the Overworld". A portal block over the bot's head is not a roof: while it waits
-  in a portal (4 s) and as it arrives, the view stays over the shoulder (the outside view among trees had been a
-  picture of leaves).
+  "entered the Nether" and "back in the Overworld". A portal block counts as open air (`#muse_cam:open`): while the
+  bot waits in a portal (4 s) and as it arrives the view stays over the shoulder (the outside view among trees had
+  been a picture of leaves), and the eye may sit in portal blocks. Before that only the roof rule knew portals, and a
+  bot standing in a portal facing along it got the eye in its head (its face filling the picture, staging
+  2026-10-12); on a local Paper the eye now goes 0.3 blocks in front of its face there (a spectator in a portal
+  block does not travel).
 - Between games: the client stays in the world (a game goes live 3.5 s after it starts). After `CAMERA_IDLE_MS`
   (10 min) without a game it quits and Xvfb stays (0 % CPU, 46 MB); the next game starts it again (live after 15 s).
 - Supervision: a client that exits, is disconnected ("Client disconnected with reason", "Couldn't connect to server")
