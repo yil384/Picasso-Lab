@@ -422,6 +422,22 @@ test('mineai host: starts on the range with a token, refuses past the cap, close
   await hosts.closeAll();
 });
 
+test('mineai host: a runtime that exits while starting is started once more (F14 of the log hunt); twice is a failed start', async () => {
+  const cfg = hostConfig();
+  const state = path.join(tmp('mineai-st-'), 'starts');
+  const hosts = createHostManager({ config: cfg, log, spawnFn: fakeSpawn({ FAKE_MODE: 'early', FAKE_STATE: state, FAKE_BAD_STARTS: '1' }), preload: null });
+  const h = await hosts.start({ instanceId: 'g1', username: 'Tst_rv_e' });
+  await h.ready;
+  assert.ok((await h.health())?.minecraft, 'ready on the second try');
+  assert.equal(fs.readFileSync(state, 'utf8'), '2');
+  await h.close('test');
+  const state2 = path.join(tmp('mineai-st-'), 'starts');
+  const hosts2 = createHostManager({ config: cfg, log, spawnFn: fakeSpawn({ FAKE_MODE: 'early', FAKE_STATE: state2 }), preload: null });
+  const h2 = await hosts2.start({ instanceId: 'g2', username: 'Tst_rv_e2' });
+  await assert.rejects(h2.ready, /exited while starting/);
+  assert.equal(fs.readFileSync(state2, 'utf8'), '2', 'one more try, not more');
+});
+
 test('mineai host: a crash is restarted once; the second time it is down', async () => {
   const cfg = hostConfig();
   const state = path.join(tmp('mineai-st-'), 'starts');
