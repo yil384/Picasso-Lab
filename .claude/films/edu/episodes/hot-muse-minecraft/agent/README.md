@@ -569,9 +569,12 @@ profile `camera`, `deploy/Dockerfile.camera`).
   player's own view (full red in the Nether, the sky in the Overworld) before the ride; over the shoulder under the
   Nether ceiling with piglins and lava, night vision kept (the fog stays dark red while the camera rides the eye; it is
   full red only for that moment the camera player itself is the camera), no ffmpeg restart, and the terminal shows
-  "entered the Nether" and "back in the Overworld". A portal block over the bot's head is not a roof: while it waits
-  in a portal (4 s) and as it arrives, the view stays over the shoulder (the outside view among trees had been a
-  picture of leaves).
+  "entered the Nether" and "back in the Overworld". A portal block counts as open air (`#muse_cam:open`): while the
+  bot waits in a portal (4 s) and as it arrives the view stays over the shoulder (the outside view among trees had
+  been a picture of leaves), and the eye may sit in portal blocks. Before that only the roof rule knew portals, and a
+  bot standing in a portal facing along it got the eye in its head (its face filling the picture, staging
+  2026-10-12); on a local Paper the eye now goes 0.3 blocks in front of its face there (a spectator in a portal
+  block does not travel).
 - Between games: the client stays in the world (a game goes live 3.5 s after it starts). After `CAMERA_IDLE_MS`
   (10 min) without a game it quits and Xvfb stays (0 % CPU, 46 MB); the next game starts it again (live after 15 s).
 - Supervision: a client that exits, is disconnected ("Client disconnected with reason", "Couldn't connect to server")
@@ -956,9 +959,11 @@ The sound (the stream had only silence: Facebook reported 2.8 kb/s of audio):
 - A soft music bed (`STREAM_MUSIC`, on): "Etirwer" by Kistol (opengameart.org/content/etirwer), CC0 1.0, a seamless
   guitar loop levelled at -20 LUFS (`assets/muse-ui/music`, `assets/muse-ui/CREDITS.txt`), looped in real time,
   ducked by a side-chain compressor whenever the game is loud (threshold -26 dB, ratio 3, 450 ms release), mixed with
-  the game and limited at -1 dBFS; AAC 128 kb/s stereo. The bed alone measures -19.8 LUFS; with the stand-in beeps
-  -15.7 LUFS, no clipping. UNVERIFIED with the real client (the one camera account was in the owner's run): the game's
-  gain (`STREAM_GAME_DB`) is set on the first camera test.
+  the game and limited at -1 dBFS; AAC 128 kb/s stereo. Measured with the real client on staging (2026-10-12): the
+  client image had left out every sound file (silence though OpenAL played into the sink); with the effects installed
+  (never the soundtrack or records) a daylight trip (digging, a portal) recorded the game alone at -26.6 LUFS, peak
+  -7.1 dBFS. The defaults, game +12 dB and the bed -2 dB, make that trip -16.5 LUFS overall, peak -1.0 dBFS: the
+  effects well over the bed, no clipping.
 
 live_view's page, for the square video and Facebook's player:
 
@@ -1122,7 +1127,7 @@ X display) and feeds the terminal a scripted session through the real formatter
 | `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
 | `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `5`, `30`, `fast`, `0.75` | the client's video settings (the tuned ones); it draws at 1280x720 times the scale and ffmpeg scales up |
 | `STREAM_LAYOUT`, `STREAM_UI_SIZE`, `STREAM_TERMINAL_SIZE` | `ui`, `1080x1080`, `1080x1920` | the camera's video: `ui`, square (or `1080x1200`, `1080x1350`), the game over Muse's panel (section "The stream UI"); `terminal`, vertical with the terminal of Muse's calls (or `1080x1350`); `landscape`, the game alone at 1280x720 |
-| `STREAM_GAME_AUDIO`, `STREAM_MUSIC`, `STREAM_MUSIC_FILE`, `STREAM_MUSIC_DB`, `STREAM_GAME_DB` | on, on, (Etirwer), 0, 0 | the camera's sound: the game's own effects and ambience (the client's music at 0), a CC0 music bed under it ducked while the game is loud, the gains in dB, then a limiter at -1 dBFS (section "The stream UI") |
+| `STREAM_GAME_AUDIO`, `STREAM_MUSIC`, `STREAM_MUSIC_FILE`, `STREAM_MUSIC_DB`, `STREAM_GAME_DB` | on, on, (Etirwer), -2, 12 | the camera's sound: the game's own effects and ambience (the client's music at 0), a CC0 music bed under it ducked while the game is loud, the gains in dB, then a limiter at -1 dBFS (section "The stream UI") |
 | `CAMERA_VIEW` | `third` | `third`: over the bot's shoulder (its arm, tool and swing in view), outside its shelter while it is enclosed; `first`: in its head (outside too while enclosed). The Paper datapack does it (section "Real-client camera") |
 | `CAMERA_MODS`, `CAMERA_CHUNK_THREADS`, `CAMERA_JVM_ARGS` | `sodium`, `0`, (none) | client mods from the image (`deploy/camera/mods.json`; `off` = vanilla); Sodium's chunk builder threads (0: its own choice); extra JVM flags (a collector given here replaces G1) |
 | `STREAM_CLOCK`, `STREAM_CLOCK_TZ` | `false`, `America/Los_Angeles` | test only: the wall clock burned into the video |
