@@ -26,10 +26,11 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import {
   STREAM_DEFAULTS, ffmpegArgs, findFfmpeg, findFont, maskOutput, scrubOutputs, cleanCaption, cleanPose, processTree,
-  spawnNiced, spawnEncoder, createStreamManager, managerConfig, encoderEnv, childEnv,
+  spawnNiced, spawnEncoder, createStreamManager, managerConfig, encoderEnv, childEnv, streamAspect,
 } from './stream.js';
 import { createGraph, createLiveChannel } from './fb-live.js';
 import { createTerminalPanel, findMonoFont } from './terminal-panel.js';
+import { createUiPanel, UI_ASSETS } from './ui-panel.js';
 
 const require = createRequire(import.meta.url);
 
@@ -764,8 +765,27 @@ export function createCameraStream(o) {
   // the vertical layout (STREAM_LAYOUT=terminal): the game on top, 16:9, and the terminal panel under it, the lines the
   // agent sends (term) drawn by src/terminal-panel.js; the landscape layout is the game alone
   let panel = null;
+  let shm = null; // the UI panel's frames go to memory (/dev/shm) when the container has it
   let size = { width: opt.width, height: opt.height };
-  if (opt.layout === 'terminal') {
+  if (opt.layout === 'ui') {
+    // the UI layout (STREAM_LAYOUT=ui, square by default): the game on top, cut to its shape, and Muse's panel under
+    // it, about a third of the height (src/ui-panel.js), redrawn 30 times a second
+    try {
+      const [uw, uh] = String(opt.uiSize ?? '1080x1080').split('x').map(Number);
+      const ph = Math.round(uh / 3 / 2) * 2;
+      try { shm = fs.mkdtempSync(path.join(opt.shmDir ?? '/dev/shm', 'muse-ui-')); } catch { shm = null; }
+      panel = createUiPanel({ width: uw, height: ph, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS });
+      panel.top = uh - ph;
+      panel.kind = 'ui';
+      panel.write(); // ffmpeg opens the file at its start
+      size = { width: uw, height: uh };
+    } catch (err) {
+      event('stream_error', { message: `the UI panel is off: ${clip(err?.message ?? err, 200)}` });
+      panel = null;
+      if (shm) fs.rm(shm, { recursive: true, force: true }, () => {});
+      shm = null;
+    }
+  } else if (opt.layout === 'terminal') {
     try {
       const [tw, th] = String(opt.terminalSize ?? '1080x1920').split('x').map(Number);
       const top = Math.round((tw * 9) / 16 / 2) * 2;
@@ -800,11 +820,19 @@ export function createCameraStream(o) {
 
   function startEncoder() {
     const ro = rig.options;
-    const args = ffmpegArgs({ ...opt, ...size, font, captionFile, x11: x11Input(ro), progress: true, ...(panel ? { panel: { file: panel.file, top: panel.top } } : {}) });
+    // the sound: the game's (the rig's PulseAudio monitor) unless off, and the music bed unless off
+    const sound = opt.gameAudio === false ? null : rig.sound ?? null;
+    const music = opt.music === false ? null : opt.musicFile || path.join(opt.uiAssets ?? UI_ASSETS, 'music', 'etirwer.m4a');
+    const audio = { pulse: sound?.source ?? null, music: music && fs.existsSync(music) ? music : null, musicDb: opt.musicDb, gameDb: opt.gameDb };
+    const args = ffmpegArgs({
+      ...opt, ...size, font, captionFile, x11: x11Input(ro), progress: true, audio,
+      ...(panel ? { panel: { file: panel.file, top: panel.top, kind: panel.kind ?? 'terminal', fps: panel.kind === 'ui' ? opt.fps : undefined } } : {}),
+    });
     const { child, failure } = spawnEncoder({
       ffmpeg, args, output: opt.output, nice: opt.encoderNice, stdio: ['ignore', 'pipe', 'pipe'],
-      env: encoderEnv(opt, { DISPLAY: `:${ro.display}` }), event: (k, d) => event(k, d), createPublisher: opt.createPublisher,
+      env: encoderEnv(opt, { DISPLAY: `:${ro.display}`, ...(sound ? { PULSE_SERVER: sound.server } : {}) }), event: (k, d) => event(k, d), createPublisher: opt.createPublisher,
     });
+    if (!enc) event('stream_audio', { game: Boolean(audio.pulse), music: Boolean(audio.music) });
     const me = { child, startedAt: Date.now(), err: '', progress: {} };
     enc = me;
     let out = '';
@@ -886,6 +914,7 @@ export function createCameraStream(o) {
     await stopEncoder();
     await rig.park().catch(() => {});
     fs.rm(work, { recursive: true, force: true, maxRetries: 3 }, () => {});
+    if (shm) fs.rm(shm, { recursive: true, force: true, maxRetries: 3 }, () => {});
   }
 
   return {
@@ -896,7 +925,7 @@ export function createCameraStream(o) {
       if (!ffmpeg) throw new Error('no ffmpeg found (set STREAM_FFMPEG)');
       if (!validName(opt.player)) throw new Error('the camera needs the bot\'s player name');
       state = 'starting';
-      event('stream_start', { output: maskOutput(opt.output), size: `${size.width}x${size.height}`, layout: panel ? 'terminal' : 'landscape', fps: opt.fps, bitrateK: opt.bitrateK, caption: Boolean(font), source: 'client', player: opt.player });
+      event('stream_start', { output: maskOutput(opt.output), size: `${size.width}x${size.height}`, layout: panel ? panel.kind ?? 'terminal' : 'landscape', fps: opt.fps, bitrateK: opt.bitrateK, caption: Boolean(font), source: 'client', player: opt.player });
       rig.start();
       const ready = await rig.waitReady(opt.readyWaitMs);
       if (!running()) return;
@@ -907,6 +936,7 @@ export function createCameraStream(o) {
       if (!running()) return;
       state = 'live';
       liveAt = Date.now();
+      panel?.start?.(); // the UI panel's frames, 30 a second, while the stream is live
       startEncoder();
       startWatchdog();
       event('stream_live', { afterMs: liveAt - startedAt, camera: rig.name });
@@ -949,11 +979,13 @@ export function createCameraStream(o) {
     /** The terminal under the game (the vertical layout): new lines ({k, t}) and the status line. */
     term(u) {
       if (!panel || !u) return;
+      if (typeof panel.term === 'function') { panel.term(u); return; } // the UI panel: lines, status numbers, advice
       if (Array.isArray(u.lines) && u.lines.length) panel.push(u.lines);
       if (typeof u.status === 'string' && u.status) panel.status(u.status);
     },
     get aspect() { return panel ? `${size.width}/${size.height}` : '16/9'; },
     caption(text) {
+      if (panel?.kind === 'ui') { panel.caption(cleanCaption(text)); return; } // said in Muse's panel, not on the game
       const tmp = `${captionFile}.tmp`;
       try { fs.writeFileSync(tmp, cleanCaption(text)); fs.renameSync(tmp, captionFile); } catch { /* the stream has ended */ }
     },
@@ -1039,7 +1071,7 @@ export function createCameraManager({ config, log, createRig, graph = null, game
       createStream: (opts) => pool.create(opts), streamOptions: managerConfig(config.stream).options, log,
       title: config.fb.title, stateFile: config.fb.stateFile, gameTtlMs, deleteAfter: config.fb.deleteAfter,
       privacy: config.fb.target === 'me' ? config.fb.privacy : null, maxPerHour: config.fb.maxPerHour, maxPerDay: config.fb.maxPerDay,
-      aspect: config.stream.layout === 'terminal' ? config.stream.terminalSize.replace('x', '/') : '16/9',
+      aspect: streamAspect(config.stream),
       deleteDelayMs: config.fb.deleteDelayS * 1000,
     });
     pool.start();

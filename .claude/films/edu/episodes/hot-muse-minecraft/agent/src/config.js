@@ -325,7 +325,7 @@ export function loadConfig(env = process.env) {
     gameAudio: r.bool('STREAM_GAME_AUDIO', true),
     music: r.bool('STREAM_MUSIC', true),
     musicFile: r.str('STREAM_MUSIC_FILE', ''),
-    musicDb: r.num('STREAM_MUSIC_DB', -4, -40, 6),
+    musicDb: r.num('STREAM_MUSIC_DB', 0, -40, 6),
     gameDb: r.num('STREAM_GAME_DB', 0, -30, 12),
     camera: {
       mcDir: r.str('CAMERA_MC_DIR', '/opt/mc'),

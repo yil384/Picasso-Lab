@@ -115,7 +115,7 @@ export function audioArgs(a = {}) {
   if (!a?.music) return { inputs, maps: ['-map', '1:a', '-af', `${game},${limit}`] };
   inputs.push('-re', '-stream_loop', '-1', '-i', String(a.music));
   const graph = `[1:a]${game},asplit=2[g][key];`
-    + `[2:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${db(a.musicDb, -4)}dB[bed];`
+    + `[2:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${db(a.musicDb, 0)}dB[bed];`
     + '[bed][key]sidechaincompress=threshold=0.02:ratio=6:attack=20:release=700:knee=4[ducked];'
     + `[g][ducked]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,${limit}[aout]`;
   return { inputs, maps: ['-filter_complex', graph, '-map', '[aout]'] };

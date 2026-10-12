@@ -24,7 +24,7 @@ ARG VGL_VERSION=3.1.5
 # Xvfb + xdotool (the F1 key), ffmpeg (x11grab, libx264, aac, rtmps), glvnd + Mesa (llvmpipe), the X libraries GLFW
 # loads, VirtualGL (GLX on the GPU through EGL, frames drawn into Xvfb)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      xvfb xdotool x11-utils ffmpeg fonts-dejavu-core ca-certificates procps curl \
+      xvfb xdotool x11-utils ffmpeg fonts-dejavu-core ca-certificates procps curl pulseaudio pulseaudio-utils \
       libgl1 libegl1 libgles2 libopengl0 libglx-mesa0 libegl-mesa0 libgl1-mesa-dri libglu1-mesa \
       libxtst6 libxv1 libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 libxext6 libxrender1 \
  && curl -fsSL -o /tmp/vgl.deb "https://github.com/VirtualGL/virtualgl/releases/download/${VGL_VERSION}/virtualgl_${VGL_VERSION}_amd64.deb" \
@@ -41,6 +41,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
 COPY scripts ./scripts
+# the stream UI's sprites, icons, fonts and the CC0 music bed (assets/muse-ui/CREDITS.txt)
+COPY assets ./assets
 # runs as the operator's own uid (compose `user:`), so the token files in the auth folder stay theirs; HOME is a tmpfs
 ENV LOG_DIR=/logs NODE_ENV=production STREAM_SOURCE=client STREAM_SERVICE_PORT=7862 \
     CAMERA_MC_DIR=/opt/mc CAMERA_HOME=/camera CAMERA_AUTH_DIR=/auth HOME=/camera \

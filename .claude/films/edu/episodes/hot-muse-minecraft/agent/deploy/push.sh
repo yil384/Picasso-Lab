@@ -37,7 +37,7 @@ x() { if (( DRY )); then print -r -- "${(j: :)${(q-)@}}"; else "$@"; fi }
 
 # what goes out: a hash of every file the deploy copies, so production gets exactly the code staging was checked with
 fingerprint() {
-  (cd "$A" && { find -L src scripts deploy -type f ! -name .env ! -name stream.env ! -name camera.env ! -path '*/__pycache__/*'
+  (cd "$A" && { find -L src scripts deploy assets -type f ! -name .env ! -name stream.env ! -name camera.env ! -path '*/__pycache__/*'
     find -L mineai -type f
     print -l package.json package-lock.json README.md .dockerignore server/paper.jar server/plugins/*.jar(N); } \
     | LC_ALL=C sort | tr '\n' '\0' | xargs -0 shasum 2>/dev/null | shasum | cut -c1-16)
@@ -48,7 +48,7 @@ staging() {
   # mineai-data holds the Mine AI runtime's per-bot SQLite (the bots' private names): this user only
   x ssh picasso 'mkdir -p ~/workspace/muse-staging/{app,data,logs,mineai-data} && chmod 700 ~/workspace/muse-staging/mineai-data'
   # production's compose files stay out of the staging copy: a bare `docker compose` there must never reach production
-  (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --exclude deploy/compose.yaml --exclude deploy/camera-test.compose.yaml --relative src scripts deploy mineai package.json package-lock.json README.md .dockerignore $S/app/)
+  (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --exclude deploy/compose.yaml --exclude deploy/camera-test.compose.yaml --relative src scripts deploy assets mineai package.json package-lock.json README.md .dockerignore $S/app/)
   (cd "$A/server" && x rsync -azL paper.jar $S/app/paper.jar && x rsync -azL --delete --include '*.jar' --exclude '*' plugins/ $S/app/plugins/)
   x ssh picasso 'set -eo pipefail; cd ~/workspace/muse-staging/app
   [ -f deploy/.env ] || printf "WEB_ADMIN_TOKEN=%s\n" "$(openssl rand -base64 24 | tr -d "/+=" | head -c 32)" > deploy/.env
@@ -75,7 +75,7 @@ check() {
 prod() {
   local R=picasso:workspace/muse-minecraft
   x ssh picasso 'mkdir -p ~/workspace/muse-minecraft/{app,data,logs} ~/workspace/muse-minecraft/app/mineai-data && chmod 700 ~/workspace/muse-minecraft/app/mineai-data'
-  (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy mineai package.json package-lock.json README.md .dockerignore $R/app/)
+  (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy assets mineai package.json package-lock.json README.md .dockerignore $R/app/)
   (cd "$A/server" && x rsync -azL paper.jar $R/app/paper.jar && x rsync -azL --delete --include '*.jar' --exclude '*' plugins/ $R/app/plugins/)
   x ssh picasso 'set -eo pipefail; cd ~/workspace/muse-minecraft/app
   [ -f deploy/.env ] || printf "WEB_ADMIN_TOKEN=%s\n" "$(openssl rand -base64 24 | tr -d "/+=" | head -c 32)" > deploy/.env
