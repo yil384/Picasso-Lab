@@ -21,7 +21,7 @@
 import { createPlanner } from '../plan.js';
 import { registryFor } from '../mc.js';
 import { fuelPlan } from '../game.js';
-import { bestFood, CARE_DEFAULTS, CARE_KNOBS, junkOf, reflexWords } from './skills.js';
+import { bestFood, CARE_DEFAULTS, CARE_KNOBS, junkOf, reflexWords, EMERGENCY_FOOD } from './skills.js';
 import { facingOf } from '../state.js';
 
 const reg = registryFor('1.21.4');
@@ -432,6 +432,8 @@ export function shieldPath(inventory = {}, stacks = [], furnace = false) {
 export const WARN_BEFORE_NIGHT = 2_700;
 /** Inventory slots (main and hotbar) and what to drop first when they are full, keeping some of each. */
 export const INVENTORY_SLOTS = 36;
+/** At this health or lower the advice says to stay enclosed until healed. */
+export const LOW_HEALTH = 8;
 /** Obsidian for a nether_portal build: its 12, and 2 more for the blocks it puts under a frame on uneven ground. */
 export const PORTAL_OBSIDIAN = 14;
 /** At most this many advice items a reply. */
@@ -492,6 +494,18 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
       if (prey) say('hunt', `${why}; no food carried; a ${prey.name} ${Math.round(prey.nearest.distance)} blocks away`, { skill: 'hunt', args: { mob: prey.name, drop: PREY[prey.name], n: 3 } });
       else say('food', `${why}; no food carried and no animal in sight`);
     }
+  }
+  // very low health: stay enclosed until healed (a production game, 2026-10-12, g0793f1: at 3.4 health and dawn the
+  // plan went out to hunt, and a skeleton killed the bot)
+  const shelterHere = memory.shelter && s.position && memory.shelter.feet.x === Math.floor(s.position.x) && memory.shelter.feet.z === Math.floor(s.position.z) && Math.floor(s.position.y) <= memory.shelter.feet.y + 1;
+  if (health <= LOW_HEALTH) {
+    const meal = bestFood(inventory) ?? EMERGENCY_FOOD.find((f) => (inventory[f] ?? 0) > 0) ?? null;
+    const words = [
+      `health ${round(health)}/20: stay ${shelterHere ? 'in your shelter' : 'enclosed'} until it heals, as one more hit or arrow can kill you`,
+      food < 18 ? `healing needs food 18 or more (now ${food})` : 'at food 18 or more it heals by itself',
+      meal ? `the best food you carry: ${meal}` : 'you carry no food: hunt only once it has healed some, in daylight, near cover',
+    ];
+    say('heal', words.join('; '), food < 18 && meal ? { skill: 'eat', args: {} } : !shelterHere ? { skill: 'shelter', args: {} } : null);
   } else if (health <= CRITICAL_HEALTH && near.length) say('danger', `health ${round(health)}/20 with ${near.length} hostile mob${near.length > 1 ? 's' : ''} within 16 blocks`, bed || blocks >= SHELTER_SIZE || pickaxe ? { skill: 'shelter', args: {} } : null);
   // the night
   const sh = memory.shelter;
@@ -948,6 +962,15 @@ export function createCare(deps) {
         const here = () => { const q = deps.situation()?.position; return q ? { x: Math.floor(q.x), y: Math.floor(q.y), z: Math.floor(q.z) } : null; };
         let feet = here();
         if (!feet) return null;
+        // before the first call with too few blocks to close a shelter: only dug in, said as what it is (a production
+        // game, 2026-10-12, g0793f1: "could not close a shelter ... nothing to place against" with no blocks carried)
+        if (d.prePlay && shelterBlocks(inv()).total < SHELTER_SIZE) {
+          const g = await run([{ tool: 'navigate', args: { x: feet.x, y: feet.y - 2, z: feet.z } }], LIMITS.dig, ctl);
+          if (ctl.stopped) return stopped();
+          if (okOf(g)) await run([{ tool: 'pick_up_items', args: {} }], LIMITS.pickbed, ctl);
+          await deps.refresh();
+          return add({ kind: 'shelter', ok: okOf(g), ms: ms(), text: okOf(g) ? `${d.why}: dug two blocks down to wait there (no blocks carried to close it over)` : `${d.why}: could not dig in where it stands (${errOf(g) ?? 'stopped'})` });
+        }
         // in water no wall holds and nothing can be dug: to the shore first (their navigate takes a column on water to
         // the nearest dry ground; staging lab spot 0 15000)
         if (deps.situation()?.position?.inWater && !d.check) {
@@ -1182,8 +1205,11 @@ export function createCare(deps) {
     /** Their reflexes that acted during a step of the player's: counted, and logged as reflex rows (not in the journal:
      * the step's own reply says what they did). */
     reflexesInStep(list, tool) {
-      counts.reflex += list.length;
-      for (const x of list) deps.event('care', { kind: 'in_step', source: 'reflex', step: tool, text: reflexWords([x]) });
+      // once per kind of response and kind of mob in a step (g0793f1: one fight with four zombies, three spiders and a
+      // skeleton made 13 rows); a phrase that says nothing (an unknown reflex) is not an action
+      const phrases = [...new Set(list.map((x) => reflexWords([x])))].filter((w) => w && w !== 'one of its reflexes acted');
+      counts.reflex += phrases.length;
+      for (const text of phrases) deps.event('care', { kind: 'in_step', source: 'reflex', step: tool, text });
     },
     /** The player went back for a death's items (pick_up death_items): no more advice about that death. */
     recovered(key) { if (key) memory.recovered = key; },

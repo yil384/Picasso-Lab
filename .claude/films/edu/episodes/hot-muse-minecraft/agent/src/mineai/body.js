@@ -486,6 +486,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     gameId,
     containerOwner: (pos) => containers.get(keyOf(pos)) ?? null,
     lastBuild,
+    lastDeath: status?.lastDeath ?? null,
     portal: lastPortal,
     dimension: dimension ?? 'overworld',
     arrival: arrivals[dimension ?? 'overworld'] ? { dimension: dimension ?? 'overworld', ...arrivals[dimension ?? 'overworld'] } : null,
@@ -825,7 +826,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       else if (plan.refused) { r = plan.refused; refusedFirst = true; }
       else if (!plan.calls?.length && plan.care) r = { ok: true, result: careText.replace(/^; /, ''), code: null };
       else {
-        const deadline = t0 + (plan.timeoutMs ?? timeouts[tool] ?? 60_000);
+        let deadline = t0 + (plan.timeoutMs ?? timeouts[tool] ?? 60_000);
         ctl.attack = plan.attack ?? null;
         if (plan.timeoutMs) ctl.limitMs = plan.timeoutMs; // what a time-out says
         const parts = [];
@@ -901,6 +902,20 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             parts.push({ ok: true, result: `the ${/furnace/.test(String(out.output?.result?.error)) ? 'furnace' : 'crafting table'} put down for it was not seen in place (a timing hitch); tried again`, code: null });
             i -= 1;
             continue;
+          }
+          // the step's time ran out while one of their reflexes had the body (a production game, 2026-10-12, g0793f1:
+          // a bucket fill "timed out after 120 s" with a creeper fight in it): not a slow step but a cut-short one
+          if (!res.ok && res.code === 'TIMED_OUT' && inStep.length && !ctl.stopped?.startsWith?.('stopped')) {
+            if (RETRY_AFTER_REFLEX.has(call.tool) && !retried.has(i)) {
+              retried.add(i);
+              ctl.stopped = null;
+              deadline = Date.now() + (plan.timeoutMs ?? timeouts[tool] ?? 60_000);
+              parts.push({ ok: true, result: `time ran out while a reflex had the body (${reflexWords(inStep)}); tried again`, code: null });
+              i -= 1;
+              continue;
+            }
+            own = null;
+            res = { ok: false, code: 'INTERRUPTED', result: `${doneSoFar(call.tool, out.output, call) ? `${doneSoFar(call.tool, out.output, call)}; ` : ''}the step's time ran out while a reflex had the body (${reflexWords(inStep)}); nothing is wrong with the step: send it again once the mobs are dealt with` };
           }
           // truly cut short: tried once more after the reflex let go (calls that can simply be sent again), else a
           // plain INTERRUPTED, leading with what was done, instead of a failure
@@ -999,6 +1014,11 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (['go_to', 'explore'].includes(tool) && !r.ok && latest.position) r = { ...r, result: `${r.result}; you are now at ${floorPos(latest.position).x} ${floorPos(latest.position).y} ${floorPos(latest.position).z}` };
     if (tool === 'explore' && r.ok && latest.position) r = { ...r, result: `${r.result === 'done' ? 'explored' : r.result}; you are now at ${floorPos(latest.position).x} ${floorPos(latest.position).y} ${floorPos(latest.position).z}` };
     if (tool === 'portal' && r.ok && v.args.action === 'enter') r = { ...r, result: r.result.replace(/went through the portal( into the \S+)? at/, `went through the portal; you came out in the ${{ the_nether: 'Nether', the_end: 'End' }[dimension] ?? dimension} at`) };
+    // a pickup said only "done" (g0793f1): what came back
+    if (tool === 'pick_up' && r.ok && /^done\b/.test(r.result)) {
+      const got = Object.fromEntries(Object.entries(delta).filter(([, n]) => n > 0));
+      r = { ...r, result: Object.keys(got).length ? `picked up ${describeDelta(got)}` : 'nothing to pick up there' };
+    }
     if (yielded === 'recover') r = { ...r, result: `${r.result} (before it the body finished going back for the items it dropped when it died)` };
     const ms = Date.now() - t0;
     if (!['get_state', 'policy'].includes(tool) && !refusedFirst) museActions += 1;
