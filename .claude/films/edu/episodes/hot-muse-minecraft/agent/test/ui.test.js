@@ -49,7 +49,7 @@ test('plain words: a call as Muse would say it, counts and plurals, a sequence, 
 
 test('why: Muse\'s own words with a call go to the stream (cleaned, cut at a whole word within 140) and the log; the body never sees them', () => {
   const why = 'Night in 2 min and no shield: digging in, then smelting the iron while I wait';
-  assert.deepEqual(callLine('play', { skill: 'shelter', args: {}, why }), { k: 'call', t: '> play: shelter', say: 'Build a shelter for the night', tool: 'play', words: why, raw: JSON.stringify({ skill: 'shelter', args: {}, why }), of: 1, steps: [{ say: 'Build a shelter for the night', raw: 'shelter' }] });
+  assert.deepEqual(callLine('play', { skill: 'shelter', args: {}, why }), { k: 'call', t: '> play: shelter', say: 'Build a shelter for the night', tool: 'play', words: why, raw: JSON.stringify({ skill: 'shelter', args: {}, why }), of: 1, steps: [{ say: 'Build a shelter for the night', raw: 'shelter', skill: 'shelter', args: '{}' }] });
   const long = callLine('play_sequence', { steps: [{ skill: 'eat', args: {} }], why: `${'x '.repeat(100)}token EAAPageTok3n0123456789abcdef` }).words;
   assert.ok(long.length <= 140 && long.endsWith('x...'), long);
   // production game ga13a88's first why was cut at 140 characters mid-word ("for the nig"): now at the word
@@ -76,14 +76,14 @@ test('sub-steps: the body carrying out a command, from the runtime\'s checkpoint
   const sent = [];
   let clock = 1_000_000;
   const handlers = [];
-  const body = { on: (name, fn) => { handlers.push(fn); return () => handlers.splice(handlers.indexOf(fn), 1); }, attribution: () => null };
+  const body = { on: (name, fn) => { if (name !== 'progress') return () => {}; handlers.push(fn); return () => handlers.splice(handlers.indexOf(fn), 1); }, attribution: () => null };
   const feed = createTermFeed({ send: (id, u) => sent.push(u), now: () => clock });
   const game = { id: 'g1', body };
   feed.call(game, 'play', { skill: 'collect', args: { block: 'obsidian', n: 14 } });
   assert.equal(handlers.length, 1, 'subscribed once');
   handlers[0]({ sub: { kind: 'mine', text: 'obsidian 1 of 14', done: 1, of: 14 } });
   assert.deepEqual([sent.at(-1).lines.filter((l) => l.k !== 'world'), sent.at(-1).sub, sent.at(-1).live.mode], [[], { kind: 'mine', text: 'obsidian 1 of 14', done: 1, of: 14 }, 'idle'], 'with what is happening (the step running, when the queue says)');
-  assert.deepEqual(sent.at(-1).lines, [{ k: 'world', t: 'obsidian 1 of 14' }], 'and the mining progress for BODY · WORLD');
+  assert.deepEqual(sent.at(-1).lines, [{ k: 'world', who: 'body', t: 'obsidian 1 of 14' }], 'and the mining progress for BODY · WORLD');
   clock += 200;
   handlers[0]({ sub: { kind: 'mine', text: 'obsidian 2 of 14', done: 2, of: 14 } });
   assert.equal(sent.at(-1).sub.text, 'obsidian 1 of 14', 'within 500 ms: not sent');
@@ -151,7 +151,7 @@ test('HUD data: the call\'s steps and its number, a step\'s place in its call, t
   running = { call: { no: 3 }, step: 2, skill: 'collect', args: steps[1].args };
   feed.call(game, 'play_sequence', { why: 'Stone pickaxe crafted: iron next', steps });
   const u = sent.at(-1);
-  assert.deepEqual(u.lines[0].steps, [{ say: 'Craft a stone pickaxe', raw: 'craft stone_pickaxe 1' }, { say: 'Mine 5 iron ore', raw: 'collect iron_ore 5' }]);
+  assert.deepEqual(u.lines[0].steps, [{ say: 'Craft a stone pickaxe', raw: 'craft stone_pickaxe 1', skill: 'craft', args: '{"item":"stone_pickaxe","n":1}' }, { say: 'Mine 5 iron ore', raw: 'collect iron_ore 5', skill: 'collect', args: '{"block":"iron_ore","n":5}' }]);
   assert.equal(u.lines[0].tool, 'play_sequence');
   assert.deepEqual([u.live.mode, u.live.c, u.live.s, u.live.step], ['run', 3, 2, 'Mine 5 iron ore'], 'the step running: its call\'s number and Muse\'s step');
   assert.deepEqual(u.inv, { diamond: 0, iron: 0, raw_iron: 3, obsidian: 0, flint_and_steel: 0, water_bucket: 0, lava_bucket: 0, bucket: 0, food: 3, shield: 1, pick: 'stone' });
@@ -217,7 +217,7 @@ test('HUD: the trace (every step in plain words and raw: done with its time, run
   // the body's own actions, deaths; a milestone: a toast for 6 s, and the checklist ticks it
   p.term({ lines: [{ k: 'reflex', t: 'reflex: defending itself (zombie), then back to mining' }, { k: 'milestone', t: 'milestone: a wooden pickaxe at 4:32' }] });
   st = at(100);
-  assert.deepEqual([st.events[0], st.toast, st.goal.list[0].atS], [{ kind: 'reflex', text: 'defending itself (zombie)' }, 'Got a wooden pickaxe', 272]);
+  assert.deepEqual([st.events[0], st.toast, st.goal.list[0].atS], [{ kind: 'reflex', text: 'defending itself (zombie)' }, 'a wooden pickaxe', 272]);
   assert.equal(at(6_500).toast, null);
   // the body's own actions lead with the action, not the reason they share (g40e978: two rows read the same)
   p.term({ lines: [{ k: 'body', t: 'body: waiting for your first call with hostile mobs near or at night: dug two blocks down to wait there (no blocks carried to close it over)' },
@@ -249,7 +249,7 @@ test('HUD: the state (the server\'s goal with its times and the next one, the it
   let st = at(4_000);
   assert.deepEqual([st.goal.title, st.goal.list.map((m) => m.atS)], ['The Nether', [272, null, null]], 'the server\'s goal');
   assert.deepEqual([st.inv.obsidian, st.pos.place, st.game], [3, 'deep caves', { id: 'g1', s: 304 }], 'the game\'s age counts on');
-  assert.deepEqual(st.advice, [{ k: 'night', text: 'night: no closed shelter around you', sev: 2 }]);
+  assert.deepEqual(st.advice, [{ k: 'night', text: 'night: no closed shelter around you', full: 'night (time 12000): no closed shelter around you; 7 blocks', sev: 2 }]);
   p.term({ lines: [{ k: 'follow', t: 'Went on without the body\'s advice: night' }] });
   assert.equal(at(10).follow, 'Went on without the body\'s advice: night');
   assert.equal(st.status, 'Waiting for Muse’s first move · 0:04');
@@ -271,7 +271,10 @@ test('HUD: the state (the server\'s goal with its times and the next one, the it
   p.term({ lines: [{ k: 'call', t: '> set_goal: kill 100 pigs', say: 'A new goal: kill 100 pigs', tool: 'set_goal' }],
     goal: { key: 'custom', title: 'kill 100 pigs', text: 'kill 100 pigs', reached: false, list: [{ k: 'kill_pig', t: 'pigs killed', done: 37, of: 100, atS: null }] } });
   st = at(100);
-  assert.deepEqual([st.goal.title, st.goal.list[0].done, st.goal.list[0].of, st.newGoal, st.toast, st.calls[0].say], ['kill 100 pigs', 37, 100, true, 'New goal: Kill 100 pigs', 'A new goal: kill 100 pigs']);
+  assert.deepEqual([st.goal.title, st.goal.list[0].done, st.goal.list[0].of, st.newGoal, st.calls[0].say], ['kill 100 pigs', 37, 100, true, 'A new goal: kill 100 pigs']);
+  // the HUD: the counted goal with its NEW chip and toast, and the goal before it in words
+  const hg = p.hud().state.goal;
+  assert.deepEqual([hg.kind, hg.new, hg.toast, hg.parts[0].done, hg.parts[0].of, hg.previous?.title], ['counted', true, 'New goal: Kill 100 pigs', 37, 100, 'The Nether']);
   p.term({ goal: { key: 'custom', title: 'kill 100 pigs', text: 'kill 100 pigs', reached: false, list: [{ k: 'kill_pig', t: 'pigs killed', done: 38, of: 100, atS: null }] } });
   assert.equal(at(100).goal.list[0].done, 38, 'a count moving on is not a new goal');
   assert.equal(at(10_000).newGoal, false, 'lit for 10 s');

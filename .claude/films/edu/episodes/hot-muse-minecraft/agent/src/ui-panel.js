@@ -1,42 +1,30 @@
-// src/ui-panel.js - the HUD under the game in the live video (STREAM_LAYOUT=ui, the camera's side): an agent trace, the
-// owner's pick of two dense layouts (layout 2, 2026-10-12; ui-art/hud-mockups.mjs).
+// src/ui-panel.js - the HUD in the live video (STREAM_LAYOUT=ui, the camera's side), the final design
+// (ui-art/hud-final/FINAL-SPEC.md, its mock-up ui-art/hud-final/index.html): the stats strip, the goal band, Muse's why
+// and plan (or one honest line when it sent none), NOW (the call running, its steps as Muse sent them, the body carrying
+// them out) beside the body's advice and the BODY · WORLD events, and RAW across the bottom (every call as sent, newest
+// first, with the server's answer); the inventory hotbar and the toasts over the video's bottom corners.
 //
-// A header strip: health, food and the time of day on the left; Muse's share, the game's id and its age on the right.
-// Under it a band, THINKING: Muse's own words with its latest call (its why), big, and the two before them fading;
-// before Muse's first move, what is happening and the goal. Then two columns. MUSE · TRACE: the current call (its tool,
-// each step in plain words beside the step as Muse wrote it, done with its time, running with the body's sub-step, its
-// count and a bar, queued, failed with the reason, skipped), and every earlier call one line each (get_state with what
-// Muse saw, failures with their reason on a line of their own) with the body's reflexes among them. STATE: the goal's
-// checklist with the time of each milestone and the next one marked, the items that matter (icons and counts), y and
-// the place, the Body advice and whether Muse took it. A milestone is a toast over the game. Body text 16-20 px, labels
-// 13 px in spaced capitals, JetBrains Mono for raw calls only; nothing cut mid-word.
-//
-// Drawn with node-canvas at the stream's frame rate (30 a second): the header, the band and the two columns are drawn
-// into their own canvases only when what they show changes (the ticking times once a second); a frame copies them and
-// draws the moving parts (the running step's bar, a breathing dot, the toast). Each frame is an uncompressed 32-bit BMP
-// with alpha (the toast's band over the game is see-through), renamed over the panel file, which ffmpeg reads again for
-// every frame (src/stream.js). Every text was cleaned by the agent and again by the service (src/terminal.js).
+// This module keeps what the agent sends (src/terminal.js, cleaned again by the service) and turns it into the HUD
+// state, the shape of the design's data (hudState()); src/hud.js draws that state with the mock-up's own drawing code.
+// The layout and every wrap run once per change of what is shown (the clocks: once a second), into a canvas of their
+// own; each frame (30 a second) copies it. Each frame is an uncompressed 32-bit BMP with alpha (the band over the
+// video is see-through but for the overlays), renamed over the panel file, which ffmpeg reads again for every frame
+// (src/stream.js).
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { drawHud, ICON_SIZES } from './hud.js';
 
 const require = createRequire(import.meta.url);
 
 export const UI_ASSETS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'muse-ui');
-const ICONS = ['heart', 'food', 'sun', 'moon', 'flame', 'star', 'pickaxe', 'boot', 'hammer', 'sword', 'house', 'portal', 'bucket', 'compass', 'bed', 'shield',
-  'wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'diamond_pickaxe', 'diamond', 'iron_ingot', 'raw_iron', 'coal', 'obsidian',
-  'flint_and_steel', 'water_bucket', 'lava_bucket', 'steak', 'bread', 'cobblestone', 'log', 'depth', 'ender_pearl'];
-export const UI_COLORS = Object.freeze({
-  bg: '#0a0d12', rule: 'rgba(255,255,255,0.075)', text: '#eef0f4', soft: '#aeb6c6', muted: '#6b7488', raw: '#8d97ab', rawRun: '#b9c6dc',
-  muse: '#a99bff', quote: '#ebe7ff', body: '#7cc4ff', ok: '#5fd09c', fail: '#ff8a7a', gold: '#ffd164', look: '#6fd3c8',
-});
-const FAMILY = 'MuseUI';
-const MONO = 'MuseMono';
+/** The design's colour tokens (src/hud.js has them all). */
+export const UI_COLORS = Object.freeze({ base: '#07090d', band: '#0b0e14', muse: '#9d8cff', body: '#efa443', ok: '#5fd39b', fail: '#ff6f61', t1: '#f3f5f9', t3: '#7f889b' });
 const PLAY = /^(?:play|play_sequence)$/;
-const ease = (t) => 1 - (1 - Math.min(1, Math.max(0, t))) ** 3;
-const clamp01 = (t) => Math.min(1, Math.max(0, t));
+/** The video's height in the 1080x1080 frame: the HUD's coordinates are the frame's. */
+const VIDEO_H = 608;
 
 /** The icon for a command or a sub-step, from its words or its kind. */
 export function iconFor(words, kind = '') {
@@ -65,106 +53,6 @@ export function iconFor(words, kind = '') {
   return 'compass';
 }
 
-/** Words wrapped to maxW in at most `lines` lines; null when they do not fit (never cut mid-word). */
-function wrapFit(g, text, maxW, lines) {
-  const out = [];
-  let cur = '';
-  for (const w of String(text ?? '').split(/\s+/).filter(Boolean)) {
-    const next = cur ? `${cur} ${w}` : w;
-    if (g.measureText(next).width <= maxW) cur = next;
-    else if (!cur) return null; // one word wider than the line
-    else { out.push(cur); cur = w; }
-  }
-  if (cur) out.push(cur);
-  return out.length <= lines ? out : null;
-}
-/** Wrapped to fit: the text, else whole words up to the room with "..." (never cut mid-word). */
-function fitText(g, text, maxW, lines) {
-  const t = String(text ?? '');
-  const w0 = wrapFit(g, t, maxW, lines);
-  if (w0) return w0;
-  const words = t.split(/\s+/);
-  while (words.length > 1) { words.pop(); const w = wrapFit(g, `${words.join(' ').replace(/[,;:.-]+$/, '')}...`, maxW, lines); if (w) return w; }
-  return [t];
-}
-/** A comma list on one line, dropping whole items from its end and saying how many ("+2 more"). */
-function fitItems(g, items, maxW) {
-  const list = items.filter(Boolean);
-  for (let k = list.length; k >= 1; k--) {
-    const t = list.slice(0, k).join(', ') + (k < list.length ? `, +${list.length - k} more` : '');
-    if (g.measureText(t).width <= maxW) return t;
-  }
-  return fitText(g, list[0] ?? '', maxW, 1)[0];
-}
-/** A call's arguments (JSON) as coloured runs: keys, strings (Muse's words), numbers, true/false/null, punctuation. */
-function jsonRuns(str) {
-  const C = UI_COLORS;
-  const out = [];
-  const t = String(str ?? '');
-  let i = 0;
-  while (i < t.length) {
-    const ch = t[i];
-    if (ch === '"') {
-      let j = i + 1;
-      while (j < t.length && t[j] !== '"') j += t[j] === '\\' ? 2 : 1;
-      const tok = t.slice(i, j + 1);
-      let k = j + 1;
-      while (t[k] === ' ') k += 1;
-      out.push({ t: tok, c: t[k] === ':' ? C.body : C.quote });
-      i = j + 1;
-    } else if (/[-0-9]/.test(ch)) {
-      const m = /^-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/.exec(t.slice(i));
-      const tok = m?.[0] || ch;
-      out.push({ t: tok, c: C.gold });
-      i += tok.length;
-    } else if (/^(?:true|false|null)/.test(t.slice(i))) {
-      const tok = /^(?:true|false|null)/.exec(t.slice(i))[0];
-      out.push({ t: tok, c: C.look });
-      i += tok.length;
-    } else {
-      // a space after ":" and "," so the line reads and wraps
-      out.push({ t: ch === ':' || ch === ',' ? `${ch} ` : ch, c: C.muted });
-      i += 1;
-    }
-  }
-  return out;
-}
-/** Coloured runs wrapped to lines of max characters (monospace): at spaces where it can, else in the middle. */
-function wrapRuns(runs, max) {
-  const pieces = [];
-  for (const r of runs) for (const p of r.t.split(/(?<= )/)) if (p) pieces.push({ t: p, c: r.c });
-  const lines = [[]];
-  let len = 0;
-  const push = (p) => { const line = lines[lines.length - 1]; const last = line[line.length - 1]; if (last && last.c === p.c) last.t += p.t; else line.push({ ...p }); len += p.t.length; };
-  for (let p of pieces) {
-    while (p.t.length > max - len) {
-      if (len > 0 && p.t.length <= max) { lines.push([]); len = 0; break; }
-      const room = max - len;
-      push({ t: p.t.slice(0, room), c: p.c });
-      p = { t: p.t.slice(room), c: p.c };
-      lines.push([]);
-      len = 0;
-    }
-    if (p.t.length) push(p);
-  }
-  return lines.filter((l) => l.length);
-}
-/** The first n lines, the last of them ending in "..." when lines were left out. */
-function cut(lines, n, max) {
-  if (lines.length <= n) return lines;
-  const out = lines.slice(0, n).map((l) => l.map((r) => ({ ...r })));
-  const last = out[n - 1];
-  let len = last.reduce((a, r) => a + r.t.length, 0);
-  while (len > max - 3 && last.length) {
-    const r = last[last.length - 1];
-    const drop = Math.min(r.t.length, len - (max - 3));
-    r.t = r.t.slice(0, r.t.length - drop);
-    len -= drop;
-    if (!r.t) last.pop();
-  }
-  last.push({ t: '...', c: UI_COLORS.muted });
-  return out;
-}
 /** A failure's reason, its first clause when that still says something: "no lava pool within 16 blocks". */
 export function shortReason(t) {
   const x = String(t ?? '').trim();
@@ -246,15 +134,26 @@ const LINE_GOALS = [
   [/back in the Overworld/, 'back'],
 ];
 
+
+/** A JSON string of a step's arguments as sent, read back (null when it is not JSON). */
+function parseArgs(s) {
+  if (typeof s !== 'string' || !s) return null;
+  try { const v = JSON.parse(s); return v && typeof v === 'object' ? v : null; } catch { return null; }
+}
+/** A result line in words: "ok  mined 4 oak log (18 s)" -> "mined 4 oak log". */
+const resultWords = (t) => String(t ?? '').replace(/^ok\s+/, '').replace(/\s*\(\d+(?:\.\d+)? s\)$/, '').trim();
+/** "40s ago", "16 min ago", "1 h 5 min ago". */
+
 /**
  * @param {object} o
  * @param {number} o.width            the panel's size under the game (the frame's width, the rest of its height)
  * @param {number} o.height
- * @param {number} [o.over]           a see-through band this tall over the bottom of the game, for the milestone toast
+ * @param {number} [o.over]           a see-through band this tall over the bottom of the video, for the overlays
  * @param {string} [o.file]           where each frame goes (an uncompressed BMP with alpha, replaced by renaming)
  * @param {number} [o.fps]            frames a second written by start() (30)
  * @param {string} [o.assets]         icons and fonts (assets/muse-ui)
  * @param {() => number} [o.now]
+ * @param {boolean} [o.qa]            outline every text problem in red (the mock-up's ?qa=1)
  */
 export function createUiPanel(o) {
   const { createCanvas, Image, registerFont } = require('canvas');
@@ -262,201 +161,82 @@ export function createUiPanel(o) {
   const now = o.now ?? Date.now;
   const W = o.width;
   const H = o.height;
-  const T = o.over ?? 0; // the toast's band over the game
-  const s = W / 1080; // drawn for 1080 wide
+  const T = o.over ?? 0; // the band over the video, for the overlays
+  const s = W / 1080; // the design is drawn for 1080 wide
   const fps = o.fps ?? 30;
   if (!createUiPanel.fonts) {
     createUiPanel.fonts = true;
-    for (const [file, family, weight] of [['Inter-Medium.ttf', FAMILY, '500'], ['Inter-SemiBold.ttf', FAMILY, '600'], ['Inter-Bold.ttf', FAMILY, '700'],
-      ['JetBrainsMono-Regular.ttf', MONO, '400'], ['JetBrainsMono-Medium.ttf', MONO, '500']]) {
+    for (const [file, family, weight] of [['Inter-Medium.ttf', 'MuseUI', '500'], ['Inter-SemiBold.ttf', 'MuseUI', '600'], ['Inter-Bold.ttf', 'MuseUI', '700'],
+      ['JetBrainsMono-Regular.ttf', 'MuseMono', '400'], ['JetBrainsMono-Medium.ttf', 'MuseMono', '500']]) {
       try { registerFont(path.join(assets, 'fonts', file), { family, weight }); } catch { /* the default face then */ }
     }
   }
-  const font = (weight, px) => `${weight} ${Math.round(px * s * 10) / 10}px ${FAMILY}`;
-  const mono = (px, weight = 400) => `${weight} ${Math.round(px * s * 10) / 10}px ${MONO}`;
-  const load = (p) => { const im = new Image(); im.src = fs.readFileSync(p); return im; };
-  const sized = (im, w) => { const c = createCanvas(Math.round(w), Math.round(w)); const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, 0, 0, c.width, c.height); return c; };
-  const icons = { 20: {}, 26: {} };
-  for (const n of ICONS) {
-    try { const im = load(path.join(assets, 'icons', `${n}.png`)); icons[20][n] = sized(im, 20 * s); icons[26][n] = sized(im, 26 * s); } catch { /* drawn without */ }
-  }
-  const icon = (g, n, x, y, size = 20, alpha = 1) => {
-    const c = icons[size][n] ?? icons[size].compass;
-    if (!c) return;
-    g.globalAlpha = alpha;
-    g.drawImage(c, x, y);
-    g.globalAlpha = 1;
+  // icons, each scaled once to every size the HUD draws it at
+  const images = {};
+  try { for (const f of fs.readdirSync(path.join(assets, 'icons'))) if (f.endsWith('.png')) { const im = new Image(); im.src = fs.readFileSync(path.join(assets, 'icons', f)); images[f.slice(0, -4)] = im; } } catch { /* drawn without */ }
+  const scaled = new Map();
+  const iconAt = (n, size) => {
+    const k = `${n}@${size}`;
+    if (!scaled.has(k)) {
+      const im = images[n];
+      if (!im) scaled.set(k, null);
+      else { const c = createCanvas(size, size); const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, size, size); scaled.set(k, c); }
+    }
+    return scaled.get(k);
   };
-
-  // ----- geometry, in the panel (the canvas has the toast's band T above it); px at 1080 wide, times s
-  const PX = 20 * s; // the side margins
-  const HDR = 38 * s; // the header strip
-  // the thinking band under the header is as tall as what it shows (Muse's latest words and its plan in full): the two
-  // columns start under it, at LOW
-  let LOW = HDR + 102 * s;
-  const TX = PX; // the trace column
-  const TW = 560 * s;
-  const VR = TX + TW + 16 * s; // the rule between the columns
-  const SX = VR + 17 * s; // the state column
-  const SW = W - PX - SX;
+  for (const n of Object.keys(images)) for (const z of ICON_SIZES) iconAt(n, z);
 
   const canvas = createCanvas(W, H + T);
   const g = canvas.getContext('2d');
-  const bg = createCanvas(W, H);
-  {
-    const b = bg.getContext('2d');
-    b.fillStyle = UI_COLORS.bg;
-    b.fillRect(0, 0, W, H);
-    b.fillStyle = UI_COLORS.rule;
-    const px1 = Math.max(1, Math.round(s));
-    b.fillRect(PX, HDR, W - 2 * PX, px1);
-  }
-
-  // ----- drawing helpers
-  const put = (b, str, x, y, { size = 17, weight = 500, color = UI_COLORS.text, align = 'left', face = null } = {}) => {
-    b.font = face ?? font(weight, size); b.fillStyle = color; b.textAlign = align; b.fillText(str, x, y); b.textAlign = 'left';
-    return b.measureText(str).width;
-  };
-  /** A label: 13 px bold capitals spaced 0.1 em, after a small square of its colour. Returns its width. */
-  const label = (b, str, x, y, { color = UI_COLORS.muted, sq = null, align = 'left' } = {}) => {
-    const t = String(str).toUpperCase();
-    b.font = font(700, 13);
-    const ls = 1.3 * s;
-    const width = [...t].reduce((a, ch) => a + b.measureText(ch).width + ls, 0) - ls + (sq ? 16 * s : 0);
-    let cx = align === 'right' ? x - width : x;
-    if (sq) { b.fillStyle = sq; rr(b, cx, y - 9 * s, 8 * s, 8 * s, 2 * s); b.fill(); cx += 16 * s; }
-    b.fillStyle = color;
-    for (const ch of t) { b.fillText(ch, cx, y); cx += b.measureText(ch).width + ls; }
-    return width;
-  };
-  const labelWidth = (b, str) => { b.font = font(700, 13); return [...String(str).toUpperCase()].reduce((a, ch) => a + b.measureText(ch).width + 1.3 * s, 0) - 1.3 * s; };
-  /** What is happening, as short as the room needs: the same words with fewer of them (the ticking time stays). */
-  const SHORTER = [
-    [/^Sheltering until morning \((Muse\u2019s choice|the body\u2019s reflex)\), night ends in (.*)$/, (m) => `Sheltering (${m[1].startsWith('Muse') ? 'Muse' : 'reflex'}), night ends in ${m[2]}`],
-    [/^Sheltering \((?:Muse|reflex)\), night ends in (.*)$/, (m) => `Sheltering, dawn in ${m[1].replace(/^~/, '')}`],
-    [/^Sleeping until morning, night ends in (.*)$/, (m) => `Sleeping, dawn in ${m[1].replace(/^~/, '')}`],
-    [/^In the Nether, waiting for Muse\u2019s next move/, () => 'Nether, waiting for Muse'],
-    [/^Waiting for Muse\u2019s next move/, () => 'Waiting for Muse'],
-    [/^Muse is checking the situation/, () => 'Muse is checking'],
-  ];
-  const fitStatus = (b, words, room) => {
-    let w = words;
-    for (const [re, to] of SHORTER) {
-      if (labelWidth(b, w) <= room) break;
-      const m = re.exec(w);
-      if (m) w = w.replace(re, to(m));
-    }
-    return w;
-  };
-  const mark = (b, kind, x, y, color) => {
-    // a step's mark, 15 px, centred on (x, y): done, running, queued, failed, skipped
-    const r = 7.2 * s;
-    b.lineWidth = 1.4 * s;
-    b.strokeStyle = color;
-    b.fillStyle = color;
-    b.lineCap = 'round';
-    b.lineJoin = 'round';
-    if (kind === 'run') {
-      b.globalAlpha = 0.18; b.beginPath(); b.arc(x, y, r, 0, Math.PI * 2); b.fill(); b.globalAlpha = 1;
-      b.beginPath(); b.moveTo(x - 2 * s, y - 3.4 * s); b.lineTo(x + 3 * s, y); b.lineTo(x - 2 * s, y + 3.4 * s); b.closePath(); b.fill();
-      return;
-    }
-    if (kind === 'queued' || kind === 'skip') {
-      b.setLineDash([2.2 * s, 2.2 * s]); b.beginPath(); b.arc(x, y, 6.6 * s, 0, Math.PI * 2); b.stroke(); b.setLineDash([]);
-      if (kind === 'skip') { b.beginPath(); b.moveTo(x - 3.5 * s, y); b.lineTo(x + 3.5 * s, y); b.stroke(); }
-      return;
-    }
-    b.beginPath(); b.arc(x, y, r, 0, Math.PI * 2); b.stroke();
-    b.lineWidth = 1.8 * s;
-    b.beginPath();
-    if (kind === 'ok') { b.moveTo(x - 3.4 * s, y + 0.3 * s); b.lineTo(x - 1.2 * s, y + 2.5 * s); b.lineTo(x + 3.4 * s, y - 2.3 * s); }
-    else { b.moveTo(x - 2.5 * s, y - 2.5 * s); b.lineTo(x + 2.5 * s, y + 2.5 * s); b.moveTo(x + 2.5 * s, y - 2.5 * s); b.lineTo(x - 2.5 * s, y + 2.5 * s); }
-    b.stroke();
-  };
+  // the HUD drawn once per change of what it shows, in the 1080 frame's coordinates moved up to the panel's
+  const layer = createCanvas(W, H + T);
+  const lg = layer.getContext('2d');
+  const top = VIDEO_H - T; // the panel's first row in the frame
 
   // ----- what is shown
   const st = { hp: null, food: null, clock: '', muse: null, reflex: null, pct: null };
-  let calls = []; // newest first: {tool, say, words, raw, steps: [{say, raw, state, ms, why, sub}], at, gs, no, state: {kind, text, why}, msSum, checked, reflexes}
-  let events = []; // the body's own: {kind: reflex|body|death, text, at}
-  let world = []; // what happened in the world, from the body's state (src/terminal.js worldOf): {kind: 'world', text, at, gs}
+  let calls = []; // newest first: {tool, say, words, plan, raw, rid, reply, replyGs, replyCode, at, gs, no, steps, added, state, msSum, checked}
+  let events = []; // the body's own: {kind: reflex|body|death, text, at, gs}
+  let world = []; // from the body's state: {kind: 'world', who, text, at, gs}
   let landmarks = []; // milestones and dimension changes: {kind: 'milestone', text, at, gs}
-  let thoughts = []; // Muse's words, newest first: {text, gs, call}
-  let sub = null; // the body's live sub-step: {kind, text, done, of, left, first, at}
-  let live = null; // what the agent says is happening: {mode, reason, step, sinceS, dawnS, at}
-  let follow = null; // {text, ok, at}
-  const advice = new Map(); // kind -> {text, sev, at}
-  let toast = null; // {text, at}
+  let thoughts = []; // Muse's words, newest first: {text, gs, call, cmd}
+  let sub = null; // the body's live sub-step
+  let live = null; // what the agent says is happening
+  let follow = null; // {text, ok, at, gs}
+  const advice = new Map(); // kind -> {text, gist, sev, at, gs}
+  let toast = null; // a milestone: {text, at}
   let anchor = null; // the game clock: {ticks, at, rate}
   let game = null; // {id, s, at}
-  let goal = null; // the server's: {key, title, text, reached, list: [{k, t, atS, done?, of?}]}
-  let newGoalAt = null; // when the goal last changed to another (set_goal)
-  const reachedLocal = new Map(); // milestone key -> game seconds, from milestone lines (while no goal came)
+  let goal = null; // the server's: {key, title, text, reached, list}
+  let prevGoal = null; // the one before (set_goal)
+  let newGoalAt = null;
+  const reachedLocal = new Map();
   let inv = null;
   let pos = null;
-  let over = null; // "Game over after 42:10"
+  let over = null;
+  let caller = 'MUSE';
   let lastEventAt = now();
   let frames = 0;
   let timer = null;
-  const layers = { header: null, band: null, trace: null, state: null };
-  const keys = { header: '', band: '', trace: '', state: '' };
-  let barShown = 0;
+  let version = 0; // every input moves it: the HUD is drawn again
+  let callTotal = 0; // every call of the game (the list keeps the newest 120)
+  let drawnKey = '';
+  let lastLayout = null;
+  let lastQa = null;
 
   const gameS = (t = now()) => (game && Number.isFinite(game.s) ? game.s + (t - game.at) / 1000 : null);
+  const ticksNow = () => (anchor ? (((anchor.ticks + anchor.rate * (now() - anchor.at)) % 24_000) + 24_000) % 24_000 : null);
   const clockNow = () => {
     if (!st.clock || st.clock === 'NETHER' || st.clock === 'END' || !anchor) return st.clock;
-    const tk = (((anchor.ticks + anchor.rate * (now() - anchor.at)) % 24_000) + 24_000) % 24_000;
+    const tk = ticksNow();
     const h = Math.floor(tk / 1000 + 6) % 24;
     const m = Math.floor(((tk % 1000) * 60) / 1000);
     return `${tk >= 13_000 && tk < 23_000 ? 'NIGHT' : 'DAY'} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   };
-  const ticksNow = () => (anchor ? (((anchor.ticks + anchor.rate * (now() - anchor.at)) % 24_000) + 24_000) % 24_000 : null);
-  const current = () => calls.find((c) => PLAY.test(c.tool)) ?? null; // the call the trace shows on top
+  const current = () => calls.find((c) => PLAY.test(c.tool)) ?? null;
   const running = () => { const c = current(); return c?.state?.kind === 'run' ? c : null; };
-
-  // ----- the header: health, food, time | Muse's share, the game and its age
-  function drawHeader(t) {
-    const c = createCanvas(W, Math.round(HDR));
-    const b = c.getContext('2d');
-    b.textBaseline = 'middle';
-    const y = HDR / 2;
-    let x = PX;
-    const item = (n, v, rest, warn = false) => {
-      icon(b, n, x, y - 10 * s);
-      x += 27 * s;
-      x += put(b, v, x, y + 1 * s, { weight: 600, color: warn ? UI_COLORS.fail : UI_COLORS.text });
-      if (rest) x += 4 * s + put(b, rest, x + 4 * s, y + 1 * s, { color: UI_COLORS.muted });
-      x += 22 * s;
-    };
-    item('heart', Number.isFinite(st.hp) ? String(st.hp) : '--', '/20', Number.isFinite(st.hp) && st.hp <= 6);
-    item('food', Number.isFinite(st.food) ? String(st.food) : '--', '/20', Number.isFinite(st.food) && st.food <= 6);
-    const clock = clockNow();
-    if (st.clock === 'NETHER') item('flame', 'Nether', '');
-    else if (st.clock === 'END') item('star', 'The End', '');
-    else if (clock) {
-      const tk = ticksNow();
-      const night = clock.startsWith('NIGHT');
-      let rest = night ? 'night' : 'day';
-      if (tk !== null && night) rest = `night, dawn in ${Math.max(1, Math.round((23_000 - tk) / 1200))} min`;
-      else if (tk !== null && tk >= 11_000 && tk < 13_000) rest = `day, dusk in ${Math.max(1, Math.round((13_000 - tk) / 1200))} min`;
-      item(night ? 'moon' : 'sun', clock.replace(/^(?:DAY|NIGHT) /, ''), rest);
-    }
-    // the right: the game and its age, then Muse's share before it
-    let rx = W - PX;
-    const el = gameS(t);
-    if (el !== null) rx -= put(b, mmss(el), rx, y + 1 * s, { face: mono(14, 500), align: 'right' }) + 8 * s;
-    if (game?.id) rx -= put(b, game.id, rx, y + 1 * s, { face: mono(14), color: UI_COLORS.soft, align: 'right' }) + 8 * s;
-    if (game) rx -= label(b, 'Game', rx, y + 1 * s, { align: 'right' }) + 24 * s;
-    const pct = Number.isFinite(st.pct) ? st.pct : Number.isFinite(st.muse) && Number.isFinite(st.reflex) && st.muse + st.reflex > 0 ? Math.round((100 * st.muse) / (st.muse + st.reflex)) : null;
-    if (pct !== null) {
-      bar(b, rx - 70 * s, y - 2 * s, 70 * s, 6 * s, pct / 100, UI_COLORS.muse);
-      rx -= 70 * s + 9 * s;
-      rx -= put(b, `${pct}%`, rx, y + 1 * s, { weight: 600, align: 'right' }) + 9 * s;
-      label(b, 'Muse', rx, y + 1 * s, { color: UI_COLORS.muse, align: 'right' });
-    }
-    return c;
-  }
-
-  // what is happening while no command runs, in words ("Waiting for Muse's next move 0:45")
+  const latestPlan = () => calls.find((c) => PLAY.test(c.tool) && c.plan) ?? null;
+  // what is happening while no command runs, in words (the HUD shows facts instead; kept for the state)
   function statusWords(t) {
     if (over) return over;
     const reason = live?.mode === 'idle' ? live.reason : 'waiting';
@@ -472,409 +252,33 @@ export function createUiPanel(o) {
     if (reason === 'nether') return `In the Nether, waiting for Muse’s next move · ${mmss(since)}`;
     return `Waiting for Muse’s next move · ${mmss(since)}`;
   }
-  /** The goal in a line: "Goal: Nether and back · 0 of 12 milestones · next: wooden pickaxe", "Goal: kill 100 pigs · pigs killed 37 of 100". */
-  const goalWords = (gl) => {
-    if (!gl.list.length) return `Goal: ${gl.text || gl.title}`;
-    if (gl.list.some((m) => Number.isFinite(m.of))) return `Goal: ${gl.title} · ${gl.list.map((m) => `${m.t} ${m.done ?? 0} of ${m.of ?? 1}`).join(', ')}`;
-    const reached = gl.list.filter((m) => m.atS != null).length;
-    const next = gl.list.find((m) => m.atS == null);
-    return `Goal: ${gl.title}${gl.text ? ` (${gl.text})` : ''} · ${reached} of ${gl.list.length} milestones${next ? ` · next: ${(GOAL_WORDS[next.k] ?? capital(next.t)).toLowerCase()}` : ''}`;
-  };
   const goalNow = () => {
-    if (goal) return goal; // the server's (a goal of plain words has no list)
-    // no goal from the server (yet): the way to the Nether and back, with what the stream saw reached
+    if (goal) return goal;
     return { ...DEFAULT_GOAL, list: DEFAULT_GOAL.list.map((k) => ({ k, t: GOAL_WORDS[k], atS: reachedLocal.get(k) ?? null })) };
   };
-
-  // ----- the band: Muse's latest words (big) and its latest plan in full under them (smaller, "PLAN"); the earlier
-  // words are in the state column (EARLIER THINKING); before any, what is happening and the goal. Its height is what
-  // it shows (between 80 and 172 px).
-  const QX = PX + 132 * s;
-  const QW = W - PX - QX - 15 * s;
-  /** Muse's latest plan, with the time of its call: the newest play call that had one. */
-  const latestPlan = () => calls.find((c) => PLAY.test(c.tool) && c.plan) ?? null;
-  function drawBand(t) {
-    const top = 11 * s;
-    const dyn = {};
-    if (!thoughts.length) {
-      // no words from Muse yet: what is happening, and the goal
-      const c = createCanvas(W, Math.round(102 * s));
-      const b = c.getContext('2d');
-      label(b, 'Thinking', PX, top + 13 * s, { sq: UI_COLORS.muse });
-      b.font = font(600, 20);
-      const l = fitText(b, statusWords(t), QW - 20 * s, 1);
-      put(b, l[0], QX + 20 * s, top + 22 * s, { size: 20, weight: 600, color: UI_COLORS.soft });
-      dyn.pulse = { x: QX + 6 * s, y: top + 15 * s };
-      b.font = font(500, 17);
-      const words = goalWords(goalNow());
-      put(b, fitText(b, words, QW, 1)[0], QX, top + 56 * s, { color: UI_COLORS.muted });
-      b.font = font(500, 16);
-      put(b, fitText(b, 'Muse’s own words with each command appear here', QW, 1)[0], QX, top + 84 * s, { size: 16, color: UI_COLORS.muted });
-      return { c, dyn, h: c.height };
-    }
-    const lead = thoughts[0];
-    const plan = latestPlan();
-    // measure first: the words (two lines at most) and the plan (all of it: 400 characters fit in five lines)
-    const m = createCanvas(4, 4).getContext('2d');
-    m.font = font(600, 20);
-    const q = fitText(m, lead.text, QW - 15 * s, 2);
-    m.font = font(500, 15);
-    const pl = plan ? fitText(m, plan.plan, QW - 15 * s, 5) : [];
-    const h = Math.min(172 * s, Math.max(80 * s, top + q.length * 27 * s + (pl.length ? 14 * s + pl.length * 20 * s : 0) + 12 * s));
-    const c = createCanvas(W, Math.round(h));
-    const b = c.getContext('2d');
-    label(b, 'Thinking', PX, top + 13 * s, { sq: UI_COLORS.muse });
-    put(b, [Number.isFinite(lead.gs) ? mmss(lead.gs) : '', lead.call ? `call ${lead.call}` : ''].filter(Boolean).join(' · '), PX, top + 37 * s, { face: mono(13), color: UI_COLORS.muted });
-    b.fillStyle = UI_COLORS.muse;
-    b.fillRect(QX, top - 1 * s, 3 * s, q.length * 27 * s + 2 * s);
-    q.forEach((l, i) => put(b, l, QX + 15 * s, top + 19 * s + i * 27 * s, { size: 20, weight: 600, color: UI_COLORS.quote }));
-    if (pl.length) {
-      // the plan: Muse's next steps and fallbacks, as written (cut at a word at 400 characters by the agent)
-      let y = top + q.length * 27 * s + 14 * s + 13 * s;
-      label(b, 'Plan', PX, y, { sq: UI_COLORS.soft });
-      if (plan !== calls.find((x) => PLAY.test(x.tool))) put(b, Number.isFinite(plan.gs) ? `${mmss(plan.gs)}` : '', PX, y + 20 * s, { face: mono(12.5), color: UI_COLORS.muted });
-      b.fillStyle = 'rgba(174,182,198,0.35)';
-      b.fillRect(QX, y - 14 * s, 3 * s, pl.length * 20 * s + 2 * s);
-      b.globalAlpha = 0.92;
-      pl.forEach((l) => { put(b, l, QX + 15 * s, y, { size: 15, color: UI_COLORS.soft }); y += 20 * s; });
-      b.globalAlpha = 1;
-    }
-    return { c, dyn, h };
-  }
-
-  // ----- the trace: the current call and its steps, then every earlier call
   function stepStates(cmd) {
-    // each step's state as shown: the first not finished in a running call runs
     let runAt = -1;
     if (cmd.state?.kind === 'run') runAt = cmd.steps.findIndex((x) => x.state === 'queued' || x.state === 'run');
     return cmd.steps.map((x, i) => (i === runAt ? 'run' : x.state === 'run' ? 'queued' : x.state));
   }
-  function drawTrace(t) {
-    const c = createCanvas(Math.round(TW), Math.round(H - LOW));
-    const b = c.getContext('2d');
-    const dyn = {};
-    const bottom = H - LOW - 8 * s;
-    let y = 23 * s;
-    const cmd = current();
-    const run = cmd?.state?.kind === 'run';
-    const lw = label(b, 'Muse · Trace', 0, y, { sq: UI_COLORS.muse });
-    // the right of the label: the call, its time and how long it has run; while nothing runs, what is happening
-    if (cmd && run) label(b, [cmd.no ? `call ${cmd.no}` : '', Number.isFinite(cmd.gs) ? mmss(cmd.gs) : '', `running ${mmss((t - cmd.at) / 1000)}`].filter(Boolean).join(' · '), TW, y, { align: 'right' });
-    else {
-      // nothing runs: what is happening, after a breathing dot, as short as the room needs
-      const w = fitStatus(b, statusWords(t), TW - lw - 44 * s);
-      const ww = label(b, w, TW, y, { align: 'right', color: UI_COLORS.soft });
-      dyn.pulse = { x: TW - ww - 13 * s, y: y - 4.5 * s };
-    }
-    y += 25 * s;
-    if (!cmd) {
-      put(b, 'No command yet', 0, y + 4 * s, { size: 17, color: UI_COLORS.muted });
-      y += 26 * s;
-    } else {
-      // the tool, and how many steps; while it is over, its result
-      let x = put(b, cmd.tool, 0, y, { face: mono(14, 500), color: UI_COLORS.muse });
-      const n = cmd.steps.length;
-      const tail = cmd.state?.kind === 'ok' ? ` · ${n} step${n === 1 ? '' : 's'} · done in ${secs(cmd.msSum)}` : cmd.state?.kind === 'fail' ? ` · ${n} step${n === 1 ? '' : 's'} · failed` : ` · ${n} step${n === 1 ? '' : 's'}`;
-      x += put(b, tail, x, y, { face: mono(14), color: cmd.state?.kind === 'fail' ? UI_COLORS.fail : cmd.state?.kind === 'ok' ? UI_COLORS.ok : UI_COLORS.muted });
-      y += 10 * s;
-      // the steps: as many as there is room for, the done ones before the first unfinished folded into one line if
-      // they do not all fit (never dropped: "Steps 1-4 done, 1:02")
-      const states = stepStates(cmd);
-      const ROW = 27 * s;
-      const roomRows = Math.max(3, Math.floor((bottom - y - 22 * s - 3 * 23 * s - 34 * s) / ROW));
-      let from = 0;
-      const firstOpen = states.findIndex((k) => k !== 'ok');
-      if (cmd.steps.length > roomRows && firstOpen > 1) from = Math.min(firstOpen - 1, cmd.steps.length - roomRows + 1);
-      const rows = [];
-      if (from > 0) rows.push({ fold: from });
-      for (let i = from; i < cmd.steps.length && rows.length < roomRows; i++) rows.push({ i });
-      const RAWX = TW - 290 * s; // the raw step's column
-      const TX2 = TW - 8 * s; // the status column's right edge
-      for (const r of rows) {
-        if (r.fold) {
-          const ms = cmd.steps.slice(0, r.fold).reduce((a, x) => a + (x.ms ?? 0), 0);
-          mark(b, 'ok', 35 * s, y + ROW / 2, UI_COLORS.ok);
-          put(b, `Steps 1-${r.fold} done`, 52 * s, y + 19 * s, { size: 17, color: UI_COLORS.soft });
-          put(b, secs(ms), TX2, y + 19 * s, { face: mono(13.5), color: UI_COLORS.ok, align: 'right' });
-          y += ROW;
-          continue;
-        }
-        const step = cmd.steps[r.i];
-        const k = states[r.i];
-        const isRun = k === 'run';
-        const h = isRun ? ROW + 24 * s : ROW;
-        if (isRun) {
-          b.fillStyle = 'rgba(124,196,255,0.09)';
-          rr(b, 0, y, TW, h, 5 * s); b.fill();
-          b.fillStyle = UI_COLORS.body; b.fillRect(0, y + 2 * s, 2 * s, h - 4 * s);
-        }
-        put(b, String(r.i + 1), 7 * s, y + 18 * s, { face: mono(13), color: UI_COLORS.muted });
-        const color = { ok: UI_COLORS.ok, run: UI_COLORS.body, fail: UI_COLORS.fail }[k] ?? UI_COLORS.muted;
-        mark(b, k, 35 * s, y + 13.5 * s, color);
-        const right = k === 'ok' ? (step.ms > 0 ? secs(step.ms) : 'done') : k === 'fail' ? 'failed' : k === 'skip' ? 'skipped' : k === 'run' ? (sub && Number.isFinite(sub.of) ? `${sub.done ?? 0} of ${sub.of}` : '') : 'queued';
-        b.font = mono(13.5);
-        const rw = right ? b.measureText(right).width + 12 * s : 0;
-        b.font = font(isRun ? 600 : 500, 17);
-        const words = fitText(b, step.say, RAWX - 52 * s - 10 * s, 1)[0];
-        put(b, words, 52 * s, y + 19 * s, { size: 17, weight: isRun ? 600 : 500, color: k === 'ok' ? UI_COLORS.soft : k === 'queued' || k === 'skip' ? UI_COLORS.muted : UI_COLORS.text });
-        b.font = mono(13);
-        put(b, fitText(b, step.raw, TX2 - rw - RAWX - 6 * s, 1)[0], RAWX, y + 18 * s, { face: mono(13), color: isRun ? UI_COLORS.rawRun : UI_COLORS.raw });
-        if (right) put(b, right, TX2, y + 18 * s, { face: mono(13.5), color: k === 'queued' || k === 'skip' ? UI_COLORS.muted : color, align: 'right' });
-        if (isRun) {
-          // the body carrying it out: its sub-step, a bar, how long the step has run
-          const text = sub?.text ? sub.text : live?.mode === 'run' && live.step ? live.step : 'starting';
-          b.font = font(500, 15);
-          const tw = Math.min(b.measureText(text).width, 230 * s);
-          put(b, fitText(b, text, 230 * s, 1)[0], 52 * s, y + 43 * s, { size: 15, color: UI_COLORS.body });
-          const el = mmss((t - (step.startAt ?? cmd.at)) / 1000);
-          b.font = mono(13);
-          const ew = b.measureText(el).width;
-          put(b, el, TX2, y + 43 * s, { face: mono(13), color: UI_COLORS.body, align: 'right' });
-          dyn.bar = { x: 52 * s + tw + 12 * s, y: y + 37 * s, w: TX2 - ew - 12 * s - (52 * s + tw + 12 * s) };
-        }
-        if (k === 'fail' && step.why && y + h + 21 * s < bottom - 60 * s) {
-          b.font = font(500, 15);
-          put(b, fitText(b, capital(step.why), TW - 60 * s, 1)[0], 52 * s, y + h + 14 * s, { size: 15, color: UI_COLORS.fail });
-          y += 21 * s;
-        }
-        y += h;
-      }
-    }
-    // RAW: what Muse sent, newest first: each call as "> tool {arguments}" (as Muse wrote them, JSON in colour, wrapped
-    // to the column), the server's answer as "< ..." (the call running now: "< running 0:12"); the body's own actions
-    // dimmed as "# body: ..." (not Muse's). The newest call in full (its why and plan), older ones cut to fit.
-    if (y + 46 * s <= bottom) {
-      y += 13 * s;
-      label(b, 'Raw · what Muse sent', 0, y + 10 * s, { sq: UI_COLORS.muse });
-      label(b, `${calls.length} call${calls.length === 1 ? '' : 's'}`, TW, y + 10 * s, { align: 'right' });
-      y += 15 * s;
-      b.font = mono(13);
-      const cw = b.measureText('M').width;
-      const max = Math.max(20, Math.floor(TW / cw));
-      const LH = 17 * s;
-      const avail = Math.floor((bottom + 6 * s - y) / LH);
-      const entries = [...calls.map((x) => ({ at: x.at, call: x })), ...events.map((e) => ({ at: e.at, ev: e }))].sort((p1, p2) => p2.at - p1.at)
-        .map((e) => {
-          if (e.ev) return { lines: wrapRuns([{ t: `# ${e.ev.kind === 'death' ? 'death' : 'body'}: ${e.ev.text}`, c: e.ev.kind === 'death' ? UI_COLORS.fail : UI_COLORS.muted }], max), fixed: 1 };
-          const x = e.call;
-          const args = wrapRuns([{ t: '> ', c: UI_COLORS.muted }, { t: x.tool, c: UI_COLORS.muse }, { t: ' ', c: UI_COLORS.muted }, ...jsonRuns(x.raw || '{}')], max);
-          let reply;
-          if (x.state?.kind === 'run' && PLAY.test(x.tool)) reply = [{ t: `< running ${mmss((t - x.at) / 1000)}`, c: UI_COLORS.body }];
-          else if (x.reply) reply = [{ t: '< ', c: UI_COLORS.muted }, { t: x.reply.replace(/^<\s*/, ''), c: /^<?\s*[A-Z][A-Z_]{3,}:/.test(x.reply) ? UI_COLORS.fail : UI_COLORS.soft }];
-          else reply = [{ t: `< waiting ${mmss((t - x.at) / 1000)}`, c: UI_COLORS.muted }];
-          return { args, reply: wrapRuns(reply, max), call: x };
-        });
-      // the room: the newest call's arguments as far as they go (with its answer under them), leaving a line each for
-      // two older entries; then every older entry on one line (its call cut, its answer after it), newest first
-      const oneLine = (e) => {
-        if (!e.call) return cut(e.lines, 1, max)[0];
-        const rep = e.reply[0] ?? [];
-        const replyLen = rep.reduce((n, r) => n + r.t.length, 0);
-        const argRoom = Math.max(18, max - Math.min(replyLen, Math.floor(max * 0.45)) - 2);
-        const args = cut(wrapRuns(e.args.flat(), argRoom), 1, argRoom)[0];
-        const used = args.reduce((n, r) => n + r.t.length, 0);
-        return [...args, { t: '  ', c: UI_COLORS.muted }, ...cut(wrapRuns(rep, max - used - 2), 1, max - used - 2)[0]];
-      };
-      // the newest play call (Muse's why and plan in it) gets the lines; the rest one line each, in order
-      const big = entries.findIndex((e) => e.call && PLAY.test(e.call.tool));
-      const bigArgs = big >= 0 ? Math.max(1, Math.min(entries[big].args.length, avail - 1 - Math.min(2, entries.length - 1))) : 0;
-      const drawLine = (runs, yy) => { let x = 0; for (const r of runs) { put(b, r.t, x, yy, { face: mono(13), color: r.c }); x += r.t.length * cw; } };
-      y += 2 * s;
-      let used = 0;
-      entries.forEach((e, i) => {
-        if (i === big) {
-          const n = Math.min(bigArgs, avail - used - 1);
-          if (n < 1) return;
-          for (const l of cut(e.args, n, max)) { y += LH; drawLine(l, y); }
-          y += LH;
-          drawLine(cut(e.reply, 1, max)[0], y);
-          used += n + 1;
-          return;
-        }
-        // keep the room the newest play call needs below
-        if (used >= avail || (i < big && used + 1 + bigArgs + 1 > avail)) return;
-        y += LH;
-        drawLine(oneLine(e), y);
-        used += 1;
-      });
-    }
-    return { c, dyn };
-  }
-
-  // ----- the state: the goal's checklist, the items, where the bot is, the advice
-  function drawState() {
-    const c = createCanvas(Math.round(SW), Math.round(H - LOW));
-    const b = c.getContext('2d');
-    let y = 23 * s;
-    const gl = goalNow();
-    const list = gl.list;
-    const top = y;
-    const fresh = newGoalAt !== null && now() - newGoalAt < NEW_GOAL_MS;
-    const counted = list.some((m) => Number.isFinite(m.of));
-    // the goal's room is what it shows (the items under it move up): milestone rows, counted parts, or its words
-    b.font = font(500, 17);
-    const plain = list.length ? [] : fitText(b, capital(gl.text || gl.title), SW, 3);
-    const GOAL_H = !list.length ? plain.length * 24 * s + 26 * s
-      : counted ? Math.min(3, list.length) * 30 * s + (list.length > 3 ? 22 * s : 0)
-        : Math.ceil(Math.min(8, list.length) / 2) * 23 * s;
-    if (fresh) {
-      // a new goal (set_goal): the block lit for a few seconds
-      b.fillStyle = 'rgba(255,209,100,0.10)';
-      rr(b, -8 * s, top - 18 * s, SW + 16 * s, GOAL_H + 34 * s, 7 * s); b.fill();
-    }
-    const doneN = list.filter((m) => m.atS != null || (counted && Number.isFinite(m.of) && (m.done ?? 0) >= m.of)).length;
-    // the count in the label: for a list (milestones, several counted parts); one counted part has its own on its row
-    const right = gl.reached ? 'reached' : list.length > 1 || (list.length === 1 && !counted) ? `${doneN}/${list.length}` : '';
-    const rw = right ? labelWidth(b, right) + 16 * s : 0;
-    // the label: "Goal" (or "New goal") and its title, whole words to the room
-    const head = fresh ? 'New goal' : 'Goal';
-    let title = list.length || !gl.text ? capital(gl.title || '') : ''; // a goal of plain words: its words are under the label
-    const words = title.split(' ');
-    while (words.length > 1 && labelWidth(b, `${head} · ${title}`) + 16 * s > SW - rw) { words.pop(); title = `${words.join(' ')}...`; }
-    label(b, title ? `${head} · ${title}` : head, 0, y, { sq: UI_COLORS.gold, color: fresh ? UI_COLORS.gold : UI_COLORS.muted });
-    if (right) label(b, right, SW, y, { align: 'right', color: gl.reached ? UI_COLORS.ok : UI_COLORS.muted });
-    y += 10 * s;
-    if (!list.length) {
-      // a goal of plain words: the words, nothing counted
-      plain.forEach((l, i) => put(b, l, 0, y + 20 * s + i * 24 * s, { size: 17, color: UI_COLORS.text }));
-      b.font = font(500, 15);
-      put(b, fitText(b, 'A goal in words: nothing to count', SW, 1)[0], 0, y + GOAL_H - 2 * s, { size: 15, color: UI_COLORS.muted });
-    } else if (counted) {
-      // a counted goal: each part with its count and a bar ("Pigs killed 37/100"), at most 3, the unfinished first
-      const parts = list.length > 3 ? [...list.filter((m) => !((m.done ?? 0) >= (m.of ?? 1))), ...list.filter((m) => (m.done ?? 0) >= (m.of ?? 1))].slice(0, 3) : list;
-      parts.forEach((m, i) => {
-        const cy = y + i * 30 * s;
-        const full = (m.done ?? 0) >= (m.of ?? 1);
-        icon(b, partIcon(m.k), 6 * s, cy + 2 * s);
-        const cnt = full && m.atS != null ? `${m.of}/${m.of} \u00b7 ${mmss(m.atS)}` : `${m.done ?? 0}/${m.of ?? 1}`;
-        b.font = mono(14, 500);
-        const cw = b.measureText(cnt).width;
-        put(b, cnt, SW - 4 * s, cy + 17 * s, { face: mono(14, 500), color: full ? UI_COLORS.ok : UI_COLORS.gold, align: 'right' });
-        b.font = font(600, 16);
-        put(b, fitText(b, capital(m.t), SW - 40 * s - cw - 12 * s, 1)[0], 34 * s, cy + 17 * s, { size: 16, weight: 600, color: full ? UI_COLORS.soft : UI_COLORS.text });
-        bar(b, 34 * s, cy + 23 * s, SW - 38 * s, 4 * s, clamp01((m.done ?? 0) / (m.of ?? 1)), full ? UI_COLORS.ok : UI_COLORS.gold);
-      });
-      if (list.length > 3) put(b, `+${list.length - 3} more`, 34 * s, y + 3 * 30 * s + 14 * s, { size: 15, color: UI_COLORS.muted });
-    } else {
-      // milestones: 8 cells, 2 by 4, row by row: those reached last (with their times), the next (marked), those after it
-      const nextAt = list.findIndex((m) => m.atS == null);
-      const SLOTS = 8;
-      let from = 0;
-      if (list.length > SLOTS) {
-        const last = nextAt < 0 ? list.length : nextAt;
-        from = Math.max(0, Math.min(last - 2, list.length - SLOTS));
-      }
-      const cells = list.slice(from, from + SLOTS);
-      const CW = (SW - 10 * s) / 2;
-      cells.forEach((m, i) => {
-        const cx = (i % 2) * (CW + 10 * s);
-        const cy = y + Math.floor(i / 2) * 23 * s;
-        const idx = from + i;
-        const isNext = idx === nextAt && !gl.reached;
-        const isDone = m.atS != null;
-        if (isNext) {
-          b.fillStyle = 'rgba(255,209,100,0.12)'; rr(b, cx, cy, CW, 23 * s, 5 * s); b.fill();
-          b.fillStyle = UI_COLORS.gold; b.fillRect(cx, cy + 2 * s, 2 * s, 19 * s);
-        }
-        icon(b, GOAL_ICONS[m.k] ?? (icons[20][m.k] ? m.k : partIcon(m.k)), cx + 6 * s, cy + 1.5 * s, 20, isDone || isNext ? 1 : 0.4);
-        let r = '';
-        let rc = UI_COLORS.muted;
-        if (isDone) { r = mmss(m.atS); rc = UI_COLORS.ok; }
-        else if (isNext) { r = 'next'; rc = UI_COLORS.gold; }
-        if (!isDone && m.k === 'obsidian' && inv) r = `${Math.min(inv.obsidian ?? 0, 14)}/14`;
-        if (!isDone && m.k === 'diamond' && inv && (inv.diamond ?? 0) > 0) r = `${inv.diamond}/3`;
-        if (isNext && r) rc = UI_COLORS.gold;
-        b.font = mono(13);
-        const w2 = r ? b.measureText(r).width + 8 * s : 0;
-        b.font = font(isNext ? 600 : 500, 16);
-        put(b, fitText(b, GOAL_WORDS[m.k] ?? capital(m.t), CW - 36 * s - w2, 1)[0], cx + 34 * s, cy + 16.5 * s, { size: 16, weight: isNext ? 600 : 500, color: isNext ? UI_COLORS.text : isDone ? UI_COLORS.soft : UI_COLORS.muted });
-        if (r) put(b, r, cx + CW - 6 * s, cy + 16 * s, { face: mono(13), color: rc, align: 'right' });
-      });
-    }
-    y = top + 10 * s + GOAL_H + 24 * s;
-    // the items that matter: icon and count, dimmed at none
-    label(b, 'Inventory', 0, y, { sq: UI_COLORS.look });
-    y += 9 * s;
-    const iv = inv ?? {};
-    const pickIcon = iv.pick ? `${iv.pick}_pickaxe` : 'wooden_pickaxe';
-    const bucketIcon = (iv.water_bucket ?? 0) > 0 ? 'water_bucket' : (iv.lava_bucket ?? 0) > 0 ? 'lava_bucket' : 'bucket';
-    const ironIcon = (iv.iron ?? 0) === 0 && (iv.raw_iron ?? 0) > 0 ? 'raw_iron' : 'iron_ingot';
-    const items = [
-      [pickIcon, iv.pick ? 1 : 0], ['diamond', iv.diamond ?? 0], [ironIcon, ironIcon === 'raw_iron' ? iv.raw_iron : (iv.iron ?? 0)], ['obsidian', iv.obsidian ?? 0],
-      ['flint_and_steel', iv.flint_and_steel ?? 0], [bucketIcon, (iv.water_bucket ?? 0) + (iv.lava_bucket ?? 0) + (iv.bucket ?? 0)], ['steak', iv.food ?? 0], ['shield', iv.shield ?? 0],
-    ];
-    const cw = SW / items.length;
-    items.forEach(([n, k], i) => {
-      const x = i * cw;
-      icon(b, n, x, y + 2 * s, 26, k > 0 ? 1 : 0.42);
-      put(b, String(k), x + 31 * s, y + 21 * s, { size: 17, weight: k > 0 ? 600 : 500, color: k > 0 ? UI_COLORS.text : UI_COLORS.muted });
-    });
-    y += 30 * s + 22 * s;
-    // where it is
-    if (pos && (Number.isFinite(pos.y) || pos.place)) {
-      icon(b, 'depth', 0, y - 15 * s);
-      let x = 28 * s;
-      if (Number.isFinite(pos.y)) x += put(b, `y ${pos.y}`, x, y, { size: 16, weight: 600 }) + 9 * s;
-      if (pos.place) { b.font = font(500, 16); put(b, fitText(b, pos.place, SW - x, 1)[0], x, y, { size: 16, color: UI_COLORS.soft }); }
-      y += 28 * s;
-    }
-    // the Body advice and whether Muse took it
-    const adv = [...advice.values()].sort((a, z) => z.sev - a.sev || z.at - a.at)[0];
-    if ((adv || follow) && y + 40 * s < H - LOW) {
-      label(b, 'Body advice', 0, y, { sq: UI_COLORS.gold });
-      y += 22 * s;
-      b.font = font(500, 16);
-      const room = H - LOW - 6 * s - y - (follow ? 20 * s : 0);
-      if (adv) for (const l of fitText(b, capital(adv.text), SW, room > 40 * s ? 2 : 1)) { put(b, l, 0, y, { size: 16 }); y += 21 * s; }
-      if (follow && now() - follow.at < 300_000) {
-        b.font = font(600, 15);
-        put(b, fitText(b, `→ ${follow.ok ? 'Muse followed it' : 'Muse went on without it'}`, SW, 1)[0], 0, y, { size: 15, weight: 600, color: follow.ok ? UI_COLORS.ok : UI_COLORS.fail });
-      }
-      if (follow && now() - follow.at < 300_000) y += 21 * s;
-    } else if (!adv && !follow && y + 40 * s < H - LOW) {
-      label(b, 'Body advice', 0, y, { sq: UI_COLORS.gold });
-      put(b, 'Nothing pressing', 0, y + 22 * s, { size: 16, color: UI_COLORS.muted });
-      y += 22 * s;
-    }
-    // EARLIER THINKING: Muse's earlier words, newest first (its time, then the words), as many as fit, whole words
-    const bottom = H - LOW - 8 * s;
-    const earlier = thoughts.slice(1);
-    if (earlier.length && y + 22 * s + 26 * s <= bottom + 4 * s) {
-      y += 24 * s;
-      label(b, 'Earlier thinking', 0, y, { sq: UI_COLORS.muse });
-      y += 4 * s;
-      for (const th of earlier) {
-        if (y + 19 * s > bottom + 4 * s) break;
-        const at = Number.isFinite(th.gs) ? mmss(th.gs) : '';
-        b.font = mono(12.5);
-        const aw = at ? b.measureText(at).width + 8 * s : 0;
-        b.font = font(500, 15);
-        const lines = Math.max(1, Math.min(3, Math.floor((bottom + 4 * s - y) / (19 * s))));
-        const ls = fitText(b, th.text, SW - aw, lines);
-        y += 19 * s;
-        if (at) put(b, at, 0, y, { face: mono(12.5), color: UI_COLORS.muted });
-        ls.forEach((l, i) => put(b, l, aw, y + i * 19 * s, { size: 15, color: UI_COLORS.soft }));
-        y += (ls.length - 1) * 19 * s + 4 * s;
-      }
-    }
-    return c;
-  }
 
   // ----- the inputs
   function addCall(l) {
+    version += 1;
     const tool = l.tool ?? (/^> ([a-z_]+)/.exec(l.t)?.[1] ?? 'call');
     const steps = Array.isArray(l.steps) && l.steps.length ? l.steps : PLAY.test(tool) ? [{ say: l.say || '', raw: String(l.t).replace(/^> [a-z_]+:?\s*/, '') }] : [];
     const ready = tool === 'start_game'; // start_game's line comes with its reply: the game is there
     const cmd = {
       tool, say: l.say || l.t.replace(/^>\s*/, ''), words: l.words || '', plan: l.plan || '', raw: l.raw || '', rid: Number.isInteger(l.rid) ? l.rid : null, reply: null, at: now(), gs: gameS(), no: null,
-      steps: steps.map((x) => ({ say: x.say || x.raw, raw: x.raw || '', state: 'queued', ms: 0 })),
+      steps: steps.map((x) => ({ say: x.say || x.raw, raw: x.raw || '', skill: x.skill || String(x.raw || '').split(' ')[0], args: parseArgs(x.args), state: 'queued', ms: 0 })),
+      replyGs: null, replyCode: null, added: [],
       state: PLAY.test(tool) ? { kind: 'run' } : { kind: 'ok' }, msSum: 0, checked: null, goal: ready && goal ? goal.title : null,
     };
     calls.unshift(cmd);
-    calls = calls.slice(0, 24);
+    calls = calls.slice(0, 120);
+    callTotal += 1;
     if (PLAY.test(tool)) {
       sub = null;
-      barShown = 0;
       if (cmd.words) { thoughts.unshift({ text: cmd.words, gs: cmd.gs, call: null, cmd }); thoughts = thoughts.slice(0, 12); }
     }
     lastEventAt = now();
@@ -914,52 +318,143 @@ export function createUiPanel(o) {
     const partial = l.pre || (Number.isInteger(l.pt) && Number.isInteger(l.pts) && l.pt < l.pts);
     if (l.k === 'info') { if (/^skip\b/.test(l.t) && step.state !== 'ok' && step.state !== 'fail') step.state = 'skip'; }
     else if (l.k === 'fail') { step.state = 'fail'; step.why = why; }
-    else if (!partial) { step.state = 'ok'; if (cmd.steps[i + 1]) cmd.steps[i + 1].startAt = now(); }
+    else if (!partial) { step.state = 'ok'; step.result = resultWords(l.t); if (cmd.steps[i + 1]) cmd.steps[i + 1].startAt = now(); }
     else if (step.state === 'queued') { step.state = 'run'; step.startAt = now(); }
     // a step that failed cancels the ones after it; a call is over when all are done
     if (l.k === 'fail' || cmd.steps.every((x) => ['ok', 'fail', 'skip'].includes(x.state))) settle(cmd);
     lastEventAt = now();
   }
 
-  // ----- the HUD's data, apart from its drawing (the design's input; state() returns them)
-  /** "8s", "42s", "3m", "1h": how long ago, for the RAW console's newest calls. */
+
+  // ----- the HUD state: the shape of the design's data (data/states.json), from what came in
   const ago = (sec) => (sec < 60 ? `${Math.max(0, Math.floor(sec))}s` : sec < 3600 ? `${Math.floor(sec / 60)}m` : `${Math.floor(sec / 3600)}h`);
-  /**
-   * RAW: every call newest first as Muse sent it, runs of the same call with the same arguments as one entry (count,
-   * the latest time and answer): {tool, raw (its arguments, JSON as sent), count, gs (game seconds of the latest),
-   * clock ("12:05"), age ("8s", seconds since the latest), reply (the server's answer, whole: "< ..."), running (the play
-   * call running now), why, plan}
-   */
-  function rawEntries(t = now()) {
-    const out = [];
-    for (const c of calls) {
-      const last = out[out.length - 1];
-      if (last && last.tool === c.tool && last.raw === (c.raw || '{}') && !PLAY.test(c.tool)) { last.count += 1; continue; }
-      const runningNow = PLAY.test(c.tool) && c.state?.kind === 'run';
-      out.push({
-        tool: c.tool, raw: c.raw || '{}', count: 1, gs: c.gs, clock: Number.isFinite(c.gs) ? mmss(c.gs) : '', age: ago((t - c.at) / 1000), ageS: Math.round((t - c.at) / 1000),
-        reply: c.reply, running: runningNow, waiting: !c.reply && !PLAY.test(c.tool) && c.tool !== 'start_game', why: c.words || '', plan: c.plan || '',
-      });
+  const clockOf = (gs) => (Number.isFinite(gs) ? mmss(gs) : '');
+  const iconOf = (n, fallback = 'compass') => (images[n] ? n : fallback);
+  function goalState(gl, fresh) {
+    const list = gl?.list ?? [];
+    const counted = list.some((m) => Number.isFinite(m.of));
+    if (!list.length) return { kind: 'text', key: gl?.key ?? 'free', title: gl?.title && gl.title !== gl?.text ? gl.title : '', text: gl?.text || gl?.title || '', new: fresh };
+    if (counted) {
+      return {
+        kind: 'counted', key: gl.key, title: gl.title || gl.text || 'goal', new: fresh, toast: `New goal: ${capital(gl.title || gl.text || 'set')}`,
+        parts: list.map((m) => ({ key: m.k, label: capital(m.t), icon: iconOf(partIcon(m.k), 'star'), done: Math.min(m.done ?? 0, m.of ?? 1), of: m.of ?? 1 })),
+        ...(prevGoal ? { previous: milestones(prevGoal) } : {}),
+      };
     }
-    return out;
+    return { ...milestones(gl), new: fresh, toast: `New goal: ${capital(gl.title || 'set')}`, ...(prevGoal && fresh ? { previous: milestones(prevGoal) } : {}) };
   }
-  /**
-   * BODY · WORLD: what the body did by itself and what happened around it, never Muse's words, newest first: the
-   * body's reflexes and own actions, deaths, items that came in, damage and the hostile mob near, mobs coming near,
-   * mining progress, water on lava, milestones and dimension changes: {kind: reflex|body|death|world|milestone, text,
-   * gs, clock}
-   */
-  function worldFeed() {
-    return [...events.map((e) => ({ kind: e.kind, text: e.text, at: e.at, gs: e.gs })), ...world, ...landmarks]
-      .sort((a, z) => z.at - a.at).map((e) => ({ kind: e.kind, text: e.text, gs: e.gs, clock: Number.isFinite(e.gs) ? mmss(e.gs) : '' }));
-  }
-  /** THINKING: Muse's words with its latest play call, its latest plan; noWhy when that call came without a why. */
-  function thinkingNow() {
-    const latest = calls.find((c) => PLAY.test(c.tool)) ?? null;
-    const plan = latestPlan();
+  function milestones(gl) {
+    const list = (gl?.list ?? []).slice(0, 12);
+    const nextAt = list.findIndex((m) => m.atS == null);
     return {
-      why: latest?.words || '', plan: plan?.plan ?? '', planGs: plan?.gs ?? null, gs: latest?.gs ?? null, call: latest?.no ?? null,
-      noWhy: Boolean(latest) && !latest.words, firstMove: !latest,
+      kind: 'milestones', key: gl?.key, title: gl?.title || 'Goal', done: list.filter((m) => m.atS != null).length, total: list.length,
+      list: list.map((m, i) => {
+        const state = m.atS != null ? 'done' : i === nextAt ? 'next' : 'todo';
+        let progress;
+        if (state === 'next' && m.k === 'obsidian' && inv) progress = `${Math.min(inv.obsidian ?? 0, 14)}/14`;
+        if (state === 'next' && m.k === 'diamond' && inv && (inv.diamond ?? 0) > 0) progress = `${inv.diamond}/3`;
+        const icon = GOAL_ICONS[m.k] ?? (images[m.k] ? m.k : partIcon(m.k));
+        return { key: m.k, label: GOAL_WORDS[m.k] ?? capital(m.t), icon: iconOf(icon, 'star'), state, done: m.atS != null ? mmss(m.atS) : null, ...(progress ? { progress } : {}) };
+      }),
+    };
+  }
+  function hudState(t) {
+    const gs = gameS(t) ?? 0;
+    // stats
+    const clk = clockNow();
+    const nether = st.clock === 'NETHER';
+    const tk = ticksNow();
+    const night = /^NIGHT/.test(clk);
+    let phaseWords = nether ? 'nether' : st.clock === 'END' ? 'end' : night ? 'night' : 'day';
+    if (tk !== null && night) phaseWords = `night, dawn in ${Math.max(1, Math.round((23_000 - tk) / 1200))} min`;
+    else if (tk !== null && !nether && tk >= 11_000 && tk < 13_000) phaseWords = `day, dusk in ${Math.max(1, Math.round((13_000 - tk) / 1200))} min`;
+    const pct = Number.isFinite(st.pct) ? st.pct : Number.isFinite(st.muse) && Number.isFinite(st.reflex) && st.muse + st.reflex > 0 ? Math.round((100 * st.muse) / (st.muse + st.reflex)) : null;
+    const stats = {
+      hp: Number.isFinite(st.hp) ? st.hp : '–', hpMax: 20, food: Number.isFinite(st.food) ? st.food : '–', foodMax: 20,
+      dimension: nether ? 'nether' : st.clock === 'END' ? 'end' : 'overworld', phase: night ? 'night' : nether ? 'nether' : 'day', phaseWords,
+      timeOfDay: clk && !nether && st.clock !== 'END' ? clk.replace(/^(?:DAY|NIGHT) /, '') : '',
+      museShare: { pct, ...(Number.isFinite(st.muse) && Number.isFinite(st.reflex) && st.muse + st.reflex > 0 ? { muse: st.muse, reflex: st.reflex } : { muse: null, reflex: null }) },
+      gameId: game?.id ?? '', gameClock: mmss(gs),
+    };
+    // the inventory hotbar: the items that matter, in this order
+    const iv = inv ?? {};
+    const inventory = [
+      { key: 'pickaxe', icon: iv.pick ? `${iv.pick}_pickaxe` : 'wooden_pickaxe', count: iv.pick ? 1 : 0 },
+      { key: 'diamond', icon: 'diamond', count: iv.diamond ?? 0 },
+      (iv.iron ?? 0) === 0 && (iv.raw_iron ?? 0) > 0 ? { key: 'iron', icon: 'raw_iron', count: iv.raw_iron } : { key: 'iron', icon: 'iron_ingot', count: iv.iron ?? 0 },
+      { key: 'obsidian', icon: 'obsidian', count: iv.obsidian ?? 0 },
+      { key: 'flint_and_steel', icon: 'flint_and_steel', count: iv.flint_and_steel ?? 0 },
+      { key: 'bucket', icon: (iv.water_bucket ?? 0) > 0 ? 'water_bucket' : (iv.lava_bucket ?? 0) > 0 ? 'lava_bucket' : 'bucket', count: (iv.water_bucket ?? 0) + (iv.lava_bucket ?? 0) + (iv.bucket ?? 0) },
+      { key: 'food', icon: 'steak', count: iv.food ?? 0 },
+      { key: 'shield', icon: 'shield', count: iv.shield ?? 0 },
+    ];
+    const fresh = newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS;
+    // thinking: the latest play call's why and plan
+    const latest = current();
+    const thinking = {
+      hasWhy: Boolean(latest?.words), why: latest?.words || null, plan: latest?.words ? (latest.plan || null) : null,
+      whyCall: latest?.no ?? '?', whyAt: clockOf(latest?.gs), lastCallAgoS: calls[0] ? (t - calls[0].at) / 1000 : 0, // the age of the newest call: an old why never reads as current
+      latestPlayCall: latest ? { no: latest.no ?? '?', tool: latest.tool, sent: clockOf(latest.gs) } : null,
+    };
+    const earlierThinking = thoughts.filter((x) => x.cmd !== latest).map((x) => ({ at: clockOf(x.gs), why: x.text }));
+    // NOW: the latest play call
+    let currentCall = null;
+    if (latest) {
+      const states = stepStates(latest);
+      const runningNow = latest.state?.kind === 'run';
+      currentCall = {
+        no: latest.no ?? '?', tool: latest.tool, sent: clockOf(latest.gs), state: runningNow ? 'running' : latest.state?.kind === 'ok' ? 'ok' : 'fail',
+        running: mmss((t - latest.at) / 1000), doneIn: latest.msSum > 0 ? secs(latest.msSum) : '',
+        steps: latest.steps.map((x, i) => {
+          const k = states[i] === 'skip' ? 'queued' : states[i];
+          const isRun = k === 'run';
+          const sb = isRun && sub ? { text: sub.text, ...(Number.isFinite(sub.of) ? { done: sub.done ?? 0, of: sub.of } : {}) } : isRun ? { text: live?.step ? live.step.toLowerCase() : 'starting' } : null;
+          return {
+            n: i + 1, say: x.say, raw: x.raw, skill: x.skill || x.raw.split(' ')[0], args: x.args, icon: iconOf(iconFor(x.say, isRun ? sub?.kind : '')),
+            state: k, elapsed: isRun ? mmss((t - (x.startAt ?? latest.at)) / 1000) : null, took: k === 'ok' && x.ms > 0 ? secs(x.ms) : null, result: x.result ?? null, sub: sb,
+          };
+        }),
+        addedByServer: latest.added ?? [],
+        ...(latest.reply ? { serverAnswer: { at: clockOf(latest.replyGs), text: latest.reply.replace(/^<\s*/, '') } } : {}),
+      };
+    }
+    // RAW: every call, newest first; runs of the same call folded
+    const entries = calls.map((c, idx) => {
+      const isRun = PLAY.test(c.tool) && c.state?.kind === 'run';
+      const waiting = !c.reply && !PLAY.test(c.tool) && c.tool !== 'start_game';
+      return {
+        n: calls.length - idx, tool: c.tool, args: c.raw || '{}', sentS: c.gs, sent: clockOf(c.gs), agoS: (t - c.at) / 1000, playCallNo: PLAY.test(c.tool) ? (c.no ?? '?') : null, hasWhy: Boolean(c.words),
+        answer: { state: isRun ? 'running' : waiting ? 'waiting' : 'answered', waitingS: waiting ? (t - c.at) / 1000 : null, hudText: isRun ? `running ${mmss((t - c.at) / 1000)}` : null, code: c.replyCode ?? null },
+        reply: c.reply ? c.reply.replace(/^<\s*/, '') : null, replyAt: clockOf(c.replyGs),
+      };
+    });
+    const runs = [];
+    for (const e of entries) {
+      const last = runs[runs.length - 1];
+      if (last && last.tool === e.tool && last.args === e.args && e.playCallNo === null && last.newestState !== 'running') {
+        last.count += 1; last.firstSent = e.sent; last.ns.push(e.n);
+        if (!last.latestAnswer && e.reply) { last.latestAnswer = e.reply; last.latestAnswerAt = e.replyAt; }
+        continue;
+      }
+      runs.push({ tool: e.tool, args: e.args, count: 1, lastSent: e.sent, lastAgoS: e.agoS, firstSent: e.sent, ns: [e.n], newestState: e.answer.state, latestAnswer: e.reply, latestAnswerAt: e.replyAt });
+    }
+    // the advice: full text, when it was given, the verdict tied to it by time
+    const items = [...advice.values()].sort((a, z) => z.sev - a.sev || z.at - a.at).map((a) => {
+      const text = capital(a.text);
+      const lead = text.split(/[:;]\s/)[0]; // its first clause: "Night in about 68 s", "You carry 8 obsidian"
+      return { text, gist: lead.length <= 48 && lead !== text ? lead : '', givenAt: clockOf(a.gs), givenAtS: a.gs ?? 0 };
+    });
+    const adviceState = { items, follow: null, lastFollow: follow ? { atS: follow.gs ?? 0, at: clockOf(follow.gs), ok: follow.ok } : null };
+    // BODY · WORLD: the body's own actions, what happened around it, the server's
+    const evs = [
+      ...events.map((e) => ({ at: e.at, gs: e.gs, who: 'body', kind: e.kind, text: e.kind === 'death' ? e.text : e.text })),
+      ...world.map((e) => ({ at: e.at, gs: e.gs, who: e.who ?? 'body', kind: e.who === 'server' ? 'policy' : 'world', text: e.text })),
+      ...landmarks.map((e) => ({ at: e.at, gs: e.gs, who: 'world', kind: 'milestone', text: e.text })),
+    ].sort((a, z) => z.at - a.at).map((e) => ({ at: clockOf(e.gs), who: e.who, kind: e.kind, text: e.text }));
+    return {
+      caller, now: { gameS: gs, gameClock: mmss(gs) }, stats, position: { y: Number.isFinite(pos?.y) ? pos.y : '–', place: pos?.place ?? '' },
+      goal: goalState(goalNow(), fresh), inventory, thinking, earlierThinking, currentCall, raw: { total: Math.max(callTotal, calls.length), entries, runs },
+      advice: adviceState, events: evs, toast: toast && t - toast.at < 6_000 ? { label: 'MILESTONE', title: capital(toast.text) } : null,
     };
   }
 
@@ -967,6 +462,7 @@ export function createUiPanel(o) {
     width: W, height: H + T, over: T, fps, file: o.file ?? null,
     /** New lines from the agent ({k, t, say, words, of, ms, n, why, ak, tool, steps, c, s, pre, pt, pts}). */
     push(lines) {
+      version += 1;
       for (const l of lines ?? []) {
         if (!l || typeof l.t !== 'string') continue;
         if (l.k === 'call') addCall(l);
@@ -980,13 +476,13 @@ export function createUiPanel(o) {
         } else if (l.k === 'reply') {
           // the server's answer to a call (its first line), by the call's number
           const c = Number.isInteger(l.rid) ? calls.find((x) => x.rid === l.rid) : null;
-          if (c) c.reply = l.t;
+          if (c) Object.assign(c, { reply: l.t, replyGs: gameS(), replyCode: l.code ?? null });
         } else if (l.k === 'world') {
-          world.unshift({ kind: 'world', text: l.t, at: now(), gs: gameS() });
+          world.unshift({ kind: 'world', who: l.who ?? 'body', text: l.t, at: now(), gs: gameS() });
           world = world.slice(0, 40);
         } else if (l.k === 'milestone') {
-          toast = { text: milestoneWords(l.t), at: now() };
-          landmarks.unshift({ kind: 'milestone', text: milestoneWords(l.t), at: now(), gs: gameS() });
+          toast = { text: milestoneWords(l.t).replace(/^Got /, ''), at: now() };
+          landmarks.unshift({ kind: 'milestone', text: l.t.replace(/\s+at \d+:\d\d$/, ''), at: now(), gs: gameS() });
           landmarks = landmarks.slice(0, 20);
           const m = /at (\d+):(\d\d)$/.exec(l.t);
           const k = LINE_GOALS.find(([re]) => re.test(l.t))?.[1];
@@ -994,16 +490,20 @@ export function createUiPanel(o) {
         } else if (l.k === 'checked') {
           const g2 = calls.find((x) => x.tool === 'get_state' && !x.checked);
           if (g2) g2.checked = l.t.replace(/^Muse checked:\s*/i, '');
-        } else if (l.k === 'follow') follow = { text: l.t, ok: Boolean(l.ok) || /^Followed/.test(l.t), at: now() };
+        } else if (l.k === 'follow') follow = { text: l.t, ok: Boolean(l.ok) || /^Followed/.test(l.t), at: now(), gs: gameS() };
         else if (l.k === 'advice') {
           const k = l.ak ?? 'note';
-          advice.set(k, { text: adviceGist(l.t), sev: advice.get(k)?.sev ?? 1, at: now() });
+          const text = l.t.replace(/^advice:\s*/i, '');
+          const old = advice.get(k);
+          const shape = text.replace(/\d+/g, '#');
+          advice.set(k, { text, gist: adviceGist(text), shape, sev: old?.sev ?? 1, at: old?.shape === shape ? old.at : now(), gs: old?.shape === shape ? old.gs : gameS() });
         } else if (l.k === 'info' && /^game over/i.test(l.t)) over = capital(l.t);
       }
     },
     /** The status numbers (st) for the header. */
     status(text, data) {
       if (!data) return;
+      version += 1;
       if (Number.isFinite(data.ticks)) {
         const t = now();
         let rate = anchor?.rate ?? 0.02;
@@ -1022,7 +522,9 @@ export function createUiPanel(o) {
       for (const a of list) {
         const k = a.k ?? 'note';
         seen.add(k);
-        advice.set(k, { text: adviceGist(a.t), sev: a.sev ?? 1, at: advice.get(k)?.at ?? now() });
+        const old = advice.get(k);
+        const shape = a.t.replace(/\d+/g, '#'); // the same advice with its numbers moved on keeps the time it was given
+        advice.set(k, { text: a.t, gist: adviceGist(a.t), shape, sev: a.sev ?? 1, at: old?.shape === shape ? old.at : now(), gs: old?.shape === shape ? old.gs : gameS() });
       }
       for (const k of [...advice.keys()]) if (!seen.has(k)) advice.delete(k);
     },
@@ -1035,10 +537,13 @@ export function createUiPanel(o) {
       if (u.goal && Array.isArray(u.goal.list)) {
         // another goal than the one shown (set_goal): lit for a while, and a toast
         const sig = (x) => (x ? `${x.key}|${x.title}|${x.text ?? ''}` : '');
-        if (goal && sig(goal) !== sig(u.goal)) { newGoalAt = now(); toast = { text: `New goal: ${capital(u.goal.title || u.goal.text || 'set')}`, at: now() }; }
+        if (goal && sig(goal) !== sig(u.goal)) { newGoalAt = now(); prevGoal = goal; }
         goal = u.goal;
       }
+      version += 1;
       if (Number.isInteger(u.bind) && !calls.some((x) => x.no === u.bind)) bind(calls.find((x) => PLAY.test(x.tool) && x.no === null), u.bind);
+      if (Number.isInteger(u.bind) && Array.isArray(u.added)) { const c = calls.find((x) => x.no === u.bind); if (c) c.added = u.added; }
+      if (typeof u.caller === 'string' && u.caller) caller = u.caller;
       if (Array.isArray(u.lines) && u.lines.length) api.push(u.lines);
       if (u.st) api.status(u.status, u.st);
       if (Array.isArray(u.adv)) api.advice(u.adv);
@@ -1051,7 +556,7 @@ export function createUiPanel(o) {
           if (c?.state?.kind === 'run' && Number.isInteger(live.s)) {
             c.steps.forEach((x, i) => { if (i < live.s - 1 && (x.state === 'queued' || x.state === 'run')) x.state = 'ok'; });
             const cur = c.steps[live.s - 1];
-            if (cur && cur.state === 'queued') { cur.state = 'run'; cur.startAt = now(); }
+            if (cur && cur.state === 'queued') { cur.state = 'run'; cur.startAt = live.s === 1 ? c.at : now(); } // the first step began with the call
           }
         }
       }
@@ -1069,8 +574,10 @@ export function createUiPanel(o) {
     },
     /** Another game on camera: an empty HUD, with a note. */
     reset(note = '') {
-      calls = []; events = []; thoughts = []; world = []; landmarks = [];
-      sub = null; live = null; follow = null; toast = null; anchor = null; game = null; goal = null; inv = null; pos = null; over = null; newGoalAt = null;
+      version += 1;
+      calls = []; events = []; thoughts = []; world = []; landmarks = []; callTotal = 0;
+      sub = null; live = null; follow = null; toast = null; anchor = null; game = null; goal = null; prevGoal = null; inv = null; pos = null; over = null; newGoalAt = null;
+      caller = 'MUSE';
       advice.clear();
       reachedLocal.clear();
       for (const k of Object.keys(st)) st[k] = k === 'clock' ? '' : null;
@@ -1078,89 +585,25 @@ export function createUiPanel(o) {
       lastEventAt = now();
     },
 
-    /** One frame at time t (ms). */
+
+    /** One frame at time t (ms): the HUD drawn again when what it shows changed (its clocks: each second), then copied. */
     render(t = now()) {
-      g.clearRect(0, 0, W, T);
-      g.globalAlpha = 1;
-      g.drawImage(bg, 0, T);
-      const sec = Math.floor(t / 1000);
-      // each part again when what it shows changes (the ticking times: once a second)
-      const hk = JSON.stringify([st, clockNow(), game?.id, gameS(t) === null ? null : Math.floor(gameS(t))]);
-      if (hk !== keys.header || !layers.header) { keys.header = hk; layers.header = drawHeader(t); }
-      g.drawImage(layers.header, 0, T);
-      const bk = JSON.stringify([thoughts.slice(0, 1).map((x) => [x.text, x.call]), latestPlan()?.plan ?? '', thoughts.length ? 0 : [statusWords(t), goal]]);
-      if (bk !== keys.band || !layers.band) { keys.band = bk; layers.band = drawBand(t); LOW = HDR + layers.band.h; }
-      g.drawImage(layers.band.c, 0, T + HDR);
-      // the rules: under the band, and between the columns
-      g.fillStyle = UI_COLORS.rule;
-      const px1 = Math.max(1, Math.round(s));
-      g.fillRect(PX, T + LOW, W - 2 * PX, px1);
-      g.fillRect(VR, T + LOW + 10 * s, px1, H - LOW - 20 * s);
-      const cur = current();
-      const tk = JSON.stringify([LOW, calls.length, calls.slice(0, 8).map((c) => [c.no, c.state, c.checked, c.reply, c.steps.map((x) => x.state)]), events.length, sub && [sub.text, sub.done, sub.of], live?.step,
-        cur?.state?.kind === 'run' || calls.some((c) => !c.reply && !PLAY.test(c.tool) && c.tool !== 'start_game') ? sec : statusWords(t)]);
-      if (tk !== keys.trace || !layers.trace) { keys.trace = tk; layers.trace = drawTrace(t); }
-      g.drawImage(layers.trace.c, TX, T + LOW);
-      const sk = JSON.stringify([LOW, thoughts.slice(1, 8).map((x) => x.text), goal, [...reachedLocal], inv, pos, [...advice.entries()], follow && [follow.text, t - follow.at < 300_000], newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS]);
-      if (sk !== keys.state || !layers.state) { keys.state = sk; layers.state = drawState(); }
-      g.drawImage(layers.state, SX, T + LOW);
-      // the moving parts: the running step's bar, a breathing dot by the words of what is happening, the toast
-      const bd = layers.trace.dyn.bar;
-      if (bd && bd.w > 20 * s) {
-        let target = null;
-        if (sub && Number.isFinite(sub.of) && sub.of > 0) target = clamp01((sub.done ?? 0) / sub.of);
-        else if (sub?.kind === 'walk' && Number.isFinite(sub.left) && sub.first > 0) target = clamp01(1 - sub.left / sub.first);
-        const x = TX + bd.x;
-        const y = T + LOW + bd.y;
-        if (target !== null) {
-          barShown += (target - barShown) * 0.15;
-          bar(g, x, y, bd.w, 6 * s, barShown, UI_COLORS.body);
-        } else {
-          // no numbers yet: a light that runs along the bar
-          bar(g, x, y, bd.w, 6 * s, 0, UI_COLORS.body);
-          const p = (t / 1600) % 1;
-          g.globalAlpha = 0.8;
-          rr(g, x + p * (bd.w - 60 * s), y, 60 * s, 6 * s, 3 * s);
-          g.fillStyle = UI_COLORS.body;
-          g.fill();
-          g.globalAlpha = 1;
-        }
+      const key = `${version}|${Math.floor(t / 1000)}|${newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS}|${toast && t - toast.at < 6_000}`;
+      if (key !== drawnKey) {
+        drawnKey = key;
+        lg.setTransform(1, 0, 0, 1, 0, 0);
+        lg.clearRect(0, 0, W, H + T);
+        lg.setTransform(s, 0, 0, s, 0, -top * s);
+        const r = drawHud(lg, hudState(t), { icon: iconAt, qa: Boolean(o.qa) });
+        lg.setTransform(1, 0, 0, 1, 0, 0);
+        lastLayout = r.layout;
+        lastQa = r.qa;
       }
-      const pulse = layers.band.dyn.pulse ? { x: layers.band.dyn.pulse.x, y: T + HDR + layers.band.dyn.pulse.y } : layers.trace.dyn.pulse ? { x: TX + layers.trace.dyn.pulse.x, y: T + LOW + layers.trace.dyn.pulse.y } : null;
-      if (pulse) {
-        g.globalAlpha = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(((t / 1000) * Math.PI * 2) / 2.4));
-        g.fillStyle = UI_COLORS.soft;
-        g.beginPath();
-        g.arc(pulse.x, pulse.y, 5 * s, 0, Math.PI * 2);
-        g.fill();
-        g.globalAlpha = 1;
-      }
-      // a milestone: a toast over the bottom right of the game, 6 s
-      if (toast && T > 0) {
-        const age = t - toast.at;
-        if (age > 6_000) toast = null;
-        else {
-          g.globalAlpha = Math.min(ease(age / 300), clamp01((6_000 - age) / 600));
-          g.font = font(700, 18);
-          const tw = g.measureText(toast.text).width;
-          const w = tw + 64 * s;
-          const x = W - PX - w;
-          const y = T - 54 * s;
-          rr(g, x, y, w, 42 * s, 21 * s);
-          g.fillStyle = 'rgba(10,13,18,0.86)';
-          g.fill();
-          icon(g, 'star', x + 11 * s, y + 11 * s);
-          g.fillStyle = UI_COLORS.gold;
-          g.textBaseline = 'middle';
-          g.fillText(toast.text, x + 46 * s, y + 22 * s);
-          g.textBaseline = 'alphabetic';
-          g.globalAlpha = 1;
-        }
-      }
+      g.clearRect(0, 0, W, H + T);
+      g.drawImage(layer, 0, 0);
       frames += 1;
       return canvas;
     },
-
     /** The frame as an uncompressed 32-bit BMP (top-down, with alpha), or written over the panel file. */
     bmp(t = now()) {
       api.render(t);
@@ -1183,19 +626,19 @@ export function createUiPanel(o) {
     },
     stop() { clearInterval(timer); timer = null; },
     get frames() { return frames; },
+    /** The HUD state as drawn (the design's data shape), its layout and its QA. */
+    hud: (t = now()) => ({ state: hudState(t), layout: lastLayout, qa: lastQa }),
     state: () => {
       const cur = current();
       return {
-        calls: calls.map((c) => ({ tool: c.tool, say: c.say, words: c.words, plan: c.plan, raw: c.raw, reply: c.reply, no: c.no, state: c.state, checked: c.checked, steps: c.steps.map((x) => ({ say: x.say, raw: x.raw, state: x.state, ms: x.ms, why: x.why })) })),
+        calls: calls.map((c) => ({ tool: c.tool, say: c.say, words: c.words, plan: c.plan, raw: c.raw, reply: c.reply, replyCode: c.replyCode, no: c.no, state: c.state, checked: c.checked, added: c.added, steps: c.steps.map((x) => ({ say: x.say, raw: x.raw, skill: x.skill, args: x.args, state: x.state, ms: x.ms, why: x.why, result: x.result })) })),
         current: cur ? { tool: cur.tool, no: cur.no, states: stepStates(cur) } : null,
         thoughts: thoughts.map((x) => ({ text: x.text, call: x.call })),
         events: events.map((e) => ({ kind: e.kind, text: e.text })),
-        sub, follow: follow?.text ?? null, advice: [...advice.entries()].map(([k, a]) => ({ k, text: a.text, sev: a.sev })),
-        toast: toast?.text ?? null, st: { ...st }, clock: clockNow(), status: running() ? null : statusWords(now()),
-        plan: latestPlan()?.plan ?? null, low: Math.round(LOW / s),
-        // the design's data (see rawEntries, worldFeed, thinkingNow)
-        raw: rawEntries(now()), world: worldFeed(), thinking: thinkingNow(),
-        goal: goalNow(), newGoal: newGoalAt !== null && now() - newGoalAt < NEW_GOAL_MS, inv, pos, game: game ? { id: game.id, s: gameS() === null ? null : Math.floor(gameS()) } : null,
+        sub, follow: follow?.text ?? null, advice: [...advice.entries()].map(([k, a]) => ({ k, text: a.gist, full: a.text, sev: a.sev })),
+        toast: toast && now() - toast.at < 6_000 ? toast.text : null, st: { ...st }, clock: clockNow(), status: running() ? null : statusWords(now()),
+        plan: latestPlan()?.plan ?? null, caller, layout: lastLayout,
+        goal: goalNow(), newGoal: newGoalAt !== null && now() - newGoalAt < NEW_GOAL_MS, prevGoal, inv, pos, game: game ? { id: game.id, s: gameS() === null ? null : Math.floor(gameS()) } : null,
       };
     },
   };
@@ -1214,27 +657,4 @@ export function createUiPanel(o) {
   bmpHeader.writeInt32LE(2835, 38);
   bmpHeader.writeInt32LE(2835, 42);
   return api;
-}
-
-/** A rounded rectangle path. */
-function rr(g, x, y, w, h, r) {
-  const k = Math.min(r, h / 2, w / 2);
-  g.beginPath();
-  g.moveTo(x + k, y);
-  g.arcTo(x + w, y, x + w, y + h, k);
-  g.arcTo(x + w, y + h, x, y + h, k);
-  g.arcTo(x, y + h, x, y, k);
-  g.arcTo(x, y, x + w, y, k);
-  g.closePath();
-}
-/** A slim meter: its track and its fill. */
-function bar(g, x, y, w, h, frac, color) {
-  rr(g, x, y, w, h, h / 2);
-  g.fillStyle = 'rgba(255,255,255,0.10)';
-  g.fill();
-  if (frac > 0) {
-    rr(g, x, y, Math.max(h, w * frac), h, h / 2);
-    g.fillStyle = color;
-    g.fill();
-  }
 }

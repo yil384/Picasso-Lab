@@ -41,7 +41,7 @@ test('lines: ASCII only, never another player\'s name, an address, a link or a t
 });
 
 test('lines: calls abbreviated, results by what they did, failures with their code, the clock, the status bar', () => {
-  assert.deepEqual(callLine('play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 8 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] }), { k: 'call', t: '> play_sequence: collect oak_log 8, craft wooden_pickaxe', say: 'Mine 8 oak logs, then craft a wooden pickaxe', tool: 'play_sequence', raw: '{"steps":[{"skill":"collect","args":{"block":"oak_log","n":8}},{"skill":"craft","args":{"item":"wooden_pickaxe"}}]}', of: 2, steps: [{ say: 'Mine 8 oak logs', raw: 'collect oak_log 8' }, { say: 'Craft a wooden pickaxe', raw: 'craft wooden_pickaxe' }] });
+  assert.deepEqual(callLine('play_sequence', { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 8 } }, { skill: 'craft', args: { item: 'wooden_pickaxe' } }] }), { k: 'call', t: '> play_sequence: collect oak_log 8, craft wooden_pickaxe', say: 'Mine 8 oak logs, then craft a wooden pickaxe', tool: 'play_sequence', raw: '{"steps":[{"skill":"collect","args":{"block":"oak_log","n":8}},{"skill":"craft","args":{"item":"wooden_pickaxe"}}]}', of: 2, steps: [{ say: 'Mine 8 oak logs', raw: 'collect oak_log 8', skill: 'collect', args: '{"block":"oak_log","n":8}' }, { say: 'Craft a wooden pickaxe', raw: 'craft wooden_pickaxe', skill: 'craft', args: '{"item":"wooden_pickaxe"}' }] });
   assert.equal(callLine('play_sequence', { steps: Array.from({ length: 7 }, () => ({ skill: 'eat', args: {} })) }).t, '> play_sequence: eat, eat, eat, eat, +3 more');
   assert.equal(callLine('play', { skill: 'collect', block: 'stone', n: 3 }).t, '> play: collect stone 3', 'flat args');
   assert.equal(callLine('get_state', {}).t, '> get_state');
@@ -97,7 +97,7 @@ test('feed: a call, then its results once; advice when it changes; reflexes and 
   // a refused call, and the end
   feed.call(game, 'play', { skill: 'craft', args: { item: 'iron_pickaxe' } });
   feed.reply(game, 'play', {}, { isError: true, content: [{ type: 'text', text: 'Missing items: 3 iron_ingot\nmore' }], structuredContent: { code: 'NEED_ITEMS', steps: [] } });
-  assert.deepEqual(sent.at(-1).lines, [{ k: 'fail', t: 'FAIL NEED_ITEMS Missing items: 3 iron_ingot', why: 'missing items: 3 iron ingot' }, { k: 'reply', t: '< NEED_ITEMS: Missing items: 3 iron_ingot', rid: 4 }]);
+  assert.deepEqual(sent.at(-1).lines, [{ k: 'fail', t: 'FAIL NEED_ITEMS Missing items: 3 iron_ingot', why: 'missing items: 3 iron ingot' }, { k: 'reply', t: '< NEED_ITEMS: Missing items: 3 iron_ingot', rid: 4, code: 'NEED_ITEMS' }]);
   feed.call(game, 'end_game', {});
   feed.reply(game, 'end_game', {}, reply({}));
   assert.deepEqual(sent.at(-1).lines.at(-1), { k: 'info', t: 'game over after 0:41' });
