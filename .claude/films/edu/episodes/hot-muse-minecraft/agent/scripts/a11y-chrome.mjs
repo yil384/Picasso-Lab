@@ -1,7 +1,7 @@
 // scripts/a11y-chrome.mjs - the /play accessibility check without Playwright: it drives a Chrome or Chromium that is
 // already installed (headless, JavaScript off, a throwaway profile) over the DevTools protocol, reads the browser's own
 // accessibility tree and runs the same check as scripts/a11y_snapshot.py. From the site root it starts a session the
-// way an agent would (ticks "I am 18 or older" and presses "Start a ... session", both found in the tree) and presses
+// way an agent would (presses "Start a ... session", found in the tree) and presses
 // "End my session" afterwards. Nothing is installed or downloaded; session tokens are shortened in the output.
 //
 //   node scripts/a11y-chrome.mjs http://127.0.0.1:8787/ --check
@@ -232,9 +232,6 @@ async function openPlayPage(ops, startUrl, timeoutMs) {
   let started = false;
   if (!new URL(await ops.url()).pathname.includes('/play/')) {
     started = true;
-    await ops.click('checkbox', 'I am 18 or older');
-    const box = (await ops.tree()).find((n) => n.role?.value === 'checkbox' && n.name?.value === 'I am 18 or older');
-    if (!box?.properties?.some((p) => p.name === 'checked' && String(p.value?.value) === 'true')) throw new Error('the 18+ box did not tick');
     await ops.load(() => ops.click('button', /^Start a /));
     if (!/\/play\/[A-Za-z0-9_-]+$/.test(new URL(await ops.url()).pathname)) throw new Error(`"Start" led to ${maskTokens(await ops.url())}, not a /play page`);
   }

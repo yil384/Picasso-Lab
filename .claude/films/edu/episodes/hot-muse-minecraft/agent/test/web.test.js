@@ -1,6 +1,6 @@
-// test/web.test.js - the viewer channel on a random port with stub bodies: the landing page (18+ and why, privacy, not an
+// test/web.test.js - the viewer channel on a random port with stub bodies: the landing page (a shared world, privacy, not an
 // official Minecraft service), the zero-JS control page and its forms, argument checks before a body is called, HTML
-// escaping, other players' chat kept out, the JSON API and its OpenAPI description, /ask (18+, length cap, per-address
+// escaping, other players' chat kept out, the JSON API and its OpenAPI description, /ask (length cap, per-address
 // rate limit, the queue reaching our brain, one visitor's text not shown to another), leases, slots and the queue for a
 // bot, the size cap, stop, the operator's log and kill switch, forwarded headers only from the trusted proxy, and the
 // live views under 128-bit ids with a limit on misses; plus the accessibility tree through an installed Chrome
@@ -106,7 +106,7 @@ const call = (url, method, body, headers = {}) => fetch(url, {
 });
 
 async function guest(url, headers = {}) {
-  const r = await post(`${url}/session`, { adult: 'yes' }, headers);
+  const r = await post(`${url}/session`, {}, headers); // no age to confirm (the owner, 2026-10-13)
   assert.equal(r.status, 303, `session start: ${r.status}`);
   const loc = r.headers.get('location');
   assert.match(loc, /^\/play\/[A-Za-z0-9_-]{32}$/);
@@ -121,7 +121,7 @@ async function guest(url, headers = {}) {
 
 const text = async (url) => (await fetch(url)).text();
 
-test('landing: what it is, 18+, not affiliated, start and ask forms, strict headers', async (t) => {
+test('landing: what it is, a shared unmoderated world, not affiliated, start and ask forms, no age gate, strict headers', async (t) => {
   const { url } = await serve(t, { makeBrain: () => ({}) });
   const r = await fetch(`${url}/`);
   assert.equal(r.status, 200);
@@ -138,12 +138,13 @@ test('landing: what it is, 18+, not affiliated, start and ask forms, strict head
   assert.equal(NOT_OFFICIAL, 'NOT AN OFFICIAL MINECRAFT SERVICE. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.');
   assert.match(page, /<p class="notice"><strong>NOT AN OFFICIAL MINECRAFT SERVICE\. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT\.<\/strong>/);
   assert.match(page, /<footer>[\s\S]*NOT AN OFFICIAL MINECRAFT SERVICE/, 'on every page');
-  assert.match(page, /<strong>Adults only \(18\+\)\.<\/strong> The world is shared with strangers/, 'and why');
+  assert.match(page, /<p>The world is shared with other people's bots, which their own AI agents drive, and nothing in it is moderated\.<\/p><\/header>/);
+  assert.doesNotMatch(page, /18\+|18 or older|adults/i, 'no age gate');
   assert.match(page, /<h2 id="h-privacy">Privacy<\/h2>[\s\S]*No account, no cookies[\s\S]*Only the people who run this demo at Picasso Lab can read that log[\s\S]*not written to the log/);
   assert.doesNotMatch(page, /href="\/log"|public log/i, 'the log is not public');
   assert.match(page, /<form [^>]*method="post" action="\/session"/);
   assert.match(page, /<form [^>]*method="post" action="\/ask"/);
-  assert.equal((page.match(/type="checkbox"[^>]*name="adult"[^>]*required/g) ?? []).length, 2);
+  assert.doesNotMatch(page, /type="checkbox"/, 'nothing to tick');
   assert.match(page, /maxlength="40"/);
   assert.ok(!/<script/i.test(page), 'zero JavaScript');
   assert.equal((await fetch(`${url}/nowhere`)).status, 404);
@@ -152,7 +153,6 @@ test('landing: what it is, 18+, not affiliated, start and ask forms, strict head
 
 test('play page: state as text, no refresh while idle, one labelled form per skill, stop, recent actions', async (t) => {
   const { url } = await serve(t);
-  assert.equal((await post(`${url}/session`, {})).status, 400, '18+ must be confirmed');
   const { token, page } = await guest(url);
   const r = await fetch(page);
   assert.equal(r.status, 200);
@@ -269,8 +269,7 @@ test('openapi + JSON api: operationIds are the tool names, args validated, busy,
     assert.ok(op.responses[200] && op.responses[202] && op.responses[400] && op.responses[409]);
   }
 
-  assert.equal((await call(`${url}/api/session`, 'POST', {})).status, 400);
-  const created = await call(`${url}/api/session`, 'POST', { adult: true });
+  const created = await call(`${url}/api/session`, 'POST', {});
   assert.equal(created.status, 201);
   const s = await created.json();
   assert.match(s.token, /^[A-Za-z0-9_-]{32}$/);
@@ -325,7 +324,7 @@ test('openapi + JSON api: operationIds are the tool names, args validated, busy,
   assert.equal([...bodies.values()][0].closed, true);
 });
 
-test('/ask: 18+, length cap, per-address limits, the queue reaches our brain', async (t) => {
+test('/ask: no age gate, length cap, per-address limits, the queue reaches our brain', async (t) => {
   let clock = 1_000_000;
   const goals = [];
   let hold = null; // set to a promise to keep a request running
@@ -348,13 +347,12 @@ test('/ask: 18+, length cap, per-address limits, the queue reaches our brain', a
   const { url, bodies } = await serve(t, { makeBrain, now: () => clock, trustProxy: 1 });
   const ip = (a) => ({ 'x-forwarded-for': `203.0.113.9, ${a}` });
 
-  assert.equal((await post(`${url}/ask`, { text: 'build a hut' }, ip('1.1.1.1'))).status, 400, 'needs 18+');
   assert.equal((await post(`${url}/ask`, { text: 'x'.repeat(41), adult: 'yes' }, ip('1.1.1.1'))).status, 413);
   assert.equal((await post(`${url}/ask`, { text: '   ', adult: 'yes' }, ip('1.1.1.1'))).status, 400);
 
   let release;
   hold = new Promise((r) => { release = r; });
-  let r = await post(`${url}/ask`, { text: '<b>hut</b>', adult: 'yes' }, ip('1.1.1.1'));
+  let r = await post(`${url}/ask`, { text: '<b>hut</b>' }, ip('1.1.1.1')); // no age to confirm
   assert.equal(r.status, 303);
   assert.equal(r.headers.get('location'), '/ask?queued=1');
   r = await post(`${url}/ask`, { text: 'a second one', adult: 'yes' }, ip('1.1.1.1'));

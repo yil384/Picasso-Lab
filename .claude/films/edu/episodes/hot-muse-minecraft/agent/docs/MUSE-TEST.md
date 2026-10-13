@@ -20,14 +20,12 @@ table and a furnace down and picks them up again for every craft and smelt).
 ## The prompt (paste into a new muse.ai chat)
 
 ```
-I am 18 or older, and I confirm it for this game.
-
 1. Connect to my Minecraft MCP server at https://play-staging.picasso-lab.com/mcp (streamable HTTP, no
    authentication). If you already have a custom integration or a client for a Minecraft server (an earlier one used
    https://play.picasso-lab.com/mcp), update it to this URL or build a new custom integration for it; either is fine.
    Use only this MCP server, not its web pages.
 
-2. Call start_game with adult: true. Then, without asking me anything:
+2. Call start_game. Then, without asking me anything:
    a. get an iron pickaxe into your inventory;
    b. build a small shelter around or next to you (the build skill, blueprint shelter or hut_3x3, with planks or
       cobblestone you carry; gather more first if you need it);

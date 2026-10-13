@@ -1,7 +1,7 @@
-// src/web.js - the viewer channel, node:http only. GET / says what this is (18+, privacy, not an official Minecraft
+// src/web.js - the viewer channel, node:http only. GET / says what this is (a shared, unmoderated world, privacy, not an official Minecraft
 // service); GET /play/<token> is a zero-JS control page an agent browser can drive from the accessibility tree (state
 // as text, one form per skill, a stop button, the session's last actions); /api offers the same actions as JSON,
-// described by /openapi.json (OpenAPI 3.1); POST /ask queues a natural-language instruction for our own brain (18+,
+// described by /openapi.json (OpenAPI 3.1); POST /ask queues a natural-language instruction for our own brain
 // per-address limits, length cap); GET /log is the JSONL tail for the operator (admin token). Each guest gets a random
 // token, a bot of its own and a lease (one live session per address); when every bot is in use, callers wait in a
 // queue with a place and an ETA. The live 3D views live under unguessable 128-bit view ids. Viewer input is data: every
@@ -163,7 +163,7 @@ ${refresh > 0 ? html`<meta http-equiv="refresh" content="${refresh}">\n` : ''}${
 <div class="wrap">
 ${main}
 <footer><p class="muted">A research demo by Picasso Lab, UC San Diego. ${NOT_OFFICIAL} Not affiliated with or endorsed by
-Meta. For adults (18+). <a href="/">Home</a> · <a href="/openapi.json">OpenAPI</a></p></footer>
+Meta. <a href="/">Home</a> · <a href="/openapi.json">OpenAPI</a></p></footer>
 </div>
 </body>
 </html>
@@ -337,9 +337,9 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
         operationId: 'start_session',
         tags: ['session'],
         summary: 'Get a bot of your own for one lease',
-        description: `Starts a ${leaseWords(leaseMs)} session with its own bot. Adults only: send {"adult": true} to confirm you are 18 or older.`,
-        requestBody: { required: true, content: json({ type: 'object', properties: { adult: { type: 'boolean', const: true, description: 'I am 18 or older' } }, required: ['adult'], additionalProperties: false }) },
-        responses: { 201: { description: 'session started (the bot joins within seconds)', content: json(ref('Session')) }, 400: err('not confirmed 18+'), 429: err('too many sessions from this address'), 503: err('every bot is in use: queue gives your place and an estimate; ask again within holdSeconds to keep the place') },
+        description: `Starts a ${leaseWords(leaseMs)} session with its own bot. The body may be empty.`,
+        requestBody: { required: false, content: json({ type: 'object', properties: { adult: { type: 'boolean', description: 'accepted for old clients and ignored' } }, additionalProperties: false }) },
+        responses: { 201: { description: 'session started (the bot joins within seconds)', content: json(ref('Session')) }, 429: err('too many sessions from this address'), 503: err('every bot is in use: queue gives your place and an estimate; ask again within holdSeconds to keep the place') },
       },
     },
     '/api/{token}': {
@@ -387,7 +387,7 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
       version: '0.1.0',
       description: 'Drive a Minecraft bot through 10 fixed skills. Start a session, then call one skill at a time and read the state. '
         + 'Arguments are checked against fixed lists; nothing you send is run as code. A research demo by Picasso Lab, UC San Diego. '
-        + 'Not affiliated with or endorsed by Meta, Mojang or Microsoft. Adults (18+) only.',
+        + 'Not affiliated with or endorsed by Meta, Mojang or Microsoft.',
     },
     servers: [{ url: baseUrl }],
     tags: [{ name: 'session', description: 'start, read, stop, end' }, { name: 'tools', description: 'the 10 skills' }],
@@ -870,9 +870,9 @@ export function createWeb(opts = {}) {
     const lease = leaseWords(web.leaseMs);
     // the one-line prompt (the server's instructions carry the rest; src/mcp.js instructionsText)
     const mcpUrl = `${base(req)}/mcp`;
-    const oneLine = `I'm 18 or older. Play Minecraft on ${mcpUrl} and get to the Nether and back.`;
+    const oneLine = `Play Minecraft on ${mcpUrl} and get to the Nether and back.`;
     const closed = askClosedReason();
-    const prompt = `Open ${base(req)}/ . In "Get a bot", tick "I am 18 or older" and press "Start a ${lease} session". `
+    const prompt = `Open ${base(req)}/ . In "Get a bot", press "Start a ${lease} session". `
       + 'On the page that opens, read "Game state", then use the action buttons to collect 10 logs of whatever tree is nearby, craft them into planks and build a hut_3x3 from those planks. '
       + 'After each action, press "Check again" until Status says "Ready for the next action", then read "Last result" before you choose the next one. '
       + 'Stop when the hut is built.';
@@ -884,22 +884,19 @@ guest's bot) acts only through 10 fixed skills (walk, mine, craft, smelt, place,
 state). Meta's Muse Spark model plays it on our side, and you can drive a bot yourself, by hand or through your own AI
 agent.</p>
 <p class="notice"><strong>${NOT_OFFICIAL}</strong> Not affiliated with or endorsed by Meta, Mojang or Microsoft.</p>
-<p><strong>Adults only (18+).</strong> The world is shared with strangers and with bots that other people's AI agents
-drive, nothing in it is moderated, and none of it is made for children; we cannot check ages, so everyone who plays
-confirms they are 18 or older.</p></header>
+<p>The world is shared with other people's bots, which their own AI agents drive, and nothing in it is moderated.</p></header>
 <main>
 <section aria-labelledby="h-muse"><h2 id="h-muse">Let Muse play: one line</h2>
 <p>In muse.ai, two steps:</p>
 <ol class="steps">
 <li>Add this server as a custom integration: in a chat, ask Muse to build a custom integration (an MCP connector) for <code>${mcpUrl}</code> (streamable HTTP, no sign-in). Once is enough.</li>
-<li>In a new conversation, send this one line (only if you are 18 or older):</li>
+<li>In a new conversation, send this one line:</li>
 </ol>
 <pre class="oneline">${oneLine}</pre>
 <p class="muted">Other goals: end the line with "get an iron pickaxe", "get diamonds" or "just play". Muse then plays by itself: it opens the live view, says why with every step, and at the end shows the server's report (the milestones with their times, deaths, who acted, its decision log). Any other MCP client: the same address, with the ready prompts play_to_the_nether and free_play.</p></section>
 <section aria-labelledby="h-start"><h2 id="h-start">Get a bot</h2>
 <p>You get a bot of your own for a ${lease} lease, then the slot goes to the next guest. Bots in use: ${sessions.size} of ${web.maxSessions}.</p>
 <form class="panel" method="post" action="/session" aria-labelledby="h-start" novalidate>
-<div class="check"><input type="checkbox" id="start-adult" name="adult" value="yes" required><label for="start-adult">I am 18 or older</label></div>
 <button type="submit">Start a ${lease} session</button>
 </form></section>
 <section aria-labelledby="h-agent"><h2 id="h-agent">Let your own agent play</h2>
@@ -911,7 +908,6 @@ confirms they are 18 or older.</p></header>
 the queue per address, at most ${web.askPerHour} per hour, ${web.askMaxChars} characters each. Waiting now: ${ask.queue.length}. <a href="/ask">Queue status</a></p>
 ${askNotice ? html`<p class="notice">${askNotice}</p>` : ''}${closed ? html`<p class="notice" role="status">${closed}</p>` : html`<form class="panel" method="post" action="/ask" aria-labelledby="h-ask" novalidate>
 <div class="field"><label for="ask-text">Instruction (up to ${web.askMaxChars} characters)</label><textarea id="ask-text" name="text" maxlength="${web.askMaxChars}" required></textarea></div>
-<div class="check"><input type="checkbox" id="ask-adult" name="adult" value="yes" required><label for="ask-adult">I am 18 or older</label></div>
 <button type="submit">Queue instruction</button>
 </form>`}</section>
 <section aria-labelledby="h-privacy"><h2 id="h-privacy">Privacy</h2>
@@ -1080,15 +1076,14 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
   }
 
   /**
-   * Ask for a session: 18+ confirmed, no live session and no cooldown for this address, a free slot (callers who
+   * Ask for a session: no live session and no cooldown for this address, a free slot (callers who
    * waited in the queue go first), the hourly per-address limit. Returns the session or throws.
    * MCP games (mcp = {key, address}) are one per MCP session (key): every connector user arrives from the agent's own
    * cloud, so one address can stand for many people. Per address they get a looser cap (mcpGamesPerAddress live
    * games, mcpStartsPerHour starts), so one caller cannot take every bot.
    */
-  function newSession(req, adult, mcp = null) {
+  function newSession(req, mcp = null) {
     if (closing) throw new HttpError(503, 'the server is shutting down');
-    if (!adult) throw new HttpError(400, 'please confirm that you are 18 or older');
     sweep();
     const address = mcp ? mcp.address : clientKey(req);
     const key = mcp ? mcp.key : address;
@@ -1119,8 +1114,6 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     const { kind, fields } = await readFields(req, web.maxBodyBytes);
     const asJson = kind === 'json' || /application\/json/.test(String(req.headers.accept ?? ''));
     const fail = (status, error, headers) => (asJson ? sendJson(res, status, { error }, headers) : sendHtml(res, status, errorPage(status, error), headers));
-    const adult = fields.adult === true || fields.adult === 'yes' || fields.adult === 'on';
-    if (!adult) return fail(400, 'please confirm that you are 18 or older');
     if (typeof fields.text !== 'string') return fail(400, 'type an instruction');
     if (fields.text.length > web.askMaxChars * 4) return fail(413, `the instruction is longer than ${web.askMaxChars} characters`);
     const text = cleanText(fields.text);
@@ -1378,8 +1371,8 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     }
     if (p === '/session') {
       only('POST');
-      const { fields } = await readFields(req, web.maxBodyBytes);
-      const s = newSession(req, fields.adult === 'yes' || fields.adult === 'on' || fields.adult === true);
+      await readFields(req, web.maxBodyBytes); // an old form's adult field is accepted and ignored
+      const s = newSession(req);
       return redirect(res, playPath(s));
     }
     if (p === '/ask') {
@@ -1441,8 +1434,8 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
 
     if (p === '/api/session') {
       only('POST');
-      const { fields } = await readFields(req, web.maxBodyBytes);
-      const s = newSession(req, fields.adult === true || fields.adult === 'yes');
+      await readFields(req, web.maxBodyBytes); // {"adult": true} from old clients is accepted and ignored
+      const s = newSession(req);
       return sendJson(res, 201, sessionJson(s, req), PRIVATE);
     }
     m = p.match(/^\/api\/([^/]+)\/?$/);

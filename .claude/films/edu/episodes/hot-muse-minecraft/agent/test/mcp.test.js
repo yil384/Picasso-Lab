@@ -1,5 +1,5 @@
 // test/mcp.test.js - the MCP endpoint end to end: against the fake world (tools listed with the skills and their
-// arguments, 18+, start_game, play and play_sequence answer with result + state, refusals, one bot per MCP session, no
+// arguments, no age gate, start_game, play and play_sequence answer with result + state, refusals, one bot per MCP session, no
 // link or token in any reply but live_view's, the client's protocol version and name logged), and against stub bodies
 // with a short call budget: one deadline per call, results that outlive their call (or a client that gave up) reported
 // once later, join failures, lease ends, resuming a game from a new connection with a handle that is not the control
@@ -22,7 +22,8 @@ async function connect(url) {
   await c.connect(new StreamableHTTPClientTransport(new URL(`${url}/mcp`)));
   return c;
 }
-const text = (r) => r.content.map((x) => x.text).join('\n');
+// the reply as these tests read it: without the live view nudge at the top (test/liveview.test.js checks it)
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^Your user cannot see the game yet: [^\n]*\n\n/, '');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const START = { adult: true };
 
@@ -50,18 +51,15 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
     assert.match(play.description, /- place \{block: one of [^}]*, pos: \{x: integer, y: integer -64 to 320, z: integer\}\}/);
     assert.match(play.description, /stone_bricks/, 'every craftable item is listed');
     assert.equal(tools.find((t) => t.name === 'get_state').annotations?.readOnlyHint, true);
-    assert.deepEqual(tools.find((t) => t.name === 'start_game').inputSchema.required, ['adult']);
-    assert.match(a.getInstructions(), /Adults \(18\+\) only/);
+    assert.equal(tools.find((t) => t.name === 'start_game').inputSchema.required, undefined, 'nothing required: no age gate');
+    assert.doesNotMatch(a.getInstructions(), /18\+|18 or older|adult/i);
 
     const none = await a.callTool({ name: 'play', arguments: { skill: 'eat' } });
     assert.equal(none.isError, true);
     assert.match(text(none), /call start_game first/);
 
-    const minor = await a.callTool({ name: 'start_game', arguments: { adult: false } });
-    assert.equal(minor.isError, true);
-    assert.match(text(minor), /adults \(18\+\) only/);
-
-    const s = text(await a.callTool({ name: 'start_game', arguments: START }));
+    // no age to confirm (the owner, 2026-10-13); old prompts' adult: true still works (START, below)
+    const s = text(await a.callTool({ name: 'start_game', arguments: {} }));
     assert.match(s, /^New game g\w+: a new bot at a fresh spot with an empty inventory/);
     assert.doesNotMatch(s, /https?:|\/eyes\/|\/watch\/|watch live/i, 'no links in the reply');
     const handle = /game: "([A-Za-z0-9_-]{22})"/.exec(s)?.[1];

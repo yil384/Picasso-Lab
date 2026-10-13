@@ -1,5 +1,5 @@
 // test/onebox.test.js - the one-line prompt (2026-10-12, the owner: "nobody else can use it out of the box"): one line
-// such as "I'm 18 or older. Play Minecraft on https://play.picasso-lab.com/mcp and get to the Nether and back." is
+// such as "Play Minecraft on https://play.picasso-lab.com/mcp and get to the Nether and back." is
 // enough, because the server carries the rest. Checked over /mcp: initialize carries the standing rules; tools/list
 // has game_report and start_game's goal; prompts/list has the ready prompts; start_game with a goal replies with the
 // milestone plan and its how-tos; end_game and game_report give the report; a client that still sends the old long
@@ -23,7 +23,8 @@ import { createTracker, goalOf, planText, GOAL_NAMES } from '../src/report.js';
 import { promptText } from '../src/mcp.js';
 import { fakeHosts } from './fake-mineai.js';
 
-const text = (r) => r.content.map((x) => x.text).join('\n');
+// the reply as these tests read it: without the live view nudge at the top (test/liveview.test.js checks it)
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^Your user cannot see the game yet: [^\n]*\n\n/, '');
 
 async function connect(url) {
   const c = new Client({ name: 'test', version: '1' });
@@ -40,7 +41,6 @@ test('one line is enough: the instructions carry every standing rule; tools, goa
     // initialize: every rule the long prompt carried, said once by the server
     const ins = c.getInstructions();
     for (const [rule, re] of [
-      ['age only from the user', /Adults \(18\+\) only: start_game needs adult: true\. Set it only when your user has said in this conversation that they are 18 or older; never assume it/],
       ['by itself', /once the game has started, play on without asking your user anything/],
       ['only this server', /Use only these tools, not the server's web pages/],
       ['the goal', /start_game, with goal when your user named one \(free, iron_pickaxe, diamonds, nether, nether_and_back, or their words: the server counts goals like "kill 100 pigs"/],
@@ -61,9 +61,10 @@ test('one line is enough: the instructions carry every standing rule; tools, goa
     const by = Object.fromEntries(tools.map((t) => [t.name, t]));
     assert.ok(by.game_report, 'game_report');
     assert.equal(by.game_report.annotations?.readOnlyHint, true);
-    assert.deepEqual(by.start_game.inputSchema.required, ['adult'], 'goal stays optional');
+    assert.equal(by.start_game.inputSchema.required, undefined, 'nothing required: no age gate, goal optional');
+    assert.doesNotMatch(ins, /18\+|18 or older|adult/i, 'no age rule');
     assert.match(by.start_game.inputSchema.properties.goal.description, /free, iron_pickaxe, diamonds, nether, nether_and_back/);
-    assert.match(by.start_game.inputSchema.properties.adult.description, /your user has said in this conversation that they are 18 or older/);
+    assert.match(by.start_game.inputSchema.properties.adult.description, /^not needed \(accepted from older prompts and ignored\)$/);
     for (const name of ['play', 'play_sequence']) assert.match(by[name].inputSchema.properties.why.description, /on every call/, name);
     assert.match(by.play.description, /Positions are block coordinates \{"x": 10, "y": 64, "z": -3\}: go_to takes x, y, z themselves, other skills a pos/);
     assert.match(by.end_game.description, /full report/);
@@ -75,7 +76,7 @@ test('one line is enough: the instructions carry every standing rule; tools, goa
     const nether = await c.getPrompt({ name: 'play_to_the_nether' });
     assert.equal(nether.messages[0].role, 'user');
     assert.match(nether.messages[0].content.text, /get to the Nether and back \(start_game with goal: "nether_and_back"\)/);
-    assert.match(nether.messages[0].content.text, /ask me whether I am 18 or older unless I have already said so/, 'the age stays the user\'s to state');
+    assert.doesNotMatch(nether.messages[0].content.text, /18|older/, 'no age question');
     assert.match((await c.getPrompt({ name: 'free_play', arguments: { goal: 'diamonds' } })).messages[0].content.text, /play toward this goal: diamonds \(start_game with goal: "diamonds"\)/);
     assert.match((await c.getPrompt({ name: 'free_play', arguments: {} })).messages[0].content.text, /play for as long as the game lasts/);
 
@@ -109,7 +110,7 @@ test('one line is enough: the instructions carry every standing rule; tools, goa
     const at = (re) => page.search(re);
     assert.ok(at(/<h2 id="h-muse">Let Muse play: one line<\/h2>/) > 0 && at(/<h2 id="h-muse">/) < at(/<h2 id="h-start">/), 'first section of the page');
     assert.match(page, /<li>Add this server as a custom integration: in a chat, ask Muse to build a custom integration \(an MCP connector\) for <code>http:\/\/127\.0\.0\.1:\d+\/mcp<\/code>/);
-    assert.match(page, /<li>In a new conversation, send this one line \(only if you are 18 or older\):<\/li>\n<\/ol>\n<pre class="oneline">I&#39;m 18 or older\. Play Minecraft on http:\/\/127\.0\.0\.1:\d+\/mcp and get to the Nether and back\.<\/pre>/);
+    assert.match(page, /<li>In a new conversation, send this one line:<\/li>\n<\/ol>\n<pre class="oneline">Play Minecraft on http:\/\/127\.0\.0\.1:\d+\/mcp and get to the Nether and back\.<\/pre>/);
   } finally {
     await c.close();
     await agent.stop();
@@ -139,9 +140,10 @@ test('back-compat: a client sending the old long prompt (no goal, why on some ca
     assert.match(text(end), /^Game ended\.\n\nReport for game g\w+: goal Diamonds \(get some diamonds please\);/);
     assert.match(text(end), /\nGoals this game: 0:00 free play \(until 0:00\); 0:00 Diamonds \(now\)\.\n/);
     assert.match(text(end), /\n- \d+:\d\d \(no why given\) -> collect oak_log 1: ok\n- \d+:\d\d "planks" -> craft oak_planks 4: ok/);
-    // the old adult rule: no adult, no game
-    const minor = await c.callTool({ name: 'start_game', arguments: { adult: false, goal: 'nether' } });
-    assert.equal(minor.isError, true);
+    // no age gate any more (the owner, 2026-10-13): adult false or missing starts a game too
+    const anyone = await c.callTool({ name: 'start_game', arguments: { adult: false, goal: 'nether' } });
+    assert.equal(anyone.isError, undefined, text(anyone));
+    assert.match(text(anyone), /^New game g\w+/);
   } finally {
     await c.close();
     await agent.stop();
@@ -213,7 +215,7 @@ test('report.js: goals from words, the plan for each goal, the tracker on its ow
   assert.deepEqual(goalOf(''), { key: 'free', text: null, title: 'Free play', parts: null });
   for (const g of GOAL_NAMES) assert.match(planText(goalOf(g)), /^Goal: /);
   assert.match(planText(goalOf('iron_pickaxe')), /\n4\. iron pickaxe: craft an iron_pickaxe \(3 iron ingots\)\nNights:/);
-  assert.match(promptText('nether_and_back'), /18 or older/);
+  assert.doesNotMatch(promptText('nether_and_back'), /18|older/);
 
   let t = 0;
   const tr = createTracker({ goal: goalOf('nether_and_back'), now: () => t });
