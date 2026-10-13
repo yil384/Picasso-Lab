@@ -23,7 +23,7 @@ async function connect(url) {
   return c;
 }
 // the reply as these tests read it: without the nudges at the top (test/liveview.test.js checks them)
-const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet|Viewers see your why and plan under the video): [^\n]*\n\n)+/, '');
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet: |Viewers see your why and plan under the video: |Next: call live_view now)[^\n]*\n\n)+/, '');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const START = { adult: true };
 
@@ -122,12 +122,12 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
     // one bad step refuses the whole call
     const notRun = await a.callTool({ name: 'play_sequence', arguments: { steps: [
       { skill: 'craft', args: { item: 'stick', n: 4 } },
-      { skill: 'craft', args: { item: 'stick' } },
+      { skill: 'craft', args: { item: 'stick', n: 'many' } }, // (a craft with no n makes one: g71c9f5)
       { skill: 'craft', args: { item: 'crafting_table', n: 1 } },
     ] } });
     assert.equal(notRun.isError, true);
     assert.equal(notRun.structuredContent.code, 'BAD_ARGS');
-    assert.match(text(notRun), /^2\. craft: not run, bad arguments: craft\.n is required\nNothing was run/m);
+    assert.match(text(notRun), /^2\. craft: not run, bad arguments: craft\.n must be an integer\nNothing was run/m);
     assert.deepEqual(notRun.structuredContent.state.inventory, { oak_log: 2, oak_planks: 4 });
 
     // a second MCP session from the same address gets its own bot (connector users share the agent's addresses)

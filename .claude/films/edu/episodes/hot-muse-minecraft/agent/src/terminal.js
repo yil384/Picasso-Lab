@@ -37,6 +37,13 @@ export function cleanTerm(u) {
       if (l.shut) out.shut = 1; // the body closed itself in (a shelter)
       if (l.ok) out.ok = 1;
       if (typeof l.ak === 'string' && /^[a-z_]{1,24}$/.test(l.ak)) out.ak = l.ak;
+      // who decided it: Muse's call, a rule Muse set (its name, rs: game seconds and rc: the call it was set with), the body
+      if (['muse', 'rule', 'body'].includes(l.src)) out.src = l.src;
+      if (out.src === 'rule' && ['defend', 'flee', 'escape', 'eat_below'].includes(l.rule)) {
+        out.rule = l.rule;
+        { const v = int(l.rs, 0, 86_400); if (v !== undefined) out.rs = v; }
+        { const v = int(l.rc, 1, 100_000); if (v !== undefined) out.rc = v; }
+      }
       if (typeof l.tool === 'string' && /^[a-z_]{1,24}$/.test(l.tool)) out.tool = l.tool;
       if (typeof l.code === 'string' && /^[A-Z_]{2,24}$/.test(l.code)) out.code = l.code; // a reply's typed code
       if (['body', 'world', 'server'].includes(l.who)) out.who = l.who; // a world line: whose event
@@ -51,7 +58,7 @@ export function cleanTerm(u) {
   const out = { lines, status: typeof u?.status === 'string' ? clean(u.status, 120) : '' };
   if (u?.st && typeof u.st === 'object') {
     const st = {};
-    for (const [key, lo, hi] of [['hp', 0, 20], ['food', 0, 20], ['muse', 0, 1e6], ['reflex', 0, 1e6], ['pct', 0, 100], ['ticks', 0, 23_999]]) { const v = int(u.st[key], lo, hi); if (v !== undefined) st[key] = v; }
+    for (const [key, lo, hi] of [['hp', 0, 20], ['food', 0, 20], ['muse', 0, 1e6], ['reflex', 0, 1e6], ['pct', 0, 100], ['ticks', 0, 23_999], ['rule', 0, 1e6], ['body', 0, 1e6], ['dpct', 0, 100]]) { const v = int(u.st[key], lo, hi); if (v !== undefined) st[key] = v; }
     const clock = typeof u.st.clock === 'string' ? clean(u.st.clock, 16) : '';
     if (/^(?:(?:DAY|NIGHT) \d\d:\d\d|NETHER|END)$/.test(clock)) st.clock = clock;
     out.st = st;
@@ -74,6 +81,14 @@ export function cleanTerm(u) {
       out.sub = { kind: SUB_KINDS.includes(sb.kind) ? sb.kind : 'other', text };
       for (const [key, lo, hi] of [['done', 0, 100_000], ['of', 1, 100_000], ['left', 0, 100_000]]) { const v = int(sb[key], lo, hi); if (v !== undefined) out.sub[key] = v; }
     }
+  }
+  if (Array.isArray(u?.rules)) {
+    // Muse's rules now: {n, on, v (eat_below's level), setS (game seconds), call (Muse's call number)}
+    out.rules = u.rules.slice(0, 8).filter((r) => ['defend', 'flee', 'escape', 'eat_below'].includes(r?.n)).map((r) => {
+      const x = { n: r.n, on: r.on === true };
+      for (const [key, lo, hi] of [['v', 0, 20], ['setS', 0, 86_400], ['call', 1, 100_000]]) { const v = int(r[key], lo, hi); if (v !== undefined) x[key] = v; }
+      return x;
+    });
   }
   if (u?.goal && typeof u.goal === 'object') {
     // the goal set last (start_game, set_goal) and its checklist (src/report.js progress): a preset's milestones with
@@ -441,6 +456,8 @@ export function statusData(state, attribution) {
     st.muse = attribution.muse;
     st.reflex = (attribution.reflex ?? 0) + (Number.isFinite(attribution.care) ? attribution.care : 0);
     if (Number.isFinite(attribution.musePct)) st.pct = attribution.musePct;
+    // Muse's rules: rule = actions by them, body = on its own, dpct = decided by Muse (directly or by its rules)
+    if (Number.isFinite(attribution.rule)) { st.rule = attribution.rule; st.body = attribution.body ?? 0; if (Number.isFinite(attribution.decidedPct)) st.dpct = attribution.decidedPct; }
   }
   return st;
 }
@@ -511,7 +528,9 @@ export function createTermFeed(o) {
     const bodyAt = now() - agoS * 1000;
     if (/shelter/i.test(`${e.kind} ${e.text}`) && !(g.museShelterAt >= bodyAt)) Object.assign(g, { lastSkill: 'shelter', lastSkillBy: 'body' });
     const death = /death|died/i.test(`${e.kind} ${e.text}`);
-    return { k: death ? 'fail' : e.source === 'reflex' ? 'reflex' : 'body', t: clean(`${death ? 'death' : e.source === 'reflex' ? 'reflex' : 'body'}: ${e.text}`), ago: Math.round(agoS), ...(/closed itself in/i.test(String(e.text)) ? { shut: 1 } : {}) };
+    // who decided it: a rule Muse set (with when: rs game seconds, rc its call), else the body on its own
+    const byRule = e.source === 'rule';
+    return { k: death ? 'fail' : e.source === 'reflex' || byRule ? 'reflex' : 'body', t: clean(`${death ? 'death' : byRule ? `rule ${e.rule}` : e.source === 'reflex' ? 'reflex' : 'body'}: ${e.text}`), ...(death ? {} : { src: byRule ? 'rule' : 'body' }), ...(byRule && e.rule ? { rule: e.rule, ...(Number.isFinite(e.ruleSet?.atS) ? { rs: e.ruleSet.atS } : {}), ...(Number.isFinite(e.ruleSet?.call) ? { rc: e.ruleSet.call } : {}) } : {}), ago: Math.round(agoS), ...(/closed itself in/i.test(String(e.text)) ? { shut: 1 } : {}) };
   }
   // each call and its reply carry the same number (rid), so the RAW console pairs them though calls may overlap
   const rids = new WeakMap();
@@ -631,7 +650,10 @@ export function createTermFeed(o) {
       let goal = null;
       try { goal = s.tracker?.progress?.() ?? null; } catch { goal = null; }
       const hud = hudOf(s, g, structured);
-      o.send(s.id, { lines: [...lines.filter(Boolean).filter((l) => l.t), ...(g.world ?? [])], status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}), ...(goal ? { goal } : {}), ...hud, ...(extra ?? {}) });
+      // Muse's rules now, with when each was set (the body acts by itself only by these)
+      let rules = null;
+      try { const r = s.body?.rules?.(); if (r?.rules) rules = Object.entries(r.rules).map(([n, v]) => ({ n, on: v === true || v > 0, ...(typeof v === 'number' ? { v } : {}), ...(r.set?.[n] ? { setS: r.set[n].atS, call: r.set[n].call } : {}) })); } catch { rules = null; }
+      o.send(s.id, { lines: [...lines.filter(Boolean).filter((l) => l.t), ...(g.world ?? [])], status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}), ...(goal ? { goal } : {}), ...(rules ? { rules } : {}), ...hud, ...(extra ?? {}) });
     } catch { /* the video goes on without it */ }
   };
   const PLACES = { the_nether: 'entered the Nether', the_end: 'entered the End', overworld: 'back in the Overworld' };
@@ -653,7 +675,7 @@ export function createTermFeed(o) {
       if (args && typeof args === 'object') rids.set(args, rid);
       // and by tool, oldest first, for a reply that does not come with the same arguments object
       (g.pend ??= new Map()).set(tool, [...(g.pend.get(tool) ?? []), rid]);
-      const lines = [{ ...callLine(tool, args), rid }];
+      const lines = [{ ...callLine(tool, args), rid, src: 'muse' }];
       // the advice the last reply gave: did this command take it? Said only when it is clear: the advised skill is in
       // the command, or a pressing advice (night, health) is left for something else
       if ((tool === 'play' || tool === 'play_sequence') && g.hints?.length) {
@@ -676,7 +698,7 @@ export function createTermFeed(o) {
       const pend = g.pend?.get(tool) ?? [];
       if (rid !== undefined) g.pend?.set(tool, pend.filter((x) => x !== rid));
       else if (pend.length) { rid = pend[0]; g.pend.set(tool, pend.slice(1)); }
-      if (tool === 'start_game') { rid = ++ridSeq; lines.push({ ...callLine(tool, args), rid }); }
+      if (tool === 'start_game') { rid = ++ridSeq; lines.push({ ...callLine(tool, args), rid, src: 'muse' }); }
       const st = out?.structuredContent ?? {};
       for (const step of [...(st.earlier ?? []), ...(st.steps ?? [])]) {
         const key = `${step.call ?? ''}:${step.n}`;
@@ -685,7 +707,7 @@ export function createTermFeed(o) {
         const line = resultLine(step);
         const total = (st.steps ?? []).some((x) => x === step) ? (st.steps ?? []).length : null;
         if (line && Number.isInteger(step.n)) Object.assign(line, { n: step.n }, total ? { of: total } : {});
-        if (line) Object.assign(line, ...stepRef(step));
+        if (line) Object.assign(line, ...stepRef(step), { src: 'muse' });
         if (line) lines.push(line);
         if (step.status === 'confirmed') {
           // the last thing done, for the status line between calls (a shelter at night, a bed)

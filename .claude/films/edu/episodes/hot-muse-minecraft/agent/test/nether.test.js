@@ -313,14 +313,17 @@ test('a step of the player\'s never runs beside an action of the body\'s own tha
   const fake = hosts.started[0].fake;
   await body.ready;
   try {
-    // before the first call, at night: the body shelters on its own; its dig does not stop when asked
-    fake.world.durations = { ...(fake.world.durations ?? {}), navigate: 2_500 };
+    // a meal under Muse's rule eat_below (the only action of the body's own since 2026-10-13), one that does not stop
+    // when asked
+    fake.world.durations = { ...(fake.world.durations ?? {}), eat_food: 2_500 };
     fake.world.ignoreCancel = true;
-    fake.world.timeOfDay = 15000;
-    assert.ok(await until(() => fake.tools('navigate').length > 0, 6000), 'the body started its own shelter');
+    fake.world.food = 5;
+    fake.world.inventory.set('bread', 2);
+    body.setRules({ eat_below: 6 });
+    assert.ok(await until(() => fake.tools('eat_food').length > 0, 6000), 'the body started its meal');
     const r = await body.run('craft', { item: 'stick', n: 4 });
     assert.equal(r.ok, false);
-    assert.match(r.result, /^busy: the body is still finishing what it did on its own \(sheltering for the night\); send the step again in a few seconds$/);
+    assert.match(r.result, /^busy: the body is still finishing what it did on its own \(eating\); send the step again in a few seconds$/);
     assert.equal(fake.tools('craft_item').length, 0, 'nothing ran beside it');
     fake.world.ignoreCancel = false;
     await sleep(2_600);

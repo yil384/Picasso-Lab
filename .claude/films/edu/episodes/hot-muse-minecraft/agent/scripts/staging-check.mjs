@@ -169,7 +169,7 @@ async function checks(base, playGame, minutes, print) {
     let wood = null;
     for (let spot = 1; !wood; spot++) {
       for (;;) {
-        r = await call('start_game', { adult: true });
+        r = await call('start_game', { adult: true, live: false }); // a check, not a watched game
         if (!r.error) break;
         if (!/could not start/.test(r.text) || left() < 120_000) fail(`start_game: ${short(r.text.split('\n')[0])}`);
         say(`start_game: ${short(r.text.split('\n')[0], 120)}; trying again in 5 s`);

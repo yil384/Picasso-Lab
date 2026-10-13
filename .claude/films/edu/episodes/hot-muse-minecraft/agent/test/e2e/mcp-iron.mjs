@@ -125,14 +125,14 @@ export async function runIronRoute({ url, strict = true, print = console.log, mi
   }
 
   try {
-    let r = await call('start_game', { adult: true });
+    let r = await call('start_game', { adult: true, live: false });
     // a full server answers with a place in the queue: asking again keeps it (waiting, not a retry)
     while (/in the queue/.test(r.text) && Date.now() < deadline) {
       print(`[${sec()} s] waiting: ${r.text.slice(0, 160)}`);
       await sleep(20_000);
-      r = await call('start_game', { adult: true });
+      r = await call('start_game', { adult: true, live: false });
     }
-    if (!strict) for (let i = 0; i < 20 && r.isError && /could not start/.test(r.text); i++) { await sleep(5_000); r = await call('start_game', { adult: true }); }
+    if (!strict) for (let i = 0; i < 20 && r.isError && /could not start/.test(r.text); i++) { await sleep(5_000); r = await call('start_game', { adult: true, live: false }); }
     if (r.isError) throw new Error(`start_game: ${r.text.slice(0, 300)}`);
     s = r.text;
     game = /game (g\w+)/.exec(s)?.[1] ?? null;

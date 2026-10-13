@@ -67,7 +67,7 @@ test('g0793f1: reflexes during a step count once per kind of response and mob, n
   assert.equal(events.filter((e) => e.source === 'reflex').length, 5);
 });
 
-test('g0793f1: the body\'s own shelter before the first call with no blocks only digs in, and says so', async () => {
+test('g0793f1 (since 2026-10-13): no shelter of its own before the first call either: the body acts only by Muse\'s rules', async () => {
   const calls = [];
   const state = { situation: { ...situation({ clock: { timeOfDay: 15000 } }) } };
   const care = createCare({
@@ -77,11 +77,8 @@ test('g0793f1: the body\'s own shelter before the first call with no blocks only
     event: () => {}, now: () => NOW, tickMs: 1e9, mode: 'advise',
   });
   await care.tick();
-  assert.deepEqual(calls.map((c) => c.tool), ['navigate', 'pick_up_items']);
-  assert.equal(calls[0].args.y, 44);
-  const [entry] = care.since(0);
-  assert.equal(entry.ok, true);
-  assert.match(entry.text, /dug two blocks down to wait there \(no blocks carried to close it over\)$/);
+  assert.deepEqual(calls, []);
+  assert.deepEqual(care.since(0), []);
 });
 
 test('g0793f1: a step whose time ran out while a reflex fought is tried once more, then INTERRUPTED in plain words; a pickup says what came back', async () => {

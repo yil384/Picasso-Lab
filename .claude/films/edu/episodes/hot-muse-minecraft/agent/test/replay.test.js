@@ -161,6 +161,17 @@ INCIDENTS.g4ac86b = {
   33: (w) => { w.overworldAt = { x: 49.5, y: 93, z: 161.5 }; },
 };
 
+INCIDENTS.g71c9f5 = {
+  // a zombie at the hole before the first call; it killed the bot in Muse's first collect
+  0: (w) => { w.position = { x: 398.5, y: 77, z: -269.5 }; w.die = 'collect_block'; w.dieCause = 'Tst_rv was slain by Zombie'; },
+  1: (w) => { w.inventory.set('oak_log', 0); w.position = { x: 93.5, y: 83, z: 89.5 }; }, // respawned near the world spawn
+  20: LAVA_NEAR,
+  22: (w) => { w.inventory.set('flint', 1); },
+  // the obsidian it took (from the leftover portal at 49 93 160, production says) before Muse stopped the collect
+  24: (w) => { w.inventory.set('obsidian', 14); },
+  28: (w) => { w.netherAt = { x: 12.5, y: 58, z: 17.5 }; },
+};
+
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
   // 1: raw_chicken (refused before a hunt until 2026-10-12) is read as chicken now and hunted (src/tolerant.js); 18: production smelted the mutton again after its hitch, but here the
@@ -183,10 +194,14 @@ const EXPECTED = {
   g809e1b: { 16: null, 17: null, 18: null, 23: null, 25: 'LAVA', 32: null, 36: null, 38: null, 40: null, 42: null, 44: null, 45: null },
   // the lit portal and the pool far off (20, 22), the explore that found no plains (29)
   g4ac86b: { 20: 'FAILED', 22: 'LAVA', 29: null },
+  // 0: the zombie; 5: craft with no n, refused in production, runs now; the walks the world stopped (15, 24, 29);
+  // Muse's stop (21)
+  g71c9f5: { 0: 'DIED', 15: null, 21: null, 24: null, 29: null },
   ga13a88: { 27: null, 28: null, 31: null, 40: null, 41: null, 42: null, 46: null, 47: null, 52: null, 53: null, 58: null },
 };
 /** What a step's reply must say (by index). */
 const EXPECTED_TEXT = {
+  g71c9f5: { 5: /^craft \{"item":"wooden_pickaxe","n":1\}: ok/ },
   g809e1b: { 31: /cleared \d+ cells of (stone and dirt|dirt and stone) for it first/, 34: /cleared \d+ cells of (stone and dirt|dirt and stone) for it first/ },
   g4ac86b: { 20: /at 49 93 161\): collect obsidian could take its frame\. Go about 200 blocks from it first/, 28: /cleared \d+ cells of/, 33: /your own portal is at -?\d+ -?\d+ -?\d+, \d+ blocks away \(the Nether side led to an older portal/ },
   // 55, 57: the stone hillside and the birch leaves are cleared first now, and the frames go up (g809e1b's fix)
@@ -194,7 +209,7 @@ const EXPECTED_TEXT = {
 };
 
 /** The goal each game played for. */
-const GOALS = { g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
+const GOALS = { g71c9f5: 'nether_and_back', g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
 /** A why for a step, as Muse writes them (the fixtures predate why in the log). */
 const whyOf = (i, st) => `Step ${i}: ${[st.tool, ...Object.values(st.args ?? {}).filter((v) => typeof v !== 'object')].join(' ')} for the goal`;
 
@@ -240,14 +255,16 @@ async function replay(id, steps) {
   await c.connect(new StreamableHTTPClientTransport(new URL(`${url}/mcp`)));
   const out = [];
   try {
-    const start = await c.callTool({ name: 'start_game', arguments: { adult: true, goal: GOALS[id] } });
+    // the games ran with the reflexes on, before Muse's rules (2026-10-13): replayed with those rules set
+    const start = await c.callTool({ name: 'start_game', arguments: { adult: true, goal: GOALS[id], rules: { defend: true, flee: true, escape: true, eat_below: 4 } } });
     assert.ok(!start.isError, start.content[0].text);
     if (GOALS[id]) assert.match(start.content[0].text, /\nGoal: [^\n]+\. The plan, milestone by milestone/);
     const fake = hosts.started[0].fake;
     for (const [i, st] of steps.entries()) {
       INCIDENTS[id]?.[i]?.(fake.world);
       const r = await c.callTool({ name: 'play', arguments: { skill: st.tool, args: st.args, why: whyOf(i, st) } });
-      const text = r.content.map((x) => x.text).join('\n');
+      // the reply without the nudges at the top (test/liveview.test.js checks them)
+      const text = r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet: |Viewers see your why and plan under the video: |Next: call live_view now)[^\n]*\n\n)+/, '');
       const step = r.structuredContent?.steps?.at(-1) ?? null;
       out.push({ i, st, text, code: r.structuredContent?.code ?? null, status: step?.status ?? (r.isError ? 'refused' : null), result: step?.result ?? text.split('\n')[0], advice: r.structuredContent?.advice ?? [] });
     }

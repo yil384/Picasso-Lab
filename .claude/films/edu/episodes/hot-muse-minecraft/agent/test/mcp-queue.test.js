@@ -16,7 +16,7 @@ import { startAgent } from '../src/index.js';
 
 const START = { adult: true };
 // the reply as these tests read it: without the nudges at the top (test/liveview.test.js checks them)
-const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet|Viewers see your why and plan under the video): [^\n]*\n\n)+/, '');
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet: |Viewers see your why and plan under the video: |Next: call live_view now)[^\n]*\n\n)+/, '');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const status = (r) => r.structuredContent.steps.map((x) => x.status);
 

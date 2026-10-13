@@ -23,7 +23,7 @@ export async function startTogether({ url, n = 2, print = console.log }) {
     const c = await connect(url, `e2e-two-starts-${i}`);
     try {
       const text = (r) => r.content.map((x) => x.text ?? '').join('\n');
-      const s = await c.callTool({ name: 'start_game', arguments: { adult: true } }, undefined, { timeout: 120_000 });
+      const s = await c.callTool({ name: 'start_game', arguments: { adult: true, live: false } }, undefined, { timeout: 120_000 });
       const st = text(s);
       if (s.isError) return { n: i, ok: false, game: null, position: null, line: st.split('\n')[0].slice(0, 200) };
       const g = text(await c.callTool({ name: 'get_state', arguments: {} }, undefined, { timeout: 120_000 }));

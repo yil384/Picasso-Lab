@@ -33,7 +33,8 @@ import { startFakeMineAi, fakeHosts } from './fake-mineai.js';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const text = (r) => r.content.map((x) => x.text).join('\n');
+// the reply as these tests read it: without the nudges at the top (test/liveview.test.js checks them)
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet: |Viewers see your why and plan under the video: |Next: call live_view now)[^\n]*\n\n)+/, '');
 // temporary folders of this file, removed when it is done
 const made = [];
 const tmp = (p) => { const dir = fs.mkdtempSync(path.join(os.tmpdir(), p)); made.push(dir); return dir; };
@@ -506,7 +507,8 @@ test('mineai through MCP: the queue, request_id, typed codes and the extra skill
     // 39,994 bytes before M4; the armor skill, the policy's care knobs and onItsOwn in the reply schema add about 2 KB;
     // advise mode (the reflex knobs, the shelter and shield skills, advice and attribution in the schema) about 4 KB;
     // the one-line prompt (game_report, start_game's goal, the position shape) about 0.8 KB
-    assert.ok(size < 52_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
+    // set_goal, why and plan, the live view rule (2026-10-13) about 1 KB more
+    assert.ok(size < 54_000, `our tools/list stays small (${size} bytes; theirs is 1.36 MB)`);
     assert.doesNotMatch(JSON.stringify(listed), /rationale|submission_id|wait_for_action|response_format/);
     const play = listed.tools.find((t) => t.name === 'play');
     assert.match(play.description, /- hunt \{mob: one of cow\|pig[^}]*, drop: text \(1 to 48 characters\), n: integer 1 to 64, without_shield: true\|false \(optional\)\}/);

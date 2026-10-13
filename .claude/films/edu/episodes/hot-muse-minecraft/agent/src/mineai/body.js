@@ -23,7 +23,7 @@ import { renderState, describeCall, describeDelta } from '../state.js';
 import { NOTABLE_BLOCKS } from '../state.js';
 import { MINEAI_SKILLS, MINEAI_TIMEOUTS, DIRECT_TOOLS, CONTAINER_BLOCKS, SPAWN_GUARD, toTheirs, fromTheirs, doneSoFar, reflexTakeover, reflexWords, ownChange, splitError } from './skills.js';
 export { reflexTakeover };
-import { createCare, armorPlan, wearPlan, toolClassFor, toolOf, pickaxeTierFor, sparePlan, replacementFor, describeCare, describeReflexes, ARMOR_SLOTS, armorOf } from './care.js';
+import { createCare, describeRules, armorPlan, wearPlan, toolClassFor, toolOf, pickaxeTierFor, sparePlan, replacementFor, describeCare, describeReflexes, ARMOR_SLOTS, armorOf } from './care.js';
 
 /** Every call of ours says why in one sentence (their rationale is required and goes into their own log only). */
 const RATIONALE = 'Requested by the player through the game gateway.';
@@ -238,12 +238,27 @@ function listening(port, ms) {
  *   timeouts?: Record<string, number>}} opts
  * @returns {import('../contracts.js').Body & {refresh: () => Promise<void>, temporaryStations: true, kind: 'mineai'}}
  */
-/** Who acted in a game: {muse, reflex, care, musePct, text}. */
-export function attributionOf(muse, { reflex = 0, care = 0 } = {}) {
-  const all = muse + reflex + care;
+/**
+ * Who acted in a game: Muse directly, the rules Muse set (each with when it was set: game time and call), and the body
+ * on its own (a reflex whose rule is off, the body's own plans in full mode). {muse, rule, body, care, reflex (rule +
+ * body), byRule, musePct (Muse directly), decidedPct (Muse directly or by its rules), text}. Without rule counts (an
+ * older care): the older words.
+ */
+export function attributionOf(muse, { reflex = 0, care = 0, rule = null, body = null, byRule = {} } = {}, { set = {} } = {}) {
+  if (rule === null) {
+    const all = muse + reflex + care;
+    const musePct = all ? Math.round((100 * muse) / all) : null;
+    const text = `This game: ${muse} action${muse === 1 ? '' : 's'} by Muse, ${reflex} reflex${reflex === 1 ? '' : 'es'}${care ? `, ${care} by the body's own plans` : ''}${musePct != null ? ` (${musePct}% Muse)` : ''}`;
+    return { muse, reflex, care, musePct, text };
+  }
+  const own = (body ?? 0) + care;
+  const all = muse + rule + own;
   const musePct = all ? Math.round((100 * muse) / all) : null;
-  const text = `This game: ${muse} action${muse === 1 ? '' : 's'} by Muse, ${reflex} reflex${reflex === 1 ? '' : 'es'}${care ? `, ${care} by the body's own plans` : ''}${musePct != null ? ` (${musePct}% Muse)` : ''}`;
-  return { muse, reflex, care, musePct, text };
+  const decidedPct = all ? Math.round((100 * (muse + rule)) / all) : null;
+  const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  const which = Object.entries(byRule).filter(([, n]) => n > 0).map(([k]) => `${k}${set[k] ? `, set at ${mmss(set[k].atS)} with call ${set[k].call}` : ''}`);
+  const text = `This game: ${muse} action${muse === 1 ? '' : 's'} by Muse directly, ${rule} by rules Muse set${which.length ? ` (${which.join('; ')})` : ''}, ${own} by the body on its own${decidedPct != null ? ` (${decidedPct}% decided by Muse)` : ''}`;
+  return { muse, rule, body: own, care, reflex, byRule: { ...byRule }, musePct, decidedPct, text };
 }
 
 export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs, careYieldMs, portalSettleMs = PORTAL_SETTLE_MS }) {
@@ -290,6 +305,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     return out;
   };
   let lastDeath = null;
+  let pendingRules = null; // Muse's rules given before the body's care runs (start_game rules on a joining bot)
   let policyRevision = null;
   let dimension = null; // the last status's dimension (a change is logged)
   let reflexNow = null; // the reflex of theirs that holds the body, as the last status said
@@ -364,7 +380,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     /** Advise mode: what needs doing that the body will not do by itself: [{kind, text, hint?: {skill, args}}]. */
     advice: () => (care ? [...portalAdvice(), ...care.advice()] : []),
     /** Who acted this game: the player's skills, the body's reflexes and its own plans (full mode). */
-    attribution: () => attributionOf(museActions, care ? care.counts() : { reflex: 0, care: 0 }),
+    attribution: () => attributionOf(museActions, care ? care.counts() : { reflex: 0, care: 0 }, care?.rules?.() ?? {}),
+    /** Muse's rules (start_game rules, the policy skill): set some; read them with when each was set. */
+    setRules: (r, meta) => { if (care?.setRules) return care.setRules(r, meta); pendingRules = { r, meta }; return null; },
+    rules: () => care?.rules?.() ?? null,
+    /** The number of Muse's call now (the MCP layer counts them): when a rule is set. */
+    noteCall: (n) => care?.noteCall?.(n),
     careMode: () => careMode,
     /** The care starts only once this settles (the agent's spread of a new bot: nothing of its own at the spawn). */
     deferCare: (promise) => { careGate = promise; },
@@ -887,6 +908,13 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       // the body's own care knobs (policy skill): kept here, never sent to the runtime
       const careText = plan.care ? (() => {
         const knobs = care?.setPolicy(plan.care === 'reset' ? null : plan.care);
+        if (careMode === 'advise' && care?.setRules) {
+          // Muse's rules (the owner, 2026-10-13): no arguments turn them all off
+          const k = plan.care === 'reset' ? null : plan.care;
+          const onOff = (v) => (v === undefined ? undefined : v === 'on');
+          const r = care.setRules(k ? { defend: onOff(k.defend), flee: onOff(k.flee), escape: onOff(k.escape), eat_below: k.eat_below ?? (k.eat ? { hungry: 14, starving: 4, off: 0 }[k.eat] : undefined) } : { defend: false, flee: false, escape: false, eat_below: 0 });
+          return `; your rules now: ${describeRules(r)}`;
+        }
         return `; its reflexes: ${describeReflexes(knobs, careMode)}${careMode === 'full' ? `; on its own between your calls: ${describeCare(knobs)}` : ''}`;
       })() : '';
       if (!plan.refused && tool === 'build' && v.args.blueprint === 'nether_portal' && plan.build) {
@@ -938,6 +966,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             // carried and worn: a fresh shield goes to the off-hand when their guard reflex takes it (F1 of the log hunt)
             craftHad = { item, count: Number(count) || 1, have: allItems(latest.inventory, latest.equipment)[item] ?? 0, tables: latest.inventory?.crafting_table ?? 0 };
           }
+          // a pause of ours between their calls (a portal's cooldown)
+          if (call.tool === 'wait') { await new Promise((r) => { setTimeout(r, Math.min(call.ms ?? 1_000, Math.max(0, deadline - Date.now()))); }); continue; }
           let out = await act(call, deadline, ctl);
           // a call with alternatives (a way out of a portal: one side, else the other): the next when this one failed
           for (const alt of call.alts ?? []) {
@@ -953,6 +983,25 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped, call });
+          // their entry refuses a bot standing in the portal it just lit or came out of ("already occupies this nether_portal
+          // after a recent arrival"); the game takes a bot through by itself once it has stood there long enough
+          // (production game g71c9f5, 2026-10-13: enter failed, then the bot went through on its own while walking out).
+          // Up to 8 s for that; else out of the opening, the game's cooldown, and in once more
+          if (!res.ok && call.tool === 'enter_nether_portal' && /already occupies this nether_portal/i.test(`${res.result} ${res.theirs ?? ''}`) && !retried.has(`occupied:${i}`)) {
+            retried.add(`occupied:${i}`);
+            const was = dimension ?? 'overworld';
+            for (let w = 0; w < 16 && (dimension ?? 'overworld') === was && !ctl.stopped; w++) { await new Promise((r) => { setTimeout(r, 500); }); await refresh().catch(() => {}); }
+            if ((dimension ?? 'overworld') !== was) {
+              const at = latest.position ? floorPos(latest.position) : null;
+              res = { ok: true, result: `went through the portal at ${at ? `${at.x} ${at.y} ${at.z}` : 'its other side'} (the game took the bot through as it stood in the portal)`, code: null };
+            } else if (!ctl.stopped) {
+              const a = call.args;
+              const [first, ...alts] = [[3, 0], [-3, 0], [0, 3], [0, -3]].map(([dx, dz]) => ({ x: a.x + dx, y: a.y, z: a.z + dz }));
+              calls.splice(i + 1, 0, { tool: 'navigate', args: first, alts, optional: true, quiet: true }, { tool: 'wait', ms: 4_000, quiet: true }, call);
+              parts.push({ ok: true, result: 'it was standing in the portal: stepped out of it to enter again after the game\'s cooldown', code: null });
+              continue;
+            }
+          }
           // a cell of the portal's site that would not clear: nothing placed yet, said so
           if (!res.ok && call.clearing) res = { ...res, result: `could not clear the cell at ${call.args.x} ${call.args.y} ${call.args.z} (${call.args.block_name}) where the portal frame goes: ${res.result.replace(/^failed: /, '')}; no obsidian was placed. Build it a few blocks away, on open ground` };
           // their reflexes that acted during the call count as the body's own (F10 of the log hunt: in-step fights were in
@@ -1227,6 +1276,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         kills: (mobs) => emit('kill', { mobs, by: 'reflex' }),
         event, tickMs: careTickMs, idleBeforeMs: careIdleMs, mode: careMode,
       });
+      if (pendingRules) { care.setRules(pendingRules.r, pendingRules.meta); pendingRules = null; }
       care.start();
     });
     if (host.viewPorts) {

@@ -22,6 +22,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { z } from 'zod';
 import { createTracker, goalOf, planText, lexiconFrom, GOAL_NAMES } from './report.js';
 import { HUNT_DROPS, dropOf } from './mineai/skills.js';
+import { describeRules } from './mineai/care.js';
 import { tolerate } from './tolerant.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -46,12 +47,13 @@ const JOIN_WAIT_MS = 30_000;
 const SERVER_WAIT_MS = 25_000;
 const SERVER_RETRY_S = 15;
 const MAX_STEPS = 32;
-/** start_game's last line, until live_view is called in the game. */
-export const LIVE_NEXT = 'Next: call live_view now and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, before you play.';
-/** The top line of a play, play_sequence or get_state reply while live_view has not been called (the first, then every 5th). */
+/** start_game's first line, until live_view is called in the game. */
+export const LIVE_NEXT = 'Next: call live_view now and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, before you play (play waits for it).';
+/** The top line of every play, play_sequence or get_state reply while live_view has not been called in the game. */
 export const LIVE_NUDGE = 'Your user cannot see the game yet: call live_view and show its HTML in your preview panel.';
 /** The top line of a play or play_sequence reply sent without why or plan (the first such call, then every 5th). */
-export const WHY_NUDGE = 'Viewers see your why and plan under the video: pass both on every play call.';
+export const NEED_LIVE_TEXT = 'Your user wants to watch: call live_view first and show the HTML it returns, exactly as returned, as a web artifact in your preview panel; then send this call again. If your user said they don\'t want to watch, call start_game with live: false.';
+export const WHY_NUDGE = 'Viewers see your why and plan under the video: pass both on every play call. If your tool list has no why or plan fields, your integration is out of date: re-read this server\'s tools (tools/list) or rebuild the integration.';
 const MAX_BODY = 64 * 1024; // the SDK's own default is 4 MiB, kept for the session's life in clientInfo
 const STATION_RADIUS = 24; // craft and smelt use a table or furnace this close (REUSE_RADIUS in src/stations.js)
 
@@ -224,9 +226,9 @@ const REPLY_OUT = z.object({
   queue: z.object({ running: z.string().nullable(), waiting: z.number() }),
   changed: z.record(z.string(), z.number()).describe('inventory change of every finished step in this reply'),
   state: z.record(z.string(), z.any()).nullable().describe('health, food, pos, inventory, timeLeftS'),
-  onItsOwn: z.array(z.object({ seq: z.number(), agoS: z.number(), source: z.enum(['care', 'reflex']), kind: z.string(), ok: z.boolean(), text: z.string() }).loose()).optional().describe('what the body did by itself since your last reply (care: its own plans between your calls, full mode only; reflex: fights, meals, deaths)'),
+  onItsOwn: z.array(z.object({ seq: z.number(), agoS: z.number(), source: z.enum(['care', 'reflex', 'rule', 'body']), kind: z.string(), ok: z.boolean(), text: z.string() }).loose()).optional().describe('what the body did by itself since your last reply (care: its own plans between your calls, full mode only; reflex: fights, meals, deaths)'),
   advice: z.array(z.object({ kind: z.string(), text: z.string(), hint: z.object({ skill: z.string(), args: z.record(z.string(), z.any()) }).optional() }).loose()).optional().describe('what needs doing that the body will not do by itself, most urgent first; hint: a skill that would do it'),
-  attribution: z.object({ muse: z.number(), reflex: z.number(), care: z.number(), musePct: z.number().nullable() }).optional().describe('get_state: who acted this game (your skills, the body\'s reflexes, its own plans in full mode)'),
+  attribution: z.object({ muse: z.number(), reflex: z.number(), care: z.number(), musePct: z.number().nullable(), rule: z.number().optional(), body: z.number().optional(), decidedPct: z.number().nullable().optional() }).loose().optional().describe('get_state: who acted this game (your skills, the body\'s reflexes, its own plans in full mode)'),
 }).loose();
 
 /**
@@ -245,7 +247,7 @@ export function instructionsText({ callMs = 90_000, leaseMin = 30, idleMin = 5, 
   return [
     'Muse plays Minecraft: you play your own bot in a survival Minecraft world, by yourself: once the game has started, play on without asking your user anything. Use only these tools, not the server\'s web pages.',
     'Rules:',
-    `1. Start: start_game, with goal when your user named one (${GOAL_NAMES.join(', ')}, or their words: the server counts goals like "kill 100 pigs", "collect 64 cobblestone", "craft 20 torches", "reach y -59", "build a hut", "survive 2 nights"); its reply has the plan, with how to do each part${live ? '. Then call live_view and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, so your user sees the game' : ''}.`,
+    `1. Start: start_game, with goal when your user named one (${GOAL_NAMES.join(', ')}, or their words: the server counts goals like "kill 100 pigs", "collect 64 cobblestone", "craft 20 torches", "reach y -59", "build a hut", "survive 2 nights"); its reply has the plan, with how to do each part${live ? '. Then call live_view and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, so your user sees the game: play and play_sequence are refused (code NEED_LIVE_VIEW) until you have. Only when your user said they do not want to watch, start_game with live: false' : ''}.`,
     '2. A new goal: whenever your user gives a new or changed goal during the game, call set_goal with it (their words, or a preset) before you play on; the stream, every reply\'s state and the report follow the goal set last, and the report keeps every goal with its time.',
     `3. Play: play_sequence for several steps in a row (play for one); each reply carries the results and the state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A big count (100 pigs, 500 blocks) takes many steps: a step takes at most 64, so split it across calls and watch the goal's count in each reply.`,
     '4. why and plan: pass both on every play and play_sequence call. why: one short sentence in plain words, what you are doing and why. plan: your next few steps and what you will do if one fails, in your own words (up to about 400 characters). Viewers of the live stream see both as your own words, and the report keeps them.',
@@ -310,7 +312,7 @@ export function createMcp(hooks) {
   const careMode = hooks.careMode ?? 'advise';
   const CARE_TEXT = !skills.names.includes('armor') || careMode === 'off' ? ''
     : careMode === 'full' ? ' Between your calls the body looks after itself: it shelters at night (or sleeps when it carries a bed), eats and hunts when hungry, wears and crafts armor, crafts a spare before a tool breaks, and goes back for its items after a death; its reflexes fight or flee from mobs. Every reply says what it did on its own (structuredContent.onItsOwn); the policy skill changes it.'
-      : ' You plan everything: the body acts by itself only through its reflexes (it fights back or flees when attacked, eats only when starving at food 4 or less, surfaces for air, leaves fire and lava, gets its footing back), each of which the policy skill switches (defend, eat, escape). Every reply carries "Body advice": what needs doing that the body will not do by itself (night coming with no shelter or shield, low food, a tool about to break, items to recover after a death), with the facts and the skill that would do it (shelter and shield are skills too); following it or not is your decision. Replies also say what the reflexes did (structuredContent.onItsOwn), and get_state and end_game count who acted this game (structuredContent.attribution).';
+      : ' You decide everything: the body does nothing by itself, not even between your calls, except by rules you set (start_game rules, or the policy skill at any time): defend (fight back, raise the shield, wall in when badly hurt), flee (withdraw from a hostile mob), escape (out of water, fire and lava, back on its feet) and eat_below N (eat at food N or less). Every game starts with none. A rule acts within a second; your calls take seconds to minutes, and a zombie hits in one second: without defend and escape the bot dies more. Decide at the start. Every reply carries "Body advice": what needs doing (night coming with no shelter or shield, low food, a tool about to break, items to recover after a death), with the facts and the skill that would do it; it is information, the body does not act on it. Actions under your rules count as decided by you; get_state and end_game count who acted (structuredContent.attribution).';
   const now = hooks.now ?? Date.now; // the web's clock (leases, idle, repeats); call deadlines run on the real one
   const callMs = hooks.callMs ?? CALL_MS;
   /** How long a call waits for its steps: callMs less the time its reply takes to build, so the reply leaves within callMs. */
@@ -464,9 +466,9 @@ export function createMcp(hooks) {
 
   /** One thing the body did by itself, as a reply line: "- 41 s ago, night: closed itself in at ... (ok)". */
   const ownAgo = (e) => Math.max(0, Math.round((now() - Date.parse(e.at)) / 1000));
-  const ownLine = (e) => `- ${ownAgo(e)} s ago, ${e.source === 'reflex' ? 'reflex' : 'on its own'}, ${e.kind}: ${e.text}${e.ok === false ? ' (did not work)' : ''}`;
+  const ownLine = (e) => `- ${ownAgo(e)} s ago, ${e.source === 'rule' ? `by your rule ${e.rule}` : e.source === 'body' ? 'reflex, no rule of yours' : e.source === 'reflex' ? 'reflex' : 'on its own'}, ${e.kind}: ${e.text}${e.ok === false ? ' (did not work)' : ''}`;
   const adviceLine = (a) => `- ${a.text}${a.hint ? ` (to do it: ${a.hint.skill} ${JSON.stringify(a.hint.args ?? {})})` : ''}`;
-  const ownOut = (e) => ({ seq: e.seq, agoS: ownAgo(e), source: e.source, kind: e.kind, ok: e.ok !== false, text: e.text });
+  const ownOut = (e) => ({ seq: e.seq, agoS: ownAgo(e), source: e.source, kind: e.kind, ok: e.ok !== false, text: e.text, ...(e.rule ? { rule: e.rule, ruleSet: e.ruleSet ?? null } : {}) });
   /** The body's own actions a reply carries count as told once its HTTP response was written out in full. */
   function deliverOwnWhenSent(s, seq, extra) {
     const mark = () => { s.ownDelivered = Math.max(s.ownDelivered ?? 0, seq); };
@@ -532,7 +534,7 @@ export function createMcp(hooks) {
       state: shortState(s),
       ...(own.length ? { onItsOwn: own.map(ownOut) } : {}),
       ...(advice.length ? { advice } : {}),
-      ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } : {}),
+      ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct, ...(attribution.rule != null ? { rule: attribution.rule, body: attribution.body, decidedPct: attribution.decidedPct } : {}) } } : {}),
       ...more,
     };
     return { content: [{ type: 'text', text: body }], structuredContent: structured, ...(isError ? { isError: true } : {}) };
@@ -540,6 +542,8 @@ export function createMcp(hooks) {
 
   /** A call that was not accepted: nothing ran. */
   const refuse = (s, extra, code, message, more = {}) => reply(s, extra, { lead: message, code, isError: true, more });
+  /** A game whose play waits for live_view: the server has the live channel, the user watches, and it was not called. */
+  const liveRequired = (s) => hooks.liveEnabled === true && s && !s.liveViewed && s.liveOff !== true;
 
   /** The dry-run check for steps on this game: the plan, or null when the check cannot run (then nothing is refused). */
   function checkSteps(s, steps) {
@@ -587,6 +591,10 @@ export function createMcp(hooks) {
     const signal = signalOf(extra);
     let s;
     try { s = need(entry); } catch (e) { return refuse(null, extra, 'NOT_STARTED', e.message); }
+    // the user watches (the owner's decision after g71c9f5, 2026-10-13): no step runs before live_view in a game with a
+    // live view, unless the user said they do not want to watch (start_game live: false). A server without the live
+    // channel asks for nothing; live_view counts whatever it answered (capped, test, off)
+    if (liveRequired(s)) return refuse(s, extra, 'NEED_LIVE_VIEW', NEED_LIVE_TEXT);
 
     const bad = [];
     // arguments read the way they were meant where that is unambiguous (src/tolerant.js): positions in any common
@@ -747,26 +755,27 @@ export function createMcp(hooks) {
       server.registerTool = (name, def, handler) => register(name, def, async (args, extra) => {
         const t0 = Date.now();
         const before = safely(() => game(entry), null);
+        // Muse's calls in its game, counted (a rule says with which call it was set)
+        if (before) { before.callNo = (before.callNo ?? 0) + 1; safely(() => before.body?.noteCall?.(before.callNo)); }
         let out = null;
         try {
           out = await handler(args, extra);
-          // the user cannot see the game until live_view's HTML is shown (a production game, 2026-10-13, g08370a: Muse,
-          // run as a background task, went from start_game straight to play_sequence): a line at the top of the reply,
-          // on the first call without it and every 5th after; the call itself is never held up
+          // the user cannot see the game until live_view's HTML is shown (production games g08370a and g71c9f5,
+          // 2026-10-13: Muse went from start_game straight to play_sequence and never called it): a line at the top of
+          // every play, play_sequence and get_state reply until it is called; the call itself is never held up
           // a play call without why or plan leaves the stream's thinking band empty (g08370a: none on any call): a line
           // at the top too, on the first such call and every 5th after (below the live view's line when both apply)
           if (['play', 'play_sequence'].includes(name)) safely(() => {
             const g = game(entry);
             const has = (v) => typeof v === 'string' && v.trim().length > 0;
-            if (!g || (has(args?.why) && has(args?.plan)) || !out?.content?.[0] || typeof out.content[0].text !== 'string') return;
+            if (!g || (has(args?.why) && has(args?.plan)) || out?.structuredContent?.code === 'NEED_LIVE_VIEW' || !out?.content?.[0] || typeof out.content[0].text !== 'string') return;
             g.wordlessCalls = (g.wordlessCalls ?? 0) + 1;
             if (g.wordlessCalls % 5 === 1) out.content[0].text = `${WHY_NUDGE}\n\n${out.content[0].text}`;
           });
           if (['play', 'play_sequence', 'get_state'].includes(name)) safely(() => {
             const g = game(entry);
-            if (!g || g.liveViewed || !out?.content?.[0] || typeof out.content[0].text !== 'string') return;
-            g.unseenCalls = (g.unseenCalls ?? 0) + 1;
-            if (g.unseenCalls % 5 === 1) out.content[0].text = `${LIVE_NUDGE}\n\n${out.content[0].text}`;
+            if (!g || g.liveViewed || g.liveOff || out?.structuredContent?.code === 'NEED_LIVE_VIEW' || !out?.content?.[0] || typeof out.content[0].text !== 'string') return;
+            out.content[0].text = `${LIVE_NUDGE}\n\n${out.content[0].text}`;
           });
           // the game's report: the call, its why, the advice before it, the milestones (src/report.js)
           safely(() => {
@@ -832,10 +841,13 @@ export function createMcp(hooks) {
       description: `Starts your own Minecraft bot in a survival world (a NEW bot at a fresh spot with an empty inventory), or resumes the game of this connection, or (game set to the handle an earlier start_game reply gave) that game from an earlier connection. A game lasts ${leaseMin} min and ends after ${IDLE_MS / 60_000} min without calls. When every bot is in use, the reply gives your place in the queue and an estimate. Returns the skills, the state and a handle to resume the game. Call this first.`,
       inputSchema: {
         adult: z.boolean().optional().describe('not needed (accepted from older prompts and ignored)'),
+        live: z.boolean().optional().describe('default true: your user watches, and play waits for live_view. false only when your user said they do not want to watch'),
+        rules: z.object({ defend: z.boolean().optional(), flee: z.boolean().optional(), escape: z.boolean().optional(), eat_below: z.number().int().min(0).max(20).optional() }).optional()
+          .describe('your rules: what the body does by itself, without a call (none at the start); also the policy skill at any time'),
         game: z.string().max(64).optional().describe('the handle of a game to resume (from an earlier start_game reply)'),
         goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')} (default free), or your user's words ("kill 100 pigs"); the reply gives the plan`),
       },
-    }, async ({ game: handle, goal: goalRaw }, extra) => {
+    }, async ({ game: handle, goal: goalRaw, live, rules: rulesArg }, extra) => {
       let s = game(entry);
       let resumed = Boolean(s);
       if (handle && handle !== entry.handle) {
@@ -890,8 +902,18 @@ export function createMcp(hooks) {
         // the kills of the body's reflexes (a zombie the defend reflex killed counts for "kill 10 zombies")
         safely(() => s.body?.on?.('kill', (k) => safely(() => tracker.onKills(k?.mobs, k?.by ?? 'reflex'))));
       } else if (goalRaw) s.tracker.setGoal(readGoal(goalRaw, s), 'start_game');
+      // Muse's rules, given with start_game (the body acts by itself by these only; none at the start)
+      s.callNo = s.callNo ?? 1;
+      if (rulesArg && typeof s.body?.setRules === 'function') safely(() => s.body.setRules(rulesArg, { call: s.callNo }));
+      // live: false only when the user does not want to watch (the default: they do, and play waits for live_view)
+      if (live === false) s.liveOff = true;
+      else if (live === true) s.liveOff = false;
       const plan = planText(s.tracker.goal, { lex, leaseMin });
-      return text(`${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\n${plan}\nTo resume this game from a new connection, call start_game with game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}${s.liveViewed ? '' : `\n\n${LIVE_NEXT}`}`);
+      // the rules: what is set, what each does, the trade-off, and to decide now (the owner, 2026-10-13)
+      const ri = safely(() => s.body?.rules?.() ?? null);
+      const anyRule = ri && Object.values(ri.rules ?? {}).some((v) => v === true || v > 0);
+      const rulesText = ri ? `\nYour rules (the body does nothing by itself but these; ${anyRule ? 'as set' : 'none set yet'}): ${describeRules(ri.rules)}. A rule acts within a second; your calls take seconds to minutes, and a zombie hits in one second: without defend and escape the bot dies more. Decide now: start_game with rules {defend, flee, escape, eat_below}, or the policy skill at any time (e.g. policy {"defend": "on", "escape": "on", "eat_below": 6}). What a rule does counts as decided by you.` : '';
+      return text(`${s.liveViewed || s.liveOff ? '' : `${LIVE_NEXT}\n\n`}${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\n${plan}${rulesText}\nTo resume this game from a new connection, call start_game with game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
     });
 
     server.registerTool('play', {
@@ -1028,7 +1050,7 @@ export function createMcp(hooks) {
       forget('you ended it with end_game');
       const out = text(`Game ended.${report ? `\n\n${report.text}\n\n` : attribution ? ` ${attribution.text}. ` : ' '}start_game gives you a new bot.`);
       const sc = {
-        ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } : {}),
+        ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct, ...(attribution.rule != null ? { rule: attribution.rule, body: attribution.body, decidedPct: attribution.decidedPct } : {}) } } : {}),
         ...(report ? { report: report.data } : {}),
       };
       return Object.keys(sc).length ? { ...out, structuredContent: sc } : out;
@@ -1075,6 +1097,28 @@ export function createMcp(hooks) {
         argsSchema: { goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')}, or a short text`) },
       }, ({ goal } = {}) => ({ messages: [{ role: 'user', content: { type: 'text', text: promptText(goal || 'free') } }] }));
     }
+    // what the client reads of this server (production game g71c9f5, 2026-10-13: Muse sent no why or plan and asked for
+    // the age as if its tool list were days old; whether it reads tools/list each session was in no log): each list
+    // request, once per MCP session per kind
+    for (const method of ['tools/list', 'prompts/list']) {
+      const h = low._requestHandlers?.get?.(method);
+      if (typeof h !== 'function') continue;
+      low._requestHandlers.set(method, async (...a) => {
+        const out = await h(...a);
+        safely(() => hooks.log.event('mcp_list', { session: sid8(), method, count: (out?.tools ?? out?.prompts ?? []).length, game: safely(() => game(entry)?.id, null) ?? null }));
+        return out;
+      });
+    }
+    // a client that kept an old tool list: told the list changed once it is initialized (it may read it again; a
+    // client without a stream open for it just does not hear it)
+    low.oninitialized = () => {
+      // a moment later: a client opens its stream for server messages after initializing
+      const t = setTimeout(() => safely(() => {
+        server.sendToolListChanged?.();
+        hooks.log.event('mcp_list_changed', { session: sid8() });
+      }), 1_000);
+      t.unref?.();
+    };
     return server;
   }
 
@@ -1132,10 +1176,11 @@ export function createMcp(hooks) {
         req.resume();
         res.writeHead(status, { 'content-type': 'application/json', ...headers }).end(JSON.stringify({ jsonrpc: '2.0', error: { code: status === 404 ? -32001 : -32000, message }, id: null }));
       };
-      if (id) { reply(404, 'unknown session; initialize again'); return; }
+      // refusals before a session, in the log too (g71c9f5: two get_state calls Muse saw fail are in no log of ours)
+      if (id) { hooks.log.event('mcp_http', { status: 404, session: String(id).slice(0, 8), method: req.method, why: 'unknown session' }); reply(404, 'unknown session; initialize again'); return; }
       const address = hooks.clientKey(req);
       const refused = admit(address);
-      if (refused) { reply(refused.status, refused.message, refused.headers); return; }
+      if (refused) { hooks.log.event('mcp_http', { status: refused.status, method: req.method, why: clean(refused.message, 120) }); reply(refused.status, refused.message, refused.headers); return; }
       // only what the session needs later: never the request itself
       entry = { address, base: hooks.base(req), token: null, handle: null, client: null, endedWhy: null, lastCall: now() };
       entry.key = `mcp:${crypto.randomUUID()}`; // the key the game counts under: mcp:<MCP session id> once there is one

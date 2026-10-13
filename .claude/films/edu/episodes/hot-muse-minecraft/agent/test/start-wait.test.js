@@ -52,7 +52,7 @@ test('start_game while the server is still starting: SERVER_STARTING, typed, wit
     up = true;
     const ok = await c.callTool({ name: 'start_game', arguments: {} });
     assert.ok(!ok.isError, ok.content[0].text);
-    assert.match(ok.content[0].text, /^New game g\w+/);
+    assert.match(ok.content[0].text, /^(?:Next: call live_view now[^\n]*\n\n)?New game g\w+/);
     const rows = fs.readdirSync(dir).filter((f) => f.endsWith('.jsonl')).flatMap((f) => fs.readFileSync(path.join(dir, f), 'utf8').trim().split('\n')).map((l) => JSON.parse(l));
     assert.ok(rows.some((x) => x.kind === 'mcp_server_wait' && x.ok === false), 'the wait is logged');
     await c.callTool({ name: 'end_game', arguments: {} });

@@ -15,6 +15,8 @@ const isPosSchema = (s) => s?.type === 'object' && ['x', 'y', 'z'].every((k) => 
 const POS_KEYS = ['pos', 'position', 'target', 'at', 'coords', 'coordinates', 'location', 'destination', 'xyz', 'where', 'goal', 'block_pos', 'point'];
 /** Other names for a count. */
 const N_KEYS = ['count', 'amount', 'quantity', 'qty', 'number', 'num'];
+/** The skills whose count has an obvious default when none is given: one item crafted (craft, craft_batch's entries). */
+const ONE_BY_DEFAULT = new Set(['craft', 'craft_batch']);
 /** The keys whose values are game names (items, blocks, mobs, biomes): the only free strings that are normalized. */
 const NAME_KEYS = new Set(['item', 'block', 'drop', 'mob', 'target', 'material', 'biome', 'blueprint']);
 /** Interchangeable names of the one name argument a skill has. */
@@ -152,6 +154,8 @@ export function tolerate(schema, args, ctx = {}) {
       if (typeof v === 'string' && /^(true|false)$/i.test(v.trim())) { changes.push(`${at}: "${v}" as ${v.trim().toLowerCase()}`); return v.trim().toLowerCase() === 'true'; }
       return v;
     }
+    // a rule switched with true or false where the skill takes on or off (policy: defend, flee, escape)
+    if (s.type === 'string' && typeof v === 'boolean' && s.enum?.includes('on') && s.enum?.includes('off')) { changes.push(`${at}: ${v} as ${v ? 'on' : 'off'}`); return v ? 'on' : 'off'; }
     if (s.type === 'string' && typeof v === 'string') {
       if (s.enum) {
         const r = nameOf(v, s.enum, { key, inventory: ctx.inventory, byInventory });
@@ -205,6 +209,8 @@ export function tolerate(schema, args, ctx = {}) {
     if (Object.hasOwn(props, 'n') && !Object.hasOwn(o, 'n')) {
       const k = N_KEYS.filter(spare);
       if (k.length === 1) { o.n = o[k[0]]; delete o[k[0]]; changes.push(`${at}: ${k[0]} as n`); }
+      // a craft with no count makes one (production game g71c9f5: craft {item: wooden_pickaxe} refused as BAD_ARGS)
+      else if (!k.length && ONE_BY_DEFAULT.has(ctx.skill) && Object.hasOwn(props, 'item') && Object.hasOwn(o, 'item')) { o.n = 1; changes.push(`${at}: no n, so 1`); }
     }
     for (const [want, sent] of NAME_SWAPS) {
       if (Object.hasOwn(props, want) && !Object.hasOwn(o, want) && spare(sent) && !NAME_SWAPS.some(([w, x]) => x === sent && w !== want && Object.hasOwn(props, w))) {

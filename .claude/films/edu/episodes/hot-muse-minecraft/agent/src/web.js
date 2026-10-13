@@ -1344,6 +1344,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
         links: (s, b) => ({ eyes: `${b}/eyes/${s.viewId}/`, watch: `${b}/watch/${s.viewId}/` }),
         liveVideo: (s) => { try { return opts.liveVideo?.(s.id) ?? null; } catch { return null; } },
         liveView: opts.liveView ? (s, o) => Promise.resolve(opts.liveView(s.id, o)).catch(() => null) : null,
+        liveEnabled: opts.liveEnabled === true,
         term: typeof opts.term === 'function' ? (id, u) => { try { opts.term(id, u); } catch { /* the video goes on without it */ } } : null,
         leaveQueue: (key) => { const i = waiting.findIndex((w) => w.key === key); if (i >= 0) waiting.splice(i, 1); },
         watching: (id) => { let n = 0; for (const k of viewSockets) if (k.gameId === id && !k.destroyed) n += 1; return n; },
