@@ -1,7 +1,7 @@
 # the evidence of a camera spot, kept in storage muse_cam:spot for the server log (the camera service asks the console
 # for it after each new one: src/camera.js keepFollowingCommands): the rule that picked it (#rl: 1 the ring, 2 the
 # nearest within 8 blocks, 3 from above, 5 the place from outside with no line to the shelter, 4 none outside, 11 the bot's eyes, 12 just ahead of them, 13 above its head,
-# 14 and 15 behind it, 16 to 21 from above at an angle (muse_cam:overhead), 24 inside a shelter behind it (muse_cam:inside); hidden 1 when no spot behind had seen the bot for a second, seen 1 when one sees it now),
+# 14 and 15 behind it, 16 to 21 from above at an angle (muse_cam:overhead), 22 behind it in a tunnel, 24 inside a shelter behind it (muse_cam:inside); hidden 1 when no spot behind had seen the bot for a second, seen 1 when one sees it now),
 # the eye and the bot (position, dimension, the bot's facing), and the blocks around as characters ("." open, "L"
 # leaves, "#" anything else): col, the bot's column from its feet 24 blocks up; ring, the 8 blocks around its head
 # then around its feet; eye, the eye's block and its 6 neighbours

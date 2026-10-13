@@ -168,12 +168,16 @@ function drawHotbar() {
   rrect(x, y, w, h, 6, 'rgba(7,9,13,0.82)');
   st.inventory.forEach((it, i) => {
     const sx = x + pad + i * (s + gap), sy = y + pad;
-    rrect(sx, sy, s, s, 4, it.count ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)');
-    icon(it.icon, sx + 5, sy + 4, 28, it.count ? 1 : 0.28);
+    // owned: full colour and the count; not owned: an empty slot with a faint silhouette, no digit (g0a414c: at a
+    // count of 0 the icons read as owned, "an iron pickaxe and a shield from the start")
+    const has = it.count > 0;
+    rrect(sx, sy, s, s, 4, has ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.025)');
+    icon(it.icon, sx + 5, sy + 4, 28, has ? 1 : 0.12);
+    if (!has) return;
     const c = String(it.count);
     g.font = MONO(500, 13); g.textAlign = 'right'; g.lineJoin = 'round';
     g.strokeStyle = 'rgba(7,9,13,0.95)'; g.lineWidth = 3; g.strokeText(c, sx + s - 3, sy + s - 4);
-    T(c, sx + s - 3, sy + s - 4, MONO(500, 13), it.count ? K.t1 : K.t4, 'right');
+    T(c, sx + s - 3, sy + s - 4, MONO(500, 13), K.t1, 'right');
   });
 }
 // the body closed itself in for the night (a shelter): the camera films the shelter from outside, the bot is inside
@@ -665,10 +669,19 @@ function nowModule(x, y, w, draw, opts = {}) {
     }
   }
   yy += HH;
-  const added = cc.addedByServer || [];
-  const rows = [];
-  for (const sp of cc.steps) { for (const a of added) if (a.before === sp.n) rows.push({ server: true, raw: a.raw }); rows.push(sp); }
+  const rows = nowRows(cc, opts.maxRows);
   for (const sp of rows) {
+    if (sp.summary) {
+      // the steps folded away for room (g0a414c: 10 steps and 4 the server added did not fit; the HUD stopped drawing)
+      if (draw) {
+        const cy = yy + 11;
+        hline(x, yy + 21, w, K.line);
+        if (sp.summary === 'done') check(x + 34, cy, K.ok, 0.8); else ring(x + 34, cy, 4, K.t4, 1.5);
+        T(ellip(sp.words, UI(500, 13), w - 76 - 12), x + 76, cy + 4, UI(500, 13), K.t3);
+      }
+      yy += 22;
+      continue;
+    }
     if (sp.server) {
       // a step the server's check added: not the caller's, no number, drawn apart
       if (draw) {
@@ -769,6 +782,27 @@ function howCard(x, y, w, draw, level) {
     lx += 15 + T(label, lx + 15, by, lf, K.t2) + 18;
   });
   return h;
+}
+// The call's step rows (and the steps the server added), all of them, or with maxRows a window: the steps done folded
+// into one row, the running one and the next, the rest folded into one row
+function nowRows(cc, maxRows = Infinity) {
+  const added = cc.addedByServer || [];
+  const rows = [];
+  for (const sp of cc.steps) { for (const a of added) if (a.before === sp.n) rows.push({ server: true, raw: a.raw }); rows.push(sp); }
+  if (rows.length <= maxRows) return rows;
+  let cur = rows.findIndex((r) => !r.server && (r.state === 'run' || r.state === 'fail'));
+  if (cur < 0) cur = rows.findIndex((r) => !r.server && r.state !== 'ok');
+  if (cur < 0) cur = Math.max(0, rows.length - Math.max(1, maxRows - 1));
+  const done = rows.slice(0, cur).filter((r) => !r.server);
+  const keep = Math.max(1, maxRows - (done.length ? 1 : 0) - 1);
+  const shown = rows.slice(cur, cur + keep);
+  const rest = rows.slice(cur + shown.length).filter((r) => !r.server);
+  const list = (rs) => rs.map((r) => r.say || r.raw).join(', ');
+  return [
+    ...(done.length ? [{ summary: 'done', words: `${done.length} step${done.length === 1 ? '' : 's'} done: ${list(done)}` }] : []),
+    ...shown,
+    ...(rest.length ? [{ summary: 'more', words: `${rest.length} more queued: ${list(rest)}` }] : []),
+  ];
 }
 // LATEST: the newest call when it is not the current one, with its answer as a filler
 function latestRows(x, y, w, draw, opts) {
@@ -1124,7 +1158,10 @@ function rawModule(y, nLines) {
   const hidden = hiddenRuns.reduce((a, r) => a + r.count, 0);
   const a0 = hidden ? hiddenRuns[hiddenRuns.length - 1].firstSent : '', a1 = hidden ? hiddenRuns[0].lastSent : '';
   const range = hidden ? (a0 === a1 ? ` (${a0})` : ` (${a0}–${a1})`) : '';
-  T(`${st.raw.total} calls${folded ? ` · ${folded} repeats folded` : ''}${hidden ? ` · ${hidden} older below${range}` : ''}`, X1, hb, MONO(400, 11), K.t3, 'right');
+  // the newest call's age here, ticking each second
+  const newest = st.raw.runs[0];
+  const age = newest && Number.isFinite(newest.lastAgoS) ? ` · newest ${agoWords(newest.lastAgoS)}` : '';
+  T(`${st.raw.total} calls${age}${folded ? ` · ${folded} repeats folded` : ''}${hidden ? ` · ${hidden} older below${range}` : ''}`, X1, hb, MONO(400, 11), K.t3, 'right');
   let ly = y + RAW_HEAD;
   P.shown.forEach(({ it, n, lines }, i) => {
     const r = it.r;
@@ -1133,7 +1170,8 @@ function rawModule(y, nLines) {
     else if (i % 2 === 1) rect(0, top, 1080, hgt, K.zebra);
     const recent = r.lastAgoS < RECENT_S;
     let b = top + 13;
-    T(rawWhen(r.lastAgoS, r.lastSent), RAW_TIME_R, b, MONO(recent ? 500 : 400, RAW_FS - 1), recent ? K.t1 : K.t3, 'right');
+    // when it was sent, on the game clock (as the why's header says it): never a stale age
+    T(r.lastSent || rawWhen(r.lastAgoS, r.lastSent), RAW_TIME_R, b, MONO(recent ? 500 : 400, RAW_FS - 1), recent ? K.t1 : K.t3, 'right');
     for (let li = 0; li < n; li++) { drawMonoLine(lines[li], RAW_TX + (li ? RAW_INDENT * RAW_CW : 0), b); b += RAW_LH; }
     ly += hgt;
   });
@@ -1150,8 +1188,13 @@ function packLeft(H, allowEarlier) {
     for (let lv = 3; lv >= 1; lv--) { opts.card = lv; if (nowModule(LX, 0, LW, false, opts) + rulesGap() <= H) break; }
     if (nowModule(LX, 0, LW, false, opts) + rulesGap() > H) delete opts.card; // no room even for the shortest card
   }
-  // Muse's rules under its calls (its standing orders to the body)
+  // Muse's rules under its calls (its standing orders to the body); a call with many steps folds them until it fits
   let used = nowModule(LX, 0, LW, false, opts) + rulesGap();
+  const cc0 = st.currentCall;
+  if (used > H && cc0) {
+    const all = cc0.steps.length + (cc0.addedByServer || []).length;
+    for (let m = all - 1; m >= 3 && used > H; m--) { opts.maxRows = m; used = nowModule(LX, 0, LW, false, opts) + rulesGap(); }
+  }
   if (used > H) return null;
   const r0 = latestRun();
   if (r0 && r0.latestAnswer && used + 18 <= H) { opts.latestAns = true; used += 18; }
@@ -1159,7 +1202,7 @@ function packLeft(H, allowEarlier) {
   if (cc && cc.state === 'running' && cc.serverAnswer && used + 20 <= H) { opts.interim = true; used += 20; }
   let earlier = 0;
   if (allowEarlier && earlierRest().length && H - used >= GAP + HEAD + ROW) { earlier = Math.min(earlierRest().length, Math.floor((H - used - GAP - HEAD) / ROW)); used += GAP + HEAD + earlier * ROW; }
-  return { opts, used, earlier, gap: H - used, cardRows: opts.card ? cardRows(LW, opts.card) : 0 };
+  return { opts, used, earlier, gap: H - used, cardRows: opts.card ? cardRows(LW, opts.card) : 0, nowRows: cc0 ? nowRows(cc0, opts.maxRows).length : 0 };
 }
 // right column: advice (its minimum always), then events, then earlier whys; the smallest gap wins, advice lines first
 function packRight(H0, allowEarlier) {
@@ -1187,12 +1230,21 @@ function packRight(H0, allowEarlier) {
 }
 // a visible BODY · WORLD module (the body's and the rules' actions) is worth this much RAW (in px: 18 a line)
 const EV_WORTH = 80;
+// the smallest layout there is: RAW at its least, the call folded to 3 rows, the advice in one row, no fillers
+function lastResort(colTop) {
+  const avail = 1080 - colTop - PAD;
+  const n = Math.max(1, Math.min(rawNeedFull(), 3));
+  const H = Math.max(40, avail - rawH(n));
+  const opts = { maxRows: 3 };
+  return { n, H, L: { opts, used: H, earlier: 0, gap: 0, cardRows: 0, nowRows: 3 }, R: { b: 0, aH: 22, evH: 0, earlier: 0, explain: false, used: 22, gap: H - 22 }, score: 0 };
+}
 function chooseLayout(colTop) {
   const avail = 1080 - colTop - PAD;
   const needFull = rawNeedFull();
   const nMax = Math.min(needFull, Math.floor((avail - RAW_HEAD - RAW_BOT) / RAW_LH));
   let best = null;
-  for (let n = Math.min(RAW_MIN, needFull); n <= nMax; n++) for (let bot = RAW_BOT; bot >= 2; bot -= 2) {
+  // relaxed (nothing fitted at RAW's minimum): RAW down to 2 lines
+  for (let n = Math.min(RELAX ? 2 : RAW_MIN, needFull); n <= nMax; n++) for (let bot = RAW_BOT; bot >= 2; bot -= 2) {
     const H = avail - rawH(n) + (RAW_BOT - bot);
     const L = packLeft(H, true);
     if (!L) continue;
@@ -1201,7 +1253,8 @@ function chooseLayout(colTop) {
     const over = Math.max(0, L.gap - 24) + Math.max(0, R.gap - 24);
     // RAW lines count most; a visible BODY · WORLD module and earlier whys are worth a little RAW; holes cost
     // a line of the card is worth a little more than a line of RAW (it is gone with the first play call)
-    const score = n * RAW_LH + L.cardRows * 20 + (R.evH ? EV_WORTH : 0) + (L.earlier || R.earlier ? 20 : 0) - over * 4 - (L.gap + R.gap) * 0.25;
+    // the call's step rows shown count too (folded too far, NOW says little)
+    const score = n * RAW_LH + L.cardRows * 20 + L.nowRows * 14 + (R.evH ? EV_WORTH : 0) + (L.earlier || R.earlier ? 20 : 0) - over * 4 - (L.gap + R.gap) * 0.25;
     if (!best || score > best.score) best = { n, H, L, R, score };
   }
   return best;
@@ -1251,6 +1304,7 @@ function drawAll() {
       maxPlan--;
     }
     if (!best) { RELAX = true; best = chooseLayout(colTop); } // nothing fitted: without the extras
+    if (!best) best = lastResort(colTop); // and never no layout: the HUD must keep drawing
     LAST = sig === null ? null : { sig, maxPlan, tH, colTop, best, earlierFrom: EARLIER_FROM, relax: RELAX };
     SEARCHES += 1;
   }
