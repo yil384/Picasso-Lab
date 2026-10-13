@@ -1,0 +1,51 @@
+[
+ {
+  "id": "C15",
+  "lecture": "L03",
+  "rec_start": 576.31,
+  "rec_end": 578.83,
+  "dur": 2.52,
+  "text": "And the first is why we want to have attention."
+ },
+ {
+  "id": "C1",
+  "lecture": "L03",
+  "rec_start": 578.69,
+  "rec_end": 584.91,
+  "dur": 6.22,
+  "text": "So attention, again, is like aggregation of the information from other tokens."
+ },
+ {
+  "id": "C23",
+  "lecture": "L03",
+  "rec_start": 711.89,
+  "rec_end": 716.05,
+  "dur": 4.16,
+  "text": "So that's why if you sum up each line, you will add up to one."
+ },
+ {
+  "id": "C11",
+  "lecture": "L03",
+  "rec_start": 845.45,
+  "rec_end": 850.91,
+  "dur": 5.46,
+  "text": "So that's why sometimes we want to use different head to capture different relationships among the tokens."
+ },
+ {
+  "id": "C12",
+  "lecture": "L03",
+  "rec_start": 951.23,
+  "rec_end": 960.41,
+  "dur": 9.18,
+  "text": "And the default we have here is this dimension just equals the hidden dimension of x divided by the number of heads."
+ },
+ {
+  "id": "C27",
+  "lecture": "L03",
+  "rec_start": 907.93,
+  "rec_end": 912.71,
+  "dur": 4.78,
+  "text": "If you look at the x and the z, you will find that usually they will have the same number of elements.",
+  "text_was": "If you look at x and z, you will find that usually they will have the same number of elements."
+ }
+]

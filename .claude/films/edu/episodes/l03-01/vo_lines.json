@@ -1,0 +1,127 @@
+[
+ {
+  "id": "n0",
+  "en": "The animal didn't cross the street because it was too tired. So, what is 'it'?",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "The animal, of course. Now change one word: because it was too wide. Now 'it' is the street.",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "Same 'it', same spot. Only the other words decide. A language model has to work that out with arithmetic, for every word it reads. Lecture 3 of Prof. Yufei Ding's CSE 291P at UC San Diego starts right here.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "Here is one trained model reading 'it'. The sentence is cut into tokens, words or pieces of words, and 'it' draws a thread to every token in the sentence. The thickest threads run to 'the animal'.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "Aggregation: 'it' pulls a little information out of every token. The question is how much from each.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "So every token is turned into three vectors, three lists of numbers, by three learned matrices.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "Think of a party. The query is the question card you hold up: what am I looking for? The key is your name tag, what you show the others. And the value is the parcel you hand over when you get picked.",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "'it' holds its question card up to every name tag. To score a match, multiply the query and the key number by number, and add it all up. That's a dot product: big when the two point the same way.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "Then softmax turns the scores into shares that add up to one. With toy numbers, 'it' gives 58 percent of its attention to 'animal', 21 to 'tired', 13 to 'street', and crumbs to the rest.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "Her slide writes the whole recipe in one line: every query against every key, divided by the square root of dₖ, softmaxed, then used to mix the values. dₖ is how many numbers each query and key holds. Here is her two-token example, after the softmax.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "Row one: 0.119 and 0.881. Row two: 0.182 and 0.818. Softmax only sees gaps: 0.881 just means the second score was 2 higher than the first.",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "Then the mix. Token one's new vector is 0.119 of the first value plus 0.881 of the second, like paint poured by a recipe. In our toy sentence, the new 'it' comes out mostly 'animal'.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "Now the odd step: why divide by the square root of dₖ? Her slide marks it self study, so here is the short version.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "Variance measures spread. A dot product adds up dₖ products. If the numbers are independent, with mean zero and variance one, its variance is dₖ: with 64 numbers, scores spread about 8 times wider. Dividing by the square root of dₖ brings the spread back to one.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "Skip the division and watch. Same toy scores, 8 times wider: 'animal' takes essentially everything, and every other share rounds to zero.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "A softmax that is all or nothing hardly moves when nudged, so its gradients, the nudges training runs on, become tiny, and learning stalls. Dividing by the square root of dₖ is the temperature knob from our Lecture 1 episode, set for you.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "One honest footnote: the 2017 paper itself only says its authors suspect this is the reason.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "One pattern is not enough, though. 'it' needs a link to the animal it names, and another to the word that describes it.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "So attention runs several heads: copies of this whole recipe, side by side, each with its own query, key and value matrices, each free to look for something different.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "On her slide, one head links 'it' to 'the animal', and another links it to 'tired'. So the new 'it' carries a bit of both.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "Then the heads' outputs are glued back together and mixed by one more matrix. Call a token's numbers going in x, and coming out z.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "So each token comes out the same size it went in. And each head works with fewer numbers per token.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "The 2017 base model had 512 numbers per token and 8 heads, so 64 per head, and all the heads together cost about the same as one full-size head. That 64 is the dₖ we divided by.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "So, who is listening to whom? 'it' listens to every token and takes a share from each: that is how the other words decide what 'it' means. And every token does the same. That's the power, and the bill: a thousand tokens means a million scores, in every head of every layer.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "Next time: the KV cache.",
+  "zh": ""
+ }
+]

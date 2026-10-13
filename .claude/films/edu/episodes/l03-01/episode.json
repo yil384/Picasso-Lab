@@ -1,0 +1,3088 @@
+{
+ "id": "l03-01",
+ "lecture": "L03",
+ "facts": "FACTS.md",
+ "title": "L03-01 Attention: Who Is Listening to Whom",
+ "langs": [
+  "en"
+ ],
+ "voice": {
+  "lines": "vo_lines.json",
+  "clips": "clips.json",
+  "clipDir": "~/picasso-work/clips/l03-01",
+  "rate": "+4%",
+  "slotPad": 0.4
+ },
+ "sound": {
+  "dir": "~/picasso-assets/snd"
+ },
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "slides",
+  "drawings": {
+   "dog": {
+    "src": "line_tired_dog_street",
+    "w": 1040
+   },
+   "qkv": {
+    "src": "line_word_three_things",
+    "w": 560
+   },
+   "heads": {
+    "src": "line_three_readers",
+    "w": 1040
+   },
+   "pour": {
+    "src": "line_paint_pour",
+    "w": 600
+   },
+   "knob": {
+    "src": "line_temp_knob",
+    "w": 360
+   },
+   "table": {
+    "src": "line_round_table",
+    "w": 760
+   },
+   "mic": {
+    "src": "line_mic",
+    "w": 240,
+    "boost": 0.3
+   }
+  },
+  "slides": {
+   "s7": {
+    "src": "p07.png"
+   },
+   "s8": {
+    "src": "p08.png"
+   },
+   "s10": {
+    "src": "p10.png"
+   }
+  }
+ },
+ "mic": {
+  "drawing": "mic"
+ },
+ "end": {
+  "at": "endCard"
+ },
+ "panels": [
+  {
+   "id": "p0",
+   "note": "cover: the tired dog at the kerb of a wide street; the sentence; \"it\" ringed (F1); n1 flips it to the street (F2)",
+   "items": [
+    {
+     "id": "dog",
+     "t": "draw",
+     "d": "dog",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 1040
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "dog",
+      0.2705,
+      0.4801
+     ],
+     "w": 620,
+     "h": 300,
+     "a": 0.45,
+     "rot": -0.05
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "dog",
+      0.742,
+      0.5829
+     ],
+     "w": 600,
+     "h": 420,
+     "a": 0.22,
+     "rot": 0.1
+    },
+    {
+     "t": "label",
+     "text": "title.0",
+     "xy": [
+      70,
+      340
+     ],
+     "px": 140,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.1",
+     "xy": [
+      84,
+      446
+     ],
+     "px": 68,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "fit": 900,
+     "id": "title2"
+    },
+    {
+     "t": "underline",
+     "of": "title2",
+     "dx": 6,
+     "dy": 40,
+     "rise": -8,
+     "bend": 0.03,
+     "at": "title",
+     "dur": 0.6
+    },
+    {
+     "t": "sans",
+     "text": "strip",
+     "xy": [
+      86,
+      520
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left"
+    },
+    {
+     "t": "label",
+     "text": "sent0",
+     "xy": [
+      70,
+      628
+     ],
+     "px": 54,
+     "align": "left",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "sent1",
+     "xy": [
+      70,
+      700
+     ],
+     "px": 54,
+     "align": "left",
+     "font": "latin",
+     "id": "s1"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "s1",
+      0.352,
+      0.52
+     ],
+     "r": [
+      32,
+      30
+     ],
+     "seed": 3,
+     "lw": 6,
+     "at": "title-9",
+     "dur": 0.4
+    },
+    {
+     "t": "arrow",
+     "from": [
+      300,
+      728
+     ],
+     "to": [
+      "dog",
+      0.3621,
+      0.3644,
+      0,
+      -10
+     ],
+     "bend": 0.35,
+     "lw": 6,
+     "at": "title-9"
+    },
+    {
+     "t": "label",
+     "text": "q",
+     "xy": [
+      470,
+      808
+     ],
+     "px": 96,
+     "color": "red",
+     "font": "latin",
+     "rot": 0.1,
+     "at": "title-9",
+     "dur": 0.3,
+     "out": "n1@street"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       440,
+       686
+      ],
+      [
+       548,
+       682
+      ]
+     ],
+     "at": "n1@wide",
+     "dur": 0.35,
+     "lw": 7
+    },
+    {
+     "t": "label",
+     "text": "wide",
+     "xy": [
+      572,
+      702
+     ],
+     "px": 58,
+     "color": "red",
+     "font": "latin",
+     "align": "left",
+     "at": "n1@wide+0.2",
+     "patch": 0.3,
+     "rot": -0.05
+    },
+    {
+     "t": "arrow",
+     "from": [
+      330,
+      742
+     ],
+     "to": [
+      "dog",
+      0.7485,
+      0.6857
+     ],
+     "bend": -0.25,
+     "lw": 6,
+     "at": "n1@street",
+     "dur": 0.5
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "note": "one head reading \"it\": threads to every token, thickest to \"the animal\" (F3, F4); her clip C1",
+   "items": [
+    {
+     "t": "label",
+     "text": "thrT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p1+0.3",
+     "rot": -0.03
+    },
+    {
+     "t": "sans",
+     "text": "thrS",
+     "xy": [
+      74,
+      380
+     ],
+     "px": 26,
+     "a": 0.8,
+     "align": "left",
+     "at": "p1+0.6"
+    },
+    {
+     "t": "label",
+     "text": "w0",
+     "xy": [
+      430,
+      430
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+0.50",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w1",
+     "xy": [
+      430,
+      510
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+0.56",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w2",
+     "xy": [
+      430,
+      590
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+0.62",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w3",
+     "xy": [
+      430,
+      670
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+0.68",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w4",
+     "xy": [
+      430,
+      750
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+0.74",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w5",
+     "xy": [
+      430,
+      830
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+0.80",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w6",
+     "xy": [
+      430,
+      910
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+0.86",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w7",
+     "xy": [
+      430,
+      990
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+0.92",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w8",
+     "xy": [
+      430,
+      1070
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+0.98",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w9",
+     "xy": [
+      430,
+      1150
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+1.04",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "w10",
+     "xy": [
+      430,
+      1230
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p1+1.10",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "wit",
+     "xy": [
+      790,
+      990
+     ],
+     "px": 64,
+     "color": "red",
+     "font": "latin",
+     "at": "n3@reading",
+     "dur": 0.3
+    },
+    {
+     "t": "ring",
+     "xy": [
+      792,
+      972
+     ],
+     "r": [
+      46,
+      40
+     ],
+     "seed": 2,
+     "at": "n3@reading+0.3",
+     "dur": 0.4,
+     "lw": 5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       416
+      ],
+      0.08
+     ],
+     "lw": 8,
+     "color": "red",
+     "alpha": 0.9,
+     "at": "n3@thread+0.00",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       496
+      ],
+      0.08
+     ],
+     "lw": 14,
+     "color": "red",
+     "alpha": 0.9,
+     "at": "n3@thread+0.12",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       576
+      ],
+      0.08
+     ],
+     "lw": 4,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n3@thread+0.24",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       656
+      ],
+      0.08
+     ],
+     "lw": 2,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n3@thread+0.36",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       736
+      ],
+      0.08
+     ],
+     "lw": 3,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n3@thread+0.48",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       816
+      ],
+      0.08
+     ],
+     "lw": 4,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n3@thread+0.60",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       896
+      ],
+      0.08
+     ],
+     "lw": 2,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n3@thread+0.72",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       976
+      ],
+      -0.08
+     ],
+     "lw": 2,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n3@thread+0.84",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       1056
+      ],
+      -0.08
+     ],
+     "lw": 2,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n3@thread+0.96",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       1136
+      ],
+      -0.08
+     ],
+     "lw": 4,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n3@thread+1.08",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       1216
+      ],
+      -0.08
+     ],
+     "lw": 3,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n3@thread+1.20",
+     "dur": 0.5
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      350,
+      454.0
+     ],
+     "w": 340,
+     "h": 170,
+     "a": 0.5,
+     "at": "n3@thickest"
+    },
+    {
+     "t": "label",
+     "text": "thrN",
+     "xy": [
+      650,
+      1245
+     ],
+     "px": 42,
+     "color": "red",
+     "at": "n3@thickest+0.4",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "note": "each token -> query, key, value (F5); the analogy: question card, name tag, parcel",
+   "items": [
+    {
+     "id": "qkv",
+     "t": "draw",
+     "d": "qkv",
+     "xy": [
+      330,
+      860
+     ],
+     "w": 480,
+     "at": "p2+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "label",
+     "text": "qkvT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "n5@three",
+     "rot": -0.03,
+     "fit": 940
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "qkv",
+      0.22,
+      0.0803
+     ],
+     "w": 300,
+     "h": 200,
+     "a": 0.5,
+     "at": "n6@query"
+    },
+    {
+     "t": "label",
+     "text": "qL",
+     "xy": [
+      790,
+      470
+     ],
+     "px": 68,
+     "color": "red",
+     "font": "latin",
+     "at": "n6@query"
+    },
+    {
+     "t": "label",
+     "text": "qS",
+     "xy": [
+      790,
+      540
+     ],
+     "px": 38,
+     "at": "n6@query+0.4",
+     "fit": 230
+    },
+    {
+     "t": "arrow",
+     "from": [
+      700,
+      480
+     ],
+     "to": [
+      "qkv",
+      0.3891,
+      0.087,
+      10,
+      0
+     ],
+     "bend": 0.2,
+     "lw": 5,
+     "at": "n6@query+0.3",
+     "dur": 0.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "qkv",
+      0.5239,
+      0.4362
+     ],
+     "w": 220,
+     "h": 220,
+     "a": 0.45,
+     "at": "n6@key"
+    },
+    {
+     "t": "label",
+     "text": "kL",
+     "xy": [
+      760,
+      720
+     ],
+     "px": 68,
+     "color": "red",
+     "font": "latin",
+     "at": "n6@key"
+    },
+    {
+     "t": "label",
+     "text": "kS",
+     "xy": [
+      760,
+      780
+     ],
+     "px": 38,
+     "at": "n6@key+0.4",
+     "fit": 230
+    },
+    {
+     "t": "arrow",
+     "from": [
+      690,
+      730
+     ],
+     "to": [
+      "qkv",
+      0.6219,
+      0.4295,
+      10,
+      0
+     ],
+     "bend": -0.2,
+     "lw": 5,
+     "at": "n6@key+0.3",
+     "dur": 0.4
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "qkv",
+      0.7567,
+      0.5101
+     ],
+     "w": 260,
+     "h": 220,
+     "a": 0.5,
+     "at": "n6@value"
+    },
+    {
+     "t": "label",
+     "text": "vL",
+     "xy": [
+      740,
+      960
+     ],
+     "px": 68,
+     "color": "red",
+     "font": "latin",
+     "at": "n6@value"
+    },
+    {
+     "t": "label",
+     "text": "vS",
+     "xy": [
+      740,
+      1020
+     ],
+     "px": 38,
+     "at": "n6@value+0.4",
+     "fit": 230
+    },
+    {
+     "t": "arrow",
+     "from": [
+      680,
+      930
+     ],
+     "to": [
+      "qkv",
+      0.8303,
+      0.5437,
+      10,
+      0
+     ],
+     "bend": 0.2,
+     "lw": 5,
+     "at": "n6@value+0.3",
+     "dur": 0.4
+    },
+    {
+     "t": "sans",
+     "text": "qkvS",
+     "xy": [
+      74,
+      384
+     ],
+     "px": 26,
+     "a": 0.8,
+     "align": "left",
+     "at": "n5@matrices"
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "note": "'it' holds its query card up to 'animal''s name tag: q . k (F6)",
+   "items": [
+    {
+     "t": "label",
+     "text": "dotT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "p3+0.3",
+     "rot": -0.03
+    },
+    {
+     "id": "qa",
+     "t": "draw",
+     "d": "qkv",
+     "xy": [
+      290,
+      915
+     ],
+     "w": 380,
+     "at": "p3+0.4",
+     "dur": 1.6
+    },
+    {
+     "id": "qb",
+     "t": "draw",
+     "d": "qkv",
+     "xy": [
+      790,
+      915
+     ],
+     "w": 380,
+     "at": "p3+0.7",
+     "dur": 1.6
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "qa",
+      0.22,
+      0.0803
+     ],
+     "w": 240,
+     "h": 160,
+     "a": 0.5,
+     "at": "n7@query"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "qb",
+      0.5239,
+      0.4362
+     ],
+     "w": 170,
+     "h": 170,
+     "a": 0.45,
+     "at": "n7@key"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "qa",
+      0.3891,
+      0.0668,
+      8,
+      0
+     ],
+     "to": [
+      "qb",
+      0.4749,
+      0.4161,
+      -12,
+      0
+     ],
+     "bend": -0.25,
+     "lw": 7,
+     "at": "n7@multiply",
+     "dur": 0.6
+    },
+    {
+     "t": "label",
+     "text": "dotF",
+     "xy": [
+      540,
+      440
+     ],
+     "px": 56,
+     "color": "red",
+     "font": "latin",
+     "at": "n7@query",
+     "patch": 0.3,
+     "fit": 960
+    },
+    {
+     "t": "label",
+     "text": "dotS",
+     "xy": [
+      540,
+      510
+     ],
+     "px": 38,
+     "at": "n7@dot",
+     "fit": 960
+    },
+    {
+     "t": "label",
+     "text": "nA",
+     "xy": [
+      "qa",
+      0.6832,
+      0.0803
+     ],
+     "px": 48,
+     "color": "red",
+     "font": "latin",
+     "at": "p3+1.2",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "nB",
+     "xy": [
+      "qb",
+      0.7322,
+      0.0803
+     ],
+     "px": 44,
+     "font": "latin",
+     "at": "p3+1.5",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "note": "softmax turns the scores of \"it\" into shares (toy numbers F8): animal 58, tired 21, street 13",
+   "items": [
+    {
+     "t": "label",
+     "text": "smT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "p4+0.3",
+     "rot": -0.03,
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "toy",
+     "xy": [
+      860,
+      430
+     ],
+     "px": 44,
+     "color": "red",
+     "align": "right",
+     "at": "n8@toy",
+     "rot": -0.05,
+     "patch": 0.3
+    },
+    {
+     "t": "bars",
+     "xy": [
+      130,
+      1130
+     ],
+     "w": 740,
+     "h": 900,
+     "logits": [
+      -1.0,
+      2.0,
+      -0.5,
+      0.5,
+      1.0
+     ],
+     "words": [
+      "b_the",
+      "b_animal",
+      "b_cross",
+      "b_street",
+      "b_tired"
+     ],
+     "temps": [
+      {
+       "T": 1
+      }
+     ],
+     "px": 46,
+     "at": "n8@softmax",
+     "dur": 1.4,
+     "c": "cobalt",
+     "a": 0.55,
+     "seed": 5
+    },
+    {
+     "t": "label",
+     "text": "sum1",
+     "xy": [
+      860,
+      500
+     ],
+     "px": 44,
+     "color": "red",
+     "align": "right",
+     "at": "n8@one",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "note": "her slide 7 taped; third-party middle covered, the recipe lettered on it (F11); her 2x2 clipped out (F9); rows = 1 (C23); gap of 2 (F10)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs7",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape5+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s7",
+     "xy": [
+      540,
+      852
+     ],
+     "w": 900,
+     "rot": -0.015,
+     "crop": [
+      0.0,
+      0.0,
+      1.0,
+      1.0
+     ],
+     "at": "p5+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      150,
+      593
+     ],
+     "w": 240,
+     "rot": -0.55,
+     "at": "tape5"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      930,
+      589
+     ],
+     "w": 200,
+     "rot": 0.5,
+     "at": "tape5+0.15"
+    },
+    {
+     "id": "cv7",
+     "t": "cover",
+     "xy": [
+      "sl:px",
+      1765,
+      815
+     ],
+     "size": [
+      292,
+      272
+     ],
+     "rot": 0.012,
+     "at": "tape5+0.3",
+     "dur": 0.4,
+     "tape": {
+      "i": 6,
+      "dy": -134,
+      "w": 120,
+      "rot": 0.04,
+      "at": "tape5+0.5"
+     }
+    },
+    {
+     "id": "cv7b",
+     "t": "cover",
+     "xy": [
+      "sl:px",
+      2070,
+      1742
+     ],
+     "size": [
+      446,
+      200
+     ],
+     "rot": -0.01,
+     "at": "tape5+0.4",
+     "dur": 0.4,
+     "tape": {
+      "i": 1,
+      "dx": 200,
+      "dy": -90,
+      "w": 110,
+      "rot": 0.5,
+      "at": "tape5+0.6"
+     }
+    },
+    {
+     "t": "label",
+     "text": "f7q",
+     "xy": [
+      "cv7",
+      0.5,
+      0.3
+     ],
+     "px": 34,
+     "font": "latin",
+     "at": "n9@query",
+     "rows": {
+      "dy": 40,
+      "dt": 0.3
+     }
+    },
+    {
+     "t": "label",
+     "text": "f7a",
+     "xy": [
+      "cv7b",
+      0.5,
+      0.5
+     ],
+     "px": 44,
+     "color": "red",
+     "font": "latin",
+     "at": "n9@divided"
+    },
+    {
+     "t": "sans",
+     "text": "cred7",
+     "xy": [
+      "sl:px",
+      620,
+      2010
+     ],
+     "px": 20,
+     "a": 0.8,
+     "at": "tape5+0.6"
+    },
+    {
+     "t": "clipping",
+     "id": "x7",
+     "slide": "s7",
+     "crop": [
+      0.66,
+      0.16,
+      0.34,
+      0.1956
+     ],
+     "from": [
+      "sl:px",
+      3300,
+      600
+     ],
+     "to": [
+      540,
+      1162
+     ],
+     "w0": 160,
+     "w": 780,
+     "rot": -0.01,
+     "at": "n9@example",
+     "fly": 0.6,
+     "tapes": [
+      {
+       "i": 2,
+       "dx": -0.46,
+       "dy": -0.12,
+       "w": 150,
+       "rot": -0.4,
+       "at": "n9@example+0.5"
+      },
+      {
+       "i": 7,
+       "dx": 0.46,
+       "dy": -0.12,
+       "w": 150,
+       "rot": 0.4,
+       "at": "n9@example+0.6"
+      }
+     ],
+     "items": [
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "x7",
+         0.27,
+         0.72
+        ],
+        [
+         "x7",
+         0.8,
+         0.72
+        ]
+       ],
+       "at": "c23@20%",
+       "dur": 0.5,
+       "lw": 5
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "x7",
+         0.27,
+         0.97
+        ],
+        [
+         "x7",
+         0.8,
+         0.97
+        ]
+       ],
+       "at": "c23@45%",
+       "dur": 0.5,
+       "lw": 5
+      },
+      {
+       "t": "label",
+       "text": "one1",
+       "xy": [
+        "x7",
+        0.87,
+        0.62
+       ],
+       "px": 46,
+       "color": "red",
+       "font": "latin",
+       "at": "c23@60%",
+       "patch": 0.3
+      },
+      {
+       "t": "label",
+       "text": "one2",
+       "xy": [
+        "x7",
+        0.87,
+        0.88
+       ],
+       "px": 46,
+       "color": "red",
+       "font": "latin",
+       "at": "c23@70%",
+       "patch": 0.3
+      }
+     ]
+    },
+    {
+     "t": "group",
+     "at": "n10@gaps",
+     "items": [
+      {
+       "t": "label",
+       "text": "gap7",
+       "xy": [
+        "x7",
+        0.12,
+        0.5
+       ],
+       "px": 40,
+       "color": "red",
+       "font": "latin",
+       "at": "n10@gaps",
+       "rows": {
+        "dy": 44,
+        "dt": 0.3
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "note": "the mix: token one = 0.119 x value 1 + 0.881 x value 2 (her slide 7 numbers, F30); toy it -> mostly animal (F8)",
+   "items": [
+    {
+     "t": "label",
+     "text": "mixT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "p6+0.3",
+     "rot": -0.03
+    },
+    {
+     "id": "pour",
+     "t": "draw",
+     "d": "pour",
+     "xy": [
+      540,
+      850
+     ],
+     "w": 600,
+     "at": "p6+0.4",
+     "dur": 2.0
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "pour",
+      0.224,
+      0.0993
+     ],
+     "w": 240,
+     "h": 200,
+     "a": 0.5,
+     "at": "n11@0119"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "pour",
+      0.7828,
+      0.0993
+     ],
+     "w": 240,
+     "h": 200,
+     "a": 0.45,
+     "at": "n11@0881"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "pour",
+      0.4985,
+      0.8218
+     ],
+     "w": 300,
+     "h": 300,
+     "a": 0.5,
+     "at": "n11@paint"
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "pour",
+      0.4593,
+      0.7554
+     ],
+     "w": 120,
+     "h": 110,
+     "a": 0.35,
+     "at": "n11@paint+0.4"
+    },
+    {
+     "t": "label",
+     "text": "vA",
+     "xy": [
+      150,
+      540
+     ],
+     "px": 46,
+     "color": "red",
+     "font": "latin",
+     "at": "n11@0119",
+     "rows": {
+      "dy": 56,
+      "dt": 0.3
+     }
+    },
+    {
+     "t": "label",
+     "text": "vT",
+     "xy": [
+      930,
+      540
+     ],
+     "px": 46,
+     "color": "red",
+     "font": "latin",
+     "at": "n11@0881",
+     "rows": {
+      "dy": 56,
+      "dt": 0.3
+     }
+    },
+    {
+     "t": "label",
+     "text": "vN",
+     "xy": [
+      540,
+      1235
+     ],
+     "px": 50,
+     "color": "red",
+     "at": "n11@paint",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "vToy",
+     "xy": [
+      70,
+      405
+     ],
+     "px": 36,
+     "align": "left",
+     "at": "n11@toy",
+     "patch": 0.3,
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p7",
+   "note": "her slide 8, first three bullets: Var = d_k, std = root d_k boxed (F14, F15); red pen: the unit variance is an assumption (errata); zoom while n13",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs8",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape7+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s8",
+     "xy": [
+      480,
+      760
+     ],
+     "w": 800,
+     "rot": -0.015,
+     "crop": [
+      0.36,
+      0.1956,
+      0.54,
+      0.5156
+     ],
+     "at": "p7+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 1,
+     "xy": [
+      120,
+      548
+     ],
+     "w": 200,
+     "rot": -0.55,
+     "at": "tape7"
+    },
+    {
+     "t": "tape",
+     "i": 4,
+     "xy": [
+      840,
+      544
+     ],
+     "w": 210,
+     "rot": 0.5,
+     "at": "tape7+0.15"
+    },
+    {
+     "t": "box",
+     "on": "sl:px",
+     "rect": [
+      1655,
+      1372,
+      2310,
+      1590
+     ],
+     "at": "n13@variance#3",
+     "dur": 0.8,
+     "lw": 6
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       2890,
+       1236
+      ],
+      [
+       "sl:px",
+       3535,
+       1232
+      ]
+     ],
+     "at": "n13@independent",
+     "dur": 0.4,
+     "lw": 5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1692,
+       1322
+      ],
+      [
+       "sl:px",
+       2000,
+       1318
+      ]
+     ],
+     "at": "n13@independent+0.2",
+     "dur": 0.3,
+     "lw": 5
+    },
+    {
+     "t": "label",
+     "text": "fix8a",
+     "xy": [
+      80,
+      1050
+     ],
+     "px": 36,
+     "color": "red",
+     "align": "left",
+     "at": "n13@independent+0.4",
+     "patch": 0.3,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "x8",
+     "xy": [
+      80,
+      1115
+     ],
+     "px": 36,
+     "color": "red",
+     "align": "left",
+     "at": "n13@64+0.3",
+     "patch": 0.3,
+     "fit": 760
+    }
+   ],
+   "camera": [
+    {
+     "at": "n13-0.3",
+     "xy": [
+      540,
+      960
+     ],
+     "z": 1.0
+    },
+    {
+     "at": "n13+0.9",
+     "xy": [
+      470,
+      880
+     ],
+     "z": 1.16
+    },
+    {
+     "at": "n13@back-0.6",
+     "xy": [
+      470,
+      880
+     ],
+     "z": 1.17
+    },
+    {
+     "at": "n13@back+0.6",
+     "xy": [
+      540,
+      960
+     ],
+     "z": 1.0
+    }
+   ]
+  },
+  {
+   "id": "p8",
+   "note": "toy bars: x8 -> one-hot (F16); divide = temperature (F17); the paper only \"suspects\" (F18)",
+   "items": [
+    {
+     "t": "label",
+     "text": "skT",
+     "xy": [
+      70,
+      340
+     ],
+     "px": 64,
+     "align": "left",
+     "at": "p8+0.3",
+     "out": "n15@temperature",
+     "rot": -0.03,
+     "rows": {
+      "dy": 74,
+      "dt": 0.4
+     }
+    },
+    {
+     "t": "label",
+     "text": "tkT",
+     "xy": [
+      70,
+      340
+     ],
+     "px": 56,
+     "color": "red",
+     "align": "left",
+     "at": "n15@temperature+0.3",
+     "rot": -0.03,
+     "rows": {
+      "dy": 70,
+      "dt": 0.4
+     }
+    },
+    {
+     "id": "knob",
+     "t": "draw",
+     "d": "knob",
+     "xy": [
+      770,
+      520
+     ],
+     "w": 360,
+     "at": "p8+0.4",
+     "dur": 1.4
+    },
+    {
+     "t": "label",
+     "text": "toy8",
+     "xy": [
+      70,
+      520
+     ],
+     "px": 40,
+     "out": "n15@temperature",
+     "color": "red",
+     "align": "left",
+     "at": "n14@same",
+     "patch": 0.3
+    },
+    {
+     "t": "bars",
+     "xy": [
+      130,
+      1150
+     ],
+     "w": 740,
+     "h": 560,
+     "logits": [
+      -1.0,
+      2.0,
+      -0.5,
+      0.5,
+      1.0
+     ],
+     "words": [
+      "b_the",
+      "b_animal",
+      "b_cross",
+      "b_street",
+      "b_tired"
+     ],
+     "temps": [
+      {
+       "T": 1
+      },
+      {
+       "at": "n14@wider",
+       "T": 0.125,
+       "dur": 1.6
+      },
+      {
+       "at": "n15@temperature",
+       "T": 1,
+       "dur": 1.6
+      }
+     ],
+     "needle": {
+      "xy": [
+       "knob",
+       0.5,
+       0.5
+      ],
+      "lo": 0.125,
+      "hi": 1,
+      "a0": -2.4,
+      "a1": -0.75,
+      "r": 120,
+      "lw": 12
+     },
+     "px": 44,
+     "at": "p8+0.6",
+     "dur": 1.2,
+     "c": "cobalt",
+     "a": 0.55,
+     "seed": 9
+    },
+    {
+     "t": "label",
+     "text": "x8b",
+     "xy": [
+      540,
+      1245
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n14@wider",
+     "out": "n15@tiny-0.4",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "tny",
+     "xy": [
+      540,
+      1245
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n15@tiny",
+     "out": "n15@temperature",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "sus",
+     "xy": [
+      540,
+      1245
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n16@suspect",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p9",
+   "note": "several heads in parallel, each looking for a different relationship (F19, F20, F23); her clip C11",
+   "items": [
+    {
+     "t": "label",
+     "text": "hdT",
+     "xy": [
+      70,
+      320
+     ],
+     "px": 58,
+     "align": "left",
+     "at": "p9+0.3",
+     "rot": -0.03,
+     "fit": 940
+    },
+    {
+     "id": "heads",
+     "t": "draw",
+     "d": "heads",
+     "xy": [
+      540,
+      975
+     ],
+     "w": 900,
+     "at": "p9+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      324,
+      787
+     ],
+     "w": 150,
+     "h": 150,
+     "a": 0.5,
+     "at": "n17@animal"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      760,
+      787
+     ],
+     "w": 150,
+     "h": 150,
+     "a": 0.45,
+     "at": "n17@describes"
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      605,
+      783
+     ],
+     "w": 150,
+     "h": 150,
+     "a": 0.5,
+     "at": "n18@different"
+    },
+    {
+     "t": "label",
+     "text": "h1",
+     "xy": [
+      300,
+      625
+     ],
+     "px": 38,
+     "color": "red",
+     "font": "latin",
+     "at": "n17@animal",
+     "rows": {
+      "dy": 46,
+      "dt": 0.3
+     }
+    },
+    {
+     "t": "arrow",
+     "from": [
+      300,
+      690
+     ],
+     "to": [
+      324,
+      737
+     ],
+     "bend": 0.1,
+     "lw": 5,
+     "at": "n17@animal+0.5",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "h2",
+     "xy": [
+      790,
+      625
+     ],
+     "px": 38,
+     "color": "red",
+     "font": "latin",
+     "at": "n17@describes",
+     "rows": {
+      "dy": 46,
+      "dt": 0.3
+     }
+    },
+    {
+     "t": "arrow",
+     "from": [
+      790,
+      690
+     ],
+     "to": [
+      766,
+      737
+     ],
+     "bend": -0.1,
+     "lw": 5,
+     "at": "n17@describes+0.5",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "h3",
+     "xy": [
+      545,
+      625
+     ],
+     "px": 36,
+     "color": "red",
+     "font": "latin",
+     "at": "n18@different",
+     "rows": {
+      "dy": 42,
+      "dt": 0.3
+     }
+    },
+    {
+     "t": "sans",
+     "text": "hdS",
+     "xy": [
+      74,
+      384
+     ],
+     "px": 26,
+     "a": 0.8,
+     "align": "left",
+     "at": "n18@own"
+    }
+   ]
+  },
+  {
+   "id": "p10",
+   "note": "two heads on \"it\": one to the animal, one to tired (F19)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h2T",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "p10+0.3",
+     "rot": -0.03
+    },
+    {
+     "t": "sans",
+     "text": "h2S",
+     "xy": [
+      74,
+      380
+     ],
+     "px": 26,
+     "a": 0.8,
+     "align": "left",
+     "at": "p10+0.6"
+    },
+    {
+     "t": "label",
+     "text": "v0",
+     "xy": [
+      430,
+      430
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.40",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v1",
+     "xy": [
+      430,
+      510
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.45",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v2",
+     "xy": [
+      430,
+      590
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.50",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v3",
+     "xy": [
+      430,
+      670
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.55",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v4",
+     "xy": [
+      430,
+      750
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.60",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v5",
+     "xy": [
+      430,
+      830
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.65",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v6",
+     "xy": [
+      430,
+      910
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.70",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v7",
+     "xy": [
+      430,
+      990
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.75",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v8",
+     "xy": [
+      430,
+      1070
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.80",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v9",
+     "xy": [
+      430,
+      1150
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.85",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "v10",
+     "xy": [
+      430,
+      1230
+     ],
+     "px": 56,
+     "align": "right",
+     "font": "latin",
+     "at": "p10+0.90",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "vit",
+     "xy": [
+      790,
+      990
+     ],
+     "px": 64,
+     "color": "red",
+     "font": "latin",
+     "at": "p10+0.9",
+     "dur": 0.3
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       416
+      ],
+      0.08
+     ],
+     "lw": 8,
+     "color": "red",
+     "alpha": 0.9,
+     "at": "n19@animal+0.00",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       496
+      ],
+      0.08
+     ],
+     "lw": 14,
+     "color": "red",
+     "alpha": 0.9,
+     "at": "n19@animal+0.08",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       576
+      ],
+      0.08
+     ],
+     "lw": 4,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n19@animal+0.16",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       656
+      ],
+      0.08
+     ],
+     "lw": 2,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n19@animal+0.24",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       736
+      ],
+      0.08
+     ],
+     "lw": 3,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n19@animal+0.32",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       816
+      ],
+      0.08
+     ],
+     "lw": 3,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n19@animal+0.40",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       1136
+      ],
+      -0.08
+     ],
+     "lw": 3,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n19@animal+0.72",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       976
+      ],
+      [
+       452,
+       1216
+      ],
+      -0.08
+     ],
+     "lw": 2,
+     "color": "pencil",
+     "alpha": 0.7,
+     "at": "n19@animal+0.80",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       986
+      ],
+      [
+       452,
+       816
+      ],
+      0.08
+     ],
+     "lw": 4,
+     "color": [
+      38,
+      86,
+      168
+     ],
+     "alpha": 0.7,
+     "at": "n19@tired+0.40",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       986
+      ],
+      [
+       452,
+       1056
+      ],
+      -0.08
+     ],
+     "lw": 8,
+     "color": [
+      38,
+      86,
+      168
+     ],
+     "alpha": 0.9,
+     "at": "n19@tired+0.64",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       986
+      ],
+      [
+       452,
+       1136
+      ],
+      -0.08
+     ],
+     "lw": 8,
+     "color": [
+      38,
+      86,
+      168
+     ],
+     "alpha": 0.9,
+     "at": "n19@tired+0.72",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       760,
+       986
+      ],
+      [
+       452,
+       1216
+      ],
+      -0.08
+     ],
+     "lw": 14,
+     "color": [
+      38,
+      86,
+      168
+     ],
+     "alpha": 0.9,
+     "at": "n19@tired+0.80",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "hd1",
+     "xy": [
+      640,
+      506
+     ],
+     "px": 44,
+     "color": "red",
+     "font": "latin",
+     "at": "n19@animal+0.6",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "hd2",
+     "xy": [
+      640,
+      1234
+     ],
+     "px": 44,
+     "color": [
+      38,
+      86,
+      168
+     ],
+     "font": "latin",
+     "at": "n19@tired+0.6",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "both",
+     "xy": [
+      750,
+      690
+     ],
+     "px": 40,
+     "color": "red",
+     "at": "n19@both",
+     "patch": 0.3,
+     "rows": {
+      "dy": 48,
+      "dt": 0.3
+     }
+    }
+   ]
+  },
+  {
+   "id": "p11",
+   "note": "her slide 10, left figure only: h heads, concat, linear (F20); 512 / 8 = 64 (F21); her clips C27, C12 (F22)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs10",
+     "xy": [
+      190,
+      445
+     ],
+     "px": 48,
+     "color": "red",
+     "at": "tape11+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s10",
+     "xy": [
+      370,
+      880
+     ],
+     "w": 560,
+     "rot": 0.012,
+     "crop": [
+      0.0375,
+      0.32,
+      0.2325,
+      0.5511
+     ],
+     "at": "p11+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 3,
+     "xy": [
+      150,
+      507
+     ],
+     "w": 180,
+     "rot": -0.5,
+     "at": "tape11"
+    },
+    {
+     "t": "tape",
+     "i": 7,
+     "xy": [
+      600,
+      503
+     ],
+     "w": 170,
+     "rot": 0.5,
+     "at": "tape11+0.15"
+    },
+    {
+     "t": "sans",
+     "text": "cred10",
+     "xy": [
+      370,
+      1266
+     ],
+     "px": 20,
+     "a": 0.8,
+     "at": "tape11+0.6"
+    },
+    {
+     "t": "box",
+     "on": "sl:px",
+     "rect": [
+      425,
+      890,
+      668,
+      1018
+     ],
+     "at": "n20@matrix",
+     "dur": 0.6,
+     "lw": 6
+    },
+    {
+     "t": "label",
+     "text": "mixL",
+     "xy": [
+      770,
+      650
+     ],
+     "px": 40,
+     "color": "red",
+     "font": "latin",
+     "at": "n20@matrix+0.3",
+     "patch": 0.3,
+     "rows": {
+      "dy": 46,
+      "dt": 0.2
+     }
+    },
+    {
+     "t": "arrow",
+     "from": [
+      700,
+      668
+     ],
+     "to": [
+      "sl:px",
+      700,
+      955
+     ],
+     "bend": 0.15,
+     "lw": 5,
+     "at": "n20@matrix+0.6",
+     "dur": 0.4
+    },
+    {
+     "t": "box",
+     "on": "sl:px",
+     "rect": [
+      405,
+      1062,
+      690,
+      1196
+     ],
+     "at": "n20@glued",
+     "dur": 0.6,
+     "lw": 6
+    },
+    {
+     "t": "label",
+     "text": "glue",
+     "xy": [
+      770,
+      770
+     ],
+     "px": 40,
+     "color": "red",
+     "font": "latin",
+     "at": "n20@glued+0.3",
+     "patch": 0.3,
+     "rows": {
+      "dy": 46,
+      "dt": 0.2
+     }
+    },
+    {
+     "t": "arrow",
+     "from": [
+      700,
+      790
+     ],
+     "to": [
+      "sl:px",
+      720,
+      1130
+     ],
+     "bend": -0.15,
+     "lw": 5,
+     "at": "n20@glued+0.6",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "xz",
+     "xy": [
+      770,
+      1115
+     ],
+     "px": 38,
+     "color": "red",
+     "font": "latin",
+     "at": "n20@x",
+     "out": "n22-0.2",
+     "patch": 0.3,
+     "rows": {
+      "dy": 44,
+      "dt": 0.3
+     }
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1010,
+      1370
+     ],
+     "r": [
+      44,
+      44
+     ],
+     "seed": 5,
+     "at": "n22@heads",
+     "dur": 0.4,
+     "lw": 6
+    },
+    {
+     "t": "label",
+     "text": "h8",
+     "xy": [
+      770,
+      900
+     ],
+     "px": 46,
+     "color": "red",
+     "font": "latin",
+     "at": "n22@heads",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "d512",
+     "xy": [
+      770,
+      990
+     ],
+     "px": 44,
+     "color": "red",
+     "font": "latin",
+     "at": "n22@64",
+     "patch": 0.3,
+     "rows": {
+      "dy": 52,
+      "dt": 0.3
+     }
+    },
+    {
+     "t": "label",
+     "text": "cost",
+     "xy": [
+      770,
+      1105
+     ],
+     "px": 36,
+     "at": "n22@cost",
+     "patch": 0.3,
+     "rows": {
+      "dy": 42,
+      "dt": 0.25
+     }
+    }
+   ]
+  },
+  {
+   "id": "p12",
+   "note": "every token listens to every token: a thousand tokens, a million scores, per head per layer (F24); next: the KV cache (F25)",
+   "items": [
+    {
+     "t": "label",
+     "text": "allT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p12+0.3",
+     "rot": -0.03
+    },
+    {
+     "id": "table",
+     "t": "draw",
+     "d": "table",
+     "xy": [
+      540,
+      830
+     ],
+     "w": 700,
+     "at": "p12+0.4",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "table",
+      0.498,
+      0.5383
+     ],
+     "w": 520,
+     "h": 360,
+     "a": 0.35,
+     "at": "n23@listens"
+    },
+    {
+     "t": "label",
+     "text": "allA",
+     "xy": [
+      540,
+      1180
+     ],
+     "px": 50,
+     "color": "red",
+     "at": "n23@every#2",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "bill",
+     "xy": [
+      540,
+      1240
+     ],
+     "px": 36,
+     "at": "n23@thousand",
+     "patch": 0.3,
+     "fit": 960
+    },
+    {
+     "t": "label",
+     "text": "next",
+     "xy": [
+      540,
+      400
+     ],
+     "px": 54,
+     "color": "red",
+     "at": "n24@kv",
+     "patch": 0.3
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.2389,
+       0.2363
+      ],
+      [
+       "table",
+       0.4248,
+       0.3422
+      ],
+      [
+       "table",
+       0.4778,
+       0.1949
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+0.00",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.2389,
+       0.2363
+      ],
+      [
+       "table",
+       0.5019,
+       0.3556
+      ],
+      [
+       "table",
+       0.7581,
+       0.2435
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+0.12",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.2389,
+       0.2363
+      ],
+      [
+       "table",
+       0.3577,
+       0.4161
+      ],
+      [
+       "table",
+       0.2339,
+       0.4638
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+0.24",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.2389,
+       0.2363
+      ],
+      [
+       "table",
+       0.5102,
+       0.421
+      ],
+      [
+       "table",
+       0.7883,
+       0.4814
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+0.36",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.4778,
+       0.1949
+      ],
+      [
+       "table",
+       0.5676,
+       0.3442
+      ],
+      [
+       "table",
+       0.7581,
+       0.2435
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+0.48",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.4778,
+       0.1949
+      ],
+      [
+       "table",
+       0.4234,
+       0.4048
+      ],
+      [
+       "table",
+       0.2339,
+       0.4638
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+0.60",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.4778,
+       0.1949
+      ],
+      [
+       "table",
+       0.5759,
+       0.4096
+      ],
+      [
+       "table",
+       0.7883,
+       0.4814
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+0.72",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.7581,
+       0.2435
+      ],
+      [
+       "table",
+       0.5005,
+       0.4181
+      ],
+      [
+       "table",
+       0.2339,
+       0.4638
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+0.84",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.7581,
+       0.2435
+      ],
+      [
+       "table",
+       0.653,
+       0.423
+      ],
+      [
+       "table",
+       0.7883,
+       0.4814
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+0.96",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.2339,
+       0.4638
+      ],
+      [
+       "table",
+       0.5088,
+       0.4835
+      ],
+      [
+       "table",
+       0.7883,
+       0.4814
+      ]
+     ],
+     "lw": 3,
+     "color": "red",
+     "alpha": 0.55,
+     "at": "n23@every#2+1.08",
+     "dur": 0.5
+    }
+   ]
+  }
+ ]
+}
