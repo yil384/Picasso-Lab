@@ -379,7 +379,7 @@ export function createUiPanel(o) {
     const on = rules.filter((r) => r.on);
     // the newest change: when and with which call
     const last = rules.filter((r) => Number.isFinite(r.setS)).sort((a, z) => z.setS - a.setS)[0] ?? null;
-    return { on: on.map((r) => ({ n: r.n, words: ruleWord(r), ...(Number.isFinite(r.v) ? { v: r.v } : {}) })), set: last ? clockOf(last.setS) : null, call: last?.call ?? null };
+    return { on: on.map((r) => ({ n: r.n, words: ruleWord(r), ...(Number.isFinite(r.v) ? { v: r.v } : {}) })), set: last ? clockOf(last.setS) : null, call: last?.call ?? null, ...(last?.via ? { via: last.via } : {}) };
   }
   function hudState(t) {
     const gs = gameS(t) ?? 0;
@@ -472,10 +472,10 @@ export function createUiPanel(o) {
     const adviceState = { items, follow: null, lastFollow: follow ? { atS: follow.gs ?? 0, at: clockOf(follow.gs), ok: follow.ok } : null };
     // BODY · WORLD: the body's own actions, what happened around it, the server's
     const evs = [
-      ...events.map((e) => ({ at: e.at, gs: e.gs, who: e.src === 'rule' ? 'rule' : 'body', kind: e.kind, text: e.text, ...(e.src === 'rule' ? { rule: e.rule, ruleSet: Number.isFinite(e.rs) ? clockOf(e.rs) : null, ruleCall: e.rc ?? null } : {}) })),
+      ...events.map((e) => ({ at: e.at, gs: e.gs, who: e.src === 'rule' ? 'rule' : 'body', kind: e.kind, text: e.text, ...(e.src === 'rule' ? { rule: e.rule, ruleSet: Number.isFinite(e.rs) ? clockOf(e.rs) : null, ruleCall: e.rc ?? null, ruleVia: e.rv ?? null } : {}) })),
       ...world.map((e) => ({ at: e.at, gs: e.gs, who: e.who ?? 'body', kind: e.who === 'server' ? 'policy' : 'world', text: e.text })),
       ...landmarks.map((e) => ({ at: e.at, gs: e.gs, who: 'world', kind: 'milestone', text: e.text })),
-    ].sort((a, z) => z.at - a.at).map((e) => ({ at: clockOf(e.gs), who: e.who, kind: e.kind, text: e.text, ...(e.who === 'rule' ? { rule: e.rule, ruleSet: e.ruleSet, ruleCall: e.ruleCall } : {}) }));
+    ].sort((a, z) => z.at - a.at).map((e) => ({ at: clockOf(e.gs), who: e.who, kind: e.kind, text: e.text, ...(e.who === 'rule' ? { rule: e.rule, ruleSet: e.ruleSet, ruleCall: e.ruleCall, ...(e.ruleVia ? { ruleVia: e.ruleVia } : {}) } : {}) }));
     return {
       caller, now: { gameS: gs, gameClock: mmss(gs) }, stats, position: { y: Number.isFinite(pos?.y) ? pos.y : '–', place: pos?.place ?? '' },
       goal: goalState(goalNow(), fresh), inventory, thinking, earlierThinking, currentCall, raw: { total: Math.max(callTotal, calls.length), entries, runs },
@@ -512,7 +512,7 @@ export function createUiPanel(o) {
           const r = actionGist(l.t);
           const ago = Number.isFinite(l.ago) ? l.ago : 0;
           const gs0 = gameS();
-          const byRule = l.src === 'rule' ? { src: 'rule', rule: l.rule ?? null, rs: Number.isFinite(l.rs) ? l.rs : null, rc: Number.isFinite(l.rc) ? l.rc : null } : {};
+          const byRule = l.src === 'rule' ? { src: 'rule', rule: l.rule ?? null, rs: Number.isFinite(l.rs) ? l.rs : null, rc: Number.isFinite(l.rc) ? l.rc : null, rv: l.rv ?? null } : {};
           if (events[0]?.text !== r) events.unshift({ kind: l.k, text: r, at: now() - ago * 1000, gs: gs0 === null ? null : Math.max(0, gs0 - ago), ...byRule });
           events.sort((a, z) => z.at - a.at);
           events = events.slice(0, 12);

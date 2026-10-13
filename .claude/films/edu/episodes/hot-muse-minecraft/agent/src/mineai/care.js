@@ -1336,13 +1336,14 @@ export function createCare(deps) {
      * Muse sets rules (start_game rules, the policy skill): only the ones given change; each remembers when (game time)
      * and with which of Muse's calls. Their reflexes follow at the next tick. Returns the rules.
      */
-    setRules(r = {}, { call = callNo } = {}) {
-      const atS = Math.round((now() - startedAt) / 1000);
+    setRules(r = {}, { call = callNo, at = null, via = null } = {}) {
+      // when: the call's send time (at, ms) when given, else now; atMs kept so the stream counts it on its own clock
+      const atS = Math.max(0, Math.round(((Number.isFinite(at) ? at : now()) - startedAt) / 1000));
       for (const k of RULES) {
         if (r[k] === undefined) continue;
         const v = k === 'eat_below' ? Math.max(0, Math.min(20, Math.round(Number(r[k]) || 0))) : Boolean(r[k]);
         rules[k] = v;
-        ruleSet[k] = { value: v, atS, call };
+        ruleSet[k] = { value: v, atS, call, ...(Number.isFinite(at) ? { atMs: at } : {}), ...(via ? { via } : {}) };
       }
       memory.hideSetAt = 0;
       return { ...rules };

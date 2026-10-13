@@ -867,7 +867,7 @@ function rulesRow(x, y, w, draw) {
   const b = y + 13;
   let cx = x + caps('RULES', x, b, 10, K.muse) + 10;
   const f = UI(500, 12);
-  const meta = R.set ? `${R.on.length ? 'set' : 'changed'} ${R.set}${R.call ? ` · call ${R.call}` : ''}` : '';
+  const meta = R.set ? `${R.on.length ? 'set' : 'changed'} ${R.set}${R.call ? ` · call ${R.call}` : R.via ? ` · ${R.via}` : ''}` : '';
   const metaW = meta ? W(meta, MONO(400, 11)) + 12 : 0;
   if (!R.on.length) T(ellip(`none: every action is a direct call of ${callerWord}`, f, x + w - metaW - cx), cx, b, f, K.t3);
   else {
@@ -938,7 +938,7 @@ function adviceModule(x, y, w, draw, budget) {
 const EV_TX0 = 84; // event text starts here (time right-aligned at +34, tag at +42); wider when a rule's event shows
 const evTx = () => ((st.events || []).some((e) => e.who === 'rule') ? 98 : EV_TX0);
 // a rule's event leads with the rule and when Muse set it: "defend (set 0:12, call 2): fought a zombie"
-const evText = (e) => (e.who === 'rule' ? `${e.rule ?? 'rule'}${e.ruleSet ? ` (set ${e.ruleSet}${e.ruleCall ? `, call ${e.ruleCall}` : ''})` : ''}: ${e.text}` : cap1(e.logged && (st.events || []).length <= 4 ? e.logged : e.text));
+const evText = (e) => (e.who === 'rule' ? `${e.rule ?? 'rule'}${e.ruleSet ? ` (set ${e.ruleSet}${e.ruleCall ? `, call ${e.ruleCall}` : e.ruleVia ? `, ${e.ruleVia}` : ''})` : ''}: ${e.text}` : cap1(e.logged && (st.events || []).length <= 4 ? e.logged : e.text));
 const EV_NOTE = 'Newest first: the body by Muse\'s rules or on its own, the world, the server.';
 const WHO = { body: ['BODY', K.body], world: ['WORLD', K.world], server: ['SERVER', K.t3], rule: ['MUSE RULE', K.muse] };
 // events, newest first, one line each; spare rows let the newest wrap (up to 3 lines)

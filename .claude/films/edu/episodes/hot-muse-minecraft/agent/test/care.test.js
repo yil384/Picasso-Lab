@@ -587,14 +587,15 @@ test('advise in the body: the reflexes set as the knobs say (eat starving), attr
     r = await c.callTool({ name: 'play', arguments: { skill: 'policy', args: { defend: true, escape: 'on', eat_below: 6 } } });
     assert.match(r.content.map((x) => x.text).join('\n'), /your rules now: defend on \([^)]*\); flee off \([^)]*\); escape on \([^)]*\); eat_below 6 /);
     assert.ok(await until(() => fake.world.foodReflex === 'starving' && fake.world.escape === true && fake.world.melee === true && fake.world.hide === 'when_exposed', 6000));
-    // a fight of the defend reflex now: by Muse's rule, with when it was set (call 4)
+    // a fight of the defend reflex now: by Muse's rule, with when it was set: play call 2 (the play calls are numbered as
+    // the replies and the stream number them, not every MCP call)
     fake.world.events.push({ type: 'survival_outcome', observedAt: new Date().toISOString(), payload: { source: 'hostile_reflex', evidence: { response: 'fight', outcome: { response: 'fight', threats: [{ id: 3, name: 'zombie' }], killedTargetIds: [], attacks: 2, healthBefore: 20, healthAfter: 18 } } } });
-    assert.ok(await until(async () => /1 by rules Muse set \(defend, set at \d+:\d\d with call 4\)/.test((await c.callTool({ name: 'get_state', arguments: {} })).content.map((x) => x.text).join('\n')), 8000));
+    assert.ok(await until(async () => /1 by rules Muse set \(defend, set at \d+:\d\d with call 2\)/.test((await c.callTool({ name: 'get_state', arguments: {} })).content.map((x) => x.text).join('\n')), 8000));
     r = await c.callTool({ name: 'play', arguments: { skill: 'shelter', args: {} } });
     assert.ok(fake.tools('build_structure').length > 0, 'the shelter skill builds');
     r = await c.callTool({ name: 'end_game', arguments: {} });
     // the report (the one-line prompt): who acted, and the advice declined, then followed with the shelter
-    assert.match(r.content[0].text, /^Game ended\.\n\nReport for game g\w+: goal free play;[\s\S]*\nThis game: 2 actions by Muse directly, 1 by rules Muse set \(defend, set at \d+:\d\d with call 4\), 0 by the body on its own \(100% decided by Muse\)\.\n/);
+    assert.match(r.content[0].text, /^Game ended\.\n\nReport for game g\w+: goal free play;[\s\S]*\nThis game: 2 actions by Muse directly, 1 by rules Muse set \(defend, set at \d+:\d\d with call 2\), 0 by the body on its own \(100% decided by Muse\)\.\n/);
     assert.match(r.content[0].text, /\n- \d+:\d\d \(no why given\) -> policy defend=on escape=on eat_below=6: ok\n/);
   } finally {
     await c.close();

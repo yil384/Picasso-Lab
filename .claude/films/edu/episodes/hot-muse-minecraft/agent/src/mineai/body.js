@@ -254,7 +254,7 @@ export function attributionOf(muse, { reflex = 0, care = 0, rule = null, body = 
   const musePct = all ? Math.round((100 * muse) / all) : null;
   const decidedPct = all ? Math.round((100 * (muse + rule)) / all) : null;
   const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-  const which = Object.entries(byRule).filter(([, n]) => n > 0).map(([k]) => `${k}${set[k] ? `, set at ${mmss(set[k].atS)} with call ${set[k].call}` : ''}`);
+  const which = Object.entries(byRule).filter(([, n]) => n > 0).map(([k]) => `${k}${set[k] ? `, set at ${mmss(set[k].atS)} with ${Number.isInteger(set[k].call) ? `call ${set[k].call}` : set[k].via ?? 'start_game'}` : ''}`);
   const text = `This game: ${muse} action${muse === 1 ? '' : 's'} by Muse directly, ${rule} by rules Muse set${which.length ? ` (${which.join('; ')})` : ''}, ${own} by the body on its own${decidedPct != null ? ` (${decidedPct}% decided by Muse)` : ''}`;
   return { muse, rule, body: own, care, reflex, byRule: { ...byRule }, musePct, decidedPct, text };
 }
@@ -843,7 +843,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     return false;
   }
 
-  async function run(tool, args) {
+  async function run(tool, args, meta = null) {
     let t0 = Date.now();
     if (ended) return { ok: false, result: 'not connected to the game', delta: {}, ms: 0, code: 'NOT_STARTED' };
     if (!body.connected) return { ok: false, result: 'not in the game yet', delta: {}, ms: 0, code: 'NOT_STARTED' };
@@ -910,7 +910,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           // Muse's rules (the owner, 2026-10-13): no arguments turn them all off
           const k = plan.care === 'reset' ? null : plan.care;
           const onOff = (v) => (v === undefined ? undefined : v === 'on');
-          const r = care.setRules(k ? { defend: onOff(k.defend), flee: onOff(k.flee), escape: onOff(k.escape), eat_below: k.eat_below ?? (k.eat ? { hungry: 14, starving: 4, off: 0 }[k.eat] : undefined) } : { defend: false, flee: false, escape: false, eat_below: 0 });
+          // set with this play call (its number, as the HUD and the replies number play calls) at the time it was sent
+          const r = care.setRules(k ? { defend: onOff(k.defend), flee: onOff(k.flee), escape: onOff(k.escape), eat_below: k.eat_below ?? (k.eat ? { hungry: 14, starving: 4, off: 0 }[k.eat] : undefined) } : { defend: false, flee: false, escape: false, eat_below: 0 },
+            Number.isInteger(meta?.call) ? { call: meta.call, at: meta.at ?? null } : undefined);
           return `; your rules now: ${describeRules(r)}`;
         }
         return `; its reflexes: ${describeReflexes(knobs, careMode)}${careMode === 'full' ? `; on its own between your calls: ${describeCare(knobs)}` : ''}`;
