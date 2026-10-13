@@ -42,6 +42,9 @@ export const PLAN_MAX = 400;
 const IDLE_MS = 5 * 60_000; // a game nobody has called for 5 minutes (and that runs nothing) is ended, freeing its bot
 const IDLE_SESSION_MS = 10 * 60_000; // an MCP session without a game is dropped after 10 minutes without calls
 const JOIN_WAIT_MS = 30_000;
+/** start_game waits this long for a Minecraft server that is still starting, then says SERVER_STARTING (retry in N s). */
+const SERVER_WAIT_MS = 25_000;
+const SERVER_RETRY_S = 15;
 const MAX_STEPS = 32;
 /** start_game's last line, until live_view is called in the game. */
 export const LIVE_NEXT = 'Next: call live_view now and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, before you play.';
@@ -849,6 +852,15 @@ export function createMcp(hooks) {
         Object.assign(entry, { token, handle, endedWhy: null });
         s.client = entry.key; // one game per MCP session: the game now counts for this one
         resumed = true;
+      }
+      if (!s && typeof hooks.serverReady === 'function') {
+        // the Minecraft server just restarted and is still starting: wait for it (bounded, within the call's time),
+        // else say so with a code and when to try again, nothing started
+        const r = await hooks.serverReady({ waitMs: SERVER_WAIT_MS, signal: signalOf(extra) });
+        if (r.waitedMs > 0) hooks.log.event('mcp_server_wait', { session: sid8(), ok: r.ok, ms: r.waitedMs, ...(r.error ? { error: r.error } : {}) });
+        if (!r.ok) {
+          return { ...fail(`SERVER_STARTING: the Minecraft server is still starting (it restarted a moment ago); nothing was started. Call start_game again in ${SERVER_RETRY_S} s.`), structuredContent: { code: 'SERVER_STARTING', retryAfterS: SERVER_RETRY_S } };
+        }
       }
       if (!s) {
         try {

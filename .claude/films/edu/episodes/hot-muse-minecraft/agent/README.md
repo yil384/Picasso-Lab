@@ -1098,6 +1098,17 @@ echo STREAM_MUSIC=off >> camera.env && sh recreate.sh production
 Paper was not rebuilt (`pre-ui3` keeps its image too). The earlier rollbacks still apply. Remove the `pre-ui3` tags
 once this has held for a week.
 
+### start_game right after a restart
+
+After a deploy the agent answers in about 5 s and Paper takes about 17 s: a start_game in between failed with "the
+Mine AI runtime failed while starting: Runtime exited: code=1" (staging, 2026-10-13: Paper's `Done` at 01:26:16, the
+two tries at 01:26:07 and 01:26:12), and Muse may give up on such an error. start_game now first asks whether the
+Minecraft server answers a status ping (`src/mc-ready.js`; Paper answers only once its world is loaded), every second
+for up to 25 s within the call, and starts the game once it does; a server that answered is believed for 15 s. If it
+still does not answer, the reply is `SERVER_STARTING` (typed, `structuredContent.code`, `retryAfterS: 15`): "the
+Minecraft server is still starting (it restarted a moment ago); nothing was started. Call start_game again in 15 s."
+The wait is logged (`mcp_server_wait`). Not in the fake world (tests); `test/start-wait.test.js`.
+
 ### On production (2026-10-12, the HUD and goals)
 
 Deployed with `deploy/push.sh --prod` while idle (the owner's ga13a88 had ended): main 4c6ec73 (the HUD, layout 2;
