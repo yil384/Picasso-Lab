@@ -54,7 +54,7 @@ test('raw: the arguments as Muse sent them, its plan cut at a word, cleaned for 
 
 test('raw: the HUD\'s RAW console: newest first, the answers paired, the call running now with its time, the body\'s actions apart', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   const at = (ms) => { t += ms; p.render(t); return p.state(); };
   const feed = createTermFeed({ send: (id, u) => p.term(cleanTerm(u)), now: () => t });
   const game = { id: 'g1', body: { attribution: () => null } };
@@ -121,7 +121,7 @@ test('plan: optional on play and play_sequence, asked for in the instructions, n
 
 test('the HUD\'s data for its next design: RAW entries (send time, runs of the same call as one, answers whole), the BODY · WORLD feed from the body\'s own state, THINKING without a why', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   let snap = { health: 20, food: 20, timeOfDay: 1000, inventory: {}, mobs: [], position: { x: 0, y: 64, z: 0 }, dimension: 'overworld' };
   const handlers = [];
   const game = { id: 'g08370a', body: { attribution: () => null, snapshot: () => snap, on: (n, fn) => { handlers.push(fn); return () => {}; } } };

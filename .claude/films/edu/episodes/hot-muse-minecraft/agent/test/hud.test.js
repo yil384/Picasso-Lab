@@ -20,7 +20,7 @@ const { createCanvas } = require('canvas');
 const STATES = JSON.parse(fs.readFileSync(path.join(here, '..', '..', 'ui-art', 'hud-final', 'states.json'), 'utf8'));
 
 test('HUD: the design\'s three states drawn as the design measured them, with no text problem', () => {
-  createUiPanel({ width: 1080, height: 472, over: 72 }); // the fonts, registered once
+  createUiPanel({ design: 'final', width: 1080, height: 472, over: 72 }); // the fonts, registered once
   const want = {
     nowhy: { goal: [644, 60], thinking: [704, 30], columns: [744, 152], rawLines: 8, rawEntries: 5 },
     long: { goal: [644, 40], thinking: [684, 86], columns: [780, 112], rawLines: 8, rawEntries: 5 },
@@ -42,7 +42,7 @@ test('HUD: the design\'s three states drawn as the design measured them, with no
 
 test('HUD: the why\'s age is the age of the call that carried it, not of a newer call', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   p.term({ lines: [{ k: 'call', t: '> play_sequence', tool: 'play_sequence', words: 'Wood first', plan: 'Then a pickaxe', of: 1, steps: [{ say: 'Mine 4 oak logs', raw: 'collect oak_log 4' }], raw: '{}', rid: 1 }], game: { id: 'g1', s: 13 } });
   t += 22_000;
   p.term({ lines: [{ k: 'call', t: '> get_state', tool: 'get_state', raw: '{}', rid: 2 }] });
@@ -54,7 +54,7 @@ test('HUD: the why\'s age is the age of the call that carried it, not of a newer
 
 test('HUD: the caller is named from the MCP client; an empty game draws', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   p.term({ caller: 'TEST SCRIPT', lines: [{ k: 'call', t: '> start_game', say: 'Start a new game', tool: 'start_game', raw: '{}', rid: 1 }, { k: 'reply', t: '< New game g1: a new bot.', rid: 1 }], game: { id: 'g1', s: 0 } });
   t += 1000;
   p.render(t);
@@ -70,7 +70,7 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 const noProblems = (g, st, what) => { const r = drawHud(g, st, { reuse: false }); assert.deepEqual(r.qa.problems, [], what); return r; };
 
 test('HUD goal band: every preset title, a long plain-words goal and a long counted goal fit their columns (the QA sees icons too)', () => {
-  createUiPanel({ width: 1080, height: 472, over: 72 });
+  createUiPanel({ design: 'final', width: 1080, height: 472, over: 72 });
   const g = createCanvas(1080, 1080).getContext('2d');
   // gc950fd: "Nether and back" ran into the grid's water bucket at a fixed 120 px title column
   for (const title of Object.values(GOAL_TITLES)) {
@@ -101,7 +101,7 @@ test('HUD goal band: every preset title, a long plain-words goal and a long coun
 });
 
 test('HUD stats: no actions by either side yet shows no share, on a neutral rule; one by the body alone is 0 % / 100 %', () => {
-  createUiPanel({ width: 1080, height: 472, over: 72 });
+  createUiPanel({ design: 'final', width: 1080, height: 472, over: 72 });
   const c = createCanvas(1080, 1080), g = c.getContext('2d');
   const drawn = [];
   const fill = g.fillText.bind(g);
@@ -121,7 +121,7 @@ test('HUD stats: no actions by either side yet shows no share, on a neutral rule
 });
 
 test('HUD layout: kept while only what moves with the clock changes, searched again for new content, the same as a fresh search', () => {
-  createUiPanel({ width: 1080, height: 472, over: 72 });
+  createUiPanel({ design: 'final', width: 1080, height: 472, over: 72 });
   const g = createCanvas(1080, 1080).getContext('2d');
   const st = clone(STATES.long);
   const r0 = drawHud(g, st, {});
@@ -146,7 +146,7 @@ test('HUD layout: kept while only what moves with the clock changes, searched ag
 test('panel: drawn again for new content at once, for the clocks and progress once a second; only new drawings are written', () => {
   const dir = fs.mkdtempSync(path.join(process.env.TMPDIR || '/tmp', 'hud-write-'));
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t, file: path.join(dir, 'panel.bmp') });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t, file: path.join(dir, 'panel.bmp') });
   p.term({ caller: 'MUSE', game: { id: 'g1', s: 10 }, lines: [{ k: 'call', t: '> play_sequence', tool: 'play_sequence', words: 'Wood first', of: 2, rid: 1, raw: '{}',
     steps: [{ say: 'Mine 4 oak logs', raw: 'collect oak_log 4', skill: 'collect', args: '{"block":"oak_log","n":4}' }, { say: 'Craft 8 oak planks', raw: 'craft oak_planks 8', skill: 'craft', args: '{"item":"oak_planks","n":8}' }] }],
     live: { mode: 'run', c: 1, s: 1 } });
@@ -176,7 +176,7 @@ test('panel: drawn again for new content at once, for the clocks and progress on
 // dig-in, the care policy (muse-hud-live-hole.png: the lower half of both columns was empty)
 function preCall(caller, goalKey, goalList) {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   const plan = planText({ key: goalKey, title: goalKey, text: goalKey === 'custom' ? 'kill 3 pigs' : null, parts: goalKey === 'custom' ? [{ kind: 'kill', target: 'pig', n: 3 }] : null }, { leaseMin: 30 });
   const start = `New game g88e230: a new bot at a fresh spot with an empty inventory.\n${plan}\nTo resume this game from a new connection, call start_game with game: "h_secret".\n\nSkills (use play or play_sequence):\n- collect`;
   p.term(cleanTerm({ caller, game: { id: 'g88e230', s: 4 }, goal: { key: goalKey, title: goalKey === 'custom' ? 'kill 3 pigs' : 'Nether and back', text: null, list: goalList }, st: { hp: 20, food: 20, clock: 'DAY 12:57', ticks: 6900, muse: 0, reflex: 2, pct: 0 },
@@ -241,7 +241,7 @@ test('feed: the body\'s own actions reach the video between calls, stamped when 
   assert.equal(sent.flatMap((u) => u.lines ?? []).filter((l) => l.k === 'body').length, 1);
   // the panel stamps it 57 s before it came: game time 0:59 - 57 s = 0:02
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   p.term(cleanTerm({ game: { id: 'g1', s: 59 }, lines: [{ k: 'world', who: 'server', t: 'Care policy set' }] }));
   p.term(cleanTerm({ lines: [own[0]] }));
   const ev = p.hud(t).state.events;
@@ -249,7 +249,7 @@ test('feed: the body\'s own actions reach the video between calls, stamped when 
 });
 
 test('HUD thinking band: as tall as the why and plan at the first play call (nothing earlier to run on); 76 px with earlier whys', () => {
-  createUiPanel({ width: 1080, height: 472, over: 72 });
+  createUiPanel({ design: 'final', width: 1080, height: 472, over: 72 });
   const g = createCanvas(1080, 1080).getContext('2d');
   const st = clone(STATES.fresh);
   st.thinking = { ...st.thinking, hasWhy: true, why: 'Night: dig in until dawn', plan: 'Wait it out in the hole, then logs and a wooden pickaxe at first light.' };
@@ -265,7 +265,7 @@ test('HUD thinking band: as tall as the why and plan at the first play call (not
 
 test('HUD: SHELTERED over the video while the body is closed in, until the next play call', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   p.term(cleanTerm({ caller: 'MUSE', game: { id: 'g1', s: 40 }, lines: [{ k: 'call', t: '> play', tool: 'play', words: 'Night: dig in', of: 1, rid: 1, raw: '{}', steps: [{ say: 'Build a shelter for the night', raw: 'shelter', skill: 'shelter', args: '{}' }] }], live: { mode: 'run', c: 1, s: 1 } }));
   t += 20_000;
   p.term(cleanTerm({ lines: [{ k: 'ok', t: 'ok  climbed down to the ground (19 s)', s: 1, shut: 1 }, { k: 'reply', t: '< 1. shelter {}: ok: closed itself in', rid: 1 }], live: { mode: 'idle' } }));
@@ -288,7 +288,7 @@ test('HUD: SHELTERED over the video while the body is closed in, until the next 
 // Muse's rules (the owner, 2026-10-13): reflexes are Muse's own rules, all off at start; actions by them are Muse's
 function rulesGame(caller = 'MUSE') {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   p.term(cleanTerm({ caller, game: { id: 'g71c9f5', s: 10 }, rules: [{ n: 'defend', on: false }, { n: 'flee', on: false }, { n: 'escape', on: false }, { n: 'eat_below', on: false }],
     st: { hp: 20, food: 20, clock: 'DAY 08:00', ticks: 2000 },
     lines: [{ k: 'call', t: '> start_game', tool: 'start_game', raw: '{"rules":{}}', rid: 1, src: 'muse' }, { k: 'reply', t: '< New game g71c9f5: a new bot.', rid: 1 }, { k: 'call', t: '> live_view', tool: 'live_view', raw: '{}', rid: 2, src: 'muse' }, { k: 'reply', t: '< Live view of game g71c9f5: test caller: no Facebook live.', rid: 2 }] }));
@@ -360,7 +360,7 @@ test('HUD rules: some on, a change mid-game is a toast; rule actions are Muse\'s
 
 test('HUD rules: the how-to-read card\'s colour key (Muse, its rules, the body on its own, the server); a NEED_LIVE_VIEW refusal in RAW with its code once', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   const sent = [];
   const feed = createTermFeed({ send: (id, u) => sent.push(u), now: () => t });
   const game = { id: 'g1', body: { attribution: () => null } };
@@ -377,7 +377,7 @@ test('HUD rules: the how-to-read card\'s colour key (Muse, its rules, the body o
   assert.equal((rawText.match(/NEED_LIVE_VIEW/g) ?? []).length, 1, 'the code once');
   // before the first play call that ran: the card with the four colours
   let t2 = 1_000_000;
-  const q = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t2 });
+  const q = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t2 });
   q.term(cleanTerm({ caller: 'MUSE', game: { id: 'g2', s: 3 }, rules: [{ n: 'defend', on: false }], lines: [{ k: 'call', t: '> start_game', tool: 'start_game', raw: '{}', rid: 1 }, { k: 'reply', t: '< New game g2: a new bot at a fresh spot with an empty inventory. Goal: free play.', rid: 1 }] }));
   t2 += 1000;
   const d2 = drawnTexts(q, t2);
@@ -389,7 +389,7 @@ test('HUD rules before the first play call: the right column says what the body 
   for (const caller of ['MUSE', 'TEST SCRIPT']) {
     for (const goalKey of ['nether_and_back', 'free']) {
       let t = 1_000_000;
-      const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+      const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
       const plan = planText({ key: goalKey, title: goalKey, text: null, parts: null }, { leaseMin: 30 });
       p.term(cleanTerm({ caller, game: { id: 'g1', s: 4 }, goal: { key: goalKey, title: 'Nether and back', text: null, list: MILESTONES }, rules: [{ n: 'defend', on: false }, { n: 'flee', on: false }, { n: 'escape', on: false }, { n: 'eat_below', on: false }],
         st: { hp: 20, food: 20, clock: 'DAY 08:10', ticks: 2200 },
@@ -409,7 +409,7 @@ test('HUD rules before the first play call: the right column says what the body 
 // drawing at 1:29; the share said "no actions yet" after Muse's policy call; the hotbar read as owned at 0
 test('HUD g0a414c: a call with many steps folds them and the HUD keeps drawing; RAW says when each call was sent and the newest\'s age; empty hotbar slots', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   const names = ['collect oak_log 8', 'craft wooden_pickaxe 1', 'collect cobblestone 11', 'craft stone_pickaxe 1', 'craft furnace 1', 'collect coal_ore 4', 'collect iron_ore 8', 'smelt raw_iron 8', 'craft iron_pickaxe 1', 'shield'];
   p.term(cleanTerm({ caller: 'MUSE', game: { id: 'g0a414c', s: 60 }, rules: [{ n: 'defend', on: true, setS: 83, call: 1 }, { n: 'escape', on: true, setS: 83, call: 1 }, { n: 'eat_below', on: true, v: 6, setS: 83, call: 1 }, { n: 'flee', on: false }],
     st: { hp: 20, food: 20, clock: 'DAY 10:55', ticks: 4900, muse: 1, reflex: 0, rule: 0, body: 0, pct: 100, dpct: 100 }, inv: {},
@@ -441,7 +441,7 @@ test('HUD g0a414c: a call with many steps folds them and the HUD keeps drawing; 
   const age = (ts) => Number(/newest (\d+)s ago/.exec(ts.find((x) => /newest \d+s ago/.test(x)))[1]);
   assert.equal(age(d2.texts) - age(d.texts), 3, 'the age moves on');
   // a drawing that throws keeps the panel going and is counted
-  const p2 = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p2 = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   p2.term(cleanTerm({ caller: 'MUSE', game: { id: 'g1', s: 1 } }));
   p2.perf();
   p2.term({ lines: [], rules: [{ n: 'defend', on: true }] });
@@ -455,7 +455,7 @@ test('HUD g0a414c: a call with many steps folds them and the HUD keeps drawing; 
 
 test('HUD hotbar: owned items full colour with their count, the best pickaxe held; not owned a faint silhouette', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   p.term(cleanTerm({ caller: 'MUSE', game: { id: 'g1', s: 10 }, inv: { pick: 'stone', diamond: 0, iron: 3, shield: 0 } }));
   t += 1000;
   const inv = p.hud(t).state.inventory;

@@ -366,7 +366,7 @@ test('camera on staging: production\'s camera settings with staging\'s Paper; th
   assert.deepEqual(stgCam, prodCam);
   assert.equal(sh, stg.agent.env.MC_HOST, 'staging\'s own Paper');
   assert.equal(ph, prod.agent.env.MC_HOST);
-  for (const k of ['network_mode: "service:agent"', 'user: "${CAMERA_UID:-1014}:${CAMERA_GID:-1014}"', 'env_file: [ { path: camera.env, required: false } ]', 'cpus: 6', 'mem_limit: 3g', 'security_opt: [ "no-new-privileges:true" ]']) {
+  for (const k of ['network_mode: "service:agent"', 'user: "${CAMERA_UID:-1014}:${CAMERA_GID:-1014}"', 'env_file: [ { path: camera.env, required: false } ]', 'cpus: ${CAMERA_CPUS:-6}', 'mem_limit: 3g', 'security_opt: [ "no-new-privileges:true" ]']) {
     assert.ok(stg.camera.text.includes(k) && prod.camera.text.includes(k), k);
   }
   assert.match(stg.camera.text, /volumes: \[ "\.\.\/\.\.\/logs:\/logs", "console:\/console", "\$\{HOME\}\/workspace\/muse-minecraft\/camera\/auth:\/auth", "\.\.\/\.\.\/fb:\/fb:ro", "\$\{RECORD_HOST_DIR:-\.\.\/\.\.\/recordings\}:\/recordings" \]/);

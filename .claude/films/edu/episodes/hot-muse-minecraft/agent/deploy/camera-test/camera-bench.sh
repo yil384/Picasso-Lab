@@ -25,7 +25,7 @@ sleep "${WARM:-15}"
 docker cp "$DEPLOY/camera-test/route.cjs" muse-camera-test-agent-1:/tmp/route.cjs
 docker exec -e RUN_S=$((RUN_S + 25)) -e ROUTE_AT="${ROUTE_AT:-54,-54}" -e CHOP="${CHOP:-0}" muse-camera-test-agent-1 node /tmp/route.cjs > "$OUT/$LABEL.route.txt" 2>&1 &
 for i in $(seq 1 60); do grep -q '^ready' "$OUT/$LABEL.route.txt" && break; sleep 1; done
-ID="bench-$LABEL"
+ID="${BENCH_ID:-bench-$LABEL}" # a game id (g + hex) to have it recorded (RECORD=on)
 api() { docker exec muse-camera-test-camera-1 node -e "$1"; }
 api "fetch('http://127.0.0.1:7862/streams/$ID', { method: 'PUT', body: JSON.stringify({ source: 'http://127.0.0.1:1/eyes/$ID/', player: 'Tst_cam_route' }) }).then((r) => r.json()).then((j) => console.log(JSON.stringify(j)))" >/dev/null
 sleep 15

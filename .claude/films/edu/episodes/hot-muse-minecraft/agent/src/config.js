@@ -326,6 +326,8 @@ export function loadConfig(env = process.env) {
     // 'landscape', the game alone at 1280x720
     layout: r.oneOf('STREAM_LAYOUT', 'ui', ['ui', 'terminal', 'landscape']),
     uiSize: r.oneOf('STREAM_UI_SIZE', '1080x1080', ['1080x1080', '1080x1200', '1080x1350']),
+    // the HUD's design in the ui layout: 'b' (concept B "Speedrun broadcast", src/hud-b.js) or 'final' (the one before)
+    hud: r.oneOf('STREAM_HUD', 'b', ['b', 'final']),
     terminalSize: r.oneOf('STREAM_TERMINAL_SIZE', '1080x1920', ['1080x1920', '1080x1350']),
     // the sound (camera only): the game's own from the client (STREAM_GAME_AUDIO, its music off), and a soft CC0
     // music bed under it (STREAM_MUSIC, assets/muse-ui/music), ducked while the game is loud, then a limiter
@@ -341,7 +343,8 @@ export function loadConfig(env = process.env) {
       auth: r.oneOf('CAMERA_AUTH', 'msa', ['msa', 'offline']),
       name: r.str('CAMERA_NAME', ''),
       gl: r.oneOf('CAMERA_GL', 'cpu', ['cpu', 'gpu']),
-      glThreads: r.int('CAMERA_GL_THREADS', 8, 1, 64),
+      // llvmpipe's threads: 8 at 960x540; the film's 1920x1080 wants 16 (and CAMERA_CPUS=24)
+      glThreads: r.int('CAMERA_GL_THREADS', r.bool('CAMERA_FILM', false) ? 16 : 8, 1, 64),
       javaThreads: r.int('CAMERA_JAVA_THREADS', 4, 1, 64),
       heapMB: r.int('CAMERA_HEAP_MB', 2048, 512, 16_384),
       maxFps: r.int('CAMERA_MAX_FPS', 30, 10, 120),
@@ -349,6 +352,9 @@ export function loadConfig(env = process.env) {
       graphics: r.oneOf('CAMERA_GRAPHICS', 'fast', ['fast', 'fancy']),
       display: r.int('CAMERA_DISPLAY', 99, 1, 900),
       scale: r.num('CAMERA_SCALE', 0.75, 0.5, 1),
+      // the promo film (off by default): the client drawn at 1920x1080 for the clean recording (the live is scaled down
+      // to its 1080 square as always); costs client frames on llvmpipe (README "Recordings")
+      film: r.bool('CAMERA_FILM', false),
       javaNice: r.int('CAMERA_NICE', 5, 0, 19),
       idleMs: r.int('CAMERA_IDLE_MS', 600_000, 0, 86_400_000),
       // client mods from the image (deploy/camera/mods.json), comma-separated; 'off' runs the vanilla client

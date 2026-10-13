@@ -35,6 +35,9 @@ import { createRecording, cleanupRecordings, cleanArgs } from './recorder.js';
 
 const require = createRequire(import.meta.url);
 
+/** The client's size for the promo film (CAMERA_FILM=on). */
+export const FILM_SIZE = Object.freeze([1920, 1080]);
+
 export const CAMERA_DEFAULTS = Object.freeze({
   mcDir: '/opt/mc', // deploy/camera/install-client.mjs: the client, its libraries and launch.json
   home: path.join(os.tmpdir(), 'muse-camera'), // per rig: the game folder (options.txt, the client's own logs)
@@ -781,12 +784,18 @@ export function createCameraStream(o) {
     // (src/ui-panel.js), redrawn 30 times a second
     try {
       const [uw, uh] = String(opt.uiSize ?? '1080x1080').split('x').map(Number);
-      // the whole 16:9 game on top, the command area under it (the owner's option A: 472 px of the square), and a
-      // see-through band of 72 px over the game's bottom for the milestone toast
+      // the whole 16:9 game on top, the command area under it (the owner's option A: 472 px of the square). Concept B
+      // (STREAM_HUD=b, the default) draws over the whole game too (its toasts, floaters, banners, the hotbar): the
+      // panel is the whole frame, see-through over the game; the design before it had a band of 72 px over the game
       const top = Math.round((uw * 9) / 16 / 2) * 2;
       const ph = uh - top;
+      const design = opt.hud === 'final' ? 'final' : 'b';
       try { shm = fs.mkdtempSync(path.join(opt.shmDir ?? '/dev/shm', 'muse-ui-')); } catch { shm = null; }
-      panel = createUiPanel({ width: uw, height: ph, over: 72, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS, ...(opt.uiNow ? { now: opt.uiNow } : {}) });
+      panel = createUiPanel({
+        width: uw, height: ph, over: design === 'b' ? top : 72, design, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS, ...(opt.uiNow ? { now: opt.uiNow } : {}),
+        // what B put over the video, with its times: in the recording's hud.jsonl, so the film can draw it again
+        onEvent: (ev) => { try { rec?.event(ev, ev.gs ?? null); } catch { /* best effort */ } },
+      });
       panel.top = top;
       panel.kind = 'ui';
       panel.write(); // ffmpeg opens the file at its start
@@ -1120,10 +1129,12 @@ export function createCameraStream(o) {
 
 /** The camera options from config (config.stream.camera, config.mc). */
 export function cameraOptions(config) {
-  const { scale = 1, ...cam } = config?.stream?.camera ?? {};
-  // the client draws at 1280x720 times CAMERA_SCALE (llvmpipe's cost); ffmpeg scales the video up to 1280x720
+  const { scale = 1, film = false, ...cam } = config?.stream?.camera ?? {};
+  // the client draws at 1280x720 times CAMERA_SCALE (llvmpipe's cost); ffmpeg scales the video up to 1280x720. The
+  // promo film (CAMERA_FILM=on): 1920x1080, for the clean recording; the live is scaled down from it
   const size = (n) => Math.round((n * scale) / 2) * 2;
-  return defined({ ...cam, width: size(CAMERA_DEFAULTS.width), height: size(CAMERA_DEFAULTS.height), server: `${config?.mc?.host ?? '127.0.0.1'}:${config?.mc?.port ?? 25565}` });
+  const [width, height] = film ? FILM_SIZE : [size(CAMERA_DEFAULTS.width), size(CAMERA_DEFAULTS.height)];
+  return defined({ ...cam, width, height, server: `${config?.mc?.host ?? '127.0.0.1'}:${config?.mc?.port ?? 25565}` });
 }
 
 /**

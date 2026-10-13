@@ -185,7 +185,7 @@ test('HUD data: the call\'s steps and its number, a step\'s place in its call, t
 test('HUD: the trace (every step in plain words and raw: done with its time, running with the body\'s sub-step, queued; failed and skipped), Muse\'s words, the earlier calls, a toast, frames', () => {
   let t = 1_000_000;
   const dir = tmp();
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, file: path.join(dir, 'panel.bmp'), now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, file: path.join(dir, 'panel.bmp'), now: () => t });
   const at = (ms) => { t += ms; p.render(t); return p.state(); };
   p.term({ lines: [{ k: 'call', t: '> start_game', say: 'Start a new game', tool: 'start_game' }], st: { hp: 20, food: 17, clock: 'NIGHT 00:57', ticks: 18_962, muse: 9, reflex: 1, pct: 90 }, game: { id: 'ga13a88', s: 0 } });
   let st = at(10);
@@ -243,7 +243,7 @@ test('HUD: the trace (every step in plain words and raw: done with its time, run
 
 test('HUD: the state (the server\'s goal with its times and the next one, the items, the place, the advice and whether Muse took it), the header, and what is happening while nothing runs', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   const at = (ms) => { t += ms; p.render(t); return p.state(); };
   const goal = { key: 'nether', title: 'The Nether', reached: false, list: [{ k: 'wooden_pickaxe', t: 'wooden pickaxe', atS: 272 }, { k: 'stone_pickaxe', t: 'stone pickaxe', atS: null }, { k: 'nether', t: 'Nether', atS: null }] };
   p.term({ lines: [{ k: 'call', t: '> start_game', say: 'Start a new game', tool: 'start_game' }], goal, inv: { obsidian: 3, pick: 'wooden' }, pos: { y: -42, place: 'deep caves' }, game: { id: 'g1', s: 300 },
@@ -291,7 +291,7 @@ test('HUD: the state (the server\'s goal with its times and the next one, the it
 
 test('panel: a frame costs little (cached cards, sprites drawn at their size)', () => {
   let t = 1_000_000;
-  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const p = createUiPanel({ design: 'final', width: 1080, height: 472, over: 72, now: () => t });
   p.term({ lines: [{ k: 'call', t: '> play', say: 'Mine 3 oak logs', words: 'Wood first: planks, a table, then a pickaxe' }], st: { hp: 20, food: 20, clock: 'DAY 08:15', muse: 1, reflex: 0 }, sub: { kind: 'mine', text: 'mining oak logs', done: 1, of: 3 } });
   const t0 = process.hrtime.bigint();
   for (let i = 0; i < 90; i++) { t += 33; p.bmp(t); }

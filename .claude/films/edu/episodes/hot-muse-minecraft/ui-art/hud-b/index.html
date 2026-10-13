@@ -1,0 +1,798 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Speedrun Broadcast HUD</title>
+<style>
+@font-face{font-family:MuseUI;font-weight:500;src:url("../../agent/assets/muse-ui/fonts/Inter-Medium.ttf")}
+@font-face{font-family:MuseUI;font-weight:600;src:url("../../agent/assets/muse-ui/fonts/Inter-SemiBold.ttf")}
+@font-face{font-family:MuseUI;font-weight:700;src:url("../../agent/assets/muse-ui/fonts/Inter-Bold.ttf")}
+@font-face{font-family:MuseMono;font-weight:400;src:url("../../agent/assets/muse-ui/fonts/JetBrainsMono-Regular.ttf")}
+@font-face{font-family:MuseMono;font-weight:500;src:url("../../agent/assets/muse-ui/fonts/JetBrainsMono-Medium.ttf")}
+html,body{margin:0;width:1080px;height:1080px;overflow:hidden;background:#07090d}
+canvas{display:block}
+</style>
+<script src="../hud-final/states.js"></script>
+<script>
+// Concept B adds one real state: game g0a414c at 1:29, Muse's call 1 (play policy) 6 s earlier.
+// Every word below is read off the owner's capture images/42.png (production HUD of that moment).
+(function () {
+  const S = window.HUD_STATES;
+  const WHY = "The body's self-defense reflexes start off this game, so I am switching defend and escape on before anything else.";
+  const PLAN = 'If these args are refused, fall back to defend and escape only; then collect logs and craft up the tool chain to an iron pickaxe.';
+  const ARGS = JSON.stringify({ skill: 'policy', args: { defend: 'on', escape: 'on', eat_below: 6 }, request_id: 'g0a414c-001', why: WHY, plan: PLAN });
+  const list = S.fresh.goal.previous.list.map((m) => ({ ...m }));
+  S.rules = {
+    id: 'rules',
+    title: 'Real Muse game g0a414c at 1:29: call 1 switches on three rules (defend, escape, eat at food 6); done in 0.1 s',
+    frame: 'B:frame-rules.png', camera: 'ceiling',
+    source: { game: 'g0a414c', render: 'images/42.png (the owner\'s capture of the production HUD at this moment)' },
+    now: { gameS: 89, gameClock: '1:29' },
+    stats: { hp: 20, hpMax: 20, food: 20, foodMax: 20, dimension: 'overworld', timeOfDay: '10:55', phase: 'day', ticks: 4917,
+      museShare: { muse: 1, reflex: 0, bot: 0, note: 'the policy call is the only action so far' }, gameId: 'g0a414c' },
+    thinking: { hasWhy: true, why: WHY, plan: PLAN, whyAt: '1:23', whyCall: 1 },
+    earlierThinking: [],
+    currentCall: { no: 1, tool: 'play', args: ARGS, sentS: 83, sent: '1:23', state: 'ok', doneS: 0.1, stepsTotal: 1,
+      steps: [{ n: 1, skill: 'policy', args: { defend: 'on', escape: 'on', eat_below: 6 }, icon: 'shield', state: 'ok', took: '0.1 s' }] },
+    raw: { total: 4, entries: [
+      { n: 4, tool: 'play', args: ARGS, sentS: 83, sent: '1:23', playCallNo: 1, hasWhy: true,
+        answer: { state: 'answered', atS: 83.1, at: '1:23', text: 'policy {"defend":"on","escape":"on","eat_below":6}: ok: your rules now: defend on (fight back, raise the shield, wall in when badly hurt); flee off (withdraw from a hostile mob); escape on (out of water for air, out…' } },
+      { n: 3, tool: 'get_state', args: '{}', sentS: 56, sent: '0:56', answer: { state: 'answered', atS: 56, at: '0:56', text: 'state: HP 20, food 20' } },
+      { n: 2, tool: 'live_view', args: '{}', sentS: 18, sent: '0:18', answer: { state: 'answered', atS: 18, at: '0:18', text: 'Live view of game g0a414c: live on Facebook since 18:19:19 UTC.' } },
+      { n: 1, tool: 'start_game', args: '{"goal":"nether_and_back"}', sentS: 18, sent: '0:18', answer: { state: 'answered', atS: 18, at: '0:18', text: 'New game g0a414c: a new bot at a fresh spot with an empty inventory. Goal: Nether and back. The plan, milestone by milestone (the server tracks each one; game_report shows where you are): 1. wooden…' } },
+    ] },
+    goal: { kind: 'milestones', key: 'nether_and_back', title: 'Nether and back', done: 0, total: 12, list },
+    inventory: S.fresh.inventory.map((i) => ({ ...i })),
+    position: { y: 78, place: 'surface, dark forest' },
+    advice: { items: [] },
+    events: [
+      { atS: 84, at: '1:24', kind: 'policy', who: 'server', text: 'Care policy set: melee true, bow true, shield true, hide…' },
+      { atS: 18, at: '0:18', kind: 'policy', who: 'server', text: 'Care policy set: melee false, bow false, shield false, hide…' },
+    ],
+  };
+})();
+</script>
+</head><body><canvas id="c" width="1080" height="1080"></canvas>
+<script>
+'use strict';
+/* =====================================================================================================================
+   Concept B: Speedrun broadcast. Canvas 2D only (fillText, rects, arcTo, drawImage, globalAlpha, linear gradients),
+   so it ports to node-canvas. Motion is position + alpha of pre-rendered offscreen canvases.
+   ?state=long|nowhy|fresh|rules   ?t=<s since the newest Muse command>   ?debug=1 (safe zones)   ?ab=1 (action-bar demo)
+   ===================================================================================================================== */
+window.HUD_READY = false;
+const S = window.HUD_STATES;
+const Q = new URLSearchParams(location.search);
+const KEY = Q.get('state') || 'long';
+const st = S[KEY];
+const DEBUG = Q.get('debug') === '1';
+const cv = document.getElementById('c');
+const g = cv.getContext('2d');
+
+/* ---------- tokens ---------- */
+const C = {
+  hud: '#0a0d12', bar: '#0f131b', plate: '#0b0e14', tile: '#161b26', track: '#262d3b', rim: 'rgba(255,255,255,0.10)',
+  hair: 'rgba(255,255,255,0.08)',
+  t1: '#f3f5f9', t2: '#c9d1df', soft: '#aeb6c6', raw: '#8d97ab', dim: '#6b7488',
+  muse: '#b0a4ff', museType: '#b9adff', rule: '#ffb547', bot: '#a3acbb', ok: '#5fd09c', fail: '#ff8a7a', hint: '#6fd3c8',
+  gold: '#ffd164', ink: '#0b0e14',
+};
+const ACTOR = { MUSE: C.muse, RULE: C.rule, BOT: C.bot, SRV: C.ok, HINT: C.hint, REFUSED: C.fail };
+const UI = (w, s) => `${w} ${s}px MuseUI`;
+const MONO = (w, s) => `${w} ${s}px MuseMono`;
+const FPS = 30;
+
+/* ---------- small maths ---------- */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const outQuint = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 5);
+const inOut = (x) => { x = clamp(x, 0, 1); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const mmss = (s) => { s = Math.max(0, Math.floor(s + 1e-6)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const durTxt = (s) => (s == null ? '' : s < 1 ? `${s.toFixed(1)} s` : s < 60 ? `${Math.round(s)} s` : mmss(s));
+const parseClock = (s) => { const [m, x] = String(s).split(':').map(Number); return m * 60 + x; };
+const cap1 = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+const lc1 = (s) => (s ? s[0].toLowerCase() + s.slice(1) : s);
+
+/* ---------- canvas primitives (all portable) ---------- */
+function mk(w, h) { const c = document.createElement('canvas'); c.width = Math.ceil(w); c.height = Math.ceil(h); return c; }
+function rr(x, y, w, h, r, ctx = g) { r = Math.min(r, h / 2, w / 2); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function fillRR(x, y, w, h, r, c, ctx = g) { rr(x, y, w, h, r, ctx); ctx.fillStyle = c; ctx.fill(); }
+function strokeRR(x, y, w, h, r, c, lw = 1, ctx = g) { rr(x + lw / 2, y + lw / 2, w - lw, h - lw, Math.max(0, r - lw / 2), ctx); ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.stroke(); }
+function rect(x, y, w, h, c, ctx = g) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
+function plate(x, y, w, h, r = 10, ctx = g, a = 0.88) { ctx.save(); ctx.globalAlpha *= a; fillRR(x, y, w, h, r, C.plate, ctx); ctx.restore(); strokeRR(x, y, w, h, r, C.rim, 1, ctx); }
+function T(s, x, y, font, color, align = 'left', ctx = g) { ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x, y); return ctx.measureText(s).width; }
+function W(s, font, ctx = g) { ctx.font = font; return ctx.measureText(s).width; }
+// text with a 3 px dark stroke, for words straight on the video (floaters, action bar)
+function TS(s, x, y, font, color, align = 'left', ctx = g, sw = 3) {
+  ctx.font = font; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
+  ctx.lineWidth = sw * 2; ctx.strokeStyle = 'rgba(6,8,12,0.94)'; ctx.strokeText(s, x, y); ctx.fillStyle = color; ctx.fillText(s, x, y);
+  return ctx.measureText(s).width;
+}
+// spaced capitals (node-canvas has no letter-spacing): one glyph at a time, +0.1 em
+function capsW(s, size, wt = 600, ctx = g) { ctx.font = UI(wt, size); let w = 0; for (const ch of s.toUpperCase()) w += ctx.measureText(ch).width + size * 0.1; return w - size * 0.1; }
+function CAPS(s, x, y, size, color, wt = 600, ctx = g, align = 'left') {
+  const w = capsW(s, size, wt, ctx); let cx = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
+  ctx.font = UI(wt, size); ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  for (const ch of s.toUpperCase()) { ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + size * 0.1; }
+  return w;
+}
+function icon(name, x, y, s, a = 1, ctx = g) { const im = IMG[name]; if (!im) return; ctx.save(); ctx.globalAlpha *= a; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, x, y, s, s); ctx.restore(); }
+function tick(x, y, s, c, lw = 2.6, ctx = g) { ctx.beginPath(); ctx.moveTo(x, y + s * 0.55); ctx.lineTo(x + s * 0.36, y + s * 0.88); ctx.lineTo(x + s, y + s * 0.12); ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(); }
+function xmark(x, y, s, c, lw = 2.6, ctx = g) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + s, y + s); ctx.moveTo(x + s, y); ctx.lineTo(x, y + s); ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke(); }
+function dot(cx, cy, r, c, hollow = false, ctx = g) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); if (hollow) { ctx.strokeStyle = c; ctx.lineWidth = 2.5; ctx.stroke(); } else { ctx.fillStyle = c; ctx.fill(); } }
+// actor chip: 14 px spaced caps on a solid actor colour (the only solid fills in the HUD)
+function chip(code, x, y, w, h, color, solid = true, ctx = g, size = 14) {
+  if (solid) fillRR(x, y, w, h, 4, color, ctx); else strokeRR(x, y, w, h, 4, color, 1.5, ctx);
+  CAPS(code, x + w / 2, y + h / 2 + size * 0.36, size, solid ? C.ink : color, 700, ctx, 'center');
+}
+// cut at a word, add an ellipsis; never wider than maxW
+function fit(s, maxW, font, ctx = g) {
+  if (!s) return '';
+  ctx.font = font; if (ctx.measureText(s).width <= maxW) return s;
+  const words = s.split(' ');
+  while (words.length > 1) { words.pop(); const t = words.join(' ').replace(/[\s,;:.\-]+$/, '') + '…'; if (ctx.measureText(t).width <= maxW) return t; }
+  let t = s; while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1); return t + '…';
+}
+
+/* ---------- Muse's words: item names get their painted icon and gold ---------- */
+const ITEM_WORDS = [
+  ['diamond pickaxe', 'diamond_pickaxe'], ['iron pickaxe', 'iron_pickaxe'], ['stone pickaxe', 'stone_pickaxe'], ['wooden pickaxe', 'wooden_pickaxe'],
+  ['water bucket', 'water_bucket'], ['flint and steel', 'flint_and_steel'], ['ender pearl', 'ender_pearl'], ['obsidian', 'obsidian'],
+  ['diamonds', 'diamond'], ['diamond', 'diamond'], ['cobblestone', 'cobblestone'], ['bread', 'bread'], ['coal', 'coal'], ['logs', 'log'],
+  ['iron', 'iron_ingot'], ['pickaxe', 'pickaxe'], ['shield', 'shield'], ['bucket', 'bucket'],
+];
+// -> tokens [{t, icon?}] (words with their following space kept)
+function richTokens(s) {
+  const out = []; const low = s.toLowerCase(); let i = 0, buf = '';
+  const flush = () => { if (buf) { for (const w of buf.match(/\S+\s*|\s+/g)) out.push({ t: w }); buf = ''; } };
+  while (i < s.length) {
+    let hit = null;
+    if (i === 0 || /[\s("'“]/.test(s[i - 1])) for (const [w, ic] of ITEM_WORDS) if (low.startsWith(w, i) && !/[a-z]/.test(low[i + w.length] || '')) { hit = [w, ic]; break; }
+    if (hit) { flush(); let j = i + hit[0].length; let tail = ''; while (j < s.length && /[,.;:!?\s]/.test(s[j])) { tail += s[j]; j++; if (s[j - 1] === ' ') break; } out.push({ t: s.slice(i, i + hit[0].length), icon: hit[1], tail }); i = j; }
+    else { buf += s[i]; i++; }
+  }
+  flush(); return out;
+}
+// wrap rich tokens into at most maxLines lines of width maxW; returns {lines, cut}
+function richWrap(s, maxW, size, wt, maxLines, ctx = g, iconSize = null) {
+  const font = UI(wt, size), isz = iconSize || Math.max(24, Math.round(size)), igap = iconSize ? 5 : 4;
+  const tokW = (k) => (k.icon ? isz + igap + W(k.t + (k.tail || ''), font, ctx) : W(k.t, font, ctx));
+  const toks = richTokens(s); const lines = [[]]; let lw = 0, cut = false;
+  for (let i = 0; i < toks.length; i++) {
+    const k = toks[i], w = tokW(k);
+    if (lw + w > maxW && lines[lines.length - 1].length) {
+      if (lines.length === maxLines) { cut = true; break; }
+      lines.push([]); lw = 0; if (!k.icon && !k.t.trim()) continue;
+    }
+    lines[lines.length - 1].push(k); lw += w;
+  }
+  if (cut) { // ellipsis on the last line, cutting whole words until it fits
+    const L = lines[lines.length - 1];
+    const lineW = () => L.reduce((a, k) => a + tokW(k), 0) + W('…', font, ctx);
+    while (L.length > 1 && lineW() > maxW) L.pop();
+    const last = L[L.length - 1];
+    if (last.icon) last.tail = (last.tail || '').replace(/[\s,;:.]+$/, '') + '…'; else last.t = last.t.replace(/[\s,;:.\-]+$/, '') + '…';
+  }
+  return { lines, cut, font, isz, igap, tokW };
+}
+function drawRich(R, x, y, lh, color, ctx = g, gold = C.gold) {
+  R.lines.forEach((L, li) => {
+    let cx = x; const by = y + li * lh;
+    for (const k of L) {
+      if (k.icon) {
+        icon(k.icon, cx, by - R.isz * 0.8, R.isz, 1, ctx); cx += R.isz + R.igap;
+        cx += T(k.t, cx, by, R.font, gold, 'left', ctx);
+        if (k.tail) cx += T(k.tail, cx, by, R.font, color, 'left', ctx);
+      } else cx += T(k.t, cx, by, R.font, color, 'left', ctx);
+    }
+  });
+}
+
+/* ---------- plain words for steps (Muse's args, said for viewers) ---------- */
+const PRETTY = { oak_log: ['oak log', 'oak logs'], birch_log: ['birch log', 'birch logs'], oak_planks: ['oak plank', 'oak planks'], crafting_table: ['crafting table', 'crafting tables'],
+  deepslate_diamond_ore: ['diamond ore', 'diamond ore'], cobbled_deepslate: ['cobbled deepslate', 'cobbled deepslate'], water_bucket: ['water bucket', 'water buckets'],
+  raw_iron: ['raw iron', 'raw iron'], iron_ingot: ['iron ingot', 'iron ingots'], clay_ball: ['clay ball', 'clay balls'] };
+const pretty = (id, n) => { const p = PRETTY[id]; if (p) return n === 1 ? p[0] : p[1]; return String(id).replace(/_/g, ' '); };
+function policyRules(a) {
+  const r = []; if (a.defend === 'on' || a.defend === true) r.push('defend'); if (a.escape === 'on' || a.escape === true) r.push('escape'); if (a.flee === 'on' || a.flee === true) r.push('flee');
+  if (a.eat_below != null) r.push(`eat at food ${a.eat_below}`); return r;
+}
+function stepSay(sk) {
+  const a = sk.args || {};
+  switch (sk.skill) {
+    case 'collect': return `Mine ${a.n} ${pretty(a.block, a.n)}`;
+    case 'craft': return a.n === 1 ? `Craft a ${pretty(a.item, 1)}` : `Craft ${a.n} ${pretty(a.item, a.n)}`;
+    case 'go_to': return `Walk to ${a.x} ${a.y} ${a.z}`;
+    case 'bucket': return a.action === 'pour' ? `Pour ${a.liquid}` : `Fill a bucket with ${a.liquid}`;
+    case 'eat': return 'Eat';
+    case 'hunt': return `Hunt ${a.n} ${a.mob}${a.n === 1 ? '' : 's'}`;
+    case 'policy': return `Set ${policyRules(a).length} rules`;
+    case 'smelt': return `Smelt ${a.n} ${pretty(a.item, a.n)}`;
+    case 'shelter': return 'Build a shelter';
+    default: return cap1(String(sk.skill).replace(/_/g, ' '));
+  }
+}
+function stepIcon(sk) {
+  const a = sk.args || {};
+  switch (sk.skill) {
+    case 'collect': return { oak_log: 'log', birch_log: 'log', obsidian: 'obsidian', stone: 'cobblestone', cobblestone: 'cobblestone', deepslate_diamond_ore: 'diamond', diamond_ore: 'diamond', coal_ore: 'coal', iron_ore: 'raw_iron' }[a.block] || 'pickaxe';
+    case 'craft': return IMG[a.item] ? a.item : 'hammer';
+    case 'go_to': return 'boot';
+    case 'bucket': return a.liquid === 'lava' ? 'lava_bucket' : 'water_bucket';
+    case 'eat': return 'bread';
+    case 'hunt': return 'sword';
+    case 'policy': return 'shield';
+    case 'smelt': return 'flame';
+    case 'shelter': return 'house';
+    default: return 'compass';
+  }
+}
+function stepsOf(args) { try { const j = JSON.parse(args); if (j.steps) return j.steps; if (j.skill) return [{ skill: j.skill, args: j.args || {} }]; } catch (e) {} return []; }
+// one action for the whole command: identical steps add up ("Hunt 10 pigs"), different steps show the first + "then N more"
+function cmdAction(steps, long = true) {
+  if (!steps.length) return '';
+  if (steps.length === 1) return stepSay(steps[0]);
+  const key = (s) => s.skill + JSON.stringify({ ...s.args, n: 0 });
+  if (steps.every((s) => key(s) === key(steps[0])) && steps[0].args && steps[0].args.n != null) {
+    return stepSay({ skill: steps[0].skill, args: { ...steps[0].args, n: steps.reduce((a, s) => a + (s.args.n || 0), 0) } });
+  }
+  if (!long) return stepSay(steps[0]);
+  if (steps.length === 2) return `${stepSay(steps[0])}, then ${lc1(stepSay(steps[1]))}`;
+  return `${stepSay(steps[0])}, then ${steps.length - 1} more`;
+}
+const COMMAND_TOOLS = new Set(['play', 'play_sequence', 'set_goal', 'start_game']);
+const CALLOUT_TOOLS = new Set(['play', 'play_sequence', 'set_goal']);
+function deltas(text) { // "+33 cobbled_deepslate, +10 tuff" from the server's bracket
+  const m = String(text || '').match(/\[([^\]]*)\]\s*$/); if (!m) return null;
+  const d = [...m[1].matchAll(/([+-]\d+) ([a-z_]+)/g)].map((x) => `${x[1]} ${pretty(x[2], Math.abs(+x[1]))}`);
+  return d.length ? d.join(', ') : null;
+}
+// the server's answer, said short (result column); the full answer stays in RAW
+function resultOf(e, steps) {
+  const tx = e.answer && e.answer.text || '';
+  if (e.tool === 'set_goal') { const m = tx.match(/it was: ([^;)]+)/); return m ? `was ${m[1]}` : 'goal set'; }
+  if (e.tool === 'start_game') { const g2 = (tx.match(/Goal: ([^.]+)\./) || [])[1]; return g2 ? `${g2}, empty inventory` : 'new bot, empty inventory'; }
+  if (steps.length === 1 && steps[0].skill === 'policy') return policyRules(steps[0].args).join(', ');
+  const d = deltas(tx); if (d) return d;
+  const ok = tx.match(/ok: ([^[]+)/); if (ok) return ok[1].replace(/\s+$/, '').replace(/ and picked up.*$/, '');
+  return '';
+}
+
+/* ---------- the model: one pass over the state, all times from the game clock ---------- */
+function buildModel() {
+  const entries = st.raw.entries;
+  const cmds = entries.filter((e) => CALLOUT_TOOLS.has(e.tool) && !/^Already received/.test(e.answer && e.answer.text || ''));
+  const newest = cmds[0];
+  const tQ = Q.get('t');
+  const t = tQ != null ? +tQ : st.now.gameS - newest.sentS; // seconds since the newest Muse command
+  const nowS = Math.round((newest.sentS + t) * 1000) / 1000;
+  const M = { t, nowS, clock: mmss(nowS), calls: entries.filter((e) => e.sentS <= nowS + 1e-6).length };
+  const s = st.stats;
+  M.hp = s.hp; M.food = s.food;
+  // time of day from the tick count: the server calls night from about tick 12300 (its own "night in N s" lines)
+  const ticks = s.ticks != null ? s.ticks : 6000;
+  if (ticks < 12300) { const sec = (12300 - ticks) / 20; M.phase = { icon: 'sun', words: sec < 60 ? `dusk in ${Math.round(sec)} s` : `dusk in ${Math.floor(sec / 60)} min`, warn: sec < 60 }; }
+  else { const sec = (23000 - ticks) / 20; M.phase = { icon: 'moon', words: sec < 60 ? `dawn in ${Math.round(sec)} s` : `dawn in ${Math.floor(sec / 60)} min`, warn: false }; }
+  // who did what: Muse's steps, its rules firing, the bot on its own (reflexes under the server's default rules)
+  const share = s.museShare || {};
+  if (share.muse != null) M.tally = { muse: share.muse, rule: share.reflex || 0, bot: share.bot || 0 };
+  else {
+    let muse = 0; for (const e of entries) if ((e.tool === 'play' || e.tool === 'play_sequence') && !/^Already received/.test(e.answer && e.answer.text || '')) muse += stepsOf(e.args).length;
+    const bot = (st.events || []).filter((ev) => ev.who === 'body' && ['reflex', 'flee', 'body', 'interrupt'].includes(ev.kind)).length;
+    M.tally = { muse, rule: 0, bot };
+  }
+  M.inv = st.inventory;
+
+  /* the newest command and whose turn it is */
+  const cc = st.currentCall && st.currentCall.sentS === newest.sentS ? st.currentCall : null;
+  const nSteps = stepsOf(newest.args);
+  const cmdNo = newest.playCallNo || newest.n;
+  const ansAt = newest.answer && newest.answer.atS != null ? newest.answer.atS : (cc && cc.doneS != null ? newest.sentS + cc.doneS : null);
+  const running = newest.tool !== 'set_goal' && (cc ? cc.state === 'running' || (cc.doneS != null && t < cc.doneS) : newest.answer.state === 'running');
+  M.cmd = { no: cmdNo, tool: newest.tool, sentS: newest.sentS, sent: mmss(newest.sentS), steps: nSteps, running, ansAt,
+    action: newest.tool === 'set_goal' ? `Set goal: ${JSON.parse(newest.args).goal}` : cmdAction(nSteps), toastAction: newest.tool === 'set_goal' ? cap1(JSON.parse(newest.args).goal) : cmdAction(nSteps, false),
+    icon: newest.tool === 'set_goal' ? 'sword' : (nSteps[0] ? stepIcon(nSteps[0]) : 'compass') };
+  const why = st.thinking && st.thinking.hasWhy ? st.thinking.why : null;
+  const whyOwner = why ? cmds.find((e) => { try { return JSON.parse(e.args).why === why; } catch (x) { return false; } }) : null;
+  M.why = why; M.plan = st.thinking && st.thinking.plan;
+  M.whyIcon = whyOwner ? (stepsOf(whyOwner.args)[0] ? stepIcon(stepsOf(whyOwner.args)[0]) : 'compass') : null;
+  M.cmd.why = whyOwner === newest ? why : null;
+
+  /* status (whose turn), always one line */
+  if (running) {
+    const sts = (cc && cc.steps) || nSteps.map((x, i) => ({ ...x, n: i + 1, state: i ? 'queued' : 'run' }));
+    const cur = sts.find((x) => x.state === 'run') || sts[0];
+    M.status = { kind: 'run', actor: 'MUSE', words: M.cmd.action, ctx: sts.length > 1 ? `Muse's command · step ${cur.n} of ${sts.length}` : "Muse's command",
+      timer: mmss(t), icon: M.cmd.icon, steps: sts, cur };
+  } else {
+    const since = ansAt != null ? nowS - ansAt : t;
+    M.status = { kind: 'think', actor: 'MUSE', words: 'Muse is thinking', ctx: 'the bot waits for its next command', timer: mmss(since), icon: 'bulb' };
+  }
+  // what comes next: Muse's plan minus its contingencies; without a plan, the goal's next split
+  M.next = planNext(M.plan, M.cmd.action);
+  if (!M.next && st.goal && st.goal.kind === 'milestones') {
+    const i = st.goal.list.findIndex((m) => m.state !== 'done');
+    const after = st.goal.list.slice(i + 1).find((m) => m.state !== 'done');
+    if (after) M.next = { label: 'next split', text: after.label, icon: after.icon };
+  }
+  // polls since the newest command (the loop's heartbeat when Muse sends no words)
+  const polls = entries.filter((e) => e.tool === 'get_state' && e.sentS > newest.sentS && e.sentS <= nowS);
+  M.polls = polls.length ? { n: polls.length, lastAgo: nowS - polls[0].sentS } : null;
+
+  /* feed: commands (not the running one), hints to Muse, rule / bot events; newest first */
+  const feed = [];
+  for (const e of entries) {
+    if (!COMMAND_TOOLS.has(e.tool) || e.sentS > nowS) continue;
+    if (/^Already received/.test(e.answer && e.answer.text || '')) continue;
+    if (e === newest && running) continue;
+    const sp = stepsOf(e.args);
+    let res = resultOf(e, sp);
+    const CC = st.currentCall && st.currentCall.sentS === e.sentS ? st.currentCall : null;
+    if (CC && CC.steps && CC.steps.every((x) => x.result)) res = CC.steps.map((x) => { const a = x.args || {}; return x.skill === "collect" ? `+${a.n} ${pretty(a.block, a.n)}` : x.skill === "craft" ? `+${a.n} ${pretty(a.item, a.n)}` : x.result; }).join(', ');
+    const at = e.answer && e.answer.atS != null ? e.answer.atS : (CC && CC.doneS != null ? e.sentS + CC.doneS : null);
+    const doneIn = CC && CC.msSum ? CC.msSum / 1000 : CC && CC.doneS != null ? CC.doneS : at != null ? at - e.sentS : null;
+    feed.push({ s: e.sentS, code: 'MUSE', icon: e.tool === 'set_goal' ? 'sword' : e.tool === 'start_game' ? 'house' : sp[0] ? stepIcon(sp[0]) : 'compass',
+      action: e.tool === 'set_goal' ? `Set goal: ${JSON.parse(e.args).goal}` : e.tool === 'start_game' ? 'Start a new game' : cmdAction(sp), result: res,
+      glyph: 'ok', dur: e.tool === 'set_goal' || e.tool === 'start_game' ? '' : durTxt(doneIn), isNewest: e === newest });
+  }
+  for (const a of (st.advice && st.advice.items) || []) {
+    if (a.givenAtS > nowS) continue;
+    let rest = a.text.slice(a.gist.length).replace(/^[:;,]\s*/, '').replace(/\s*\([^)]*\)/g, '');
+    feed.push({ s: a.givenAtS, code: 'HINT', icon: { dusk: 'moon', portal: 'portal', health: 'heart', food: 'food' }[a.kind] || 'bulb', action: a.gist, result: rest, glyph: null, dur: '' });
+  }
+  for (const ev of st.events || []) {
+    if (ev.atS > nowS) continue;
+    if (ev.who === 'body' && ['reflex', 'flee', 'interrupt'].includes(ev.kind)) feed.push({ s: ev.atS, code: share.reflex ? 'RULE' : 'BOT', icon: 'shield', action: cap1(ev.text), result: '', glyph: null, dur: '' });
+    if (ev.who === 'server' && ev.kind === 'policy' && /false/.test(ev.text) && KEY === 'rules') feed.push({ s: ev.atS + 0.01, code: 'SRV', icon: 'shield', action: 'Rules at the start', result: 'melee off, bow off, shield off', glyph: null, dur: '' });
+  }
+  feed.sort((a, b) => b.s - a.s);
+  M.feed = feed.slice(0, 3);
+
+  /* goal */
+  M.goal = st.goal;
+
+  /* RAW: one line per call, polls folded, why/plan collapsed (they are on screen) */
+  M.raw = rawLines(entries.filter((e) => e.sentS <= nowS + 1e-6), nowS);
+
+  /* video moments */
+  M.camera = st.camera || ({ nowhy: 'first', long: 'third', fresh: 'third', 'fresh-muse': 'third' })[KEY] || 'third';
+  return M;
+}
+function planNext(plan, action) {
+  if (!plan || /^Then the next part of the plan/.test(plan)) return null;
+  const sentences = plan.split(/(?<=\.)\s+/);
+  let parts = [];
+  for (const sn of sentences) for (const p of sn.split(/;\s*/)) if (p.trim() && !/^(if|fallback)\b/i.test(p.trim())) parts.push(p.trim());
+  if (!parts.length) return null;
+  let s = parts.join('; ').replace(/^(next|then)\s*:\s*/i, '').replace(/\.$/, '');
+  const verb = (action || '').split(' ')[0].toLowerCase();
+  if (verb && s.toLowerCase().startsWith(verb + ' ')) { const k = s.search(/[,;]\s/); if (k > 0) s = s.slice(k + 2); }
+  s = s.replace(/^then\s+/i, '');
+  return { label: 'then', text: s };
+}
+function collapse(args) { return String(args).replace(/"why":"(?:[^"\\]|\\.)*"/, '"why":"…"').replace(/"plan":"(?:[^"\\]|\\.)*"/, '"plan":"…"'); }
+function rawLines(entries, nowS) {
+  const runs = [];
+  for (const e of entries) {
+    const last = runs[runs.length - 1];
+    if (last && last.tool === e.tool && last.args === e.args && e.tool === 'get_state') { last.count++; continue; }
+    runs.push({ tool: e.tool, args: e.args, count: 1, sentS: e.sentS, e });
+  }
+  return runs.map((r) => {
+    const a = r.e.answer || {};
+    let ans;
+    if (a.state === 'running' || (a.atS != null && a.atS > nowS)) ans = `running ${mmss(nowS - r.sentS)}`;
+    else if (a.state === 'waiting') ans = `waiting ${mmss(Math.round(nowS - r.sentS))}`;
+    else ans = a.text || '';
+    return { time: mmss(r.sentS), tool: r.tool + (r.count > 1 ? ` ×${r.count}` : ''), rest: `${collapse(r.args)} ← ${ans}` };
+  });
+}
+
+/* =====================================================================================================================
+   LAYOUT (fixed homes; nothing below depends on the data)
+   ===================================================================================================================== */
+const L = {
+  video: { h: 608 },
+  toast: { x: 520, y: 136, w: 536, tile: 72, pad: 16, bar: 6 },
+  nowchip: { y: 136, h: 64, right: 1056 },
+  banner: { y: 150, h: 112 },
+  actionbar: { x: 16, y: 492, w: 356, h: 40 },
+  hotbar: { x: 16, y: 544, w: 356, h: 56 },
+  top: { y: 608, h: 48 },
+  lt: { y: 668, h: 144, bar: 24, tileX: 41, tileY: 670, tile: 72, x: 129, rowA: 703, rowB: 716, why1: 776, lh: 30 },
+  goal: { y: 832, h: 80 },
+  feed: { y: 922, row: 28, n: 3 },
+  raw: { y: 1016, lh: 21, n: 3 },
+};
+
+/* =====================================================================================================================
+   VIDEO LAYER
+   ===================================================================================================================== */
+function drawHotbar(M) {
+  const H = L.hotbar; plate(H.x, H.y, H.w, H.h, 10);
+  M.inv.forEach((it, i) => {
+    const x = H.x + 8 + i * 43, y = H.y + 8;
+    fillRR(x, y, 40, 40, 6, 'rgba(255,255,255,0.06)');
+    icon(it.icon, x + 5, y + 4, 30, it.count ? 1 : 0.38);
+    T(String(it.count), x + 38, y + 38, MONO(500, 14), it.count ? C.t1 : C.dim, 'right');
+  });
+}
+// pre-rendered toast: base (plate, icon, type line, action, step bar) + the why on its own layer (two beats)
+function buildToast(M, cmd, t) {
+  const TL = L.toast, textX = TL.bar + TL.pad + TL.tile + 16, textW = TL.w - textX - 18;
+  const whyFull = cmd.why || '';
+  let whyShown = '';
+  if (whyFull) {
+    const R0 = richWrap(whyFull, textW, 24, 500, 2);
+    if (!R0.cut) whyShown = whyFull;
+    else { const m = whyFull.match(/^(.{12,}?)(?::\s|;\s|,\s(?=so\b|then\b|and then\b)|\.\s|\s-\s)/); whyShown = m ? m[1] : whyFull; }
+  }
+  const R = whyShown ? richWrap(`“${whyShown}”`, textW, 24, 500, 2) : null;
+  const nWhy = R ? R.lines.length : 0;
+  const h = 96 + nWhy * 30 + (nWhy ? 10 : 0);
+  // four pre-rendered layers: the card (plate + bar), its words, the why (second beat), and the icon tile that flies home
+  const base = mk(TL.w, h), bx = base.getContext('2d');
+  plate(0, 0, TL.w, h, 10, bx);
+  bx.save(); rr(0, 0, TL.w, h, 10, bx); bx.clip(); rect(0, 0, TL.bar, h, C.muse, bx); bx.restore();
+  const tile = mk(TL.tile, TL.tile), tc = tile.getContext('2d');
+  fillRR(0, 0, TL.tile, TL.tile, 10, C.tile, tc); strokeRR(0, 0, TL.tile, TL.tile, 10, C.muse, 2, tc);
+  icon(cmd.icon, 10, 10, 52, 1, tc);
+  const small = mk(24, 24); icon(cmd.icon, 0, 0, 24, 1, small.getContext('2d'));
+  const words = mk(TL.w, h), wc = words.getContext('2d');
+  // type line, Minecraft's coloured first line
+  const steps = cmd.steps.length;
+  CAPS(`Muse \u00b7 command ${cmd.no}`, textX, 34, 18, C.museType, 600, wc);
+  T(fit(cmd.toastAction, textW, UI(700, 40), wc), textX, 80, UI(700, 40), C.t1, 'left', wc);
+  // step bar (tutorial toast): segments = steps; done green, running violet, queued dark
+  const sb = { x: textX, y: h - 9, w: textW, h: 4 };
+  const segs = Math.max(1, steps), gap = 4, sw = (sb.w - gap * (segs - 1)) / segs;
+  for (let i = 0; i < segs; i++) {
+    const done = !cmd.running || cmd.tool === 'set_goal';
+    fillRR(sb.x + i * (sw + gap), sb.y, sw, sb.h, 2, done ? C.ok : i === 0 ? C.muse : C.track, wc);
+  }
+  let why = null;
+  if (R) { why = mk(TL.w, h); const wx = why.getContext('2d'); drawRich(R, textX - W('\u201c', R.font, wx), 116, 30, '#e6e9f1', wx); }
+  return { base, words, why, tile, small, tileOff: { x: TL.bar + TL.pad, y: 16 }, h, chars: cmd.toastAction.length + whyShown.length };
+}
+// one frame of the callout: slide in, two-beat reveal, hold; on the dock the card fades in 5 frames while its icon tile
+// flies to its HUD home (the lower third's tile, or the feed row's icon, crossfading to the 24 px icon on the way)
+function drawToast(k, t) {
+  const tl = k.tl, TL = L.toast; let x = TL.x; const y = TL.y;
+  if (t >= tl.dockEnd) return;
+  if (t < tl.enter) x = 1080 + (TL.x - 1080) * outQuint(t / tl.enter);
+  const wa = clamp((t * FPS - 9) / 9, 0, 1);
+  const docking = t >= tl.dockStart, f = (t - tl.dockStart) * FPS;
+  const cardA = docking ? 1 - clamp(f / 5, 0, 1) : 1;
+  g.save();
+  if (cardA > 0) { g.globalAlpha = cardA; g.drawImage(k.base, x, y); g.drawImage(k.words, x, y); if (k.why) { g.globalAlpha = cardA * wa; g.drawImage(k.why, x, y); } }
+  const tx0 = x + k.tileOff.x, ty0 = y + k.tileOff.y;
+  if (!docking) { g.globalAlpha = 1; g.drawImage(k.tile, tx0, ty0); }
+  else {
+    const p = inOut((t - tl.dockStart) / (tl.dockEnd - tl.dockStart));
+    const d = k.dock; // target: top-left of a 72 tile (lt) or centre of a 24 icon (feed)
+    if (d.kind === 'lt') { g.globalAlpha = 1; g.drawImage(k.tile, tx0 + (d.x - tx0) * p, ty0 + (d.y - ty0) * p); }
+    else {
+      const cx = tx0 + 36 + (d.cx - tx0 - 36) * p, cy = ty0 + 36 + (d.cy - ty0 - 36) * p, s = clamp((p - 0.35) / 0.45, 0, 1);
+      g.globalAlpha = 1 - s; g.drawImage(k.tile, cx - 36, cy - 36);
+      g.globalAlpha = s; g.drawImage(k.small, cx - 12, cy - 12);
+    }
+  }
+  g.restore();
+}
+function toastTimeline(toast) {
+  const enter = 0.4, hold = clamp(1.5 + toast.chars / 18, 5, 9), dock = 14 / FPS;
+  return { enter, hold, dockStart: hold, dockEnd: hold + dock };
+}
+function drawVideo(M, frameImg) {
+  if (frameImg) g.drawImage(frameImg, 0, 0, 1080, 608); else rect(0, 0, 1080, 608, '#1b1f27');
+  drawHotbar(M);
+  const V = M.video;
+  // action bar slot (Muse's rule / bot on its own), Minecraft's action bar timing: in 0.2 s, hold 3 s, out 1 s
+  if (V.actionbar) {
+    const ab = V.actionbar, a = ab.age < 0.2 ? ab.age / 0.2 : ab.age < 3.2 ? 1 : 1 - (ab.age - 3.2);
+    if (a > 0) { g.save(); g.globalAlpha = a; const A = L.actionbar; chip(ab.code, A.x, A.y + 9, 52, 22, ACTOR[ab.code]); TS(fit(ab.text, A.w - 64, UI(700, 24)), A.x + 62, A.y + 29, UI(700, 24), C.t1); g.restore(); }
+  }
+  // floaters: rise 36 px and fade over 1.2 s, at most two
+  V.floaters.slice(0, 2).forEach((f, i) => {
+    if (f.age < 0 || f.age > 1.2) return;
+    const p = f.age / 1.2, y = f.y - 36 * p, x = f.x + i * 40;
+    g.save(); g.globalAlpha = 1 - p * p;
+    const tw = W(f.text, UI(700, 30)) + 40; const x0 = x - tw / 2;
+    icon(f.icon, x0, y - 26, 32); TS(f.text, x0 + 40, y, UI(700, 30), f.color || C.t1);
+    g.restore();
+  });
+  // now chip (between callouts): what the bot is doing for Muse, with its live count
+  if (V.nowchip && V.nowchip.a > 0) drawNowChip(V.nowchip);
+  // /title banner at natural pauses
+  if (V.banner) drawBanner(V.banner);
+  // the callout (while it docks it is drawn after the HUD, so its tile can fly over it)
+  if (V.toast && M.t < V.toast.tl.dockStart) drawToast(V.toast, M.t);
+}
+function drawNowChip(nc) {
+  const N = L.nowchip, font = UI(700, 30), cnt = MONO(500, 30);
+  const w = 6 + 14 + 40 + 14 + W(nc.text, font) + (nc.count ? 16 + W(nc.count, cnt) : 0) + 20;
+  const x = N.right - w, y = N.y;
+  g.save(); g.globalAlpha = nc.a;
+  plate(x, y, w, N.h, 10);
+  g.save(); rr(x, y, w, N.h, 10); g.clip(); rect(x, y, 6, N.h, ACTOR[nc.actor]); g.restore();
+  icon(nc.icon, x + 20, y + 12, 40);
+  let cx = x + 74; cx += T(nc.text, cx, y + 43, font, C.t1);
+  if (nc.count) T(nc.count, cx + 16, y + 43, cnt, C.soft);
+  if (nc.p != null) { fillRR(x + 74, y + N.h - 9, w - 94, 4, 2, C.track); fillRR(x + 74, y + N.h - 9, (w - 94) * clamp(nc.p, 0, 1), 4, 2, ACTOR[nc.actor]); }
+  g.restore();
+}
+function drawBanner(b) {
+  const age = b.age; let a;
+  if (age < 0) return; if (age < 0.5) a = age / 0.5; else if (age < 4) a = 1; else a = 1 - (age - 4) / 1; if (a <= 0) return;
+  const B = L.banner; g.save(); g.globalAlpha = a;
+  const gr = g.createLinearGradient(0, 0, 1080, 0);
+  gr.addColorStop(0, 'rgba(11,14,20,0)'); gr.addColorStop(0.22, 'rgba(11,14,20,0.86)'); gr.addColorStop(0.78, 'rgba(11,14,20,0.86)'); gr.addColorStop(1, 'rgba(11,14,20,0)');
+  g.fillStyle = gr; g.fillRect(0, B.y, 1080, B.h);
+  const lg = g.createLinearGradient(0, 0, 1080, 0); const col = b.color;
+  lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(0.3, col); lg.addColorStop(0.7, col); lg.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = lg; g.fillRect(0, B.y, 1080, 2); g.fillRect(0, B.y + B.h - 2, 1080, 2);
+  const tW = Math.max(W(b.title, UI(700, 40)), W(b.sub, UI(500, 24)), capsW(b.type, 18));
+  const x0 = 540 - (64 + 20 + tW) / 2;
+  icon(b.icon, x0, B.y + 24, 64);
+  CAPS(b.type, x0 + 84, B.y + 30, 18, b.typeColor, 600);
+  T(b.title, x0 + 84, B.y + 72, UI(700, 40), C.t1);
+  T(b.sub, x0 + 84, B.y + 100, UI(500, 24), C.soft);
+  g.restore();
+}
+
+/* =====================================================================================================================
+   HUD LAYER
+   ===================================================================================================================== */
+function drawTop(M) {
+  const y = L.top.y; rect(0, y, 1080, L.top.h, C.bar);
+  // possession bar along the seam: Muse / its rules / bot on its own
+  const tot = Math.max(1, M.tally.muse + M.tally.rule + M.tally.bot); let x = 0;
+  for (const [k, c] of [['muse', C.muse], ['rule', C.rule], ['bot', C.bot]]) { const w = 1080 * M.tally[k] / tot; rect(x, y, w, 3, c); x += w; }
+  const by = y + 37;
+  icon('heart', 24, y + 11, 28); T(String(M.hp), 58, by, MONO(500, 30), M.hp <= 6 ? C.fail : C.t1);
+  icon('food', 112, y + 11, 28); T(String(M.food), 146, by, MONO(500, 30), M.food <= 6 ? C.rule : C.t1);
+  icon(M.phase.icon, 200, y + 11, 28); T(M.phase.words, 236, by - 1, UI(500, 24), M.phase.warn ? C.rule : C.t2);
+  // F1-style actor blocks: stripe + code + count
+  let bx = 424 + CAPS('actions', 424, by - 3, 14, C.raw, 600) + 14;
+  for (const [code, n] of [['MUSE', M.tally.muse], ['RULE', M.tally.rule], ['BOT', M.tally.bot]]) {
+    rect(bx, y + 13, 4, 26, ACTOR[code]);
+    const cw = T(code, bx + 12, by - 2, UI(600, 18), C.t2);
+    const nw = T(String(n), bx + 12 + cw + 8, by - 1, MONO(500, 24), C.t1);
+    bx += 12 + cw + 8 + nw + 26;
+  }
+  const cw = T(M.clock, 1056, by, MONO(500, 30), C.t1, 'right');
+  T(`${M.calls} calls`, 1056 - cw - 14, by - 2, MONO(400, 16), C.raw, 'right');
+}
+function drawLowerThird(M, pend) {
+  const LT = L.lt, s = M.status, col = ACTOR[s.actor];
+  fillRR(16, LT.y - 4, 1048, LT.h + 8, 8, '#10141d');
+  if (pend.dockFlashLT != null && pend.dockFlashLT < 0.6) { g.save(); g.globalAlpha = 0.18 * (1 - pend.dockFlashLT / 0.6); rect(LT.bar, LT.y, 1056 - LT.bar, LT.h, col); g.restore(); }
+  // actor bar + icon tile (the toast's tile lands here)
+  g.save(); g.globalAlpha = s.kind === 'think' ? 0.45 : 1; rr(16, LT.y - 4, 1048, LT.h + 8, 8); g.clip(); rect(16, LT.y - 4, 6, LT.h + 8, col); g.restore();
+  fillRR(LT.tileX, LT.tileY, LT.tile, LT.tile, 10, C.tile);
+  if (pend.ltIcon) { icon(s.icon, LT.tileX + 10, LT.tileY + 10, 52, 0.25); g.save(); g.setLineDash([5, 5]); strokeRR(LT.tileX, LT.tileY, LT.tile, LT.tile, 10, 'rgba(176,164,255,0.55)', 2); g.restore(); }
+  else { strokeRR(LT.tileX, LT.tileY, LT.tile, LT.tile, 10, s.kind === 'think' ? 'rgba(176,164,255,0.45)' : col, 2); icon(s.icon, LT.tileX + 10, LT.tileY + 10, 52, s.kind === 'think' ? 0.85 : 1); }
+  // row A: whose turn (dot, words, context) + ticking timer
+  const x = LT.x, yA = LT.rowA;
+  dot(x + 7, yA - 11, 7, col, s.kind === 'think');
+  const timerW = W(s.timer, MONO(500, 30));
+  T(s.timer, 1056, yA, MONO(500, 30), C.t1, 'right');
+  const maxHero = 1056 - timerW - 24 - (x + 24);
+  const ctxW = s.ctx ? Math.min(W(s.ctx, UI(600, 18)) + 18, 300) : 0;
+  const hero = fit(s.words, maxHero - ctxW, UI(700, 30));
+  const hw = T(hero, x + 24, yA, UI(700, 30), C.t1);
+  if (s.ctx) T(fit(s.ctx, maxHero - hw - 18, UI(600, 18)), x + 24 + hw + 16, yA - 2, UI(600, 18), C.soft);
+  // row B: steps (running) or what comes next (thinking)
+  const yB = LT.rowB;
+  let bx = x;
+  if (s.kind === 'run' && s.steps && s.steps.length > 1) {
+    for (const sp of s.steps) {
+      const label = sp.say || stepSay(sp);
+      const run = sp.state === 'run', done = sp.state === 'ok';
+      const sub = run && sp.sub ? (sp.sub.of ? `${sp.sub.done}/${sp.sub.of}` : sp.sub.text) : '';
+      const subMono = run && sp.sub && sp.sub.of;
+      const subW = sub ? 10 + W(sub, subMono ? MONO(500, 16) : UI(500, 18)) : 0;
+      const w = 32 + W(label, UI(600, 18)) + subW + 12;
+      if (bx + w > 1056) break;
+      fillRR(bx, yB, w, 28, 6, run ? 'rgba(176,164,255,0.16)' : 'rgba(255,255,255,0.04)');
+      strokeRR(bx, yB, w, 28, 6, run ? 'rgba(176,164,255,0.65)' : 'rgba(255,255,255,0.12)', 1);
+      if (done) tick(bx + 10, yB + 8, 13, C.ok, 2.2); else dot(bx + 17, yB + 14, 5, run ? C.muse : C.dim, !run);
+      const lw = T(label, bx + 32, yB + 20, UI(600, 18), run || done ? C.t1 : C.soft);
+      if (sub) T(sub, bx + 32 + lw + 10, yB + 20, subMono ? MONO(500, 16) : UI(500, 18), C.soft);
+      bx += w + 8;
+    }
+    bx += 10;
+  }
+  if (M.next) {
+    const lab = M.next.label === 'then' ? (s.kind === 'run' ? 'then' : 'next') : M.next.label;
+    const lw = CAPS(lab, bx, yB + 19, 14, C.raw, 600);
+    let nx = bx + lw + 10;
+    const RN = richWrap(M.next.text, 1056 - nx, 18, 600, 1, g, 24);
+    drawRich(RN, nx, yB + 20, 0, s.kind === 'run' ? C.t2 : C.t1);
+  }
+  // row C: Muse's why, whole and still (2 lines), item names gold with their icon
+  if (M.why) {
+    g.save(); g.globalAlpha = pend.why ? 0.35 : 1;
+    let wx = x;
+    // between commands the why belongs to the last one: its icon (as in feed row 1) leads the quote
+    if (s.kind !== 'run' && M.whyIcon) { icon(M.whyIcon, x, LT.why1 - 20, 24); wx = x + 34; }
+    const R = richWrap(`“${M.why}”`, 1056 - wx, 24, 500, 2);
+    drawRich(R, wx === x ? wx - W('“', R.font) : wx, LT.why1, LT.lh, '#e6e9f1');
+    g.restore();
+  } else {
+    T('No why was sent with this command.', x, LT.why1, UI(500, 18), C.raw);
+    if (M.polls) T(`Since then Muse has checked the game ${M.polls.n} times, the last ${Math.round(M.polls.lastAgo)} s ago.`, x, LT.why1 + 26, UI(500, 18), C.raw);
+  }
+}
+function drawGoal(M) {
+  const G = L.goal, gl = M.goal, y = G.y;
+  if (gl.kind === 'counted') {
+    const p = gl.parts[0];
+    icon(p.icon, 57, y + 2, 40);
+    const tw0 = T(cap1(gl.title), 129, y + 31, UI(700, 24), C.t1);
+    const bx0 = Math.max(330, 129 + tw0 + 32), bx1 = 900, n = p.of, gap = n > 20 ? 0 : 6, sw = (bx1 - bx0 - gap * (n - 1)) / n;
+    for (let i = 0; i < n; i++) fillRR(bx0 + i * (sw + gap), y + 16, sw, 12, 3, i < p.done ? C.t2 : C.track);
+    T(`${p.done}`, 1056 - W(`/${p.of}`, MONO(500, 30)), y + 33, MONO(500, 30), C.t1, 'right');
+    T(`/${p.of}`, 1056, y + 33, MONO(500, 30), C.raw, 'right');
+    // the goal it replaced, paused: its 12 splits as small icons
+    const pv = gl.previous;
+    if (pv && pv.list) {
+      pv.list.forEach((m, i) => icon(m.icon, 129 + i * 30, y + 52, 24, m.state === 'done' ? 0.9 : 0.28));
+      const done = pv.list.filter((m) => m.state === 'done').length;
+      const tx = 129 + 12 * 30 + 10;
+      const w1 = T(pv.title, tx, y + 71, UI(600, 18), C.soft);
+      T(` ${done} / ${pv.list.length} · paused`, tx + w1, y + 71, MONO(400, 16), C.raw);
+    }
+    return;
+  }
+  // milestones as LiveSplit splits: done = full + tick + time, current = ringed + its count, next = 30 %
+  const list = gl.list; const curI = list.findIndex((m) => m.state !== 'done');
+  icon(gl.key === 'free' ? 'compass' : 'portal', 57, y + 6, 40);
+  const CW = 50, CG = 4, X0 = 129;
+  list.forEach((m, i) => {
+    const cx = X0 + i * (CW + CG), done = m.state === 'done', cur = i === curI;
+    if (cur) { fillRR(cx, y - 2, CW, 80, 8, 'rgba(176,164,255,0.10)'); strokeRR(cx, y - 2, CW, 80, 8, C.muse, 2); }
+    icon(m.icon, cx + 5, y + 6, 40, done || cur ? 1 : 0.3);
+    if (done) { fillRR(cx + 33, y + 34, 16, 16, 8, C.hud); tick(cx + 36, y + 38, 10, C.ok, 2.2); T(m.done, cx + CW / 2, y + 70, MONO(400, 16), C.soft, 'center'); }
+    if (cur) {
+      const lastSplit = Math.max(0, ...list.filter((q) => q.doneS != null).map((q) => q.doneS));
+      T(m.progress || mmss(M.nowS - lastSplit), cx + CW / 2, y + 70, MONO(500, 16), C.t1, 'center');
+    }
+  });
+  const done = list.filter((m) => m.state === 'done').length, rx = X0 + 12 * (CW + CG) + 16, rw = 1056 - rx;
+  const nw = T(`${done}`, rx, y + 26, MONO(500, 30), C.t1);
+  const sw = T(`/${list.length}`, rx + nw, y + 26, MONO(500, 30), C.raw);
+  T(fit(gl.title, rw - nw - sw - 12, UI(600, 18)), 1056, y + 24, UI(600, 18), C.soft, 'right');
+  const cur = list[curI], nxt = list.slice(curI + 1).find((m) => m.state !== 'done');
+  if (cur) T(fit(cur.label, rw, UI(700, 24)), rx, y + 55, UI(700, 24), C.t1);
+  if (nxt) { const lw = T('then ', rx, y + 78, UI(500, 18), C.raw); T(fit(nxt.label, rw - lw, UI(500, 18)), rx + lw, y + 78, UI(500, 18), C.soft); }
+}
+const FEED_ICON_X = 195;
+function drawFeed(M, pend, t) {
+  const F = L.feed;
+  M.feed.forEach((r, i) => {
+    const y = F.y + i * F.row, by = y + 20;
+    if (r.isNewest && t < 0.6) { g.save(); g.globalAlpha = 0.25 * (1 - t / 0.6); rect(24, y, 1032, F.row, ACTOR[r.code]); g.restore(); }
+    if (r.isNewest && pend.dockFlash != null && pend.dockFlash < 0.6) { g.save(); g.globalAlpha = 0.25 * (1 - pend.dockFlash / 0.6); rect(24, y, 1032, F.row, ACTOR[r.code]); g.restore(); }
+    T(mmss(r.s), 113, by, MONO(400, 16), C.raw, 'right');
+    chip(r.code, 129, y + 4, 56, 20, ACTOR[r.code]);
+    if (r.isNewest && pend.feedIcon) { icon(r.icon, FEED_ICON_X, y + 2, 24, 0.3); g.save(); g.setLineDash([3, 3]); strokeRR(FEED_ICON_X - 2, y, 28, 28, 6, 'rgba(176,164,255,0.6)', 1.5); g.restore(); }
+    else icon(r.icon, FEED_ICON_X, y + 2, 24);
+    const durW = r.dur ? W(r.dur, MONO(400, 16)) : 0;
+    const right = 960;
+    const ax = FEED_ICON_X + 34;
+    const aw = T(fit(r.action, 430, UI(600, 18)), ax, by, UI(600, 18), C.t1);
+    if (r.result) T(fit(`→ ${r.result}`, right - (ax + aw + 12), UI(500, 18)), ax + aw + 12, by, UI(500, 18), C.soft);
+    if (r.glyph === 'ok') tick(974, y + 8, 13, C.ok, 2.2);
+    if (r.dur) T(r.dur, 1056, by, MONO(400, 16), C.raw, 'right');
+  });
+}
+function drawRaw(M) {
+  const R = L.raw; rect(0, R.y - 6, 1080, 1080 - (R.y - 6), '#07090c'); rect(0, R.y - 6, 1080, 1, C.hair);
+  const font = MONO(400, 16), cw = W('0', font), RX = 129, maxC = Math.floor((1056 - RX) / cw);
+  let line = 0;
+  for (const r of M.raw) {
+    if (line >= R.n) break;
+    const y = R.y + 15 + line * R.lh;
+    T(r.time, 113, y, font, C.raw, 'right');
+    const tw = T(r.tool, RX, y, font, C.t2);
+    let rest = ' ' + r.rest; const first = Math.max(0, maxC - r.tool.length);
+    // the newest call may take two lines
+    if (line === 0 && rest.length > first && R.n > 2) {
+      let cut = first; const head = rest.slice(0, first); const k = Math.max(head.lastIndexOf(','), head.lastIndexOf('} '), head.lastIndexOf(' ')); if (k > first * 0.6) cut = k + 1;
+      T(rest.slice(0, cut), RX + tw, y, font, C.raw);
+      let r2 = rest.slice(cut).replace(/^\s+/, ''); if (r2.length > maxC - 2) r2 = r2.slice(0, maxC - 3) + '…';
+      T(r2, RX + cw * 2, y + R.lh, font, C.raw); line += 2;
+    } else {
+      if (rest.length > first) rest = rest.slice(0, first - 1) + '…';
+      T(rest, RX + tw, y, font, C.raw); line += 1;
+    }
+  }
+}
+
+/* =====================================================================================================================
+   MOMENTS: what the video shows at t
+   ===================================================================================================================== */
+function planVideo(M) {
+  const V = { floaters: [], toast: null, banner: null, nowchip: null, actionbar: null };
+  const t = M.t, cmd = M.cmd;
+  const pend = { ltIcon: false, why: false, feedIcon: false, dockFlash: null };
+  let toastBusyUntil = 0;
+  if (cmd.tool !== 'set_goal') {
+    const tk = buildToast(M, cmd, t); const tl = toastTimeline(tk);
+    // dock target: the lower third's tile while the command runs, else its feed row
+    const runningAtDock = cmd.running && (cmd.ansAt == null || cmd.ansAt > cmd.sentS + tl.dockEnd);
+    let dock;
+    if (runningAtDock) dock = { kind: 'lt', x: L.lt.tileX, y: L.lt.tileY };
+    else { const ri = Math.max(0, M.feed.findIndex((r) => r.isNewest)); dock = { kind: 'feed', cx: FEED_ICON_X + 12, cy: L.feed.y + ri * L.feed.row + 14 }; }
+    V.toast = { ...tk, tl, dock };
+    toastBusyUntil = tl.dockEnd;
+    if (t < tl.dockEnd) { if (runningAtDock) { pend.ltIcon = true; pend.why = true; } else pend.feedIcon = true; }
+    else pend.dockFlash = t - tl.dockEnd;
+    if (t >= tl.dockEnd && runningAtDock) pend.dockFlashLT = t - tl.dockEnd;
+  }
+  // banner: goal set (by a set_goal command, or a goal that changed with this command), only after the toast has gone
+  const gl = st.goal;
+  if (gl && gl.new && gl.newSinceS != null && gl.newSinceS <= M.nowS) {
+    const start = Math.max(gl.newSinceS - cmd.sentS, toastBusyUntil);
+    const age = t - start;
+    if (age >= 0 && age < 5) {
+      const p = gl.parts && gl.parts[0];
+      const prev = gl.previous ? `${gl.previous.title} paused` : '';
+      V.banner = { age, icon: p ? p.icon : 'star', type: 'New goal', typeColor: C.museType, color: 'rgba(176,164,255,0.9)', title: cap1(gl.title),
+        sub: [p ? `${p.done} of ${p.of} so far` : '', `set at ${mmss(gl.newSinceS)}`, prev].filter(Boolean).join(' · ') };
+    }
+  }
+  // floaters (step results at the bot's head; at the crosshair in first person / ceiling views)
+  const toastUp = V.toast && t < V.toast.tl.dockEnd;
+  const anchor = M.camera === 'third' ? { x: 480, y: 330 } : { x: toastUp ? 400 : 540, y: 300 };
+  if (KEY === 'rules' && cmd.ansAt != null) V.floaters.push({ ...anchor, age: t - (cmd.ansAt - cmd.sentS), icon: 'shield', text: `${policyRules(cmd.steps[0].args).length} rules on` });
+  if (KEY === 'nowhy') V.floaters.push({ ...anchor, age: 0.45, icon: 'obsidian', text: '+1 obsidian' });
+  // now chip: shown when no callout or banner holds the top right
+  const free = (!V.toast || t >= V.toast.tl.dockEnd) && !V.banner;
+  if (free && M.status.kind === 'run') {
+    const cur = M.status.cur || {};
+    let text, count = '', p = null, ic = M.status.icon;
+    if (cur.sub && cur.sub.of) { text = cap1(cur.sub.text); count = `${cur.sub.done}/${cur.sub.of}`; p = cur.sub.done / cur.sub.of; }
+    else if (cur.skill === 'hunt' && gl && gl.kind === 'counted') { const gp = gl.parts[0]; text = `Hunting ${cur.args.mob}s`; count = `${gp.done}/${gp.of}`; p = gp.done / gp.of; }
+    else text = cur.say || stepSay(cur);
+    if (cur.icon) ic = cur.icon === 'pickaxe' && cur.args && cur.args.block === 'obsidian' ? 'obsidian' : ic;
+    V.nowchip = { a: V.toast ? clamp((t - V.toast.tl.dockEnd) / 0.3, 0, 1) : 1, actor: 'MUSE', icon: ic, text, count, p };
+  }
+  if (Q.get('ab') === '1') {
+    const ev = (st.events || []).find((e) => e.who === 'body' && e.kind === 'reflex') || (st.events || []).find((e) => e.who === 'body' && e.kind === 'flee');
+    if (ev) V.actionbar = { age: 1.0, code: (st.stats.museShare || {}).reflex ? 'RULE' : 'BOT', text: ev.text };
+  }
+  M.video = V;
+  return pend;
+}
+
+/* ---------- debug: the zones the design keeps clear ---------- */
+function drawZones() {
+  const z = (x0, y0, x1, y1, c) => { g.save(); g.strokeStyle = c; g.setLineDash([6, 4]); g.lineWidth = 2; g.strokeRect(x0, y0, x1 - x0, y1 - y0); g.restore(); };
+  z(380, 330, 580, 608, '#ff4d4d'); z(18, 26, 85, 67, '#ff4d4d'); z(436, 97, 652, 126, '#ff4d4d'); z(700, 460, 950, 608, '#ffaa00');
+  z(520, 128, 1064, 400, '#33dd77'); z(16, 488, 372, 536, '#33dd77');
+}
+
+/* ---------- main ---------- */
+const IMG = {};
+const ICONS = ['bed', 'boot', 'bread', 'bucket', 'bulb', 'coal', 'cobblestone', 'compass', 'depth', 'diamond_pickaxe', 'diamond', 'ender_pearl', 'flame', 'flint_and_steel', 'food', 'hammer', 'heart', 'house', 'iron_ingot', 'iron_pickaxe', 'lava_bucket', 'log', 'moon', 'obsidian', 'pickaxe', 'portal', 'raw_iron', 'shield', 'star', 'steak', 'stone_pickaxe', 'sun', 'sword', 'water_bucket', 'wooden_pickaxe'];
+const load = (src) => new Promise((r) => { const im = new Image(); im.onload = () => r(im); im.onerror = () => { console.error('image failed', src); r(null); }; im.src = src; });
+(async () => {
+  await Promise.all(['500 24px MuseUI', '600 24px MuseUI', '700 24px MuseUI', '400 16px MuseMono', '500 16px MuseMono'].map((f) => document.fonts.load(f)));
+  await Promise.all(ICONS.map(async (n) => { IMG[n] = await load(`${S._about.iconDir}/${n}.png`); }));
+  const frameSrc = st.frame.startsWith('B:') ? st.frame.slice(2) : `${S._about.frameDir}/${st.frame}`; // the frames are not in the repo: a dark video then
+  const frame = await load(frameSrc);
+  const M = buildModel();
+  const pend = planVideo(M);
+  rect(0, 0, 1080, 1080, C.hud);
+  drawVideo(M, frame);
+  drawTop(M);
+  drawLowerThird(M, pend);
+  drawGoal(M);
+  drawFeed(M, pend, M.t);
+  drawRaw(M);
+  // the docking callout is drawn last so its tile can fly into the HUD
+  if (M.video.toast && M.t >= M.video.toast.tl.dockStart) drawToast(M.video.toast, M.t);
+  if (DEBUG) drawZones();
+  window.HUD_MODEL = M;
+  window.HUD_READY = true;
+})();
+</script>
+</body></html>

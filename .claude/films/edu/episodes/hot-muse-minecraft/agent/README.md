@@ -1173,7 +1173,50 @@ square, 1080x1080, so the video fills the panel's width on a desktop and the top
 (1080x756, the middle of the 16:9 picture: Minecraft's field of view is vertical, so this is what a 10:7 window shows)
 and Muse's panel under it:
 
-- **The HUD, the final design** (2026-10-13; `../ui-art/hud-final/FINAL-SPEC.md`, its mock-up `index.html` and the
+- **The HUD, concept B "Speedrun broadcast"** (the owner's pick, 2026-10-13; the default, `STREAM_HUD=b`; the mock-up
+  `../ui-art/hud-b/index.html`, `?state=` `?t=`): the game is a speedrun on air and Muse its runner. `src/hud-b.js`
+  draws the whole 1080x1080 frame (the panel file is the whole frame, see-through over the game). Over the video, in
+  Minecraft's own grammar: each play call a toast at the top right (`MUSE · COMMAND n`, the action at 40 px, the why in
+  a second beat, a bar a step), in 0.4 s, held 5 to 9 s by the length of its why, then its card fades and its icon tile
+  flies home: the command bar's tile while the call runs, else its row in the feed. A second call while one holds cuts
+  it short (still up 1.9 s at least) and comes in once its card is gone; the same call again while it holds folds into
+  it (`×N`); a call waiting behind another gives way to a newer one (it goes straight to the feed): never more than one
+  toast up and one going home. What the bot gets floats up over it (`+1 oak log`, from the body's own inventory; a hit
+  `-4` in red), Muse's rules stand over the hotbar (`RULES defend · escape · eat at 6`, or `none`) and give way to a
+  rule firing (`RULE defend: fought a zombie`, 3 s, Minecraft's action-bar timing); a /title banner says a new goal
+  (with the one it paused), a split (`SPLIT 4 OF 12`) or a death, one at a time and never over a toast. While a call
+  runs and nothing else holds the corner, a chip says what the body does now (`Mining obsidian 2/4`). The hotbar: what
+  is not carried an empty slot (no number), the best pickaxe held. Under the video, the broadcast package: the top bar
+  (health, food, time of day as `dusk in 6 min` / `dawn in 3 min` / `in the Nether`, who acted: the caller, its rules,
+  the bot on its own, with a possession rule along the seam, the calls and the game clock), the command bar (whose
+  turn and since when, the steps with the body's progress, what comes next from the plan or the goal, the why whole),
+  the goal as 12 LiveSplit splits (done with their times, the current one ringed with its count) or a counted goal's
+  bar, 3 "who did what" rows (STUCK and TIME advice pinned first, tinted red and amber; then the calls with their
+  results and times, hints, the rules and the bot on their own, refusals; the same row again folded `×N`) and 3 RAW
+  lines (the newest call may take two). A test caller is `TEST`, "the test script", never Muse.
+  What moves is only ever a pre-rendered canvas moved or faded: the HUD layer is drawn again when what it shows
+  changed (at most every 150 ms) and once a second for its clocks; the frame is composed again only when the picture
+  changed, so a frame is written 30 times a second only while something moves (`stream_stats.hud`: `composes`,
+  `composeMs`, `writes`). Every toast (with when it came in, held and went home, where to), banner, floater and
+  action-bar line is a line `{t, gs, ev}` in the recording's `hud.jsonl`. `test/hud-b.test.js` plays a game through
+  it: before the first call, a toast, a second call while one holds, a burst, three at once, 14 steps and a long why,
+  STUCK and TIME, rules none and some, a rule firing, a split, a new goal, a death, the Nether, a refusal; no text
+  leaves the frame or overlaps another. Back to the design before it: `STREAM_HUD=final` in deploy/camera.env, then
+  the camera again (while idle). Measured on the muse-camera-test stack (2026-10-13; `deploy/camera-test/camera-bench.sh`
+  with `hud-storm.cjs` feeding a busy game: a call every 3 s, an item every 1.5 s, a rule every 10 s, banners; 6 CPUs as
+  production, the clean recorder running): at a host load of 157 the client 25.4 frames a second (p10 21), the stream
+  30 a second with no frame dropped or duplicated, speed 1.0x, the camera 5.17 cores; the HUD 26.8 frames written a
+  second under that storm (a real game far fewer), a composition 0.8 ms (p99 3.6), a HUD drawing 14 ms (p99 31), its
+  frame clock 31 ticks a second, longest gap 58 ms. Against the design before it at the same load (44): 4.67 cores
+  against 4.00 (ffmpeg reads a frame twice the size: 114 % against 97 %), the client 27.9 frames against 28.7.
+- **The promo film** (`CAMERA_FILM=on`, off by default): the client drawn at 1920x1080 for the clean recording
+  (`clean-<n>.mp4`, `meta.json` says `client: 1920x1080`); the live is scaled down to its square as always. llvmpipe
+  pays for every pixel: at production's 6 CPUs the client fell to 5.5 frames a second and the live to 0.78x (do not);
+  at 16 CPUs 10 a second; with `CAMERA_CPUS=24` and 16 llvmpipe threads (the film's default) 21 a second (p10 17), the
+  live 30 with nothing dropped, 10.4 cores (host load 110; the normal 960x540: 25-28). For one game, while idle:
+  `CAMERA_FILM=on` in deploy/camera.env and `CAMERA_CPUS=24` in deploy/.env, `deploy/recreate.sh production`; the
+  game; then both out again and the same recreate.
+- **The HUD, the final design** (before concept B; `STREAM_HUD=final`; `../ui-art/hud-final/FINAL-SPEC.md`, its mock-up `index.html` and the
   three states it was judged on, `states.json`): `src/hud.js` is the mock-up's own drawing code, lifted to node-canvas
   (every width measured once and kept, so a redraw takes about 15 ms on the Mac); `src/ui-panel.js` keeps what the
   agent sends and turns it into the design's state (`hudState()`: who plays from the MCP client, MUSE or TEST SCRIPT;
@@ -1446,7 +1489,7 @@ X display) and feeds the terminal a scripted session through the real formatter
 | `FB_PAGE_ID`, `FB_TOKEN_FILE` | (none) | the Page's numeric id; the file (600) holding the Page token alone (or, with `FB_TARGET=me`, the long-lived user token; `scripts/fb-token.mjs` writes either); the token is never an environment variable and never logged |
 | `FB_DELETE_DELAY_S` | `600` | with `FB_DELETE_AFTER`, an ended live video is deleted this long after its game (a viewer whose panel opens late still sees the end); the due time is kept in `FB_STATE_FILE` |
 | `MCP_TEST_RECORD` | `off` (`on` in deploy/compose.yaml) | a test caller's `live_view` has the camera film its game for the recording only (focus with `local`): no live video, and a player's game always keeps the camera |
-| `RECORD`, `RECORD_DIR`, `RECORD_MAX_GB`, `RECORD_KEEP_DAYS`, `RECORD_CRF`, `RECORD_PRESET`, `RECORD_NICE` | `off` (`on` in production), `recordings/`, `150`, `30`, `18`, `veryfast`, `10` | the camera service records every game it films (src/recorder.js): per game under `RECORD_DIR/<game>/` the clean game (`clean-<n>.mp4`: the client's own picture and the game's sound, no HUD, a second ffmpeg on the display, niced, fragmented MP4), the stream as it went out (`stream-<n>.mp4`: the live's own bytes written alongside, remuxed at the end; with no live video the stream's own output), the HUD's timeline (`hud.jsonl`: every update with wall time and game seconds, the whole HUD state every 30 s) and `meta.json`; filmed when Facebook is capped or failing too (the live channel's recording-only stream); old recordings out by age, then the oldest over the size. Production: `RECORD_HOST_DIR` in deploy/.env is the folder on the host |
+| `RECORD`, `RECORD_DIR`, `RECORD_MAX_GB`, `RECORD_KEEP_DAYS`, `RECORD_CRF`, `RECORD_PRESET`, `RECORD_NICE` | `off` (`on` in production), `recordings/`, `150`, `30`, `18`, `veryfast`, `10` | the camera service records every game it films (src/recorder.js): per game under `RECORD_DIR/<game>/` the clean game (`clean-<n>.mp4`: the client's own picture and the game's sound, no HUD, a second ffmpeg on the display, niced, fragmented MP4), the stream as it went out (`stream-<n>.mp4`: the live's own bytes written alongside, remuxed at the end; with no live video the stream's own output), the HUD's timeline (`hud.jsonl`: every update with wall time and game seconds, the whole HUD state every 30 s, and each of concept B's toasts, banners, floaters and action-bar lines with its times, `{t, gs, ev}`) and `meta.json`; filmed when Facebook is capped or failing too (the live channel's recording-only stream); old recordings out by age, then the oldest over the size. Production: `RECORD_HOST_DIR` in deploy/.env is the folder on the host |
 | `MCP_TEST_LIVE` | `off` | a test caller (TEST SCRIPT: an MCP client named like a smoke, check, e2e or test script) gets no Facebook live from `live_view`: the same answer shape with state `test`, the 3D view's link, the camera left where it is, a `live_view_test` log row; `on` lets a deliberate check spend one (2026-10-13: the smoke games of one day used up `FB_MAX_PER_DAY` and the owner's game got none). At the cap, `live_view` tells Muse until when (UTC) and that the game itself works: keep playing |
 | `FB_MAX_PER_HOUR`, `FB_MAX_PER_DAY` | `6`, `20` | live videos created at most in any hour and any 24 hours (kept in `FB_STATE_FILE` across restarts); at the cap `live_view` says so and when the next one can start (Facebook asked for an identity check after many automatic public lives, 2026-10-09) |
 | `FB_TARGET`, `FB_PRIVACY`, `FB_DELETE_AFTER` | `page`, `EVERYONE`, `true` for `me` (`false` for `page`) | where the live videos go: the Page (long-term) or `me`, the token owner's profile; a profile video's privacy (the embed plays only `EVERYONE`); delete each live video after it is ended |
@@ -1461,6 +1504,8 @@ X display) and feeds the terminal a scripted session through the real formatter
 | `CAMERA_AUTH`, `CAMERA_AUTH_DIR`, `CAMERA_NAME` | `msa`, (none), (none) | the camera account: `msa` (the login in the auth folder) or `offline` (tests on our own server only, as `CAMERA_NAME`, default MuseCam) |
 | `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
 | `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `5`, `30`, `fast`, `0.75` | the client's video settings (the tuned ones); it draws at 1280x720 times the scale and ffmpeg scales up |
+| `STREAM_HUD` | `b` | the HUD in the `ui` layout: `b`, concept B "Speedrun broadcast" (src/hud-b.js, over the whole frame), or `final`, the design before it (src/hud.js) |
+| `CAMERA_FILM` | `off` | the promo film: the client drawn at 1920x1080 (not 1280x720 times `CAMERA_SCALE`) for the clean recording; the live is scaled down to its square as always. Costs client frames (section "The stream UI", the film) |
 | `STREAM_LAYOUT`, `STREAM_UI_SIZE`, `STREAM_TERMINAL_SIZE` | `ui`, `1080x1080`, `1080x1920` | the camera's video: `ui`, square (or `1080x1200`, `1080x1350`), the game over Muse's panel (section "The stream UI"); `terminal`, vertical with the terminal of Muse's calls (or `1080x1350`); `landscape`, the game alone at 1280x720 |
 | `STREAM_GAME_AUDIO`, `STREAM_MUSIC`, `STREAM_MUSIC_FILE`, `STREAM_MUSIC_DB`, `STREAM_GAME_DB` | on, on, (Etirwer), -15, 12 | the camera's sound: the game's own effects and ambience (the client's music at 0), a CC0 music bed under it ducked while the game is loud, the gains in dB, then a limiter at -1 dBFS (section "The stream UI") |
 | `CAMERA_VIEW` | `third` | `third`: over the bot's shoulder (its arm, tool and swing in view), outside its shelter while it is enclosed; `first`: in its head (outside too while enclosed). The Paper datapack does it (section "Real-client camera") |
