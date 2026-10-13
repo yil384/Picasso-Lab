@@ -562,6 +562,8 @@ function nowModule(x, y, w, draw, opts = {}) {
       T(`no play call from ${callerWord} yet`, x + nw + 12, yy + 21, UI(500, 13), K.t3);
     }
     yy += HH;
+    if (opts.card) yy += howCard(x, yy, w, draw, opts.card);
+    if (draw) REG = [0, DIV, 'now'];
     return yy - y + latestRows(x, yy, w, draw, opts);
   }
   if (draw) {
@@ -680,6 +682,38 @@ function nowModule(x, y, w, draw, opts = {}) {
   }
   return yy - y + latestRows(x, yy, w, draw, opts);
 }
+// Before the first play call: how to read the HUD, for a viewer who just came in (gone with the first play call). level
+// 1: who plays and where its calls are, and the colours; 2: where its why and plan come; 3: what the body does alone.
+const CARD_F = UI(500, 13);
+function cardText(level) {
+  const who = cap1(callerWord);
+  const paras = [`${who} plays this game itself, through MCP: every call it sends shows in RAW below exactly as sent, the server's answer after the arrow.`];
+  if (level >= 2) paras.push(`Its why and plan come with each play call, in its own words, in the band above.`);
+  if (level >= 3) paras.push(`The body acts on its own only to stay alive (it often digs in before the first call); that never counts as ${callerWord}'s.`);
+  return paras;
+}
+function cardRows(w, level) { return cardText(level).reduce((a, t) => a + wrap(t, CARD_F, w - 24).length, 0) + 1; }
+function howCard(x, y, w, draw, level) {
+  const rows = cardRows(w, level);
+  const h = 8 + HEAD + rows * ROW + 6;
+  if (!draw) return h;
+  REG = [x, x + w, 'card'];
+  rrect(x, y + 6, w, h - 6, 4, K.band);
+  const ix = x + 12, iw = w - 24;
+  head(ix, y + 10, iw, 'HOW TO READ THIS', K.t2, 'until the first play call', K.t4);
+  let by = y + 10 + HEAD + 13;
+  for (const t of cardText(level)) for (const l of wrap(t, CARD_F, iw)) { T(l, ix, by, CARD_F, K.t2); by += ROW; }
+  // the colours: the caller's, the body's, the server's
+  const lf = UI(500, 12), who = cap1(callerWord);
+  const sets = [[`${who}: its calls, why and plan`, 'the body: its own reflexes and advice', 'the server'], [ellip(who, lf, 200), 'the body, on its own', 'the server']];
+  const labels = sets.find((ls) => ls.reduce((a, l) => a + 15 + W(l, lf) + 20, -20) <= iw) ?? sets[1];
+  let lx = ix;
+  labels.forEach((label, i) => {
+    rect(lx, by - 9, 9, 9, [K.muse, K.body, K.t3][i]);
+    lx += 15 + T(label, lx + 15, by, lf, K.t2) + 20;
+  });
+  return h;
+}
 // LATEST: the newest call when it is not the current one, with its answer as a filler
 function latestRows(x, y, w, draw, opts) {
   let yy = y;
@@ -743,8 +777,10 @@ function adviceModule(x, y, w, draw, budget) {
   const items = st.advice.items || [];
   if (draw) REG = [DIV, 1080, 'advice'];
   if (!items.length) {
-    if (draw) { head(x, y, w, 'BODY · ADVICE', K.body); T(`None given to ${callerWord} yet`, x, y + HEAD + 13, UI(500, 13), K.t3); }
-    return HEAD + 22;
+    // before the first play call, also what will show here
+    const lines = st.currentCall ? [`None given to ${callerWord} yet`] : wrap(`None given to ${callerWord} yet: the body's warnings (night, hunger, lava, mobs) show here, with whether ${callerWord} took them.`, UI(500, 13), w);
+    if (draw) { head(x, y, w, 'BODY · ADVICE', K.body); lines.forEach((l, i) => T(l, x, y + HEAD + 13 + i * ROW, UI(500, 13), K.t3)); }
+    return HEAD + 22 + (lines.length - 1) * ROW;
   }
   let yy = y;
   const at = items[0].givenAt, age = NOW_S - items[0].givenAtS;
@@ -781,6 +817,7 @@ function adviceModule(x, y, w, draw, budget) {
   return yy - y;
 }
 const EV_TX = 84; // event text starts here (time right-aligned at +34, tag at +42)
+const EV_NOTE = 'Newest first: the body on its own, the world, the server.';
 const WHO = { body: ['BODY', K.body], world: ['WORLD', K.world], server: ['SERVER', K.t3] };
 // events, newest first, one line each; spare rows let the newest wrap (up to 3 lines)
 function eventsPlan(w, h) {
@@ -794,7 +831,9 @@ function eventsPlan(w, h) {
   const k = full.map(() => 1);
   for (let pass = 2; pass <= 3; pass++) for (let i = 0; i < n && spare > 0; i++) if (full[i].length >= pass && k[i] < pass) { k[i] = pass; spare--; }
   const L = full.map((l, i) => clamp(l, k[i], f, tw));
-  return { n, L, h: HEAD + L.reduce((a, l) => a + l.length, 0) * ROW };
+  // before the first play call, a row to spare says what this list is (a viewer who just came in)
+  const note = !st.currentCall && spare >= 1 && n === ev.length ? EV_NOTE : '';
+  return { n, L, note, h: HEAD + (L.reduce((a, l) => a + l.length, 0) + (note ? 1 : 0)) * ROW };
 }
 function eventsModule(x, y, w, h, draw) {
   const P = eventsPlan(w, h); if (!P) return 0;
@@ -812,6 +851,7 @@ function eventsModule(x, y, w, h, draw) {
       caps(tag, x + 42, yy - 1, 8, tc, 700, 0.08);
       lines.forEach((l) => { T(l, x + EV_TX, yy, UI(500, 12), e.kind === 'milestone' ? K.t1 : K.t2); yy += ROW; });
     });
+    if (P.note) T(ellip(P.note, UI(500, 12), w - EV_TX), x + EV_TX, yy, UI(500, 12), K.t4);
   }
   return P.h;
 }
@@ -981,6 +1021,8 @@ const rawH = (n) => RAW_HEAD + n * RAW_LH + RAW_BOT;
 // left column: NOW, then fillers (the newest call's last answer, the running call's interim answer, earlier whys)
 function packLeft(H, allowEarlier) {
   const opts = {};
+  // before the first play call: the card, as full as fits
+  if (!st.currentCall) for (let lv = 3; lv >= 1; lv--) { opts.card = lv; if (nowModule(LX, 0, LW, false, opts) <= H) break; }
   let used = nowModule(LX, 0, LW, false, opts);
   if (used > H) return null;
   const r0 = latestRun();
@@ -989,7 +1031,7 @@ function packLeft(H, allowEarlier) {
   if (cc && cc.state === 'running' && cc.serverAnswer && used + 20 <= H) { opts.interim = true; used += 20; }
   let earlier = 0;
   if (allowEarlier && earlierRest().length && H - used >= GAP + HEAD + ROW) { earlier = Math.min(earlierRest().length, Math.floor((H - used - GAP - HEAD) / ROW)); used += GAP + HEAD + earlier * ROW; }
-  return { opts, used, earlier, gap: H - used };
+  return { opts, used, earlier, gap: H - used, cardRows: opts.card ? cardRows(LW, opts.card) : 0 };
 }
 // right column: advice (its minimum always), then events, then earlier whys; the smallest gap wins, advice lines first
 function packRight(H, allowEarlier) {
@@ -1023,7 +1065,8 @@ function chooseLayout(colTop) {
     if (!R) continue;
     const over = Math.max(0, L.gap - 24) + Math.max(0, R.gap - 24);
     // RAW lines count most; a visible BODY · WORLD module and earlier whys are worth a little RAW; holes cost
-    const score = n * RAW_LH + (R.evH ? 40 : 0) + (L.earlier || R.earlier ? 20 : 0) - over * 4 - (L.gap + R.gap) * 0.25;
+    // a line of the card is worth a little more than a line of RAW (it is gone with the first play call)
+    const score = n * RAW_LH + L.cardRows * 20 + (R.evH ? 40 : 0) + (L.earlier || R.earlier ? 20 : 0) - over * 4 - (L.gap + R.gap) * 0.25;
     if (!best || score > best.score) best = { n, H, L, R, score };
   }
   return best;
