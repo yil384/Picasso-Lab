@@ -2568,9 +2568,11 @@ actions, with no runtime patch.
   - in the Nether: beds explode, water boils away, and where the portal back is.
 - **Guards** (the safety review of M8a):
   - collect obsidian runs only in the Overworld, only with lava within 16 blocks (else code `LAVA`), never where
-    that lava is near the world spawn or another player, and never while another game's obsidian (a process-wide
-    registry of every frame and placed obsidian, for the server's life) lies within 160 blocks, or a lit portal is
-    loaded near by;
+    that lava is near the world spawn or another player, and never while a live game's obsidian lies within 160 blocks.
+    That obsidian is known from a registry of every frame and placed obsidian, kept in MINEAI_DATA_DIR/portals.json.
+    An ended game's unlit frame is released, so collect may take it. A lit portal's frame is never taken: runtime
+    patch 0014 has their search skip obsidian touching a portal block, and with nothing else loaded it casts from lava
+    (2026-10-13, after g71c9f5 mined the shared return portal). The reply says when it spared one;
   - `portal dismantle` takes back the bot's own frame cell by cell;
   - no obsidian placed or built, no nether_portal built or lit, within 32 blocks of the world spawn or 8 of another
     player (players read again at each step);

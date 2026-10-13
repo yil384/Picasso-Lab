@@ -1203,20 +1203,22 @@ test('mineai body: build again where an incomplete build stands continues it, an
   }
 });
 
-test('mineai start check: a runtime built before patch 0009, 0010, 0011, 0012 or 0013 is refused', () => {
+test('mineai start check: a runtime built before patch 0009, 0010, 0011, 0012, 0013 or 0014 is refused', () => {
   const up = readUpstream();
-  assert.ok(up.patches.at(-5).endsWith('0009-placement-around-a-mob.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-5), 'utf8'), /overlaps bat #44444/);
-  assert.ok(up.patches.at(-4).endsWith('0010-build-never-stalls-the-event-loop.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-4), 'utf8'), /^\+const STEP_OUT_PASSES = 3;$/m);
-  assert.ok(up.patches.at(-3).endsWith('0011-build-on-rough-ground.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-3), 'utf8'), /^\+export const STANDS_PER_CELL = 3;$/m);
-  assert.ok(up.patches.at(-2).endsWith('0012-reflex-toggles.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-2), 'utf8'), /\.enum\(\["full", "starving", "never"\]\)/);
-  assert.ok(up.patches.at(-1).endsWith('0013-shield-waits-for-short-actions.patch'));
-  assert.match(fs.readFileSync(up.patches.at(-1), 'utf8'), /export function deferShieldPreparation/);
+  assert.ok(up.patches.at(-6).endsWith('0009-placement-around-a-mob.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-6), 'utf8'), /overlaps bat #44444/);
+  assert.ok(up.patches.at(-5).endsWith('0010-build-never-stalls-the-event-loop.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-5), 'utf8'), /^\+const STEP_OUT_PASSES = 3;$/m);
+  assert.ok(up.patches.at(-4).endsWith('0011-build-on-rough-ground.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-4), 'utf8'), /^\+export const STANDS_PER_CELL = 3;$/m);
+  assert.ok(up.patches.at(-3).endsWith('0012-reflex-toggles.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-3), 'utf8'), /\.enum\(\["full", "starving", "never"\]\)/);
+  assert.ok(up.patches.at(-2).endsWith('0013-shield-waits-for-short-actions.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-2), 'utf8'), /export function deferShieldPreparation/);
+  assert.ok(up.patches.at(-1).endsWith('0014-collect-spares-lit-portal-frames.patch'));
+  assert.match(fs.readFileSync(up.patches.at(-1), 'utf8'), /export function inLitPortalFrame/);
   const dir = tmp('mineai-eight-');
-  for (const cut of [-1, -2, -3, -4, -5]) {
+  for (const cut of [-1, -2, -3, -4, -5, -6]) {
     fs.writeFileSync(path.join(dir, STAMP), JSON.stringify(stampFor({ ...up, patches: up.patches.slice(0, cut) })));
     const old = checkFetched(dir, up);
     assert.equal(old.ok, false);
