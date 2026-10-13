@@ -2424,6 +2424,26 @@ once, the slow scripted player of `survive.mjs`, each game its whole 30-minute l
 
 **Against the gate (at most 1 death in 16): passed** (round 1: 1 in 8 and 3 in 8; the care off: 2 in 8).
 
+### Stuck and time advice; obsidian that does not come (2026-10-13, g0a414c)
+
+- **The stuck detector** (src/mcp.js `stuckCheck`, the body's `stuckWhy`):
+  - It fires when the same kind of step (collect a block, hunt a mob, walk to one 8-block area, a build, a portal
+    action) has made no progress over 3 calls, or over 2 calls and 4 minutes.
+  - Each step that ran counts once. A step that never ran (still queued, or cancelled before it ran) is no try. A
+    confirmed step, or a higher count of the item, clears its kind.
+  - From then on the Body advice of every reply starts with a `stuck` item until that kind moves. The item says what
+    does not move, the cause the body can see, and up to 3 alternatives with exact calls (the hint is the first valid
+    one).
+  - With under 8 minutes left and the goal not reached, a `time` item says once what the goal still needs.
+  - Both are information only.
+- **Obsidian:**
+  - Obsidian already formed within 6 blocks (not a frame) is mined at its own cells first, and the search fetches only
+    the rest.
+  - A search that brings no obsidian in for 75 s is stopped and fails with the cause and what to do instead (formed
+    obsidian under water: scoop it; beside it; another pool; a frame from 10).
+- **A frame from 10:** build nether_portal with 10 or 11 obsidian and a carried block makes the frame's top corners
+  from that block.
+
 ### Muse's rules (2026-10-13)
 
 The body acts on its own only by rules Muse sets. Every game starts with none: their reflexes are all off, and nothing

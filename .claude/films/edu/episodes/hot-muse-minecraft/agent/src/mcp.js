@@ -254,7 +254,7 @@ export function instructionsText({ callMs = 90_000, leaseMin = 30, idleMin = 5, 
     `5. ${care ? care.trim() : 'You make every plan: the body runs the skills you send.'}`,
     `6. Time: call at least every 4 minutes; a game with no calls for ${idleMin} minutes ends. A game lasts ${leaseMin} min.`,
     '7. Deaths: after a death, either pick_up with death_items: true within 5 minutes (the items despawn) or start over where you respawned.',
-    '8. Failures: if the same step fails 3 times, change your plan instead of sending it again.',
+    '8. Failures: if the same step fails 3 times, change your plan instead of sending it again: the Body advice then starts with what is stuck, the likely cause and what else to try.',
     '9. The end: when the goal is reached, the game ends or you stop, call end_game: its reply is the full report (the goal, milestones with times, deaths with causes, who acted, and a decision log from your why texts and the advice you followed or declined); show it to your user as it is. game_report gives the same during the game.',
     `The skills this server offers (${skillCount}): ${skillNames}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.`,
   ].join('\n');
@@ -513,7 +513,11 @@ export function createMcp(hooks) {
     const lines = steps.filter((st) => st.status !== 'cancelled' || st.result).map((st) => stepLine(st, numbered)).join('\n');
     const main = `${lead.trimEnd()}${lead.trim() && lines ? '\n' : ''}${lines}${tail}`.trim();
     // advise mode (BODY=mineai, src/mineai/care.js): what needs doing that the body will not do by itself
-    const advice = s && typeof s.body?.advice === 'function' ? safely(() => s.body.advice(), []) ?? [] : [];
+    const own0 = s && typeof s.body?.advice === 'function' ? safely(() => s.body.advice(), []) ?? [] : [];
+    // the stuck advice first (a kind of step that makes no progress), and once the time left for the goal
+    const time = s?.timeNote ?? null;
+    if (s && time) s.timeNote = null;
+    const advice = [...(s?.stuck?.advice ? [s.stuck.advice] : []), ...(time ? [time] : []), ...own0].slice(0, 5);
     const attribution = withAttribution && s && typeof s.body?.attribution === 'function' ? safely(() => s.body.attribution(), null) : null;
     const blocks = [
       earlier.length ? `Finished since your last call:\n${earlierText(earlier)}` : '',
@@ -525,7 +529,8 @@ export function createMcp(hooks) {
     ];
     const body = blocks.filter(Boolean).join('\n\n');
     const structured = {
-      code: code ?? firstCode(steps) ?? cancelledCode(steps) ?? firstCode(earlier) ?? cancelledCode(earlier),
+      // code false: none, whatever an earlier step's result says (stop with nothing running: g0a414c's "FAILED")
+      code: code === false ? null : code ?? firstCode(steps) ?? cancelledCode(steps) ?? firstCode(earlier) ?? cancelledCode(earlier),
       game: s?.id ?? null,
       steps: steps.map(report),
       earlier: earlier.map(report),
@@ -542,6 +547,74 @@ export function createMcp(hooks) {
 
   /** A call that was not accepted: nothing ran. */
   const refuse = (s, extra, code, message, more = {}) => reply(s, extra, { lead: message, code, isError: true, more });
+  /**
+   * The stuck detector (the owner, 2026-10-13, after g0a414c: nine minutes of collect obsidian that never moved): the
+   * same kind of step (collect a block, hunt a mob, walk to one area, build or a portal action) with no progress over 3
+   * calls, or 2 calls and 4 minutes, puts a "stuck" item first in the Body advice of every reply until it moves: what
+   * does not move, the likely cause the body can see, and 2 or 3 things to do instead with the exact call. Information
+   * only: the calls run as sent. Also, once, when the lease has under 8 minutes and the goal is not reached, what it
+   * still needs.
+   */
+  async function stuckCheck(s, steps = []) {
+    if (!s?.body) return;
+    const t = now();
+    const book = (s.stuckBook ??= new Map());
+    const inv = safely(() => s.body.inventory?.() ?? {}, {}) ?? {};
+    // an item count up since the kind stalled: it moved
+    for (const [k, e] of book) if (e.item && (inv[e.item] ?? 0) > e.count) book.delete(k);
+    // this call's steps and the ones that finished since: a confirmed step (a walk that got there, a build that stood)
+    // moved its kind; one that ran without that is one more try. Each step counts once; one that never ran (still
+    // queued, or cancelled before it ran) is no try.
+    const counted = (s.stuckSeen ??= new WeakSet());
+    const seen = new Set();
+    for (const st of [...(steps ?? []), ...(safely(() => queueOf(s).finished(steps) ?? [], []) ?? [])]) {
+      const k = stuckKey(st);
+      if (!k) continue;
+      if (st.status === 'confirmed') { book.delete(k.key); counted.add(st); continue; }
+      if (!st.startedAt || counted.has(st)) continue;
+      counted.add(st);
+      if (seen.has(k.key)) continue;
+      seen.add(k.key);
+      const e = book.get(k.key) ?? { ...k, calls: 0, firstAt: t, count: k.item ? (inv[k.item] ?? 0) : 0 };
+      e.calls += 1;
+      e.last = { args: st.args ?? {}, result: st.result?.result ?? st.result ?? null };
+      book.set(k.key, e);
+    }
+    const worst = [...book.values()].filter((e) => e.calls >= 3 || (e.calls >= 2 && t - e.firstAt >= 4 * 60_000)).sort((a, b) => b.calls - a.calls)[0];
+    if (!worst) { s.stuck = null; }
+    else if (!s.stuck || s.stuck.key !== worst.key || s.stuck.calls !== worst.calls || t - s.stuck.at > 120_000) {
+      const why = await Promise.race([Promise.resolve(safely(() => s.body.stuckWhy?.(worst.key, worst.last) ?? null)).catch(() => null), new Promise((r) => { setTimeout(() => r(null), 5_000).unref?.(); })]);
+      const mins = Math.max(1, Math.round((t - worst.firstAt) / 60_000));
+      const what = worst.item ? `${worst.item.replace(/_/g, ' ')} ${inv[worst.item] ?? 0}, none more for ${worst.calls} calls / ${mins} min` : `no progress for ${worst.calls} calls / ${mins} min`;
+      const options = (why?.options ?? []).slice(0, 3);
+      const hint = options.find((o) => o.hint && safely(() => skills.validate(o.hint.skill, o.hint.args ?? {}).ok, false))?.hint ?? null;
+      s.stuck = {
+        key: worst.key, calls: worst.calls, at: t,
+        advice: { kind: 'stuck', text: `stuck: ${worst.label} (${what})${why?.text ? `; ${why.text}` : ''}${options.length ? `. Try: ${options.map((o) => o.text).join('; or ')}` : ''}`, ...(hint ? { hint } : {}) },
+      };
+      hooks.log.event('mcp_stuck', { game: s.id, key: worst.key, calls: worst.calls, mins });
+    }
+    // the time left against what the goal still needs, once
+    const left = s.expiresAt - t;
+    if (!s.timeTold && left > 0 && left < 8 * 60_000 && s.tracker) {
+      const p = safely(() => s.tracker.progress(), null);
+      const todo = (p?.list ?? []).filter((m) => m.atS === null || (m.of && m.done < m.of)).map((m) => m.t);
+      if (p && p.key !== 'free' && !p.reached && todo.length) { // a goal set (free play has none to fall short of)
+        s.timeTold = true;
+        s.timeNote = { kind: 'time', text: `${Math.max(1, Math.round(left / 60_000))} min left in this game; the goal still needs: ${todo.join(', ')}` };
+      }
+    }
+  }
+  /** The kind of a step for the stuck detector: {key, label, item?} or null (crafts, eating and the like do not stall). */
+  function stuckKey(st) {
+    const a = st?.args ?? {};
+    if (st?.skill === 'collect' && a.block) return { key: `collect:${a.block}`, label: `collecting ${a.block.replace(/_/g, ' ')}`, item: lex.dropOf(a.block) ?? a.block };
+    if (st?.skill === 'hunt' && a.mob) return { key: `hunt:${a.mob}`, label: `hunting ${a.mob}`, item: a.drop ?? null };
+    if (st?.skill === 'go_to' && Number.isFinite(a.x)) return { key: `go_to:${a.x >> 3},${a.y >> 3},${a.z >> 3}`, label: `walking to ${a.x} ${a.y} ${a.z}`, item: null };
+    if (st?.skill === 'build' && a.blueprint) return { key: `build:${a.blueprint}`, label: `building ${a.blueprint.replace(/_/g, ' ')}`, item: null };
+    if (st?.skill === 'portal' && a.action) return { key: `portal:${a.action}`, label: `portal ${a.action}`, item: null };
+    return null;
+  }
   /** A game whose play waits for live_view: the server has the live channel, the user watches, and it was not called. */
   const liveRequired = (s) => hooks.liveEnabled === true && s && !s.liveViewed && s.liveOff !== true;
 
@@ -676,6 +749,7 @@ export function createMcp(hooks) {
 
     const call = q.submit(key, { sig, requestId, label: (no) => `your ${tool} #${no}`, planned });
     await wait(call.settled, end - Date.now(), signal);
+    await stuckCheck(s, call.steps);
     const added = addedLead(planned);
     return reply(s, extra, {
       steps: call.steps,
@@ -955,6 +1029,7 @@ export function createMcp(hooks) {
         await wait(q.idle(), end - Date.now(), signal);
         if (q.busy) lead = `${describe(q.running ?? q.waiting[0])} is still running${q.waiting.length ? ` (${q.waiting.length} more queued)` : ''}; call get_state again to keep waiting, or stop.\n`;
       }
+      await stuckCheck(s, []);
       const more = full ? { full: safely(() => s.body.snapshot(), null) } : {};
       return reply(s, extra, { lead, more, withAttribution: true });
     });
@@ -970,8 +1045,9 @@ export function createMcp(hooks) {
       const { running, cancelled } = q.stop('stop cleared the queue');
       const was = await hooks.stopSession(s, 'stopped through MCP');
       if (running) await wait(running.done, 3_000, signalOf(extra));
-      const what = `${was || running ? 'Stopped.' : 'Nothing was running.'}${cancelled.length ? ` ${cancelled.length} queued step${cancelled.length > 1 ? 's were' : ' was'} cancelled.` : ''}\n`;
-      return reply(s, extra, { lead: what, code: was || running || cancelled.length ? 'STOPPED' : null });
+      const ended = q.finished?.([])?.length ? ' (the last step had already ended: its result is below)' : '';
+      const what = `${was || running ? 'Stopped.' : `Nothing was running${ended}.`}${cancelled.length ? ` ${cancelled.length} queued step${cancelled.length > 1 ? 's were' : ' was'} cancelled.` : ''}\n`;
+      return reply(s, extra, { lead: what, code: was || running || cancelled.length ? 'STOPPED' : false });
     });
 
     server.registerTool('live_view', {

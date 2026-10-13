@@ -172,6 +172,17 @@ INCIDENTS.g71c9f5 = {
   28: (w) => { w.netherAt = { x: 12.5, y: 58, z: 17.5 }; },
 };
 
+INCIDENTS.g0a414c = {
+  0: (w) => { w.position = { x: -355.5, y: 78, z: -19.5 }; },
+  18: POOL_AWAY,
+  21: LAVA_NEAR,
+  // flowing lava only near the second try
+  22: (w) => { w.blocks = [{ name: 'lava', found: 3, listed: [{ x: Math.floor(w.position.x) + 2, y: Math.floor(w.position.y), z: Math.floor(w.position.z), level: 3 }, { x: Math.floor(w.position.x) + 30, y: Math.floor(w.position.y), z: Math.floor(w.position.z), level: 0 }] }]; },
+  24: LAVA_NEAR,
+  // the pit where the 12th obsidian would not come: routes that stop without breaking anything
+  26: (w) => { LAVA_NEAR(w); w.fail.collect_block = 'Collection stopped: 5 routes in a row stopped without breaking or gaining anything; the last: the walk there got stuck. Broke 0 matching blocks; inventory gained 0/3 requested items.'; },
+};
+
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
   // 1: raw_chicken (refused before a hunt until 2026-10-12) is read as chicken now and hunted (src/tolerant.js); 18: production smelted the mutton again after its hitch, but here the
@@ -198,8 +209,12 @@ const EXPECTED = {
   // 0: the zombie; 5: craft with no n, refused in production, runs now; the walks the world stopped (15, 24, 29);
   // Muse's stop (21)
   g71c9f5: { 0: 'DIED', 15: null, 21: null, 24: null, 29: null },
+  // 19: no pool near; 22: only flowing lava near; 26 to 29: the pit (routes that break nothing), 27 a walk stuck
+  g0a414c: { 19: 'LAVA', 22: 'LAVA', 26: 'FAILED', 27: null, 28: 'FAILED', 29: 'FAILED' },
   ga13a88: { 27: null, 28: null, 31: null, 40: null, 41: null, 42: null, 46: null, 47: null, 52: null, 53: null, 58: null },
 };
+/** An advice kind a step's reply must carry (by index): g0a414c's third obsidian call that did not move is stuck. */
+const EXPECTED_ADVICE = { g0a414c: { 29: 'stuck' } };
 /** What a step's reply must say (by index). */
 const EXPECTED_TEXT = {
   g71c9f5: { 5: /^craft \{"item":"wooden_pickaxe","n":1\}: ok/ },
@@ -210,7 +225,7 @@ const EXPECTED_TEXT = {
 };
 
 /** The goal each game played for. */
-const GOALS = { g71c9f5: 'nether_and_back', g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
+const GOALS = { g0a414c: 'nether_and_back', g71c9f5: 'nether_and_back', g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
 /** A why for a step, as Muse writes them (the fixtures predate why in the log). */
 const whyOf = (i, st) => `Step ${i}: ${[st.tool, ...Object.values(st.args ?? {}).filter((v) => typeof v !== 'object')].join(' ')} for the goal`;
 
@@ -291,6 +306,7 @@ for (const [id, steps] of Object.entries(games)) {
       if (want === 'ok') assert.equal(o.status, 'confirmed', `no false failure: ${where} ${process.env.REPLAY_SHOW ? o.text : ''}`);
       else if (want) assert.equal(o.code, want, `the right code: ${where}`);
       if (EXPECTED_TEXT[id]?.[o.i]) assert.match(o.text, EXPECTED_TEXT[id][o.i], where);
+      if (EXPECTED_ADVICE[id]?.[o.i]) assert.equal(o.advice[0]?.kind, EXPECTED_ADVICE[id][o.i], `${where}: ${JSON.stringify(o.advice)}`);
       if (o.code) assert.ok(RESULT_CODES.includes(o.code), `a known code: ${where}`);
       assert.doesNotMatch(o.text, JARGON, `no runtime jargon: ${where}`);
       assert.ok(o.advice.length <= 5, `at most 5 advice items: ${where}`);
