@@ -49,6 +49,37 @@ function within(promise, ms) {
     .finally(() => clearTimeout(timer));
 }
 
+/** How long a spread Mine AI bot waits, at most, for the first scan of its new spot to see anything (settleAfterSpread). */
+export const SPREAD_SCAN_MS = 30_000;
+const pauseMs = (ms) => new Promise((r) => { setTimeout(r, ms); });
+
+/**
+ * After a Mine AI bot was spread (joinMineAi): wait until it has landed (moved more than 8 blocks from `from`, up to
+ * 10 s), then until the scan of the blocks around the new spot sees something notable, scanning again every 2 s for up
+ * to SPREAD_SCAN_MS. Any overworld spot has stone, water, sand, gravel or logs within the scan radius, so an empty scan
+ * means the chunks there had not arrived yet: the server makes chunks at a spot nobody visited only as the bot lands,
+ * which on a busy or slow machine takes longer than the fixed 3 s this waited before (the open-source stack's first run,
+ * 2026-10-13: three games in a row started with "nothing notable" around, so the first state showed no wood). Returns
+ * {scans, notable} (the scans run, the kinds of notable blocks the last one saw).
+ */
+export async function settleAfterSpread(body, from, { wait = pauseMs, now = Date.now, limitMs = SPREAD_SCAN_MS } = {}) {
+  for (let i = 0; i < 20; i++) { // landed: moved away from the spawn (up to 10 s)
+    await wait(500);
+    await body.refresh().catch(() => {});
+    const p = body.bot.entity?.position;
+    if (p && Math.hypot(p.x - from.x, p.z - from.z) > 8) break;
+  }
+  await wait(3_000); // the chunks around the new spot load (their collect searches the loaded ones)
+  const until = now() + limitMs;
+  for (let scans = 1; ; scans++) {
+    await body.refresh().catch(() => {});
+    await Promise.race([body.rescan(), wait(10_000)]); // the blocks around the new spot, for the first state
+    const notable = body.snapshot?.()?.nearbyBlocks?.length ?? 1;
+    if (notable || now() >= until) return { scans, notable };
+    await wait(2_000);
+  }
+}
+
 /** Minecraft username for a web session id: the house bot is MC_USERNAME, a guest is <name>_<id> (at most 16). */
 /** The usual game lease (30 minutes); a longer one is for a long Muse run and must be taken back afterwards. */
 export const USUAL_LEASE_MS = 1_800_000;
@@ -447,18 +478,9 @@ export async function startAgent(opts = {}) {
           log.event('spread_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) });
           return;
         }
-        const pause = (ms) => new Promise((r) => setTimeout(r, ms));
-        for (let i = 0; i < 20; i++) { // landed: moved away from the spawn (up to 10 s)
-          await pause(500);
-          await body.refresh().catch(() => {});
-          const p = body.bot.entity?.position;
-          if (p && Math.hypot(p.x - from.x, p.z - from.z) > 8) break;
-        }
-        await pause(3_000); // the chunks around the new spot load (their collect searches the loaded ones)
-        await body.refresh().catch(() => {});
-        await Promise.race([body.rescan(), pause(10_000)]); // the blocks around the new spot, for the first state
+        const { scans, notable } = await settleAfterSpread(body, from); // landed, and the chunks there arrived
         const at = body.bot.entity?.position;
-        log.event('spread', { session: sessionId, at: at ? `${Math.floor(at.x)} ${Math.floor(at.y)} ${Math.floor(at.z)}` : null });
+        log.event('spread', { session: sessionId, at: at ? `${Math.floor(at.x)} ${Math.floor(at.y)} ${Math.floor(at.z)}` : null, scans, notable });
       });
       body.ready.catch(() => {});
       body.deferCare?.(body.ready); // nothing of its own at the spawn: the care starts where the bot was spread to
