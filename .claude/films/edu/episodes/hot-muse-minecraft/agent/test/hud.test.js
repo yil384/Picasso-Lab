@@ -217,6 +217,10 @@ test('feed: a new game\'s answer carries the goal\'s plan to RAW, never the resu
   const h = replyHead({ content: [{ text }] });
   assert.equal(h, 'New game g1: a new bot at a fresh spot with an empty inventory. Goal: Nether and back. The plan: 1. wooden pickaxe: collect logs');
   assert.ok(!/SECRET|resume/i.test(h));
+  // the server's notes at the top of a reply are not the answer (live_view first, a why and a plan)
+  const top = 'Next: call live_view now and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, before you play (play waits for it).\n\n' + text;
+  assert.equal(replyHead({ content: [{ text: top }] }), h);
+  assert.equal(replyHead({ content: [{ text: 'Viewers see your why and plan under the video: pass both on every play call.\n\n1. collect {"block":"oak_log","n":2}: ok: mined 2 oak_log\n\nState (game g1):' }] }), '1. collect {"block":"oak_log","n":2}: ok: mined 2 oak_log');
 });
 
 test('feed: the body\'s own actions reach the video between calls, stamped when they happened (g43884a: a dig-in at 0:02 read 0:59)', () => {

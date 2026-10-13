@@ -352,7 +352,9 @@ export function replyHead(out, checked = '') {
   if (out?.isError) return clean(`${code ? `${code}: ` : ''}${first(text)}`, ANSWER_MAX);
   for (const block of text.split(/\n\s*\n/)) {
     const b = block.trim();
-    if (!b || /^On its own since/.test(b) || /^Body advice/.test(b)) continue;
+    // not the answer: what the body did, the advice, and the server's notes at the top (call live_view next, pass a why
+    // and a plan): RAW shows the answer itself ("New game ...", the steps)
+    if (!b || /^On its own since/.test(b) || /^Body advice/.test(b) || /^(?:Next: call live_view|Your user cannot see the game yet|Viewers see your why and plan)/.test(b)) continue;
     if (/^Finished since your last call:/.test(b)) {
       const step = b.split('\n').find((l) => /^\s*\d+\. /.test(l));
       if (step) return clean(`finished: ${step.trim()}`, ANSWER_MAX);
