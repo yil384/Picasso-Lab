@@ -160,7 +160,7 @@ test('reflex kills: the mobs a fight killed, by their ids among the threats', ()
 });
 
 test('the terminal: a set_goal call shows the new goal', () => {
-  assert.deepEqual(callLine('set_goal', { goal: 'kill 100 pigs' }), { k: 'call', t: '> set_goal: kill 100 pigs', say: 'A new goal: kill 100 pigs', tool: 'set_goal' });
+  assert.deepEqual(callLine('set_goal', { goal: 'kill 100 pigs' }), { k: 'call', t: '> set_goal: kill 100 pigs', say: 'A new goal: kill 100 pigs', tool: 'set_goal', raw: '{"goal":"kill 100 pigs"}' });
   assert.equal(callLine('game_report', {}).say, 'Check the progress');
 });
 

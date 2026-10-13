@@ -96,6 +96,75 @@ function fitItems(g, items, maxW) {
   }
   return fitText(g, list[0] ?? '', maxW, 1)[0];
 }
+/** A call's arguments (JSON) as coloured runs: keys, strings (Muse's words), numbers, true/false/null, punctuation. */
+function jsonRuns(str) {
+  const C = UI_COLORS;
+  const out = [];
+  const t = String(str ?? '');
+  let i = 0;
+  while (i < t.length) {
+    const ch = t[i];
+    if (ch === '"') {
+      let j = i + 1;
+      while (j < t.length && t[j] !== '"') j += t[j] === '\\' ? 2 : 1;
+      const tok = t.slice(i, j + 1);
+      let k = j + 1;
+      while (t[k] === ' ') k += 1;
+      out.push({ t: tok, c: t[k] === ':' ? C.body : C.quote });
+      i = j + 1;
+    } else if (/[-0-9]/.test(ch)) {
+      const m = /^-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/.exec(t.slice(i));
+      const tok = m?.[0] || ch;
+      out.push({ t: tok, c: C.gold });
+      i += tok.length;
+    } else if (/^(?:true|false|null)/.test(t.slice(i))) {
+      const tok = /^(?:true|false|null)/.exec(t.slice(i))[0];
+      out.push({ t: tok, c: C.look });
+      i += tok.length;
+    } else {
+      // a space after ":" and "," so the line reads and wraps
+      out.push({ t: ch === ':' || ch === ',' ? `${ch} ` : ch, c: C.muted });
+      i += 1;
+    }
+  }
+  return out;
+}
+/** Coloured runs wrapped to lines of max characters (monospace): at spaces where it can, else in the middle. */
+function wrapRuns(runs, max) {
+  const pieces = [];
+  for (const r of runs) for (const p of r.t.split(/(?<= )/)) if (p) pieces.push({ t: p, c: r.c });
+  const lines = [[]];
+  let len = 0;
+  const push = (p) => { const line = lines[lines.length - 1]; const last = line[line.length - 1]; if (last && last.c === p.c) last.t += p.t; else line.push({ ...p }); len += p.t.length; };
+  for (let p of pieces) {
+    while (p.t.length > max - len) {
+      if (len > 0 && p.t.length <= max) { lines.push([]); len = 0; break; }
+      const room = max - len;
+      push({ t: p.t.slice(0, room), c: p.c });
+      p = { t: p.t.slice(room), c: p.c };
+      lines.push([]);
+      len = 0;
+    }
+    if (p.t.length) push(p);
+  }
+  return lines.filter((l) => l.length);
+}
+/** The first n lines, the last of them ending in "..." when lines were left out. */
+function cut(lines, n, max) {
+  if (lines.length <= n) return lines;
+  const out = lines.slice(0, n).map((l) => l.map((r) => ({ ...r })));
+  const last = out[n - 1];
+  let len = last.reduce((a, r) => a + r.t.length, 0);
+  while (len > max - 3 && last.length) {
+    const r = last[last.length - 1];
+    const drop = Math.min(r.t.length, len - (max - 3));
+    r.t = r.t.slice(0, r.t.length - drop);
+    len -= drop;
+    if (!r.t) last.pop();
+  }
+  last.push({ t: '...', c: UI_COLORS.muted });
+  return out;
+}
 /** A failure's reason, its first clause when that still says something: "no lava pool within 16 blocks". */
 export function shortReason(t) {
   const x = String(t ?? '').trim();
@@ -222,7 +291,7 @@ export function createUiPanel(o) {
   // ----- geometry, in the panel (the canvas has the toast's band T above it); px at 1080 wide, times s
   const PX = 20 * s; // the side margins
   const HDR = 38 * s; // the header strip
-  const BAND = 128 * s; // the thinking band under it
+  const BAND = 102 * s; // the thinking band under it (the latest words and the ones before; RAW has the rest)
   const LOW = HDR + BAND; // the two columns start here
   const TX = PX; // the trace column
   const TW = 560 * s;
@@ -446,7 +515,7 @@ export function createUiPanel(o) {
     b.fillRect(QX, top - 1 * s, 3 * s, q.length * 27 * s + 2 * s);
     q.forEach((l, i) => put(b, l, QX + 15 * s, top + 19 * s + i * 27 * s, { size: 20, weight: 600, color: UI_COLORS.quote }));
     let y = top + q.length * 27 * s + 20 * s;
-    rest.slice(0, 2).forEach((th, i) => {
+    rest.slice(0, 1).forEach((th, i) => {
       if (y > BAND - 6 * s) return;
       b.globalAlpha = [0.6, 0.38][i];
       const at = Number.isFinite(th.gs) ? mmss(th.gs) : '';
@@ -557,57 +626,63 @@ export function createUiPanel(o) {
         y += h;
       }
     }
-    // the earlier calls and the body's own actions, newest first, one line each (a failure's reason on the next)
-    const shown = cmd;
-    const earlier = [...calls.filter((x) => x !== shown).map((x) => ({ at: x.at, call: x })), ...events.map((e) => ({ at: e.at, ev: e }))]
-      .filter((x) => !shown || x.at <= Infinity).sort((a, z) => z.at - a.at);
-    if (earlier.length && y + 50 * s <= bottom) {
+    // RAW: what Muse sent, newest first: each call as "> tool {arguments}" (as Muse wrote them, JSON in colour, wrapped
+    // to the column), the server's answer as "< ..." (the call running now: "< running 0:12"); the body's own actions
+    // dimmed as "# body: ..." (not Muse's). The newest call in full (its why and plan), older ones cut to fit.
+    if (y + 46 * s <= bottom) {
       y += 13 * s;
-      label(b, 'Earlier', 0, y + 10 * s, { sq: UI_COLORS.muted });
-      label(b, `${calls.filter((x) => x !== shown).length} call${calls.length - (shown ? 1 : 0) === 1 ? '' : 's'} before this`, TW, y + 10 * s, { align: 'right' });
-      y += 19 * s;
-      for (const e of earlier) {
-        const fail = e.call?.state?.kind === 'fail' || e.ev?.kind === 'death';
-        if (y + (fail ? 44 : 23) * s > bottom + 4 * s) break;
-        y += 18 * s;
-        const at = Number.isFinite(e.call?.gs ?? e.ev?.gs) ? mmss(e.call?.gs ?? e.ev?.gs) : '';
-        put(b, at, 0, y, { face: mono(13), color: UI_COLORS.muted });
-        const tool = e.call ? e.call.tool : e.ev.kind;
-        const tc = e.call ? (PLAY.test(tool) ? UI_COLORS.muse : tool === 'get_state' ? UI_COLORS.look : UI_COLORS.muted) : e.ev.kind === 'death' ? UI_COLORS.fail : UI_COLORS.body;
-        put(b, tool, 46 * s, y, { face: mono(13), color: tc });
-        let words;
-        let right = '';
-        let rc = UI_COLORS.ok;
-        b.font = font(500, 16);
-        if (e.ev) words = capital(e.ev.text);
-        else if (e.call.tool === 'get_state') words = e.call.checked ?? 'Looked around';
-        else if (e.call.tool === 'start_game') { words = e.call.goal ? `New game: ${e.call.goal}` : 'New game'; right = 'ready'; }
-        else if (e.call.tool === 'live_view') words = 'Live view on';
-        else if (PLAY.test(e.call.tool)) {
-          const k = e.call.state?.kind;
-          if (k === 'fail') {
-            const f = e.call.steps.find((x) => x.state === 'fail');
-            words = f?.say ?? e.call.say;
-            right = 'failed'; rc = UI_COLORS.fail;
-          } else {
-            words = null;
-            right = k === 'ok' ? `done ${secs(e.call.msSum)}` : k === 'run' ? 'running' : '';
-            rc = k === 'ok' ? UI_COLORS.ok : UI_COLORS.soft;
-          }
-        } else words = capital(e.call.say);
-        b.font = font(600, 14);
-        const rw = right ? b.measureText(right).width + 10 * s : 0;
-        const wx = 158 * s;
-        b.font = font(500, 16);
-        const text = words === null ? fitItems(b, e.call.steps.map((x, i) => (i ? x.say[0].toLowerCase() + x.say.slice(1) : x.say)), TW - wx - rw) : fitText(b, words, TW - wx - rw, 1)[0];
-        put(b, text, wx, y, { size: 16, color: UI_COLORS.soft });
-        if (right) put(b, right, TW, y, { size: 14, weight: 600, color: rc, align: 'right' });
-        if (fail) {
-          const why = e.call ? (e.call.steps.find((x) => x.state === 'fail')?.why ?? e.call.state?.why) : '';
-          if (why) { y += 21 * s; b.font = font(500, 15); put(b, fitText(b, capital(why), TW - wx, 1)[0], wx, y, { size: 15, color: UI_COLORS.fail }); }
+      label(b, 'Raw · what Muse sent', 0, y + 10 * s, { sq: UI_COLORS.muse });
+      label(b, `${calls.length} call${calls.length === 1 ? '' : 's'}`, TW, y + 10 * s, { align: 'right' });
+      y += 15 * s;
+      b.font = mono(13);
+      const cw = b.measureText('M').width;
+      const max = Math.max(20, Math.floor(TW / cw));
+      const LH = 17 * s;
+      const avail = Math.floor((bottom + 6 * s - y) / LH);
+      const entries = [...calls.map((x) => ({ at: x.at, call: x })), ...events.map((e) => ({ at: e.at, ev: e }))].sort((p1, p2) => p2.at - p1.at)
+        .map((e) => {
+          if (e.ev) return { lines: wrapRuns([{ t: `# ${e.ev.kind === 'death' ? 'death' : 'body'}: ${e.ev.text}`, c: e.ev.kind === 'death' ? UI_COLORS.fail : UI_COLORS.muted }], max), fixed: 1 };
+          const x = e.call;
+          const args = wrapRuns([{ t: '> ', c: UI_COLORS.muted }, { t: x.tool, c: UI_COLORS.muse }, { t: ' ', c: UI_COLORS.muted }, ...jsonRuns(x.raw || '{}')], max);
+          let reply;
+          if (x.state?.kind === 'run' && PLAY.test(x.tool)) reply = [{ t: `< running ${mmss((t - x.at) / 1000)}`, c: UI_COLORS.body }];
+          else if (x.reply) reply = [{ t: '< ', c: UI_COLORS.muted }, { t: x.reply.replace(/^<\s*/, ''), c: /^<?\s*[A-Z][A-Z_]{3,}:/.test(x.reply) ? UI_COLORS.fail : UI_COLORS.soft }];
+          else reply = [{ t: `< waiting ${mmss((t - x.at) / 1000)}`, c: UI_COLORS.muted }];
+          return { args, reply: wrapRuns(reply, max), call: x };
+        });
+      // the room: the newest call's arguments as far as they go (with its answer under them), leaving a line each for
+      // two older entries; then every older entry on one line (its call cut, its answer after it), newest first
+      const oneLine = (e) => {
+        if (!e.call) return cut(e.lines, 1, max)[0];
+        const rep = e.reply[0] ?? [];
+        const replyLen = rep.reduce((n, r) => n + r.t.length, 0);
+        const argRoom = Math.max(18, max - Math.min(replyLen, Math.floor(max * 0.45)) - 2);
+        const args = cut(wrapRuns(e.args.flat(), argRoom), 1, argRoom)[0];
+        const used = args.reduce((n, r) => n + r.t.length, 0);
+        return [...args, { t: '  ', c: UI_COLORS.muted }, ...cut(wrapRuns(rep, max - used - 2), 1, max - used - 2)[0]];
+      };
+      // the newest play call (Muse's why and plan in it) gets the lines; the rest one line each, in order
+      const big = entries.findIndex((e) => e.call && PLAY.test(e.call.tool));
+      const bigArgs = big >= 0 ? Math.max(1, Math.min(entries[big].args.length, avail - 1 - Math.min(2, entries.length - 1))) : 0;
+      const drawLine = (runs, yy) => { let x = 0; for (const r of runs) { put(b, r.t, x, yy, { face: mono(13), color: r.c }); x += r.t.length * cw; } };
+      y += 2 * s;
+      let used = 0;
+      entries.forEach((e, i) => {
+        if (i === big) {
+          const n = Math.min(bigArgs, avail - used - 1);
+          if (n < 1) return;
+          for (const l of cut(e.args, n, max)) { y += LH; drawLine(l, y); }
+          y += LH;
+          drawLine(cut(e.reply, 1, max)[0], y);
+          used += n + 1;
+          return;
         }
-        y += 5 * s;
-      }
+        // keep the room the newest play call needs below
+        if (used >= avail || (i < big && used + 1 + bigArgs + 1 > avail)) return;
+        y += LH;
+        drawLine(oneLine(e), y);
+        used += 1;
+      });
     }
     return { c, dyn };
   }
@@ -754,7 +829,7 @@ export function createUiPanel(o) {
     const steps = Array.isArray(l.steps) && l.steps.length ? l.steps : PLAY.test(tool) ? [{ say: l.say || '', raw: String(l.t).replace(/^> [a-z_]+:?\s*/, '') }] : [];
     const ready = tool === 'start_game'; // start_game's line comes with its reply: the game is there
     const cmd = {
-      tool, say: l.say || l.t.replace(/^>\s*/, ''), words: l.words || '', at: now(), gs: gameS(), no: null,
+      tool, say: l.say || l.t.replace(/^>\s*/, ''), words: l.words || '', plan: l.plan || '', raw: l.raw || '', rid: Number.isInteger(l.rid) ? l.rid : null, reply: null, at: now(), gs: gameS(), no: null,
       steps: steps.map((x) => ({ say: x.say || x.raw, raw: x.raw || '', state: 'queued', ms: 0 })),
       state: PLAY.test(tool) ? { kind: 'run' } : { kind: 'ok' }, msSum: 0, checked: null, goal: ready && goal ? goal.title : null,
     };
@@ -823,6 +898,10 @@ export function createUiPanel(o) {
           const r = actionGist(l.t);
           if (events[0]?.text !== r) events.unshift({ kind: l.k, text: r, at: now(), gs: gameS() });
           events = events.slice(0, 12);
+        } else if (l.k === 'reply') {
+          // the server's answer to a call (its first line), by the call's number
+          const c = Number.isInteger(l.rid) ? calls.find((x) => x.rid === l.rid) : null;
+          if (c) c.reply = l.t;
         } else if (l.k === 'milestone') {
           toast = { text: milestoneWords(l.t), at: now() };
           const m = /at (\d+):(\d\d)$/.exec(l.t);
@@ -929,8 +1008,8 @@ export function createUiPanel(o) {
       if (bk !== keys.band || !layers.band) { keys.band = bk; layers.band = drawBand(t); }
       g.drawImage(layers.band.c, 0, T + HDR);
       const cur = current();
-      const tk = JSON.stringify([calls.length, calls.slice(0, 8).map((c) => [c.no, c.state, c.checked, c.steps.map((x) => x.state)]), events.length, sub && [sub.text, sub.done, sub.of], live?.step,
-        cur?.state?.kind === 'run' ? sec : statusWords(t)]);
+      const tk = JSON.stringify([calls.length, calls.slice(0, 8).map((c) => [c.no, c.state, c.checked, c.reply, c.steps.map((x) => x.state)]), events.length, sub && [sub.text, sub.done, sub.of], live?.step,
+        cur?.state?.kind === 'run' || calls.some((c) => !c.reply && !PLAY.test(c.tool) && c.tool !== 'start_game') ? sec : statusWords(t)]);
       if (tk !== keys.trace || !layers.trace) { keys.trace = tk; layers.trace = drawTrace(t); }
       g.drawImage(layers.trace.c, TX, T + LOW);
       const sk = JSON.stringify([goal, [...reachedLocal], inv, pos, [...advice.entries()], follow && [follow.text, t - follow.at < 300_000], newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS]);
@@ -1018,7 +1097,7 @@ export function createUiPanel(o) {
     state: () => {
       const cur = current();
       return {
-        calls: calls.map((c) => ({ tool: c.tool, say: c.say, words: c.words, no: c.no, state: c.state, checked: c.checked, steps: c.steps.map((x) => ({ say: x.say, raw: x.raw, state: x.state, ms: x.ms, why: x.why })) })),
+        calls: calls.map((c) => ({ tool: c.tool, say: c.say, words: c.words, plan: c.plan, raw: c.raw, reply: c.reply, no: c.no, state: c.state, checked: c.checked, steps: c.steps.map((x) => ({ say: x.say, raw: x.raw, state: x.state, ms: x.ms, why: x.why })) })),
         current: cur ? { tool: cur.tool, no: cur.no, states: stepStates(cur) } : null,
         thoughts: thoughts.map((x) => ({ text: x.text, call: x.call })),
         events: events.map((e) => ({ kind: e.kind, text: e.text })),

@@ -7,6 +7,7 @@
 // and its progress, every goal of the game with its time, milestones with times, deaths with causes, who acted, and a
 // decision log built from the player's own why texts and the advice it followed or declined.
 import { GOALS, GOAL_TITLES, describePart, partHow, sameGoal, mobsWord } from './goals.js';
+import { cutWords } from './terminal.js';
 
 /** The milestones the server watches, in the order of the way to the Nether and back. */
 export const MILESTONES = Object.freeze([
@@ -242,7 +243,12 @@ export function createTracker({ goal: first = { key: 'free', text: null, title: 
       const outcome = out?.isError && !failed ? `refused (${sc.code ?? 'error'})`
         : failed ? `failed${failed.code && failed.code !== 'FAILED' ? ` (${failed.code})` : ''}${words(failed.result) ? `: ${words(failed.result)}` : ''}`
           : steps.length && steps.every((st) => st.status === 'confirmed') ? 'ok' : 'running';
-      log({ at: t, kind: 'call', why: typeof args?.why === 'string' && args.why.trim() ? args.why.trim().slice(0, 200) : null, steps: sent.map(brief).join(', ').slice(0, 300), outcome });
+      log({
+        at: t, kind: 'call', why: typeof args?.why === 'string' && args.why.trim() ? args.why.trim().slice(0, 200) : null,
+        // the plan Muse gave with the call (its next steps and fallbacks), cut at a word
+        ...(typeof args?.plan === 'string' && args.plan.trim() ? { plan: cutWords(args.plan.replace(/\s+/g, ' '), 400) } : {}),
+        steps: sent.map(brief).join(', ').slice(0, 300), outcome,
+      });
       for (const st of steps) if (st.skill === 'build' && st.args?.blueprint === 'nether_portal' && st.status === 'confirmed') view.portalBuilt = true;
       shown = sc.advice ?? [];
       // a kind no longer advised can be declined again when it comes back
@@ -294,10 +300,10 @@ export function createTracker({ goal: first = { key: 'free', text: null, title: 
         Object.keys(allKills).length ? `Kills: ${Object.entries(allKills).map(([m, n]) => `${n} ${mobsWord(m, n)}`).join(', ')}${Object.keys(kills.reflex).length ? ` (by reflexes: ${Object.entries(kills.reflex).map(([m, n]) => `${n} ${mobsWord(m, n)}`).join(', ')})` : ''}.` : null,
         `Deaths: ${deaths.length ? deaths.map((d) => `${mmss(d.at)} ${d.cause ?? 'died'}${d.position ? ` at ${Math.floor(d.position.x)} ${Math.floor(d.position.y)} ${Math.floor(d.position.z)}` : ''}`).join('; ') : 'none'}.`,
         attribution?.text ? `${attribution.text}.` : null,
-        decisions.length ? 'Decision log (your own why, and the advice you followed or declined):' : 'Decision log: no calls yet.',
+        decisions.length ? 'Decision log (your own why and plan, and the advice you followed or declined):' : 'Decision log: no calls yet.',
         ...decisions.flatMap((d, i) => [
           ...(dropped && i === DECISIONS_HEAD ? [`- ... ${dropped} more entries left out here ...`] : []),
-          d.kind === 'call' ? `- ${mmss(d.at)} ${d.why ? `"${d.why}"` : '(no why given)'} -> ${d.steps}: ${d.outcome}`
+          d.kind === 'call' ? `- ${mmss(d.at)} ${d.why ? `"${d.why}"` : '(no why given)'}${d.plan ? ` (plan: "${d.plan}")` : ''} -> ${d.steps}: ${d.outcome}`
             : d.kind === 'goal' ? `- ${mmss(d.at)} goal set (${d.by}): ${d.title}${d.text && d.text !== d.title ? ` ("${d.text}")` : ''}`
               : `- ${mmss(d.at)} advice ${d.followed ? 'followed' : 'declined'} (${d.skill}): ${d.text.slice(0, 160)}`,
         ]),

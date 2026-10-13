@@ -4,7 +4,7 @@
 // (src/terminal-panel.js); the agent sends it over the camera service's loopback caption endpoint, for the filmed game
 // only. Every line is ASCII, without tokens, keys, addresses or the names of other players.
 
-export const KINDS = Object.freeze(['call', 'ok', 'fail', 'advice', 'reflex', 'body', 'milestone', 'info', 'checked', 'follow']);
+export const KINDS = Object.freeze(['call', 'ok', 'fail', 'advice', 'reflex', 'body', 'milestone', 'info', 'checked', 'follow', 'reply']);
 /** Why nothing runs, for the stream's status line: Muse sheltering or asleep for the night, looking, thinking. */
 export const IDLE_REASONS = Object.freeze(['waiting', 'checking', 'shelter', 'shelter_body', 'sleep', 'nether']);
 /** The kinds of the body's live sub-steps (src/mineai/body.js subStepOf). */
@@ -23,6 +23,12 @@ export function cleanTerm(u) {
       if (why) out.why = why;
       const words = typeof l.words === 'string' ? cutWords(clean(l.words, 600), WORDS_MAX) : ''; // Muse's own words with a call
       if (words) out.words = words;
+      const plan = typeof l.plan === 'string' ? cutWords(clean(l.plan, 2000), PLAN_MAX) : ''; // and its plan
+      if (plan) out.plan = plan;
+      // the call's arguments as Muse sent them (JSON), cleaned and capped: this goes on a public live video
+      const raw = typeof l.raw === 'string' ? clean(l.raw, RAW_MAX) : '';
+      if (raw) out.raw = raw;
+      { const v = int(l.rid, 1, 1_000_000); if (v !== undefined) out.rid = v; }
       // ms; the step's number in the reply (n of of); its call's number in the game (c) and Muse's own step number (s),
       // pre: a craft the check added before Muse's step s, pt of pts: a part of a step split in parts
       for (const [key, lo, hi] of [['ms', 0, 86_400_000], ['n', 1, 64], ['of', 1, 64], ['c', 1, 100_000], ['s', 1, 64], ['pt', 1, 64], ['pts', 1, 64]]) { const v = int(l[key], lo, hi); if (v !== undefined) out[key] = v; }
@@ -143,6 +149,10 @@ export function clean(text, max = 240) {
 
 /** Muse's own words with a call, at most this long on the stream. */
 export const WORDS_MAX = 140;
+/** Muse's plan with a call (its next steps and fallbacks), at most this long. */
+export const PLAN_MAX = 400;
+/** A call's arguments as sent (the stream's RAW console), at most this long. */
+export const RAW_MAX = 1600;
 /** At most max characters: cut at a word, with "...", when longer (never mid-word). */
 export function cutWords(text, max) {
   const t = String(text ?? '').trim();
@@ -215,7 +225,11 @@ export function callLine(tool, args = {}) {
   const of = list.length;
   // every step in plain words and as Muse wrote it (the stream's trace never hides one)
   const steps = list.slice(0, 16).map((st) => ({ say: plainStep(st), raw: clean(stepSummary(st), 64) }));
-  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args), tool, ...(words ? { words } : {}), ...(of ? { of, steps } : {}) };
+  const plan = typeof args?.plan === 'string' ? cutWords(clean(args.plan, 2000), PLAN_MAX) : ''; // Muse's plan, cut at a word
+  // the arguments exactly as Muse sent them (before the server reads them its way), for the stream's RAW console
+  let raw = '';
+  try { raw = clean(JSON.stringify(args ?? {}), RAW_MAX); } catch { raw = ''; }
+  return { k: 'call', t: clean(`> ${tool}${what ? `: ${what}` : ''}`), say: plainCall(tool, args), tool, ...(words ? { words } : {}), ...(plan ? { plan } : {}), ...(raw ? { raw } : {}), ...(of ? { of, steps } : {}) };
 }
 
 // ----- plain words for the stream's speech bubble ("Mine 3 oak logs"), never the raw call
@@ -281,6 +295,30 @@ export function plainCall(tool, args = {}) {
   }
   if (tool === 'set_goal' && typeof args?.goal === 'string' && args.goal.trim()) return clean(`A new goal: ${args.goal.trim()}`, 120);
   return clean(TOOL_WORDS[tool] ?? capital(word(tool)), 120);
+}
+/**
+ * The first line of the server's reply that says something, for the RAW console: a refusal's code and first line
+ * ("BAD_ARGS: 1. go_to: not run, ..."), else the first line of the reply proper (the step lines, a lead), passing over
+ * the blocks of what the body did on its own and of the advice (not answers to the call); a finished earlier step
+ * as "finished: ..."; a get_state with nothing else to say: what it showed (checked).
+ */
+export function replyHead(out, checked = '') {
+  const text = String(out?.content?.[0]?.text ?? '');
+  const code = out?.structuredContent?.code;
+  const first = (t) => t.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+  if (out?.isError) return clean(`${code ? `${code}: ` : ''}${first(text)}`, 240);
+  for (const block of text.split(/\n\s*\n/)) {
+    const b = block.trim();
+    if (!b || /^On its own since/.test(b) || /^Body advice/.test(b)) continue;
+    if (/^Finished since your last call:/.test(b)) {
+      const step = b.split('\n').find((l) => /^\s*\d+\. /.test(l));
+      if (step) return clean(`finished: ${step.trim()}`, 240);
+      continue;
+    }
+    if (/^State \(game /.test(b) && checked) return clean(`state: ${checked.replace(/^Muse checked:\s*/, '')}`, 240);
+    return clean(first(b), 240);
+  }
+  return clean(first(text), 240);
 }
 /** A failure's reason in a few words: "no iron ore within 64 blocks". */
 export function shortWhy(result, max = 48) {
@@ -406,6 +444,9 @@ export function createTermFeed(o) {
     return g;
   };
   const drop = (id) => { const g = games.get(id); try { g?.offProgress?.(); } catch { /* gone */ } games.delete(id); };
+  // each call and its reply carry the same number (rid), so the RAW console pairs them though calls may overlap
+  const rids = new WeakMap();
+  let ridSeq = 0;
   /** Health, food and the clock as the body knows them now, without a reply: the bot's, else the body's snapshot. */
   const liveState = (s) => {
     if (s?.status && s.status !== 'ready') return null;
@@ -509,7 +550,11 @@ export function createTermFeed(o) {
     call(s, tool, args) {
       if (!s?.id) return;
       const g = of(s);
-      const lines = [callLine(tool, args)];
+      const rid = ++ridSeq;
+      if (args && typeof args === 'object') rids.set(args, rid);
+      // and by tool, oldest first, for a reply that does not come with the same arguments object
+      (g.pend ??= new Map()).set(tool, [...(g.pend.get(tool) ?? []), rid]);
+      const lines = [{ ...callLine(tool, args), rid }];
       // the advice the last reply gave: did this command take it? Said only when it is clear: the advised skill is in
       // the command, or a pressing advice (night, health) is left for something else
       if ((tool === 'play' || tool === 'play_sequence') && g.hints?.length) {
@@ -528,7 +573,11 @@ export function createTermFeed(o) {
       const lines = [];
       // start_game's call is shown with its reply (the game exists only once it has answered); every other call was shown
       // as it came in, also when calls overlap
-      if (tool === 'start_game') lines.push(callLine(tool, args));
+      let rid = args && typeof args === 'object' ? rids.get(args) : undefined;
+      const pend = g.pend?.get(tool) ?? [];
+      if (rid !== undefined) g.pend?.set(tool, pend.filter((x) => x !== rid));
+      else if (pend.length) { rid = pend[0]; g.pend.set(tool, pend.slice(1)); }
+      if (tool === 'start_game') { rid = ++ridSeq; lines.push({ ...callLine(tool, args), rid }); }
       const st = out?.structuredContent ?? {};
       for (const step of [...(st.earlier ?? []), ...(st.steps ?? [])]) {
         const key = `${step.call ?? ''}:${step.n}`;
@@ -580,10 +629,13 @@ export function createTermFeed(o) {
         g.advice = kinds;
         g.hints = st.advice.slice(0, 4).map((a) => ({ skill: a?.hint?.skill ?? null, sev: severityOf(a), words: clean(String(a?.text ?? '').replace(/\s*\([^)]*\)/g, '').split(';')[0], 70) })).filter((h) => h.words);
       }
+      let seen = '';
       if (tool === 'get_state') {
-        const seen = checkedLine(st.state ?? null, dimOf(s) ?? g.dim);
+        seen = checkedLine(st.state ?? null, dimOf(s) ?? g.dim);
         if (seen) lines.push({ k: 'checked', t: seen });
       }
+      // the reply's head, for the RAW console: "< ..." with the call's number
+      if (rid !== undefined) { const head = replyHead(out, seen); if (head) lines.push({ k: 'reply', t: clean(`< ${head}`, 240), rid }); }
       // a portal: the first line of the new world
       const dim = dimOf(s);
       if (dim && g.dim && dim !== g.dim) lines.push({ k: 'milestone', t: clean(`${PLACES[dim] ?? `entered ${word(dim)}`} at ${elapsed(g)}`) });

@@ -48,7 +48,7 @@ test('one line is enough: the instructions carry every standing rule; tools, goa
       ['big counts split', /A big count \(100 pigs, 500 blocks\) takes many steps: a step takes at most 64, so split it across calls/],
       ['live view first, as an artifact', /Then call live_view and show the HTML it returns, exactly as returned, as a web artifact/],
       ['play_sequence and get_state', /play_sequence for several steps in a row \(play for one\)[^\n]*get_state waits for a skill still running/],
-      ['why on every call', /pass why on every play and play_sequence call[^\n]*viewers of the live stream see it/],
+      ['why and plan on every call', /why and plan: pass both on every play and play_sequence call\. why: one short sentence[^\n]*plan: your next few steps and what you will do if one fails[^\n]*Viewers of the live stream see both/],
       ['calls every 4 minutes', /call at least every 4 minutes; a game with no calls for 5 minutes ends/],
       ['deaths', /pick_up with death_items: true within 5 minutes[^\n]*or start over where you respawned/],
       ['3 failures', /if the same step fails 3 times, change your plan/],
