@@ -420,6 +420,10 @@ test('datapack: every function the camera\'s datapack calls is there, and every 
   assert.match(files.get('hold'), /#hv muse_cam_y matches 2[^\n]*good_far/);
   assert.ok(files.get('outside').indexOf('function muse_cam:inside') < files.get('outside').indexOf('function muse_cam:choose'));
   assert.match(files.get('inside'), /#v14 muse_cam_y matches 1/);
+  // g0a414c: just ahead of its face only with open air 1.2 blocks ahead (else a wall fills the picture); in a tunnel,
+  // behind it just under eye height (22), after that and before straight above its head
+  assert.match(sh, /positioned \^ \^ \^0\.3 if block ~ ~ ~ #muse_cam:open if block \^ \^ \^0\.6 #muse_cam:open if block \^ \^ \^1\.2 #muse_cam:open run scoreboard players set #sr muse_cam_y 12/);
+  assert.ok(sh.indexOf('set #sr muse_cam_y 12') < sh.indexOf('set #sr muse_cam_y 22') && sh.indexOf('set #sr muse_cam_y 22') < sh.indexOf('set #sr muse_cam_y 13'));
   assert.ok(sh.indexOf('function muse_cam:overhead') > sh.indexOf('set #sr muse_cam_y 13') && sh.indexOf('function muse_cam:overhead') < sh.lastIndexOf('set #sr muse_cam_y 15'), 'after straight down, before the spots behind');
   assert.match(files.get('note_new'), /run return 0\n/);
   assert.equal((files.get('note_col').match(/function muse_cam:nb/g) ?? []).length, 25);

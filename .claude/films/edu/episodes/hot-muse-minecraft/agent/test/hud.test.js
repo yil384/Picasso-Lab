@@ -404,3 +404,63 @@ test('HUD rules before the first play call: the right column says what the body 
     }
   }
 });
+
+// g0a414c, the first Muse game on this HUD: a call of 10 steps (and 4 the server added) did not fit and the HUD stopped
+// drawing at 1:29; the share said "no actions yet" after Muse's policy call; the hotbar read as owned at 0
+test('HUD g0a414c: a call with many steps folds them and the HUD keeps drawing; RAW says when each call was sent and the newest\'s age; empty hotbar slots', () => {
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const names = ['collect oak_log 8', 'craft wooden_pickaxe 1', 'collect cobblestone 11', 'craft stone_pickaxe 1', 'craft furnace 1', 'collect coal_ore 4', 'collect iron_ore 8', 'smelt raw_iron 8', 'craft iron_pickaxe 1', 'shield'];
+  p.term(cleanTerm({ caller: 'MUSE', game: { id: 'g0a414c', s: 60 }, rules: [{ n: 'defend', on: true, setS: 83, call: 1 }, { n: 'escape', on: true, setS: 83, call: 1 }, { n: 'eat_below', on: true, v: 6, setS: 83, call: 1 }, { n: 'flee', on: false }],
+    st: { hp: 20, food: 20, clock: 'DAY 10:55', ticks: 4900, muse: 1, reflex: 0, rule: 0, body: 0, pct: 100, dpct: 100 }, inv: {},
+    lines: [{ k: 'call', t: '> play_sequence', tool: 'play_sequence', words: 'Collecting logs and crafting up the tool chain to an iron pickaxe plus a shield before nightfall.', plan: 'Then head deep for deepslate_diamond_ore with the iron pickaxe.', of: 10, rid: 5, raw: '{}', src: 'muse',
+      steps: names.map((r) => ({ say: r, raw: r, skill: r.split(' ')[0], args: '{}' })) }], live: { mode: 'run', c: 2, s: 1 } }));
+  p.term(cleanTerm({ bind: 2, added: [{ before: 2, raw: 'craft oak_planks 8' }, { before: 2, raw: 'craft stick 4' }, { before: 2, raw: 'craft crafting_table 1' }, { before: 4, raw: 'craft stick 2' }] }));
+  t += 5000;
+  p.render(t);
+  let h = p.hud(t);
+  assert.ok(h.layout, 'drawn');
+  assert.deepEqual(h.qa.problems, []);
+  // a step further along: done steps fold into one row
+  p.term(cleanTerm({ live: { mode: 'run', c: 2, s: 5 } }));
+  t += 1000;
+  p.render(t);
+  h = p.hud(t);
+  assert.deepEqual(h.qa.problems, []);
+  const d = drawnTexts(p, t);
+  assert.ok(d.texts.some((x) => /^4 steps done: /.test(x)), d.texts.filter((x) => /steps? done|more queued/.test(x)).join(' | '));
+  assert.ok(d.texts.some((x) => /more queued: /.test(x)));
+  // the share after Muse's policy call: decided 100%, never "no actions yet"
+  assert.ok(d.texts.includes('decided') && !d.texts.includes('no actions yet'));
+  // the hotbar: nothing owned, no digits
+  assert.ok(!d.texts.some((x) => x === '0'), 'no 0 under an empty slot');
+  // RAW: the send time on the game clock, the newest's age in the header, ticking
+  assert.ok(d.texts.some((x) => /^\d+ calls? · newest \d+s ago/.test(x)), d.texts.filter((x) => /calls/.test(x)).join(' | '));
+  t += 3000;
+  const d2 = drawnTexts(p, t);
+  const age = (ts) => Number(/newest (\d+)s ago/.exec(ts.find((x) => /newest \d+s ago/.test(x)))[1]);
+  assert.equal(age(d2.texts) - age(d.texts), 3, 'the age moves on');
+  // a drawing that throws keeps the panel going and is counted
+  const p2 = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  p2.term(cleanTerm({ caller: 'MUSE', game: { id: 'g1', s: 1 } }));
+  p2.perf();
+  p2.term({ lines: [], rules: [{ n: 'defend', on: true }] });
+  const orig = Array.prototype.find;
+  // a corrupt state: a goal list that is not a list
+  p2.term({ goal: { key: 'x', title: 'x', list: [{ k: 'a', t: 'a', atS: null }] } });
+  t += 2000;
+  assert.doesNotThrow(() => p2.render(t));
+  assert.equal(orig, Array.prototype.find);
+});
+
+test('HUD hotbar: owned items full colour with their count, the best pickaxe held; not owned a faint silhouette', () => {
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  p.term(cleanTerm({ caller: 'MUSE', game: { id: 'g1', s: 10 }, inv: { pick: 'stone', diamond: 0, iron: 3, shield: 0 } }));
+  t += 1000;
+  const inv = p.hud(t).state.inventory;
+  assert.deepEqual(inv.slice(0, 3).map((x) => [x.icon, x.count]), [['stone_pickaxe', 1], ['diamond', 0], ['iron_ingot', 3]]);
+  const d = drawnTexts(p, t);
+  assert.ok(d.texts.includes('3') && d.texts.includes('1'));
+  assert.ok(!d.texts.includes('0'));
+});

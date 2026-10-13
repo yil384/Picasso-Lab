@@ -20,6 +20,8 @@ const SCEN = [
   // how every game opens: the body digs two blocks down before the first call (here with grass and a tree beside it)
   { name: 'the spawn dig-in, a tree two blocks to its right', leaves: [[-5, -57, -2, -1, -55, 2]], dirt: [[-6, -64, -6, 6, -62, 6], [-3, -61, 0, -3, -58, 0]], air: [[0, -63, 0, 0, -62, 0]], bot: [0.5, -63, 0.5] },
   { name: 'a hole two deep under a canopy 4 up', leaves: [[-8, -58, -8, 8, -56, 8]], dirt: [[-6, -64, -6, 6, -62, 6]], air: [[0, -63, 0, 0, -62, 0]], bot: [0.5, -63, 0.5] },
+  // g0a414c: mining into stone, a roof over the head: just ahead of its face the picture was a wall
+  { name: 'a 1x2 tunnel into a hillside, the bot at its end facing the wall', leaves: [], dirt: [[-6, -61, -6, 6, -55, 6]], air: [[0, -61, -6, 0, -60, 0]], bot: [0.5, -61, 0.5] },
 ];
 const inBox = (b, x, y, z) => x >= b[0] && x <= b[3] && y >= b[1] && y <= b[4] && z >= b[2] && z <= b[5];
 (async () => {

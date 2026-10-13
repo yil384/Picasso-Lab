@@ -327,7 +327,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   // the care's mode: advise (the default: the plans are the player's, advice in every reply; the body acts by itself
   // only through its reflexes), full (it also carries its plans out between the player's calls), or none (off)
   const careMode = careOpt === false || careOpt === 'off' || careOpt == null ? null : careOpt === true || careOpt === 'full' ? 'full' : 'advise';
-  let museActions = 0; // the player's skills this game (get_state and policy not counted)
+  let museActions = 0; // the player's skills this game (the policy too; get_state not counted)
   let careGate = null; // what the care waits for before it starts (body.deferCare)
   let ended = null;
   let seq = 0;
@@ -1190,7 +1190,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     }
     if (yielded === 'recover') r = { ...r, result: `${r.result} (before it the body finished going back for the items it dropped when it died)` };
     const ms = Date.now() - t0;
-    if (!['get_state', 'policy'].includes(tool) && !refusedFirst) museActions += 1;
+    // Muse's own: every skill it ran, the policy too (setting its rules is its decision; g0a414c read "no actions yet"
+    // after its policy call); a look is not an action
+    if (tool !== 'get_state' && !refusedFirst) museActions += 1;
     if (tool === 'pick_up' && v.args.death_items && r.ok) care?.recovered(status?.lastDeath?.observedAt ?? null);
     if (tool === 'pick_up' && v.args.death_items && r.code === 'DIED') care?.diedRecovering(status?.lastDeath?.observedAt ?? null);
     body.busy = false;

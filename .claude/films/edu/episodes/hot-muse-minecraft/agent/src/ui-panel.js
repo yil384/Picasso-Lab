@@ -234,7 +234,7 @@ export function createUiPanel(o) {
   let unwritten = false; // a drawing not in the panel file yet
   let lastLayout = null;
   let lastQa = null;
-  const perf = { draws: 0, writes: 0, searches: 0, searchBase: 0, ms: [], lag: [], ticks: 0, gapMax: 0, lastTick: null };
+  const perf = { draws: 0, writes: 0, searches: 0, searchBase: 0, ms: [], lag: [], ticks: 0, gapMax: 0, lastTick: null, errors: 0, lastError: null };
   function bump() { version += 1; if (changedAt === null) changedAt = now(); }
 
   const gameS = (t = now()) => (game && Number.isFinite(game.s) ? game.s + (t - game.at) / 1000 : null);
@@ -658,7 +658,14 @@ export function createUiPanel(o) {
         lg.setTransform(1, 0, 0, 1, 0, 0);
         lg.clearRect(0, 0, W, H + T);
         lg.setTransform(s, 0, 0, s, 0, -top * s);
-        const r = drawHud(lg, state, { icon: iconAt, qa: Boolean(o.qa) });
+        // a drawing that throws must not freeze the HUD (g0a414c: it stood at 1:29 for the rest of the game); counted
+        // and told in stream_stats
+        let r;
+        try { r = drawHud(lg, state, { icon: iconAt, qa: Boolean(o.qa) }); } catch (e) {
+          perf.errors += 1;
+          perf.lastError = String(e?.stack ?? e?.message ?? e).split('\n').slice(0, 3).join(' | ').slice(0, 300);
+          r = { layout: lastLayout, qa: lastQa, searches: perf.searches };
+        }
         lg.setTransform(1, 0, 0, 1, 0, 0);
         const ms = Number(process.hrtime.bigint() - t0) / 1e6;
         lastLayout = r.layout;
@@ -720,8 +727,8 @@ export function createUiPanel(o) {
         const v = [...a].sort((x, y) => x - y), at = (p) => Math.round(v[Math.min(v.length - 1, Math.floor(p * v.length))] * 10) / 10;
         return { p50: at(0.5), p99: at(0.99), max: at(1) };
       };
-      const out = { draws: perf.draws, writes: perf.writes, searches: perf.searches - perf.searchBase, drawMs: q(perf.ms), lagMs: q(perf.lag), ticks: perf.ticks, tickGapMaxMs: perf.gapMax };
-      Object.assign(perf, { draws: 0, writes: 0, ms: [], lag: [], ticks: 0, gapMax: 0, searchBase: perf.searches });
+      const out = { draws: perf.draws, writes: perf.writes, searches: perf.searches - perf.searchBase, drawMs: q(perf.ms), lagMs: q(perf.lag), ticks: perf.ticks, tickGapMaxMs: perf.gapMax, ...(perf.errors ? { errors: perf.errors, lastError: perf.lastError } : {}) };
+      Object.assign(perf, { draws: 0, writes: 0, ms: [], lag: [], ticks: 0, gapMax: 0, searchBase: perf.searches, errors: 0, lastError: null });
       return out;
     },
     /** The HUD state as drawn (the design's data shape), its layout and its QA. */
