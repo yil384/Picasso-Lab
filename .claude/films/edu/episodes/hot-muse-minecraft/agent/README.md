@@ -1121,9 +1121,15 @@ and Muse's panel under it:
   Muse's latest `why` (20 px, two lines, cut at a word), the two before it fading; before the first move, what is
   happening and the goal. MUSE · TRACE on the left: the call's tool and every step in plain words beside the step as
   Muse wrote it (JetBrains Mono): done with its time, running with the body's sub-step, its count and a bar, queued,
-  failed with the reason, skipped; then every earlier call one line each (get_state with what Muse saw, set_goal with
-  the goal, the body's own actions among them, a failure's reason under it); while nothing runs, what is happening
-  with a breathing dot. STATE on the right: the goal from the server's feed (a preset's milestones with their times
+  failed with the reason, skipped; under it RAW · WHAT MUSE SENT (2026-10-12, the owner: "the HUD doesn't show Muse's
+  raw text"): every call newest first as `> tool {arguments}`, the arguments exactly as Muse sent them over MCP (before
+  src/tolerant.js reads them), JSON in colour, wrapped to the column, then `< ` and the first line of the server's
+  answer (a refusal's code first; the call running now: `< running 0:12`), paired by a number though calls overlap;
+  the newest play call (its why and plan) gets the room, older calls one line each; the body's own actions dimmed as
+  `# body: ...`, never `>`; cleaned like every text (printable ASCII, no names, tokens or links, at most 1600
+  characters); while nothing runs, what is happening with a breathing dot. play and play_sequence take an optional
+  `plan` next to `why` (the next few steps and fallbacks, up to about 400 characters, cut at a word, never refused),
+  asked for in the instructions, logged in `mcp_call` and kept in the report's decision log. STATE on the right: the goal from the server's feed (a preset's milestones with their times
   and the next marked; a counted goal's parts with counts and bars, "Pigs killed 37/100"; a goal of plain words as its
   words), lit for 10 s with a toast when set_goal changes it; the items that matter (Codex icons, counts); y and the
   place ("deep caves", "surface, birch forest", from the body's y and the trees around); the Body advice and whether

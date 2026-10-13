@@ -49,7 +49,7 @@ test('plain words: a call as Muse would say it, counts and plurals, a sequence, 
 
 test('why: Muse\'s own words with a call go to the stream (cleaned, cut at a whole word within 140) and the log; the body never sees them', () => {
   const why = 'Night in 2 min and no shield: digging in, then smelting the iron while I wait';
-  assert.deepEqual(callLine('play', { skill: 'shelter', args: {}, why }), { k: 'call', t: '> play: shelter', say: 'Build a shelter for the night', tool: 'play', words: why, of: 1, steps: [{ say: 'Build a shelter for the night', raw: 'shelter' }] });
+  assert.deepEqual(callLine('play', { skill: 'shelter', args: {}, why }), { k: 'call', t: '> play: shelter', say: 'Build a shelter for the night', tool: 'play', words: why, raw: JSON.stringify({ skill: 'shelter', args: {}, why }), of: 1, steps: [{ say: 'Build a shelter for the night', raw: 'shelter' }] });
   const long = callLine('play_sequence', { steps: [{ skill: 'eat', args: {} }], why: `${'x '.repeat(100)}token EAAPageTok3n0123456789abcdef` }).words;
   assert.ok(long.length <= 140 && long.endsWith('x...'), long);
   // production game ga13a88's first why was cut at 140 characters mid-word ("for the nig"): now at the word
@@ -168,7 +168,8 @@ test('HUD data: the call\'s steps and its number, a step\'s place in its call, t
   // a refused call: its reason in words
   feed.call(game, 'play_sequence', { steps: [{ skill: 'go_to', args: { pos: { x: 1, y: 2, z: 3 } } }] });
   feed.reply(game, 'play_sequence', {}, { isError: true, content: [{ type: 'text', text: '1. go_to: not run, bad arguments: go_to.pos is not allowed; go_to.x is required' }], structuredContent: { code: 'BAD_ARGS', steps: [] } });
-  assert.equal(sent.at(-1).lines.at(-1).why, 'bad arguments: go_to.pos is not allowed');
+  assert.equal(sent.at(-1).lines.find((l) => l.k === 'fail').why, 'bad arguments: go_to.pos is not allowed');
+  assert.match(sent.at(-1).lines.at(-1).t, /^< BAD_ARGS: 1. go_to: not run/, 'and the answer for the RAW console');
   // the service keeps only what it knows
   assert.deepEqual(cleanTerm({ inv: { diamond: 3, pick: 'netherite', evil: 1, obsidian: -4 }, pos: { y: 9999, place: 'near Muse_aB3dE9fGh2k' }, game: { id: 'bad id!', s: 'x' }, bind: 'x', lines: [] }),
     { lines: [], status: '', inv: { diamond: 3, obsidian: 0 }, pos: { y: 320, place: 'near a player' }, game: {} });

@@ -54,7 +54,9 @@ The long prompt this line replaces (until 2026-10-12) is no longer needed: the s
   - adult only from the user's own statement;
   - start_game with the goal, then live_view, its HTML shown as a web artifact;
   - play_sequence, and get_state while a skill runs;
-  - a why on every play and play_sequence call (shown live, kept in the report);
+  - a why and a plan on every play and play_sequence call (why: one sentence, what and why; plan: the next few steps
+    and the fallbacks, up to about 400 characters, longer is cut at a word; both shown live, the call's arguments as
+    sent in the stream's RAW console, both kept in the report);
   - the body has only reflexes, and the Body advice is Muse's to follow or not;
   - a call at least every 4 minutes;
   - after a death, pick_up within 5 minutes or start over;
@@ -74,7 +76,7 @@ The long prompt this line replaces (until 2026-10-12) is no longer needed: the s
   - the goal, and the milestones with their times;
   - deaths with their causes;
   - the attribution line;
-  - a decision log built from Muse's own why texts and the Body advice it followed or declined.
+  - a decision log built from Muse's own why and plan texts and the Body advice it followed or declined.
 - **Ready prompts** for MCP clients that list them: `play_to_the_nether` and `free_play` (argument `goal`). Both still
   have Muse ask the user's age.
 - **Other goals:** end the line with "get an iron pickaxe", "get diamonds" or "just play".
@@ -107,7 +109,7 @@ What the report measures:
 - **Steps that failed:** `viewer_action` rows with `ok: false`.
 
 What the logs do not measure: whether Muse's decisions were good. The decision log in end_game's report is built by
-the server from Muse's own why texts (also in the `mcp_call` rows) and the advice each reply showed, so each decision
+the server from Muse's own why and plan texts (also in the `mcp_call` rows) and the advice each reply showed, so each decision
 sits next to the step it came with.
 
 ## Afterwards
