@@ -748,7 +748,9 @@ export function createCare(deps) {
   const add = (entry) => {
     // the same thing said again within 2 minutes (a shelter a fight keeps taking over, say) is logged, not told again
     const same = (x) => `${x.kind}|${x.ok}|${String(x.text).replace(/\(time \d+\)/g, '').replace(/\d+ s ago/g, '')}`;
-    if (performing) {
+    // the routine the player asked for (shelter, shield) is the player's; a reflex or a death meanwhile is not (g08370a:
+    // a fight and the death during Muse's shelter were logged as Muse's and counted nowhere)
+    if (performing && !entry.reflex && !['death', 'tool'].includes(entry.kind)) {
       deps.event('care', { kind: entry.kind, source: 'muse', ok: entry.ok, text: String(entry.text).slice(0, 300) });
       return { ...entry, source: 'muse' };
     }
