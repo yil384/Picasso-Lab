@@ -6,7 +6,7 @@
 // here, so no game sound). No Minecraft, no Facebook.
 //
 //   node scripts/ui-sample.mjs --clip game.mp4 --out sample.mp4 [--seconds 30] [--size 1080x1080] [--music off]
-//        [--story portal|shelter|g0793f1|ga13a88] [--pulse] [--tone]   (in the camera image: its own PulseAudio sink as the game's sound, as the rig makes it;
+//        [--story portal|shelter|g0793f1|ga13a88|long|design] [--design states.json --state nowhy|long|fresh] [--pulse] [--tone]   (in the camera image: its own PulseAudio sink as the game's sound, as the rig makes it;
 //                             --tone plays short beeps into it, standing in for the game's sound effects)
 
 import { EventEmitter } from 'node:events';
@@ -19,7 +19,7 @@ import { milestonesOf, GOAL_TITLES } from '../src/report.js';
 
 const { values: v } = parseArgs({ options: {
   clip: { type: 'string' }, out: { type: 'string' }, seconds: { type: 'string' }, size: { type: 'string' }, music: { type: 'string' },
-  pulse: { type: 'boolean' }, tone: { type: 'boolean' }, story: { type: 'string' },
+  pulse: { type: 'boolean' }, tone: { type: 'boolean' }, story: { type: 'string' }, design: { type: 'string' }, state: { type: 'string' },
 } });
 if (!v.clip || !v.out) { console.error('usage: node scripts/ui-sample.mjs --clip game.mp4 --out sample.mp4 [--seconds 30] [--size 1080x1080] [--music off]'); process.exit(2); }
 const seconds = Number(v.seconds ?? 20);
@@ -100,7 +100,93 @@ const reply = (structured) => {
 const nether = (pos) => ({ kind: 'nether', text: `in the Nether: beds explode here and water boils away; the portal back is at ${pos} (portal enter with that pos)` });
 
 const S = (call, n, skill, args, status, result, ms, extra = {}) => ({ ...step(call, n, skill, args, status, result, ms), ...extra });
+
+// a state of the HUD's design (ui-art/hud-final: data/states.json, --state nowhy|long|fresh) played through the real
+// feed: its calls as sent at their game times, the answers, the running call and its sub-step, the advice, the events,
+// the goal (and the one before it), the items, health, food, the clock, who plays; the frame at the state's moment
+const designStory = () => {
+  if (v.story !== 'design') return [];
+  const D = JSON.parse(fs.readFileSync(v.design, 'utf8'))[v.state ?? 'nowhy'];
+  const G0 = Date.now() + 1_000;
+  const at = (gt, fn) => () => { skew = G0 + gt * 1000 - Date.now(); fn(); };
+  const secsOf = (c) => { const m = /^(\d+):(\d\d)$/.exec(String(c ?? '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+  const T0 = D.stats.ticks - Math.round(D.now.gameS * 20);
+  const stateNow = (gt) => state(D.stats.hp, D.stats.food, T0 + Math.round(gt * 20));
+  // who plays, the game's id, the items, where the bot is
+  game.caller = D.raw.entries[0]?.by === 'smoke-script' ? 'TEST SCRIPT' : 'MUSE';
+  game.id = D.stats.gameId;
+  const items = { diamond_pickaxe: 'diamond_pickaxe', iron_pickaxe: 'iron_pickaxe', stone_pickaxe: 'stone_pickaxe', wooden_pickaxe: 'wooden_pickaxe', diamond: 'diamond', iron_ingot: 'iron_ingot', raw_iron: 'raw_iron', obsidian: 'obsidian', flint_and_steel: 'flint_and_steel', water_bucket: 'water_bucket', lava_bucket: 'lava_bucket', bucket: 'bucket', steak: 'cooked_beef', shield: 'shield' };
+  carry = Object.fromEntries(D.inventory.filter((x) => x.count > 0 && items[x.icon]).map((x) => [items[x.icon], x.count]));
+  worn = D.inventory.some((x) => x.key === 'shield' && x.count > 0) ? { offhand: 'shield' } : {};
+  where = { x: 0, y: D.position.y, z: 0 };
+  around = /forest|woods/.test(D.position.place) ? [{ name: /birch/.test(D.position.place) ? 'birch_log' : 'oak_log', nearest: { x: 3, y: D.position.y, z: 3 }, distance: 5 }] : [];
+  att = { muse: D.stats.museShare.muse ?? 0, reflex: D.stats.museShare.reflex ?? 0, musePct: D.stats.museShare.pct };
+  // the goal: the one before (if any) until the moment it changed, then the state's
+  const goalOf = (gl) => (gl.kind === 'counted'
+    ? { key: gl.key ?? 'custom', title: gl.title, text: gl.title, reached: false, list: gl.parts.map((p) => ({ k: p.key, t: p.label.toLowerCase(), done: p.done, of: p.of, atS: null })) }
+    : { key: gl.key ?? 'nether_and_back', title: gl.title, reached: false, list: gl.list.map((m) => ({ k: m.key, t: m.label.toLowerCase(), atS: m.done ? secsOf(m.done) : null })) });
+  let goalNow = goalOf(D.goal.previous && D.goal.new ? D.goal.previous : D.goal);
+  tracker = { progress: () => goalNow };
+  const out = [];
+  const entries = [...D.raw.entries].reverse(); // oldest first
+  const cc = D.currentCall;
+  for (const e of entries) {
+    const args = (() => { try { return JSON.parse(e.args); } catch { return {}; } })();
+    const sent = Math.max(0, e.sentS);
+    const play = e.tool === 'play' || e.tool === 'play_sequence';
+    const isCurrent = play && cc && e.playCallNo === cc.no;
+    if (e.tool === 'start_game') {
+      out.push([sent, () => feed.reply(game, 'start_game', args, { content: [{ type: 'text', text: e.answer.text ?? 'New game.' }], structuredContent: { steps: [], state: stateNow(sent) } })]);
+      continue;
+    }
+    if (e.tool === 'set_goal' && D.goal.previous && D.goal.new) out.push([sent - 0.01, () => { goalNow = goalOf(D.goal); }]);
+    const steps = play ? (e.tool === 'play' ? [args] : args.steps ?? []) : [];
+    out.push([sent, () => {
+      call(e.tool, args);
+      if (play && isCurrent) {
+        const run = cc.steps.findIndex((x) => x.state === 'run');
+        if (run >= 0) q = { ...q, busy: true, running: { call: { no: cc.no }, step: run + 1, skill: cc.steps[run].skill, args: cc.steps[run].args } };
+        if (D.goal.previous && D.goal.new && D.goal.kind === 'counted' && !entries.some((x) => x.tool === 'set_goal')) goalNow = goalOf(D.goal);
+      }
+    }]);
+    const ansAt = secsOf(e.answer.at);
+    if (e.answer.state === 'waiting' || (e.answer.state === 'running' && !(ansAt >= 0))) continue;
+    const when = Math.max(ansAt ?? sent, sent + 0.05); // the answer after its call
+    const stepsOut = play ? steps.map((x, i) => {
+      const done = !isCurrent || cc.steps[i]?.state === 'ok';
+      const cs = isCurrent ? cc.steps[i] : null;
+      return { call: e.playCallNo, n: i + 1, step: i + 1, skill: x.skill, args: x.args ?? {}, status: done ? 'confirmed' : i === cc.steps.findIndex((y) => y.state === 'run') ? 'running' : 'pending', ...(done ? { result: cs?.result ?? 'done', ms: cs?.ms ?? 20_000 } : {}) };
+    }) : [];
+    out.push([when, () => {
+      if (play && !isCurrent) done();
+      feed.reply(game, e.tool, args, { content: [{ type: 'text', text: e.answer.text ?? '' }], structuredContent: { ...(e.answer.code ? { code: e.answer.code } : {}), steps: stepsOut, state: stateNow(when) }, ...(e.answer.isError ? { isError: true } : {}) });
+    }]);
+  }
+  // the running step's sub-step from the body
+  const runStep = cc?.steps?.find((x) => x.state === 'run');
+  if (runStep?.sub) out.push([D.now.gameS - 2, () => subStep({ kind: runStep.sub.kind ?? 'other', text: runStep.sub.text, ...(Number.isFinite(runStep.sub.done) ? { done: runStep.sub.done, of: runStep.sub.of } : {}) })]);
+  // the advice, given at its time (with the reply of a look, as the server gives it)
+  const adv = D.advice.items ?? [];
+  if (adv.length) {
+    const t = adv[0].givenAtS;
+    out.push([t, () => feed.reply(game, 'get_state', {}, { content: [{ type: 'text', text: '' }], structuredContent: { steps: [], state: stateNow(t), advice: adv.map((a) => ({ kind: a.kind, text: a.text, ...(a.hint ? { hint: { skill: a.hint } } : {}) })) } })]);
+  }
+  // the events: the body's, the world's, the server's, at their times
+  for (const ev of [...(D.events ?? [])].reverse()) {
+    const t = secsOf(ev.at);
+    const line = ev.kind === 'milestone' ? { k: 'milestone', t: `${ev.text} at ${ev.at}` } : ev.kind === 'reflex' ? { k: 'reflex', t: `reflex: ${ev.logged ?? ev.text}` } : { k: 'world', who: ev.who, t: ev.text };
+    out.push([t, () => stream.term({ lines: [line] })]);
+  }
+  // the state's moment: the last status, then the frame
+  out.push([D.now.gameS, () => { cur = { health: D.stats.hp, food: D.stats.food, time: D.stats.ticks, at: clk() }; feed.tick({ ...game, status: 'ready' }); }]);
+  // played in order on the game's clock: everything up to 10 s before the moment within the first 3 s of the sample, the rest as it ran
+  const sorted = out.sort((a, b) => a[0] - b[0]);
+  const last = D.now.gameS;
+  return sorted.map(([gt, fn]) => [gt < last - 10 ? 0.3 + (2.7 * gt) / Math.max(1, last - 10) : 3 + (gt - (last - 10)), at(gt, fn)]);
+};
+
 const stories = {
+  design: designStory(),
   // production game g0793f1's last minutes (its real commands, results, advice and milestones; Muse's words, the
   // body's sub-steps and the state numbers are made up for the sample: the game had none of them)
   g0793f1: [

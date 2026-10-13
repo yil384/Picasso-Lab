@@ -74,12 +74,12 @@ test('raw: the HUD\'s RAW console: newest first, the answers paired, the call ru
   assert.ok(p.frames >= 4);
   // the plan in full in the thinking band, which grows to hold it; a call without a plan keeps the last one shown
   assert.equal(st.plan, a1.plan.length > 400 ? st.calls[0].plan : a1.plan);
-  const withPlan = at(10).low;
+  const withPlan = at(10).layout.thinking[1];
   feed.call(game, 'play', { skill: 'eat', args: {}, why: 'A snack' });
-  st = at(100);
+  st = at(1_000);
   assert.deepEqual([st.thoughts.map((x) => x.text), st.plan === st.calls[1].plan], [['A snack', 'Iron next'], true], 'the earlier words go to EARLIER THINKING');
-  p.term({ lines: [{ k: 'call', t: '> play', tool: 'play', words: 'Short', of: 1, steps: [{ say: 'Eat something', raw: 'eat' }] }] });
-  assert.ok(at(10).low <= withPlan);
+  assert.ok(st.layout.thinking[1] <= withPlan, 'the band fits what it shows');
+  assert.deepEqual(p.hud().state.earlierThinking.map((x) => x.why), ['Iron next']);
 });
 
 test('plan: optional on play and play_sequence, asked for in the instructions, never refused (cut at a word), logged, kept in the report, never seen by the body', async () => {
@@ -131,8 +131,8 @@ test('the HUD\'s data for its next design: RAW entries (send time, runs of the s
   const a1 = { skill: 'collect', args: { block: 'obsidian', n: 14 } };
   feed.call(game, 'play', a1);
   t += 1000;
-  let st = p.state();
-  assert.deepEqual([st.thinking.noWhy, st.thinking.why, st.thinking.firstMove], [true, '', false]);
+  let hs = p.hud().state;
+  assert.deepEqual([hs.thinking.hasWhy, hs.thinking.why, hs.thinking.latestPlayCall.tool], [false, null, 'play'], 'no why: the one honest line');
   // Muse polls with get_state while the collect runs: one RAW entry for the run, its latest time and answer, whole
   const long = 'collect {"block":"obsidian","n":14} is still running (2 more queued); call get_state again to keep waiting, or stop.';
   for (let i = 0; i < 6; i++) {
@@ -142,11 +142,12 @@ test('the HUD\'s data for its next design: RAW entries (send time, runs of the s
     feed.reply(game, 'get_state', a, { content: [{ text: `${long}\n\nState (game g08370a):` }] });
   }
   t += 12_000;
-  st = p.state();
-  assert.equal(st.raw.length, 3, 'the run of six get_state calls is one entry');
-  assert.deepEqual([st.raw[0].tool, st.raw[0].count, st.raw[0].age, st.raw[0].reply], ['get_state', 6, '12s', '< collect {"block":"obsidian","n":14} still running (2 more queued)']);
-  assert.deepEqual([st.raw[1].tool, st.raw[1].running, st.raw[1].raw], ['play', true, JSON.stringify(a1)]);
-  assert.match(st.raw[2].clock, /^\d+:\d\d$/);
+  hs = p.hud().state;
+  assert.equal(hs.raw.runs.length, 3, 'the run of six get_state calls is one entry');
+  assert.deepEqual([hs.raw.runs[0].tool, hs.raw.runs[0].count, Math.round(hs.raw.runs[0].lastAgoS), hs.raw.runs[0].latestAnswer], ['get_state', 6, 12, long], 'its count, its latest time, its answer whole');
+  assert.deepEqual([hs.raw.runs[1].tool, hs.raw.runs[1].newestState, hs.raw.runs[1].args], ['play', 'running', JSON.stringify(a1)]);
+  assert.match(hs.raw.runs[2].lastSent, /^\d+:\d\d$/);
+  assert.equal(hs.raw.total, 8);
   assert.equal(cleanTerm({ lines: [{ k: 'reply', t: `< ${'word '.repeat(100)}`, rid: 1 }] }).lines[0].t.length, 501, 'an answer whole (up to 600 characters)');
   // BODY · WORLD: items that came in, damage with the mob near, a mob coming near (once a minute), mining progress, water on lava
   snap = { ...snap, inventory: { obsidian: 3, cobblestone: 12 } };
@@ -161,12 +162,13 @@ test('the HUD\'s data for its next design: RAW entries (send time, runs of the s
   handlers[0]({ sub: { kind: 'mine', text: 'mining obsidian', done: 5, of: 14 } });
   handlers[0]({ sub: { kind: 'bucket', text: 'pouring water on lava' } });
   p.term({ lines: [{ k: 'reflex', t: 'reflex: defending itself (zombie), then back to mining' }, { k: 'milestone', t: 'entered the Nether at 21:40' }] });
-  st = p.state();
-  const texts = st.world.map((e) => `${e.kind}: ${e.text}`);
-  for (const want of ['world: got 3 obsidian and 12 cobblestone', 'world: took 6 damage, health 14, zombie 3 blocks away', 'world: zombie 3 blocks away', 'world: mined obsidian 3 of 14', 'world: mined obsidian 5 of 14', 'world: pouring water on lava', 'reflex: defending itself (zombie)', 'milestone: Entered the Nether']) assert.ok(texts.includes(want), `${want} in ${JSON.stringify(texts)}`);
-  assert.ok(!texts.includes('world: mined obsidian 4 of 14'), 'mining progress at most every 15 s');
+  hs = p.hud().state;
+  const texts = hs.events.map((e) => `${e.who}: ${e.text}`);
+  for (const want of ['body: got 3 obsidian and 12 cobblestone', 'body: took 6 damage, health 14, zombie 3 blocks away', 'world: zombie 3 blocks away', 'body: mined obsidian 3 of 14', 'body: mined obsidian 5 of 14', 'body: pouring water on lava', 'body: defending itself (zombie)', 'world: entered the Nether']) assert.ok(texts.includes(want), `${want} in ${JSON.stringify(texts)}`);
+  assert.ok(!texts.includes('body: mined obsidian 4 of 14'), 'mining progress at most every 15 s');
   assert.equal(texts.filter((x) => x === 'world: zombie 3 blocks away').length, 1, 'a mob near once a minute');
-  assert.ok(st.world.every((e) => /^\d+:\d\d$/.test(e.clock)), 'each with its time');
+  assert.ok(hs.events.every((e) => /^\d+:\d\d$/.test(e.at)), 'each with its time');
+  assert.ok(hs.events.every((e) => ['body', 'world', 'server'].includes(e.who)), 'never Muse');
   // the current layout still draws with all of it
   p.render(t);
   assert.ok(p.frames >= 1);

@@ -317,7 +317,14 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   let careGate = null; // what the care waits for before it starts (body.deferCare)
   let ended = null;
   let seq = 0;
-  const event = (kind, data = {}) => { try { log.event(kind, { game: gameId, ...data }); } catch { /* best effort */ } };
+  const event = (kind, data = {}) => {
+    try { log.event(kind, { game: gameId, ...data }); } catch { /* best effort */ }
+    // the care policy the server set for the body: the stream's BODY · WORLD feed shows it as the server's
+    if (kind === 'care_policy' && data.ok !== false) {
+      const words = Object.entries(data).filter(([k]) => k !== 'ok').map(([k, v]) => `${k.replace(/_/g, ' ')} ${String(v).replace(/_/g, ' ')}`).join(', ');
+      try { emit('server', { text: `care policy set: ${words || 'the defaults'}` }); } catch { /* best effort */ }
+    }
+  };
   const emit = (name, data) => { try { emitter.emit(name, data); } catch (err) { event('bot_error', { message: String(err?.message ?? err).slice(0, 200) }); } };
 
   const body = {

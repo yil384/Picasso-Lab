@@ -30,7 +30,7 @@ import { createQueue, isFinal, statusOf, stepName, stepNumber, QUEUE_MAX, REPEAT
 import { createPlanner, describeMissing } from './plan.js';
 import { registryFor } from './mc.js';
 import { liveViewHtml } from './live-page.js';
-import { createTermFeed, cutWords } from './terminal.js';
+import { createTermFeed, cutWords, callerOf } from './terminal.js';
 
 const CALL_MS = 45_000; // every reply within 45 s: MCP clients commonly give up after 60 s (a long skill keeps going)
 /** Of a call's time, what building the reply may take (the state text scans the blocks around: ~850 ms on Paper). */
@@ -869,6 +869,7 @@ export function createMcp(hooks) {
         forget(null);
         entry.token = s.token;
         hooks.log.event('mcp_game', { session: sid8(), game: s.id, client: entry.client ?? null });
+        s.caller = callerOf(entry.client?.name); // who plays, for the stream's HUD
       }
       if (!entry.handle) entry.handle = mintHandle(s.token);
       if (s.status !== 'ready') await wait(Promise.resolve(s.ready), JOIN_WAIT_MS, signalOf(extra));

@@ -1,0 +1,1067 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Muse HUD Final</title>
+<style>
+@font-face{font-family:MuseUI;font-weight:500;src:url("../../agent/assets/muse-ui/fonts/Inter-Medium.ttf")}
+@font-face{font-family:MuseUI;font-weight:600;src:url("../../agent/assets/muse-ui/fonts/Inter-SemiBold.ttf")}
+@font-face{font-family:MuseUI;font-weight:700;src:url("../../agent/assets/muse-ui/fonts/Inter-Bold.ttf")}
+@font-face{font-family:MuseMono;font-weight:400;src:url("../../agent/assets/muse-ui/fonts/JetBrainsMono-Regular.ttf")}
+@font-face{font-family:MuseMono;font-weight:500;src:url("../../agent/assets/muse-ui/fonts/JetBrainsMono-Medium.ttf")}
+html,body{margin:0;width:1080px;height:1080px;overflow:hidden;background:#07090d}
+canvas{display:block}
+</style>
+<script src="states.js"></script>
+<script>
+// edge cases for checking (?test=max|noplan|words|empty): a 139-char real why + a 400-char plan, a why with no plan,
+// a plain-words goal, no advice and no events
+(function () {
+  const S = window.HUD_STATES, t = new URLSearchParams(location.search).get('test');
+  if (t === 'max') {
+    S.long.thinking.why = 'Night with sunrise 6 min out and no tools yet: grabbing birch logs, crafting a wooden pickaxe, and pulling cobblestone to dig in for the...';
+    S.long.thinking.plan = 'Pour twice more and mine the eight blocks that form, then walk to the river at 341 62 -40 for gravel; dig gravel until flint drops, craft flint and steel with the iron, then build the frame on flat ground. If night falls first, wall in for the night and go on at dawn; if health drops under 10, eat bread before any fight. Keep the shield up near skeletons and check the obsidian count before leaving';
+  }
+  if (t === 'noplan') S.long.thinking.plan = null;
+  if (t === 'words') S.nowhy.goal = S.extras.goalPlainWords;
+  if (t === 'empty') { S.nowhy.advice = { items: [], follow: null, lastFollow: null }; S.nowhy.events = []; }
+})();
+</script>
+</head><body><canvas id="c" width="1080" height="1080"></canvas>
+<script>
+'use strict';
+window.HUD_READY = false;
+const S = window.HUD_STATES;
+const Q = new URLSearchParams(location.search);
+const KEY = Q.get('state') || 'nowhy';
+const QA_DRAW = Q.get('qa') === '1'; // ?qa=1: outline every text problem in red and print the computed layout
+const st = S[KEY];
+const g = document.getElementById('c').getContext('2d');
+
+/* ---------- tokens ---------- */
+const K = {
+  base: '#07090d', band: '#0b0e14', panel2: '#141924', chip: '#252c3a', track: '#222837',
+  zebra: 'rgba(255,255,255,0.028)', line: 'rgba(255,255,255,0.08)', line2: 'rgba(255,255,255,0.16)',
+  t1: '#f3f5f9', t2: '#bcc3d0', t3: '#7f889b', t4: '#4e5667',
+  muse: '#9d8cff', museHi: '#c6bcff', museInk: '#e4dfff', museDim: '#a69fd6', museDeep: '#15122b', museTrack: '#2a2450', museTint: 'rgba(157,140,255,0.07)',
+  body: '#efa443', bodyHi: '#ffc77a', world: '#8fb1d6',
+  ok: '#5fd39b', fail: '#ff6f61',
+  jKey: '#939cb1', jStr: '#dcd5ff', jNum: '#ffffff', jPun: '#5f687c', ans: '#a0a9bc',
+};
+const UI = (w, s) => `${w} ${s}px MuseUI`;
+const MONO = (w, s) => `${w} ${s}px MuseMono`;
+
+/* ---------- QA: every drawn text is recorded with its region; ?qa=1 draws the problems ---------- */
+const QA = [];
+let REG = [0, 1080, 'canvas'];
+function rec(x, y, w, size, s) { QA.push({ x, y: y - size * 0.76, w, h: size, s, reg: REG }); }
+
+/* ---------- primitives (all portable to node-canvas) ---------- */
+function rect(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+function hline(x, y, w, c) { g.fillStyle = c; g.fillRect(x, y, w, 1); }
+function vline(x, y, h, c) { g.fillStyle = c; g.fillRect(x, y, 1, h); }
+function rrect(x, y, w, h, r, c) { r = Math.min(r, h / 2, w / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); g.fillStyle = c; g.fill(); }
+function W(s, f) { g.font = f; return g.measureText(s).width; }
+function T(s, x, y, f, c, align = 'left') {
+  g.font = f; g.fillStyle = c; g.textAlign = align; g.textBaseline = 'alphabetic'; g.fillText(s, x, y);
+  const w = g.measureText(s).width;
+  if (s && s.trim()) rec(align === 'right' ? x - w : align === 'center' ? x - w / 2 : x, y, w, parseFloat(f.split(' ')[1]), s);
+  return w;
+}
+// spaced capitals: drawn one character at a time (node-canvas has no letterSpacing)
+function capsW(s, size, w = 700, tr = 0.09) { g.font = UI(w, size); let a = 0; for (const ch of s) a += g.measureText(ch).width + size * tr; return a - size * tr; }
+function caps(s, x, y, size, c, w = 700, tr = 0.09, align = 'left') {
+  const tw = capsW(s, size, w, tr); let cx = align === 'right' ? x - tw : x;
+  rec(cx, y, tw, size, s);
+  g.font = UI(w, size); g.fillStyle = c; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  for (const ch of s) { g.fillText(ch, cx, y); cx += g.measureText(ch).width + size * tr; }
+  return tw;
+}
+const IMG = {};
+function icon(n, x, y, s, a = 1) { const im = IMG[n]; if (!im) return; g.globalAlpha = a; g.imageSmoothingQuality = 'high'; g.drawImage(im, x, y, s, s); g.globalAlpha = 1; }
+// cut to fit with an ellipsis, at a word when that keeps 60 % of the room
+function ellip(s, f, maxW, force = false) {
+  g.font = f; if (!force && g.measureText(s).width <= maxW) return s;
+  let t = s; while (t.length && g.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  const sp = t.lastIndexOf(' ');
+  if (sp > 0 && g.measureText(t.slice(0, sp)).width >= maxW * 0.6) t = t.slice(0, sp);
+  return t.replace(/[\s,;:·(\[{–-]+$/, '') + '…';
+}
+function wrap(text, f, maxW, indent = 0) {
+  g.font = f; const words = String(text).split(/\s+/).filter(Boolean); const out = []; let cur = ''; let lim = maxW - indent;
+  for (const w of words) {
+    const t = cur ? cur + ' ' + w : w;
+    if (g.measureText(t).width <= lim) { cur = t; continue; }
+    if (cur) { out.push(cur); lim = maxW; }
+    cur = w;
+    while (g.measureText(cur).width > lim) { let k = cur.length; while (k > 1 && g.measureText(cur.slice(0, k)).width > lim) k--; out.push(cur.slice(0, k)); cur = cur.slice(k); lim = maxW; }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+// the same number of lines, as even as they go (no one-word last line)
+function wrapBalanced(text, f, maxW) {
+  const n = wrap(text, f, maxW).length; if (n < 2) return wrap(text, f, maxW);
+  let lo = maxW * 0.4, hi = maxW;
+  for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; if (wrap(text, f, mid).length <= n) hi = mid; else lo = mid; }
+  return wrap(text, f, Math.ceil(hi));
+}
+function clamp(lines, n, f, maxW) { if (lines.length <= n) return lines; const o = lines.slice(0, n); o[n - 1] = ellip(o[n - 1] + ' ' + lines[n], f, maxW, true); return o; }
+function ring(cx, cy, r, c, lw = 1.5) { g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.strokeStyle = c; g.lineWidth = lw; g.stroke(); }
+function dot(cx, cy, r, c) { g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fillStyle = c; g.fill(); }
+function check(cx, cy, c, k = 1) { g.beginPath(); g.moveTo(cx - 4.5 * k, cy + 0.5 * k); g.lineTo(cx - 1.5 * k, cy + 3.5 * k); g.lineTo(cx + 4.5 * k, cy - 3.5 * k); g.strokeStyle = c; g.lineWidth = 2; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); }
+function cross(cx, cy, c, r = 3.5) { g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx + r, cy + r); g.moveTo(cx + r, cy - r); g.lineTo(cx - r, cy + r); g.strokeStyle = c; g.lineWidth = 2; g.lineCap = 'round'; g.stroke(); }
+function dots(x0, x1, y, c) { g.fillStyle = c; for (let x = Math.ceil(x0); x <= x1 - 1; x += 4) g.fillRect(x, y, 1, 1); }
+const mmss = (s) => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const cap1 = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
+
+/* ---------- data helpers ---------- */
+// the caller is whoever the MCP client is: Muse, or our smoke-test script (never Muse's name on words it did not send)
+const CALLER = (() => { const by = (st.raw.entries[0] || {}).by; return by === 'smoke-script' ? 'TEST SCRIPT' : 'MUSE'; })();
+const callerWord = CALLER === 'MUSE' ? 'Muse' : 'the test script';
+const NOW_S = st.now.gameS;
+const agoWords = (s) => { s = Math.max(0, Math.round(s)); return s < 90 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min ago`; };
+const RECENT_S = 100; // RAW times: "40s" under 100 s, else the game clock
+const rawWhen = (agoS, sent) => agoS < RECENT_S ? `${Math.round(agoS)}s` : sent;
+
+function jsonRuns(s) {
+  const out = []; let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (c === '"') { let j = i + 1; while (j < s.length && s[j] !== '"') { if (s[j] === '\\') j++; j++; } j++; let k = j; while (s[k] === ' ') k++; out.push({ t: s.slice(i, j), c: s[k] === ':' ? K.jKey : K.jStr }); i = j; }
+    else if (/[-0-9]/.test(c)) { let j = i; while (j < s.length && /[-0-9.eE+]/.test(s[j])) j++; out.push({ t: s.slice(i, j), c: K.jNum }); i = j; }
+    else if (/[a-z]/.test(c)) { let j = i; while (j < s.length && /[a-z_]/.test(s[j])) j++; out.push({ t: s.slice(i, j), c: K.jNum }); i = j; }
+    else { out.push({ t: c, c: K.jPun }); i++; }
+  }
+  return out;
+}
+
+/* ---------- fixed geometry ---------- */
+const VH = 608;               // video height (16:9 at 1080)
+const M = 20;                 // outer margin
+const X1 = 1080 - M;          // right edge of content
+const BAND_H = 36;            // stats strip
+// 12-column grid on the 1040 px content width: 72 px columns, 16 px gutters (a column step is 88 px)
+const COL = 72, GUT = 16;
+const LX = M, LW = 7 * COL + 6 * GUT;  // left column, 7 columns: the caller (NOW): x 20-620
+const DIV = LX + LW + GUT / 2;         // column divider (hairline): x 628
+const RX = LX + 7 * (COL + GUT), RW = X1 - RX; // right column, 5 columns: the body and the world: x 636-1060 (424)
+const PAD = 10;               // between the bands, the columns and RAW
+const GAP = 8;                // between modules in a column
+const HEAD = 20;              // module header: caps label, meta at the right, hairline at +15
+const ROW = 19;               // small-prose rows
+const RAW_FS = 13, RAW_LH = 18, RAW_HEAD = 24, RAW_BOT = 10, RAW_MIN = 6; // RAW_BOT: bottom padding, 2-10 px as the layout needs
+const RAW_TIME_R = 62;        // the time column's right edge
+const RAW_TX = 72;            // where calls start
+const RAW_INDENT = 2;         // continuation lines, in characters
+const NOWHY_H = 30;
+
+/* ---------- video overlays ---------- */
+function drawHotbar() {
+  REG = [0, 1080, 'video'];
+  const n = st.inventory.length, s = 40, gap = 4, pad = 4;
+  const w = n * s + (n - 1) * gap + pad * 2, h = s + pad * 2;
+  const x = 16, y = VH - 16 - h;
+  rrect(x, y, w, h, 6, 'rgba(7,9,13,0.82)');
+  st.inventory.forEach((it, i) => {
+    const sx = x + pad + i * (s + gap), sy = y + pad;
+    rrect(sx, sy, s, s, 4, it.count ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)');
+    icon(it.icon, sx + 5, sy + 4, 28, it.count ? 1 : 0.28);
+    const c = String(it.count);
+    g.font = MONO(500, 13); g.textAlign = 'right'; g.lineJoin = 'round';
+    g.strokeStyle = 'rgba(7,9,13,0.95)'; g.lineWidth = 3; g.strokeText(c, sx + s - 3, sy + s - 4);
+    T(c, sx + s - 3, sy + s - 4, MONO(500, 13), it.count ? K.t1 : K.t4, 'right');
+  });
+}
+function drawToast() {
+  if (!st.goal || !st.goal.new || !st.goal.toast) return;
+  REG = [0, 1080, 'video'];
+  const title = st.goal.toast.replace(/^New goal:\s*/i, '');
+  const tw = W(title, UI(600, 18));
+  const w = Math.max(tw, capsW('NEW GOAL', 10)) + 46 + 18, h = 48;
+  const x = 1080 - 16 - w, y = VH - 16 - h;
+  rrect(x, y, w, h, 6, 'rgba(7,9,13,0.86)');
+  rect(x, y + 8, 3, h - 16, K.t1);
+  icon('star', x + 14, y + 12, 24);
+  caps('NEW GOAL', x + 46, y + 19, 10, K.t3);
+  T(title, x + 46, y + 38, UI(600, 18), K.t1);
+}
+
+/* ---------- 1. stats strip ---------- */
+function statsBand(y) {
+  REG = [0, 1080, 'stats'];
+  const h = BAND_H, base = y + 25;
+  const s = st.stats, pct = s.museShare.pct, known = pct != null;
+  rect(0, y, 1080, h, K.band);
+  // possession rule: the full width split by the caller's share of actions (violet) and the body's reflexes (amber)
+  if (known) { rect(0, y, 1080, 3, K.body); rect(0, y, Math.round(1080 * pct / 100), 3, K.muse); }
+  else rect(0, y, 1080, 3, K.t4);
+  hline(0, y + h - 1, 1080, K.line);
+  const night = s.phase === 'night';
+  const pw = String(s.phaseWords || '').split(/,\s*/);
+  const left = (draw, placeW) => {
+    let x = M;
+    const sep = () => { if (draw) vline(x + 11, y + 11, h - 20, K.line2); x += 22; };
+    const t = (str, f, c) => (draw ? T(str, x, base, f, c) : W(str, f));
+    if (draw) icon('heart', x, y + 9, 20); x += 26;
+    x += t(String(s.hp), MONO(500, 18), K.t1); x += 1;
+    x += t('/' + s.hpMax, MONO(400, 13), K.t3); sep();
+    if (draw) icon('food', x, y + 9, 20); x += 26;
+    x += t(String(s.food), MONO(500, 18), K.t1); x += 1;
+    x += t('/' + s.foodMax, MONO(400, 13), K.t3); sep();
+    // time of day: the phase leads (DAY / NIGHT), the world clock is secondary so it never reads as the game clock
+    if (draw) icon(s.dimension === 'nether' ? 'flame' : night ? 'moon' : 'sun', x, y + 9, 20); x += 26;
+    x += (draw ? caps(pw[0].toUpperCase(), x, base - 1, 11, night ? K.world : K.t1) : capsW(pw[0].toUpperCase(), 11)) + 7;
+    x += t(s.timeOfDay, MONO(400, 14), K.t2) + 8;
+    if (pw[1]) x += t(pw.slice(1).join(', '), UI(500, 14), K.t2);
+    sep();
+    if (draw) icon('depth', x, y + 9, 20); x += 26;
+    x += t('y ' + st.position.y, MONO(500, 18), K.t1) + 8;
+    const place = placeW == null ? st.position.place : ellip(st.position.place, UI(500, 14), placeW - x);
+    x += t(place, UI(500, 14), K.t2);
+    return x;
+  };
+  const right = (draw, counts) => {
+    let rx = X1;
+    const t = (str, f, c) => (draw ? T(str, rx, base, f, c, 'right') : W(str, f));
+    rx -= t(s.gameClock, MONO(500, 18), K.t1) + 8;
+    rx -= t(s.gameId, MONO(400, 13), K.t2) + 7;
+    rx -= (draw ? caps('GAME', rx, base - 1, 10, K.t3, 700, 0.1, 'right') : capsW('GAME', 10, 700, 0.1)) + 13;
+    if (draw) vline(rx, y + 11, h - 20, K.line2); rx -= 13;
+    const has = counts && s.museShare.muse != null;
+    if (known) {
+      rx -= t(`reflexes ${100 - pct}%${has ? ` (${s.museShare.reflex})` : ''}`, UI(500, 12), K.body) + 10;
+      if (has) rx -= t(`(${s.museShare.muse})`, MONO(400, 12), K.museHi) + 4;
+      rx -= t(pct + '%', MONO(500, 18), K.t1) + 7;
+    } else {
+      rx -= t('share not counted yet', UI(500, 12), K.t3) + 8;
+      rx -= t('–', MONO(500, 18), K.t2) + 7;
+    }
+    rx -= (draw ? caps(CALLER, rx, base - 1, 10, K.muse, 700, 0.1, 'right') : capsW(CALLER, 10, 700, 0.1)) + 13;
+    if (draw) vline(rx, y + 11, h - 20, K.line2);
+    return rx;
+  };
+  const natural = left(false, null);
+  const counts = natural + 12 <= right(false, true);
+  const rx = right(true, counts);
+  left(true, natural + 12 <= rx ? null : rx - 12);
+  return h;
+}
+
+/* ---------- 2. goal band ---------- */
+const GOAL_TAB = 120;
+function goalBand(y, draw) {
+  const gl = st.goal;
+  REG = [0, 1080, 'goal'];
+  if (gl.kind === 'milestones') {
+    const RH = 22, h = 10 + RH * 2 + 6;
+    if (!draw) return h;
+    rect(0, y, 1080, h, K.base);
+    hline(0, y + h - 1, 1080, K.line);
+    caps('GOAL', M, y + 22, 10, K.t3);
+    T(`${gl.done}/${gl.total}`, M + GOAL_TAB - 16, y + 22, MONO(500, 13), K.t2, 'right');
+    T(gl.title, M, y + 44, UI(600, 16), K.t1);
+    vline(M + GOAL_TAB - 4, y + 10, h - 20, K.line2);
+    // 6 columns x 2 rows in reading order; each column as wide as its widest cell, spare room shared out evenly
+    const gx = M + GOAL_TAB + 10, cols = 6, gap = 14;
+    const cell = (m) => {
+      const done = m.state === 'done', next = m.state === 'next';
+      const right = done ? m.done : next ? (m.progress || 'next') : '';
+      const rf = next ? MONO(500, 12) : MONO(400, 11);
+      const lf = UI(next ? 600 : 500, 13);
+      return { done, next, right, rf, lf, need: 21 + W(m.label, lf) + (right ? 8 + W(right, rf) : 0) };
+    };
+    const info = gl.list.map(cell);
+    const need = []; for (let c = 0; c < cols; c++) need.push(Math.max(...[0, 1].map((r) => (info[r * cols + c] || { need: 0 }).need)));
+    const spare = (X1 - gx - gap * (cols - 1)) - need.reduce((a, b) => a + b, 0);
+    const cw = need.map((n) => n + Math.max(0, spare) / cols);
+    let cx0 = gx; const colX = cw.map((w) => { const v = cx0; cx0 += w + gap; return v; });
+    gl.list.forEach((m, i) => {
+      const r = Math.floor(i / cols), c = i % cols, I = info[i];
+      const cx = colX[c], cy = y + 8 + r * RH, w = cw[c];
+      if (I.next) {
+        rect(cx - 6, cy, w + 12, RH - 2, K.panel2); rect(cx - 6, cy, 2, RH - 2, K.t1);
+        const pm = /^(\d+)\/(\d+)$/.exec(m.progress || '');
+        if (pm) { rect(cx - 4, cy + RH - 4, w + 10, 2, K.line2); rect(cx - 4, cy + RH - 4, (w + 10) * Number(pm[1]) / Number(pm[2]), 2, K.t1); }
+      }
+      icon(m.icon, cx, cy + 2, 16, I.done || I.next ? 1 : 0.3);
+      const rw = I.right ? W(I.right, I.rf) + 8 : 0;
+      const lab = ellip(m.label, I.lf, w - 21 - rw);
+      const lw = T(lab, cx + 21, cy + 15, I.lf, I.done ? K.t2 : I.next ? K.t1 : K.t4);
+      if (I.right) T(I.right, cx + w, cy + 15, I.rf, I.next ? K.t1 : K.t3, 'right');
+    });
+    return h;
+  }
+  if (gl.kind === 'counted') {
+    const h = 40;
+    if (!draw) return h;
+    rect(0, y, 1080, h, K.base);
+    hline(0, y + h - 1, 1080, K.line);
+    const base = y + 26;
+    let x = M;
+    x += caps('GOAL', x, base - 1, 10, K.t3) + 10;
+    if (gl.new) { const nw = capsW('NEW', 9) + 12; g.strokeStyle = K.t2; g.lineWidth = 1; g.beginPath(); g.rect(x + 0.5, base - 12.5, nw - 1, 15); g.stroke(); caps('NEW', x + 6, base - 1.5, 9, K.t1); x += nw + 10; }
+    x += T(cap1(gl.title), x, base, UI(600, 16), K.t1) + 18;
+    vline(x, y + 10, h - 20, K.line2); x += 18;
+    let rx = X1;
+    const pg = gl.previous;
+    if (pg) {
+      // the goal before this one, in words: its title, how far it got and what was next
+      const nx = (pg.list || []).find((m) => m.state === 'next') || (pg.list || []).find((m) => m.state !== 'done');
+      const tail = nx ? `next was ${nx.label}` : '';
+      if (tail) rx -= T(tail, rx, base, UI(500, 12), K.t3, 'right') + 8;
+      rx -= T(`${pg.done}/${pg.total}`, rx, base, MONO(500, 13), K.t2, 'right') + 7;
+      rx -= T(pg.title, rx, base, UI(500, 13), K.t2, 'right') + 8;
+      rx -= caps('BEFORE', rx, base - 1, 9, K.t3, 700, 0.09, 'right') + 18;
+      vline(rx, y + 10, h - 20, K.line2); rx -= 18;
+    }
+    const parts = gl.parts, pw = (rx - x - 16 * (parts.length - 1)) / parts.length;
+    parts.forEach((p, i) => {
+      const px = x + i * (pw + 16);
+      icon(p.icon, px, y + 10, 20);
+      const lw = T(p.label, px + 28, base, UI(500, 14), K.t2);
+      const nw = T(`${p.done}/${p.of}`, px + pw, base + 1, MONO(500, 18), K.t1, 'right');
+      const bx = px + 28 + lw + 14, bw = px + pw - nw - 12 - bx;
+      if (p.of <= 20) {
+        // one segment per thing to count
+        const sg = 3, segW = (bw - (p.of - 1) * sg) / p.of;
+        for (let k = 0; k < p.of; k++) rect(bx + k * (segW + sg), base - 9, segW, 6, k < p.done ? K.t1 : K.track);
+      } else {
+        rrect(bx, base - 9, bw, 6, 3, K.track);
+        if (p.done) rrect(bx, base - 9, Math.max(6, bw * p.done / p.of), 6, 3, K.t1);
+      }
+    });
+    return h;
+  }
+  // plain words: the server cannot count them, so no bar; the words are the goal
+  const h = 40;
+  if (draw) {
+    rect(0, y, 1080, h, K.base); hline(0, y + h - 1, 1080, K.line);
+    const base = y + 26;
+    let x = M + caps('GOAL', M, base - 1, 10, K.t3) + 10;
+    if (gl.title) { x += T(gl.title, x, base, UI(500, 14), K.t2) + 10; vline(x, y + 10, h - 20, K.line2); x += 12; }
+    const note = 'plain words: the server does not count them';
+    const nw = W(note, UI(500, 12));
+    T(note, X1, base, UI(500, 12), K.t3, 'right');
+    T(ellip(cap1(gl.text || gl.words || ''), UI(600, 16), X1 - nw - 24 - x), x, base, UI(600, 16), K.t1);
+  }
+  return h;
+}
+
+/* ---------- module header (one style everywhere): caps label in the speaker's colour, meta at the right ---------- */
+function head(x, y, w, label, color, meta, metaC = K.t3) {
+  caps(label, x, y + 10, 10, color);
+  if (meta) {
+    if (Array.isArray(meta)) { let rx = x + w; for (let i = meta.length - 1; i >= 0; i--) rx -= T(meta[i][0], rx, y + 10, MONO(400, 11), meta[i][1], 'right'); }
+    else T(meta, x + w, y + 10, MONO(400, 11), metaC, 'right');
+  }
+  hline(x, y + 15, w, K.line);
+  return HEAD;
+}
+
+/* ---------- 3. thinking band: the caller's why (quoted) and plan, or one honest line ---------- */
+const PLACEHOLDER_PLAN = /next part of the plan, as the goal says/;
+const WHY_GUT = 32;                    // between the why and the plan
+// The why is set as a quote on a measure that fits it: for 1-3 balanced lines (22 px, or 20 px when 3 lines at 22 do not
+// fit) the narrowest measure is found, and the plan takes the rest of the width. The candidate with the lowest band wins
+// (nothing cut first, then the two sides closest in height). So there is never a hole to the right of a short why.
+function thinkingLayout(maxPlan) {
+  const th = st.thinking;
+  const planOk = !!(th.plan && !PLACEHOLDER_PLAN.test(th.plan));
+  const metaW = capsW(`${CALLER} · WHY`, 10) + 24 + W(`call ${th.whyCall} · sent ${th.whyAt} · ${agoWords(th.lastCallAgoS ?? 0)}`, MONO(400, 11));
+  const planFor = (pw) => {
+    if (!planOk) return { ps: 14, pl: 19, plan: [], cut: false, ph: HEAD + 16 + ROW + 10 };
+    let ps = 14, plan = wrap(th.plan, UI(500, 14), pw);
+    if (plan.length > 6) { ps = 13; plan = wrap(th.plan, UI(500, 13), pw); }
+    const capN = Math.min(maxPlan, ps === 14 ? 6 : 7);
+    const cut = plan.length > capN;
+    plan = clamp(plan, capN, UI(500, ps), pw);
+    const pl = ps === 14 ? 19 : 18;
+    return { ps, pl, plan, cut, ph: HEAD + 16 + (plan.length - 1) * pl + 10 };
+  };
+  let best = null;
+  for (const ws of [22, 20]) for (const n of [1, 2, 3]) {
+    const f = UI(600, ws), qw = W('”', f) + 3;
+    let w;
+    if (n === 1) w = W(th.why, f);
+    else {
+      if (wrap(th.why, f, 640 - qw).length > n) continue;
+      let lo = 120, hi = 640 - qw;
+      for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; if (wrap(th.why, f, mid).length <= n) hi = mid; else lo = mid; }
+      w = hi;
+    }
+    const whyW = Math.max(Math.ceil((w + qw) / 4) * 4, Math.ceil(metaW / 4) * 4, 260);
+    if (whyW > 640) continue;
+    const why = wrap(th.why, f, whyW - qw);
+    if (why.length !== n && !(n === 1 && why.length === 1)) continue;
+    const planX = M + whyW + WHY_GUT, planW = X1 - planX;
+    if (planW < 360) continue;
+    const P = planFor(planW);
+    const wl = ws === 22 ? 28 : 26;
+    const whyH = HEAD + 4 + ws + (why.length - 1) * wl + 12;
+    const h = Math.max(whyH, P.ph, 76);
+    const score = h + (P.cut ? 1000 : 0) + (ws === 20 ? 8 : 0) + Math.abs(whyH - P.ph) * 0.3;
+    if (!best || score < best.score) best = { score, ws, wl, why, whyW, whyH, planX, planW, h, planOk, ...P };
+  }
+  if (!best) {
+    // a why too long for 3 lines at 20 px on the widest measure: cut at a word (whys are at most 140 characters, so rare)
+    const f = UI(600, 20), whyW = 640, why = clamp(wrap(th.why, f, whyW - 12), 3, f, whyW - 12);
+    const planX = M + whyW + WHY_GUT, P = planFor(X1 - planX);
+    const whyH = HEAD + 4 + 20 + 2 * 26 + 12;
+    best = { ws: 20, wl: 26, why, whyW, whyH, planX, planW: X1 - planX, h: Math.max(whyH, P.ph, 76), planOk, ...P };
+  }
+  return best;
+}
+function thinkingBand(y, draw, maxPlan = 7) {
+  const th = st.thinking;
+  if (!th.why) return noWhyBand(y, draw);
+  const X = thinkingLayout(maxPlan);
+  const h = X.h;
+  if (!draw) { EARLIER_FROM = bandEarlier(X, 0, h, X.plan.length ? HEAD + 16 + (X.plan.length - 1) * X.pl + 21 : HEAD + 13, false); return h; }
+  REG = [0, X.planX - WHY_GUT / 2, 'why'];
+  rect(0, y, 1080, h, K.base);
+  hline(0, y + h - 1, 1080, K.line);
+  head(LX, y, X.whyW, `${CALLER} · WHY`, K.muse, [[`call ${th.whyCall} · sent ${th.whyAt} · `, K.t3], [agoWords(th.lastCallAgoS ?? 0), K.t2]]);
+  // the why as quoted speech: the opening mark hangs in the margin, so the words align with the grid
+  let yy = y + HEAD + 4 + X.ws;
+  const qf = UI(600, X.ws);
+  T('“', LX - W('“', qf) - 1, yy, qf, K.muse);
+  X.why.forEach((l, i) => {
+    const lw = T(l, LX, yy, qf, K.t1);
+    if (i === X.why.length - 1) T('”', LX + lw + 1, yy, qf, K.muse);
+    yy += X.wl;
+  });
+  REG = [X.planX - WHY_GUT / 2, 1080, 'plan'];
+  if (X.plan.length) {
+    head(X.planX, y, X.planW, 'PLAN', K.muse, `sent with call ${th.whyCall}`);
+    let py = y + HEAD + 16;
+    X.plan.forEach((l) => { T(l, X.planX, py, UI(500, X.ps), K.museInk); py += X.pl; });
+    bandEarlier(X, y, h, py - X.pl + 21, true);
+  } else {
+    // no plan: say so, and give the space to the caller's earlier whys
+    head(X.planX, y, X.planW, 'PLAN', K.t3, 'none sent with this call');
+    bandEarlier(X, y, h, y + HEAD + 13, true);
+  }
+  return h;
+}
+// The caller's earlier whys in the thinking band: under a short plan they run on across the line(s) left; with no plan
+// they are listed one per line. Returns how many it shows; the columns' EARLIER WHYS module goes on from there.
+let EARLIER_FROM = 0;
+function bandEarlier(X, y, h, ey, draw) {
+  const et = st.earlierThinking || [];
+  let shown = 0;
+  if (!et.length || ey > y + h - 7) return 0;
+  const tf = MONO(400, 11), wf = UI(500, 12);
+  if (!X.plan.length) {
+    if (draw) caps(`EARLIER WHYS · ${et.length}`, X.planX, ey, 9, K.muse);
+    ey += ROW;
+    for (const e of et) {
+      if (ey > y + h - 7) break;
+      if (draw) { T(e.at, X.planX + 34, ey, tf, K.t3, 'right'); T(ellip(e.why, wf, X.planW - 44), X.planX + 44, ey, wf, K.museInk); }
+      ey += ROW; shown++;
+    }
+    return shown;
+  }
+  const lw = (draw ? caps('EARLIER', X.planX, ey - 1, 8, K.muse, 700, 0.1) : capsW('EARLIER', 8, 700, 0.1)) + 10;
+  const x0 = X.planX + lw, x1 = X.planX + X.planW;
+  let cx = x0;
+  for (const e of et) {
+    const need = W(e.at, tf) + 6 + W(e.why, wf);
+    const last = ey + ROW > y + h - 7;
+    if (cx > x0 && cx + need > x1 && !(last && x1 - cx >= 150)) {
+      if (last) break;
+      ey += ROW; cx = x0;
+    }
+    cx += (draw ? T(e.at, cx, ey, tf, K.t3) : W(e.at, tf)) + 6;
+    const t = ellip(e.why, wf, x1 - cx);
+    cx += (draw ? T(t, cx, ey, wf, K.museDim) : W(t, wf)) + 18;
+    shown++;
+    if (cx >= x1 - 40) { if (last) break; ey += ROW; cx = x0; }
+  }
+  return shown;
+}
+function noWhyMessage() {
+  const lp = st.thinking.latestPlayCall || { no: st.currentCall.no, tool: st.currentCall.tool, sent: st.currentCall.sent };
+  const nWhy = st.raw.entries.filter((e) => e.hasWhy).length;
+  return nWhy === 0
+    ? `${cap1(callerWord)} sent no why or plan with ${lp.tool} call ${lp.no} (${lp.sent}), nor with any of its ${st.raw.total} calls this game.`
+    : `${cap1(callerWord)} sent no why or plan with ${lp.tool} call ${lp.no} (${lp.sent}).`;
+}
+function noWhyBand(y, draw) {
+  const h = NOWHY_H;
+  if (!draw) return h;
+  REG = [0, 1080, 'nowhy'];
+  rect(0, y, 1080, h, K.base);
+  hline(0, y + h - 1, 1080, K.line);
+  const b = y + 19;
+  let x = LX;
+  x += caps(`${CALLER} · WHY`, x, b - 0.5, 10, K.muse) + 10;
+  ring(x + 5, b - 4.5, 4, K.t4, 1.5); x += 16;
+  T(ellip(noWhyMessage(), UI(500, 13), X1 - x), x, b, UI(500, 13), K.t3);
+  return h;
+}
+
+/* ---------- 4a. NOW (the current call): Muse's orders in violet, the body's execution in amber ---------- */
+function drawJsonLine(prefix, json, x, y, size, maxW, dim = false) {
+  const f = MONO(400, size), cw = W('0000000000', f) / 10;
+  const maxC = Math.floor(maxW / cw);
+  const runs = [{ t: prefix + ' ', c: dim ? K.t3 : K.museHi }].concat(json ? jsonRuns(json) : []);
+  let used = 0, cx = x;
+  for (const r of runs) {
+    if (used >= maxC) break;
+    let t = r.t;
+    if (used + t.length > maxC) t = t.slice(0, Math.max(0, maxC - used - 1)) + '…';
+    T(t, cx, y, f, dim ? K.t4 : r.c); cx += t.length * cw; used += t.length;
+  }
+  return cx - x;
+}
+// a server answer under a call: "←" and the answer's time in the number gutter, the words where step labels start
+function answerRow(x, b, w, at, text) {
+  T('←', x + 18, b, MONO(400, 12), K.t3, 'center');
+  T(at, x + 66, b, MONO(400, 11), K.t3, 'right');
+  T(ellip(text, MONO(400, 12), w - 12 - 76), x + 76, b, MONO(400, 12), K.ans);
+}
+function latestRun() {
+  // the newest call when it is not the current call (polls while a call runs, set_goal, ...)
+  const cc = st.currentCall, r0 = st.raw.runs[0];
+  const ccN = (st.raw.entries.find((e) => e.playCallNo === cc.no) || {}).n;
+  return r0 && !(r0.ns || []).includes(ccN) ? r0 : null;
+}
+// opts: { latestAns, interim } are fillers the layout turns on when the column has room
+function nowModule(x, y, w, draw, opts = {}) {
+  const cc = st.currentCall;
+  let yy = y;
+  const HH = 32;
+  if (draw) {
+    REG = [0, DIV, 'now'];
+    rect(x, yy, w, HH, K.museDeep);
+    const running = cc.state === 'running';
+    const tag = running ? 'NOW' : 'LAST';
+    const nw = capsW(tag, 11) + 24;
+    rect(x, yy, nw, HH, running ? K.muse : K.t2);
+    const b = yy + 21;
+    caps(tag, x + 12, b, 11, K.base);
+    let cx = x + nw + 12;
+    cx += caps('CALL ' + cc.no, cx, b, 11, K.t2) + 10;
+    cx += T(cc.tool, cx, b + 1, MONO(500, 16), K.t1) + 10;
+    cx += T(`sent ${cc.sent}`, cx, b, MONO(400, 12), K.t3);
+    let rl;
+    if (running) {
+      const rw = T(cc.running, x + w - 12, b + 2, MONO(500, 20), K.t1, 'right');
+      rl = x + w - 12 - rw - 8 - caps('RUNNING', x + w - 12 - rw - 8, b, 10, K.t2, 700, 0.09, 'right');
+    } else {
+      const rw = T(cc.doneIn, x + w - 12, b + 1, MONO(500, 16), cc.state === 'ok' ? K.ok : K.fail, 'right');
+      rl = x + w - 12 - rw - 8 - caps(cc.state === 'ok' ? 'DONE IN' : 'ENDED', x + w - 12 - rw - 8, b, 10, cc.state === 'ok' ? K.ok : K.fail, 700, 0.09, 'right');
+    }
+    // step tracker, only for 2+ steps: one segment per step the caller sent
+    const n = cc.steps.length;
+    if (n > 1) {
+      const sl = cx + 18, sr = rl - 16;
+      const tw = Math.min(sr - sl, n * 30);
+      if (tw >= 40) {
+        const done = cc.steps.filter((q) => q.state === 'ok').length;
+        const lab = `${done}/${n}`;
+        const lw = W(lab, MONO(400, 11));
+        const gx = sr - tw, segW = (tw - (n - 1) * 3) / n;
+        if (gx - sl > lw + 8) T(lab, gx - 8, b, MONO(400, 11), K.t3, 'right');
+        cc.steps.forEach((q, i) => {
+          const sx = gx + i * (segW + 3), sy = yy + 14;
+          rect(sx, sy, segW, 4, K.museTrack);
+          if (q.state === 'ok') rect(sx, sy, segW, 4, K.ok);
+          else if (q.state === 'run' && q.sub && q.sub.of) rect(sx, sy, Math.max(3, segW * q.sub.done / q.sub.of), 4, K.muse);
+          else if (q.state === 'run') { g.strokeStyle = K.muse; g.lineWidth = 1; g.strokeRect(sx + 0.5, sy + 0.5, segW - 1, 3); } // running, amount unknown: hollow
+          else if (q.state === 'fail') rect(sx, sy, segW, 4, K.fail);
+        });
+      }
+    }
+  }
+  yy += HH;
+  const added = cc.addedByServer || [];
+  const rows = [];
+  for (const sp of cc.steps) { for (const a of added) if (a.before === sp.n) rows.push({ server: true, raw: a.raw }); rows.push(sp); }
+  for (const sp of rows) {
+    if (sp.server) {
+      // a step the server's check added: not the caller's, no number, drawn apart
+      if (draw) {
+        const cy = yy + 11;
+        hline(x, yy + 21, w, K.line);
+        T('+', x + 34, cy + 5, MONO(500, 13), K.t3, 'center');
+        T(sp.raw, x + 76, cy + 4, MONO(400, 12), K.t3);
+        caps('ADDED BY THE SERVER', x + w - 12, cy + 4, 9, K.t4, 700, 0.09, 'right');
+      }
+      yy += 22;
+      continue;
+    }
+    const run = sp.state === 'run';
+    const rowH = run ? 54 : 24;
+    if (draw) {
+      if (run) rect(x, yy, w, rowH, K.museTint);
+      hline(x, yy + rowH - 1, w, K.line);
+      if (run) {
+        const cy = yy + 17;
+        T(String(sp.n), x + 14, cy + 4, MONO(400, 12), K.t3);
+        ring(x + 34, cy, 6, K.muse, 2); dot(x + 34, cy, 2.5, K.muse);
+        icon(sp.icon, x + 48, cy - 10, 20);
+        const lw = T(sp.say || sp.raw, x + 76, cy + 6, UI(600, 18), K.t1);
+        const rawX = x + 76 + lw + 12;
+        let rEdge = x + w - 12;
+        if (sp.sub && sp.sub.of) rEdge -= T(`${sp.sub.done} of ${sp.sub.of}`, rEdge, cy + 6, MONO(500, 15), K.t1, 'right');
+        else rEdge -= T(sp.elapsed, rEdge, cy + 6, MONO(500, 15), K.t1, 'right');
+        drawJsonLine(sp.skill, sp.args ? JSON.stringify(sp.args) : '', rawX, cy + 5, 12, rEdge - 14 - rawX);
+        // the body doing it: its own words, its progress
+        const by = yy + 41;
+        const tg = caps('BODY', x + 76, by, 8, K.body, 700, 0.1) + 7;
+        const sw = T(sp.sub ? sp.sub.text : 'working on it', x + 76 + tg, by, UI(500, 13), K.bodyHi);
+        const counted = sp.sub && sp.sub.of;
+        const ew = counted ? T(sp.elapsed, x + w - 12, by, MONO(400, 13), K.t2, 'right') + 14 : 0;
+        const bx = x + 76 + tg + sw + 14, bw = x + w - 12 - ew - bx;
+        if (counted) {
+          rrect(bx, by - 6, bw, 5, 2.5, K.track);
+          rrect(bx, by - 6, Math.max(5, bw * sp.sub.done / sp.sub.of), 5, 2.5, K.body);
+        } else {
+          g.setLineDash([2, 4]); g.strokeStyle = 'rgba(239,164,67,0.55)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(bx, by - 3.5); g.lineTo(bx + bw, by - 3.5); g.stroke(); g.setLineDash([]);
+        }
+      } else {
+        const cy = yy + 12;
+        const queued = sp.state === 'queued';
+        T(String(sp.n), x + 14, cy + 4, MONO(400, 12), K.t3);
+        if (sp.state === 'ok') check(x + 34, cy, K.ok, 0.9);
+        else if (sp.state === 'fail') cross(x + 34, cy, K.fail);
+        else ring(x + 34, cy, 5, K.t4, 1.5);
+        icon(sp.icon, x + 49, cy - 9, 18, queued ? 0.4 : 1);
+        const lw = T(sp.say || sp.raw, x + 76, cy + 5, UI(600, 15), queued ? K.t3 : K.t2);
+        const rawX = x + 76 + lw + 12;
+        let rEdge = x + w - 12;
+        if (queued) rEdge -= caps('QUEUED', rEdge, cy + 4, 9, K.t4, 700, 0.09, 'right');
+        else if (sp.took) rEdge -= T(sp.took, rEdge, cy + 5, MONO(400, 13), K.t2, 'right');
+        const room = rEdge - 14 - rawX;
+        const rr = drawJsonLine(sp.skill, sp.args ? JSON.stringify(sp.args) : '', rawX, cy + 4, 12, room, queued);
+        if (sp.state === 'ok' && sp.result && (room - rr - 12 >= W('→ ' + sp.result, UI(500, 12)) || room - rr - 12 >= 160)) T(ellip('→ ' + sp.result, UI(500, 12), room - rr - 12), rawX + rr + 12, cy + 4, UI(500, 12), K.t3);
+      }
+    }
+    yy += rowH;
+  }
+  // filler: the server's interim answer to this running call
+  if (opts.interim && cc.state === 'running' && cc.serverAnswer) {
+    if (draw) answerRow(x, yy + 14, w, cc.serverAnswer.at, cc.serverAnswer.text);
+    yy += 20;
+  }
+  const r0 = latestRun();
+  if (r0) {
+    const e0 = st.raw.entries[0];
+    if (draw) {
+      hline(x, yy, w, K.line);
+      const cy = yy + 19;
+      caps('LATEST', x + 14, cy, 9, K.t3);
+      let cx = x + 76;
+      cx += T(r0.tool, cx, cy, MONO(500, 13), K.museHi) + 8;
+      const waiting = r0.newestState === 'waiting';
+      const right = waiting ? `waiting ${mmss(e0.answer.waitingS)}` : `${agoWords(r0.lastAgoS)} · answered`;
+      const rw = T(right, x + w - 12, cy, MONO(500, 13), waiting ? K.t1 : K.t2, 'right');
+      const extra = r0.count > 1 ? `×${r0.count}` : '';
+      const since = r0.count > 1 ? ` since ${r0.firstSent}` : '';
+      const room = x + w - 12 - rw - 16 - cx - (extra ? W(extra, MONO(500, 12)) + 10 + W(since, MONO(400, 12)) : 0);
+      const a = ellip(r0.args, MONO(400, 13), room);
+      cx += T(a, cx, cy, MONO(400, 13), K.jStr) + 10;
+      if (extra) {
+        const ew = W(extra, MONO(500, 12));
+        rrect(cx - 3, cy - 11, ew + 6, 15, 3, K.chip);
+        cx += T(extra, cx, cy, MONO(500, 12), K.t1);
+        T(since, cx, cy, MONO(400, 12), K.t2);
+      }
+    }
+    yy += 28;
+    // filler: the answer the newest call got last
+    if (opts.latestAns && r0.latestAnswer) {
+      if (draw) answerRow(x, yy + 9, w, r0.latestAnswerAt || '', r0.latestAnswer);
+      yy += 18;
+    }
+  }
+  return yy - y;
+}
+
+/* ---------- 4b. right column: the body's advice, the body and the world, earlier whys ---------- */
+function adviceLines(w, budget) {
+  // first item at least 3 lines (or all it has), others at least 1; spare lines go to the items in order
+  const items = (st.advice.items || []), f2 = UI(500, 14);
+  const full = items.map((it) => wrap(cap1(it.text), f2, w - 12));
+  const n = full.map((l, i) => Math.min(l.length, i === 0 ? 3 : 1));
+  let spare = budget - n.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < n.length && spare > 0; i++) { const add = Math.min(spare, full[i].length - n[i]); n[i] += add; spare -= add; }
+  return full.map((l, i) => clamp(l, n[i], f2, w - 12));
+}
+const adviceMinLines = () => { const items = st.advice.items || []; return items.map((it, i) => Math.min(wrap(cap1(it.text), UI(500, 14), RW - 12).length, i === 0 ? 3 : 1)).reduce((a, b) => a + b, 0); };
+const adviceFullLines = () => (st.advice.items || []).map((it) => wrap(cap1(it.text), UI(500, 14), RW - 12).length).reduce((a, b) => a + b, 0);
+function adviceVerdict() {
+  // [glyph, words, colour]; a verdict about older advice is never shown against the current one
+  const ad = st.advice, items = ad.items || [], at = items[0].givenAt;
+  const who = cap1(callerWord);
+  if (ad.follow) return ad.follow.ok ? ['ok', `${who} followed it`, K.ok] : ['fail', `${who} went on without it`, K.fail];
+  if (ad.lastFollow && ad.lastFollow.atS >= items[0].givenAtS) return ad.lastFollow.ok ? ['ok', `${who} followed it · call at ${ad.lastFollow.at}`, K.ok] : ['fail', `${who} went on without it · call at ${ad.lastFollow.at}`, K.fail];
+  const lastPlay = st.raw.entries.find((e) => e.playCallNo != null);
+  if (!lastPlay || lastPlay.sentS <= items[0].givenAtS) return ['none', `No play call from ${callerWord} since ${at}`, K.t3];
+  return ['none', 'No verdict logged', K.t3];
+}
+function adviceModule(x, y, w, draw, budget) {
+  const items = st.advice.items || [];
+  if (draw) REG = [DIV, 1080, 'advice'];
+  if (!items.length) {
+    if (draw) { head(x, y, w, 'BODY · ADVICE', K.body); T(`None given to ${callerWord} yet`, x, y + HEAD + 13, UI(500, 13), K.t3); }
+    return HEAD + 22;
+  }
+  let yy = y;
+  const at = items[0].givenAt, age = NOW_S - items[0].givenAtS;
+  if (draw) head(x, yy, w, 'BODY · ADVICE', K.body, [[`${at} · `, K.t3], [agoWords(age), age > 300 ? K.bodyHi : K.t3]]);
+  yy += HEAD;
+  const f1 = UI(600, 14), f2 = UI(500, 14);
+  const L = adviceLines(w, budget);
+  const [kind, words, vc] = adviceVerdict();
+  const vW = 12 + W(words, UI(500, 12));
+  const lastL = L[L.length - 1], lastW = W(lastL[lastL.length - 1], f2) + 12;
+  const inline = lastW + 28 + vW <= w; // the verdict sits at the end of the advice's last line
+  items.forEach((it, idx) => {
+    const gist = it.gist && cap1(it.text).startsWith(it.gist) ? it.gist : '';
+    const lines = L[idx];
+    if (draw) {
+      rect(x, yy + 4, 3, 13 + (lines.length - 1) * ROW, K.body);
+      lines.forEach((l, li) => {
+        const by = yy + 15 + li * ROW;
+        if (li === 0 && gist && l.startsWith(gist)) { const gw = T(gist, x + 12, by, f1, K.t1); T(l.slice(gist.length), x + 12 + gw, by, f2, K.t2); }
+        else T(l, x + 12, by, f2, K.t2);
+      });
+    }
+    yy += lines.length * ROW + 3;
+  });
+  if (draw) {
+    const b = inline ? yy - 3 - ROW + 15 : yy + 14;
+    const vx = inline ? x + w - vW : x;
+    if (kind === 'ok') check(vx + 5, b - 4, K.ok, 0.75);
+    else if (kind === 'fail') cross(vx + 5, b - 4, K.fail, 3);
+    else ring(vx + 5, b - 4, 3.5, K.t4, 1.5);
+    T(ellip(words, UI(500, 12), w - 12), vx + 12, b, UI(500, 12), vc);
+  }
+  if (!inline) yy += 20;
+  return yy - y;
+}
+const EV_TX = 84; // event text starts here (time right-aligned at +34, tag at +42)
+const WHO = { body: ['BODY', K.body], world: ['WORLD', K.world], server: ['SERVER', K.t3] };
+// events, newest first, one line each; spare rows let the newest wrap (up to 3 lines)
+function eventsPlan(w, h) {
+  const ev = st.events || [];
+  if (!ev.length || h < HEAD + ROW) return null;
+  const f = UI(500, 12), tw = w - EV_TX;
+  const rows = Math.floor((h - HEAD) / ROW);
+  const n = Math.min(ev.length, rows);
+  let spare = rows - n;
+  const full = ev.slice(0, n).map((e) => wrap(cap1(e.logged && ev.length <= 4 ? e.logged : e.text), f, tw));
+  const k = full.map(() => 1);
+  for (let pass = 2; pass <= 3; pass++) for (let i = 0; i < n && spare > 0; i++) if (full[i].length >= pass && k[i] < pass) { k[i] = pass; spare--; }
+  const L = full.map((l, i) => clamp(l, k[i], f, tw));
+  return { n, L, h: HEAD + L.reduce((a, l) => a + l.length, 0) * ROW };
+}
+function eventsModule(x, y, w, h, draw) {
+  const P = eventsPlan(w, h); if (!P) return 0;
+  if (draw) {
+    REG = [DIV, 1080, 'events'];
+    const ev = st.events;
+    const who = new Set(ev.slice(0, P.n).map((e) => e.who));
+    const lab = ['body', 'world', 'server'].filter((k) => k !== 'server' || who.has('server')).map((k) => k.toUpperCase()).join(' · ');
+    head(x, y, w, lab, K.body, `${ev.length} logged · not ${callerWord}`);
+    let yy = y + HEAD + 13;
+    P.L.forEach((lines, i) => {
+      const e = ev[i];
+      T(e.at, x + 34, yy, MONO(400, 11), K.t3, 'right');
+      const [tag, tc] = WHO[e.who] || ['', K.t3];
+      caps(tag, x + 42, yy - 1, 8, tc, 700, 0.08);
+      lines.forEach((l) => { T(l, x + EV_TX, yy, UI(500, 12), e.kind === 'milestone' ? K.t1 : K.t2); yy += ROW; });
+    });
+  }
+  return P.h;
+}
+const earlierRest = () => (st.earlierThinking || []).slice(EARLIER_FROM);
+function earlierModule(x, y, w, h, draw) {
+  const et = earlierRest();
+  if (!et.length || h < HEAD + ROW) return 0;
+  const n = Math.min(et.length, Math.floor((h - HEAD) / ROW));
+  if (draw) {
+    REG = x < DIV ? [0, DIV, 'earlier'] : [DIV, 1080, 'earlier'];
+    head(x, y, w, CALLER + ' · EARLIER WHYS', K.muse, EARLIER_FROM ? `${et.length} more before` : `${et.length} before`);
+    for (let i = 0; i < n; i++) {
+      const e = et[i], yy = y + HEAD + i * ROW + 13;
+      T(e.at, x + 34, yy, MONO(400, 11), K.t3, 'right');
+      T(ellip(e.why, UI(500, 12), w - 44), x + 44, yy, UI(500, 12), K.museInk);
+    }
+  }
+  return HEAD + n * ROW;
+}
+
+/* ---------- 5. RAW: every call as sent, newest first, the server's answer after "←" ---------- */
+const RAW_F = MONO(400, RAW_FS);
+let RAW_CW = 0, RAW_FIRST = 0, RAW_REST = 0;
+function rawEntryRuns(r) {
+  // call: the tool and its arguments exactly as sent; count: the fold of identical calls; tail: the server's answer
+  const call = [{ t: r.tool, c: K.museHi, w: 500 }, { t: ' ', c: K.t3 }];
+  for (const j of jsonRuns(r.args)) call.push(j);
+  const count = [];
+  if (r.count > 1) { count.push({ t: '  ', c: K.t3 }); count.push({ t: `×${r.count}`, c: K.t1, w: 500, chip: true }); count.push({ t: ` ${r.firstSent}–${r.lastSent}`, c: K.t2 }); }
+  const e0 = st.raw.entries.find((e) => e.n === r.ns[0]);
+  const tail = [{ t: '  ← ', c: K.t3 }];
+  if (r.newestState === 'waiting') {
+    tail.push({ t: `waiting ${mmss(e0.answer.waitingS)}`, c: K.t1, w: 500 });
+    if (r.latestAnswer) { tail.push({ t: ` · last answer ${r.latestAnswerAt}: `, c: K.t3 }); tail.push({ t: r.latestAnswer, c: K.ans }); }
+  } else if (r.newestState === 'running') {
+    tail.push({ t: e0.answer.hudText || `running ${st.currentCall.running}`, c: K.t1, w: 500 });
+    if (r.latestAnswer) { tail.push({ t: ` · ${r.latestAnswerAt}: `, c: K.t3 }); tail.push({ t: r.latestAnswer, c: K.ans }); }
+  } else {
+    if (e0 && e0.answer.code) tail.push({ t: e0.answer.code + ' ', c: K.fail, w: 500 });
+    const txt = r.latestAnswer || '';
+    const m = txt.match(/^(.*?): ok(:|\b)(.*)$/);
+    if (m) { tail.push({ t: m[1] + ': ', c: K.ans }); tail.push({ t: 'ok', c: K.ok, w: 500 }); tail.push({ t: m[2] + m[3], c: K.ans }); }
+    else tail.push({ t: txt, c: K.ans });
+  }
+  return { call, count, tail };
+}
+const flat = (runs) => { const o = []; for (const r of runs) for (const ch of r.t) o.push({ ch, c: r.c, w: r.w || 400, chip: !!r.chip }); return o; };
+const ELL = () => ({ ch: '…', c: K.t3, w: 400, chip: false });
+// wrap at JSON separators and spaces, never inside a token unless a token is longer than the line
+function wrapChars(chars, first, rest) {
+  const lines = []; let i = 0, lim = first;
+  while (i < chars.length) {
+    let end = Math.min(chars.length, i + lim);
+    if (end < chars.length) {
+      let strong = -1, weak = -1;
+      for (let k = end; k > i + Math.floor(lim * 0.55); k--) {
+        const ch = chars[k - 1].ch, nx = chars[k].ch;
+        if (chars[k - 1].chip || chars[k].chip) continue;
+        if (strong < 0 && (ch === ' ' || ch === ',')) strong = k;
+        if (weak < 0 && (ch === ':' || ch === '{' || ch === '[' || ch === ';' || nx === '"' || nx === '{')) weak = k;
+        if (strong >= 0) break;
+      }
+      const b = strong >= 0 ? strong : weak;
+      if (b > i) end = b;
+    }
+    lines.push(chars.slice(i, end)); i = end;
+    while (i < chars.length && chars[i].ch === ' ') i++;
+    lim = rest;
+  }
+  return lines;
+}
+function wrapEntry(e) { return wrapChars(flat(e.call.concat(e.count, e.tail)), RAW_FIRST, RAW_REST); }
+// cut an entry to n lines. A short call is kept whole and its answer is cut at a word; a long call is cut at a separator
+// in its arguments, so the fold count and the start of the answer stay visible
+function cutMono(e, n) {
+  const cap = RAW_FIRST + (n - 1) * RAW_REST - 2;
+  const call = flat(e.call), count = flat(e.count), tail0 = flat(e.tail);
+  const cutTail = (max) => {
+    if (tail0.length <= max) return tail0;
+    let k = Math.max(6, max - 1); const sp = tail0.slice(0, k).map((o) => o.ch).lastIndexOf(' ');
+    if (sp > k * 0.6) k = sp;
+    return tail0.slice(0, k).concat([ELL()]);
+  };
+  const fit = (chars) => wrapChars(chars, RAW_FIRST, RAW_REST);
+  if (call.length + count.length <= cap * 0.55) {
+    for (let max = cap - call.length - count.length; ; max -= 4) {
+      const lines = fit(call.concat(count, cutTail(max)));
+      if (lines.length <= n || max < 10) return lines.slice(0, n);
+    }
+  }
+  const tail = cutTail(Math.floor(cap * 0.45));
+  for (let keep = cap - tail.length - count.length - 1; ; keep -= 4) {
+    let k = Math.max(0, Math.min(keep, call.length));
+    if (k < call.length) for (let j = k; j > Math.max(0, k - 14); j--) { const ch = call[j - 1].ch; if (ch === ',' || ch === ':' || ch === '{' || ch === '[' || ch === ' ') { k = j; break; } }
+    let kk = k; while (kk > 0 && k < call.length && call[kk - 1].ch === ' ') kk--;
+    const lines = fit(call.slice(0, kk).concat(k < call.length ? [ELL()] : [], count, tail));
+    if (lines.length <= n || keep <= 0) return lines.slice(0, n);
+  }
+}
+function drawMonoLine(chars, x, y) {
+  let k = 0;
+  while (k < chars.length) {
+    let j = k; while (j < chars.length && chars[j].c === chars[k].c && chars[j].w === chars[k].w && chars[j].chip === chars[k].chip) j++;
+    const s = chars.slice(k, j).map((o) => o.ch).join('');
+    if (chars[k].chip) rrect(x + k * RAW_CW - 3, y - 11, (j - k) * RAW_CW + 6, 15, 3, K.chip);
+    T(s, x + k * RAW_CW, y, MONO(chars[k].w, RAW_FS), chars[k].c);
+    k = j;
+  }
+}
+let RAW_ITEMS = null;
+function rawItems() {
+  if (RAW_ITEMS) return RAW_ITEMS;
+  RAW_CW = W('0000000000', RAW_F) / 10;
+  RAW_FIRST = Math.floor((X1 - RAW_TX) / RAW_CW);
+  RAW_REST = RAW_FIRST - RAW_INDENT;
+  RAW_ITEMS = st.raw.runs.map((r) => { const e = rawEntryRuns(r); return { r, e, full: wrapEntry(e) }; });
+  return RAW_ITEMS;
+}
+const rawNeedFull = () => rawItems().reduce((a, it) => a + it.full.length, 0);
+// Lines go out in this order: the newest call in full (up to 4 lines), one line each for the next three, the 2nd up to
+// 2, one more entry, the 3rd up to 2, one more, the 2nd up to 3, one more, the 3rd up to 3, the 4th up to 2, then one
+// line for every older entry. Lines left once every entry shows go to the cut entries, newest first.
+const RAW_ORDER = [[0, 4], [1, 1], [2, 1], [3, 1], [1, 2], [4, 1], [2, 2], [5, 1], [1, 3], [6, 1], [2, 3], [3, 2]];
+function rawPlan(nLines) {
+  const items = rawItems(), N = items.length;
+  const alloc = new Array(N).fill(0);
+  let used = 0;
+  const give = (i, upTo) => { if (i >= N || used >= nLines) return; const add = Math.max(0, Math.min(Math.min(items[i].full.length, upTo) - alloc[i], nLines - used)); alloc[i] += add; used += add; };
+  for (const [i, c] of RAW_ORDER) give(i, c);
+  for (let i = 7; i < N; i++) give(i, 1);
+  for (let i = 0; i < N && used < nLines; i++) if (alloc[i]) give(i, items[i].full.length);
+  const shown = [];
+  for (let i = 0; i < N && alloc[i]; i++) shown.push({ it: items[i], n: alloc[i], lines: alloc[i] < items[i].full.length ? cutMono(items[i].e, alloc[i]) : items[i].full });
+  return { shown, used };
+}
+function rawModule(y, nLines) {
+  REG = [0, 1080, 'raw'];
+  const P = rawPlan(nLines);
+  rect(0, y, 1080, 1080 - y, K.band);
+  hline(0, y, 1080, K.line);
+  const hb = y + 16;
+  const lw = caps(`${CALLER} · RAW CALLS`, M, hb, 10, K.muse);
+  T('exactly as sent, newest first   ← the server’s answer', M + lw + 12, hb, MONO(400, 11), K.t3);
+  const folded = st.raw.total - st.raw.runs.length;
+  const hiddenRuns = st.raw.runs.slice(P.shown.length);
+  const hidden = hiddenRuns.reduce((a, r) => a + r.count, 0);
+  const a0 = hidden ? hiddenRuns[hiddenRuns.length - 1].firstSent : '', a1 = hidden ? hiddenRuns[0].lastSent : '';
+  const range = hidden ? (a0 === a1 ? ` (${a0})` : ` (${a0}–${a1})`) : '';
+  T(`${st.raw.total} calls${folded ? ` · ${folded} repeats folded` : ''}${hidden ? ` · ${hidden} older below${range}` : ''}`, X1, hb, MONO(400, 11), K.t3, 'right');
+  let ly = y + RAW_HEAD;
+  P.shown.forEach(({ it, n, lines }, i) => {
+    const r = it.r;
+    const top = ly, hgt = n * RAW_LH;
+    if (i === 0) { rect(0, top, 1080, hgt, K.museTint); rect(0, top, 3, hgt, K.muse); }
+    else if (i % 2 === 1) rect(0, top, 1080, hgt, K.zebra);
+    const recent = r.lastAgoS < RECENT_S;
+    let b = top + 13;
+    T(rawWhen(r.lastAgoS, r.lastSent), RAW_TIME_R, b, MONO(recent ? 500 : 400, RAW_FS - 1), recent ? K.t1 : K.t3, 'right');
+    for (let li = 0; li < n; li++) { drawMonoLine(lines[li], RAW_TX + (li ? RAW_INDENT * RAW_CW : 0), b); b += RAW_LH; }
+    ly += hgt;
+  });
+  return P;
+}
+const rawH = (n) => RAW_HEAD + n * RAW_LH + RAW_BOT;
+
+/* ---------- layout: measured, no state switches ---------- */
+// left column: NOW, then fillers (the newest call's last answer, the running call's interim answer, earlier whys)
+function packLeft(H, allowEarlier) {
+  const opts = {};
+  let used = nowModule(LX, 0, LW, false, opts);
+  if (used > H) return null;
+  const r0 = latestRun();
+  if (r0 && r0.latestAnswer && used + 18 <= H) { opts.latestAns = true; used += 18; }
+  const cc = st.currentCall;
+  if (cc.state === 'running' && cc.serverAnswer && used + 20 <= H) { opts.interim = true; used += 20; }
+  let earlier = 0;
+  if (allowEarlier && earlierRest().length && H - used >= GAP + HEAD + ROW) { earlier = Math.min(earlierRest().length, Math.floor((H - used - GAP - HEAD) / ROW)); used += GAP + HEAD + earlier * ROW; }
+  return { opts, used, earlier, gap: H - used };
+}
+// right column: advice (its minimum always), then events, then earlier whys; the smallest gap wins, advice lines first
+function packRight(H, allowEarlier) {
+  const nItems = (st.advice.items || []).length;
+  const bMin = adviceMinLines(), bFull = adviceFullLines();
+  let best = null;
+  for (let b = bMin; b <= Math.max(bMin, bFull); b++) {
+    const aH = adviceModule(RX, 0, RW, false, b);
+    if (aH > H) break;
+    let used = aH, evH = 0, earlier = 0;
+    const ep = eventsPlan(RW, H - used - GAP);
+    if (ep) { evH = ep.h; used += GAP + evH; }
+    if (allowEarlier && earlierRest().length && H - used >= GAP + HEAD + ROW) { earlier = Math.min(earlierRest().length, Math.floor((H - used - GAP - HEAD) / ROW)); used += GAP + HEAD + earlier * ROW; }
+    // each advice line is worth 4 px of gap (the body's advice comes before the event log)
+    const cand = { b, aH, evH, earlier, used, gap: H - used, score: H - used - 4 * b };
+    if (!best || cand.score < best.score) best = cand;
+  }
+  if (!best && nItems === 0) return null;
+  return best;
+}
+function chooseLayout(colTop) {
+  const avail = 1080 - colTop - PAD;
+  const needFull = rawNeedFull();
+  const nMax = Math.min(needFull, Math.floor((avail - RAW_HEAD - RAW_BOT) / RAW_LH));
+  let best = null;
+  for (let n = Math.min(RAW_MIN, needFull); n <= nMax; n++) for (let bot = RAW_BOT; bot >= 2; bot -= 2) {
+    const H = avail - rawH(n) + (RAW_BOT - bot);
+    const L = packLeft(H, true);
+    if (!L) continue;
+    const R = packRight(H, L.earlier === 0);
+    if (!R) continue;
+    const over = Math.max(0, L.gap - 24) + Math.max(0, R.gap - 24);
+    // RAW lines count most; a visible BODY · WORLD module and earlier whys are worth a little RAW; holes cost
+    const score = n * RAW_LH + (R.evH ? 40 : 0) + (L.earlier || R.earlier ? 20 : 0) - over * 4 - (L.gap + R.gap) * 0.25;
+    if (!best || score > best.score) best = { n, H, L, R, score };
+  }
+  return best;
+}
+function drawAll(frame) {
+  rect(0, 0, 1080, 1080, K.base);
+  REG = [0, 1080, 'video'];
+  if (frame) g.drawImage(frame, 0, 0, 1080, VH);
+  drawHotbar();
+  drawToast();
+  let y = VH;
+  y += statsBand(y);
+  const gH = goalBand(y, false);
+  // the plan gives up lines (down to 3) before RAW drops below its minimum
+  let maxPlan = 7, tH, colTop, best;
+  for (;;) {
+    tH = thinkingBand(0, false, maxPlan);
+    colTop = VH + BAND_H + gH + tH + PAD;
+    best = chooseLayout(colTop);
+    if ((best && best.n >= Math.min(RAW_MIN, rawNeedFull())) || maxPlan <= 3) break;
+    maxPlan--;
+  }
+  goalBand(y, true); y += gH;
+  thinkingBand(y, true, maxPlan); y += tH;
+  const { n, H, L, R } = best;
+  // left column
+  nowModule(LX, colTop, LW, true, L.opts);
+  let ly = colTop + nowModule(LX, 0, LW, false, L.opts);
+  if (L.earlier) earlierModule(LX, ly + GAP, LW, HEAD + L.earlier * ROW, true);
+  REG = [0, 1080, 'columns'];
+  vline(DIV, colTop, H, K.line);
+  // right column
+  let ry = colTop + adviceModule(RX, colTop, RW, true, R.b);
+  if (R.evH) { eventsModule(RX, ry + GAP, RW, H - (ry - colTop) - GAP, true); ry += GAP + R.evH; }
+  if (R.earlier) earlierModule(RX, ry + GAP, RW, HEAD + R.earlier * ROW, true);
+  const rawTop = colTop + H + PAD;
+  const P = rawModule(rawTop, n);
+  window.HUD_LAYOUT = {
+    stats: [VH, BAND_H], goal: [VH + BAND_H, gH], thinking: [VH + BAND_H + gH, tH], columns: [colTop, H], raw: [rawTop, 1080 - rawTop],
+    rawLines: n, rawEntries: P.shown.length, maxPlan, leftGap: L.gap, rightGap: R.gap, adviceLines: R.b, events: R.evH ? eventsPlan(RW, H - R.aH - GAP).n : 0,
+    earlier: L.earlier || R.earlier, fillers: L.opts,
+  };
+  qaCheck();
+}
+
+/* ---------- QA: overlaps, canvas exits, column crossings ---------- */
+function qaCheck() {
+  const bad = [];
+  for (const b of QA) {
+    if (b.x < -0.5 || b.x + b.w > 1080.5 || b.y < -0.5 || b.y + b.h > 1080.5) bad.push(['canvas', b]);
+    else if (b.x < b.reg[0] - 0.5 || b.x + b.w > b.reg[1] + 0.5) bad.push([`leaves ${b.reg[2]}`, b]);
+  }
+  for (let i = 0; i < QA.length; i++) for (let j = i + 1; j < QA.length; j++) {
+    const a = QA[i], b = QA[j];
+    const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+    if (ox > 1 && oy > 1) bad.push(['overlap', a, b]);
+  }
+  window.HUD_QA = { texts: QA.length, problems: bad.map((p) => [p[0], p[1].s, p[2] ? p[2].s : null]) };
+  if (bad.length) console.warn('QA', JSON.stringify(window.HUD_QA.problems.slice(0, 20)));
+  if (QA_DRAW) for (const p of bad) for (const b of p.slice(1)) { g.strokeStyle = '#ff2d55'; g.lineWidth = 2; g.strokeRect(b.x, b.y, b.w, b.h); }
+}
+
+/* ---------- boot ---------- */
+async function boot() {
+  const faces = ['500 12px MuseUI', '600 12px MuseUI', '700 12px MuseUI', '400 12px MuseMono', '500 12px MuseMono'];
+  await Promise.all(faces.map((f) => document.fonts.load(f)));
+  const names = new Set(['heart', 'food', 'sun', 'moon', 'flame', 'star', 'depth', 'sword', 'pickaxe', 'hammer', 'boot']);
+  st.inventory.forEach((i) => names.add(i.icon));
+  st.currentCall.steps.forEach((s) => names.add(s.icon));
+  (st.goal.list || []).forEach((m) => names.add(m.icon));
+  (st.goal.parts || []).forEach((m) => names.add(m.icon));
+  const load = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  await Promise.all([...names].map(async (n) => { IMG[n] = await load(S._about.iconDir + '/' + n + '.png'); }));
+  const frame = null; // the video frames are not in the repo (the camera draws the video)
+  drawAll(frame);
+  if (QA_DRAW) console.warn('LAYOUT', JSON.stringify(window.HUD_LAYOUT));
+  window.HUD_READY = true;
+}
+boot();
+</script>
+</body></html>

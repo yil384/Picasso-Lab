@@ -1138,7 +1138,17 @@ square, 1080x1080, so the video fills the panel's width on a desktop and the top
 (1080x756, the middle of the 16:9 picture: Minecraft's field of view is vertical, so this is what a 10:7 window shows)
 and Muse's panel under it:
 
-- **The HUD** (layout 2 of two dense layouts, the owner's pick, 2026-10-12; `../ui-art/hud-mockups.mjs`,
+- **The HUD, the final design** (2026-10-13; `../ui-art/hud-final/FINAL-SPEC.md`, its mock-up `index.html` and the
+  three states it was judged on, `states.json`): `src/hud.js` is the mock-up's own drawing code, lifted to node-canvas
+  (every width measured once and kept, so a redraw takes about 15 ms on the Mac); `src/ui-panel.js` keeps what the
+  agent sends and turns it into the design's state (`hudState()`: who plays from the MCP client, MUSE or TEST SCRIPT;
+  each step as sent; the answers with their times and codes; the advice in full with when it was given; the steps the
+  server added; the goal before a set_goal; the body's, the world's and the server's events) and draws it once per
+  change of what it shows (the clocks: each second); every frame copies it. The three states played through the real
+  pipeline (`scripts/ui-sample.mjs --story design --design ../ui-art/hud-final/states.json --state nowhy|long|fresh`) in
+  the camera image: `~/Downloads/muse-hud-port-*.png`; 30.2 frames a second, gaps p99 50 ms. `test/hud.test.js` checks
+  the layout the design measured and its QA (no text over another or out of its column).
+- *Before the final design* (history) **The HUD** (layout 2 of two dense layouts, the owner's pick, 2026-10-12; `../ui-art/hud-mockups.mjs`,
   `~/Downloads/muse-hud-final.png`): the full 16:9 game on top (1080x608) and an agent trace under it (472 px). A
   header: health, food, the time with dawn or dusk; Muse's share, the game's id and its age. THINKING across the top:
   Muse's latest `why` (20 px, two lines, cut at a word) and under it PLAN, Muse's latest plan in full (15 px, up to

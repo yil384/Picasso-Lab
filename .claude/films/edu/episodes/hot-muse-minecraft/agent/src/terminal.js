@@ -36,10 +36,13 @@ export function cleanTerm(u) {
       if (l.ok) out.ok = 1;
       if (typeof l.ak === 'string' && /^[a-z_]{1,24}$/.test(l.ak)) out.ak = l.ak;
       if (typeof l.tool === 'string' && /^[a-z_]{1,24}$/.test(l.tool)) out.tool = l.tool;
+      if (typeof l.code === 'string' && /^[A-Z_]{2,24}$/.test(l.code)) out.code = l.code; // a reply's typed code
+      if (['body', 'world', 'server'].includes(l.who)) out.who = l.who; // a world line: whose event
       if (Array.isArray(l.steps)) {
         // a call's steps, each in plain words and as Muse wrote it
         out.steps = l.steps.slice(0, 16).filter((x) => x && typeof x === 'object')
-          .map((x) => ({ say: clean(x.say, 80), raw: clean(x.raw, 64) })).filter((x) => x.say || x.raw);
+          .map((x) => ({ say: clean(x.say, 80), raw: clean(x.raw, 64), ...(typeof x.skill === 'string' && /^[a-z_]{1,24}$/.test(x.skill) ? { skill: x.skill } : {}), ...(typeof x.args === 'string' ? { args: clean(x.args, 300) } : {}) }))
+          .filter((x) => x.say || x.raw);
       }
       return out;
     }).filter((l) => l.t);
@@ -89,8 +92,12 @@ export function cleanTerm(u) {
       }).filter((m) => m.t);
     out.goal = goal;
   }
-  // the call a reply answered: its number in the game (the steps' results name it)
+  // the call a reply answered: its number in the game (the steps' results name it), and the steps the server's check
+  // added before Muse's steps ({before: Muse's step, raw: "craft {...}"})
   { const v = int(u?.bind, 1, 100_000); if (v !== undefined) out.bind = v; }
+  if (Array.isArray(u?.added)) out.added = u.added.slice(0, 16).map((a) => ({ before: int(a?.before, 1, 64), raw: clean(a?.raw, 120) })).filter((a) => a.before && a.raw);
+  // who plays: MUSE (muse.ai's client), TEST SCRIPT (our checks), or the client's own name (src/mcp.js callerOf)
+  if (typeof u?.caller === 'string' && /^[A-Z0-9 ._-]{1,24}$/.test(u.caller)) out.caller = u.caller;
   if (u?.inv && typeof u.inv === 'object') {
     // the items that matter on the way, as counts; the best pickaxe by its material
     const inv = {};
@@ -115,7 +122,7 @@ export function cleanTerm(u) {
   if (Array.isArray(u?.adv)) {
     out.adv = u.adv.slice(0, 6)
       .filter((a) => typeof a?.k === 'string' && /^[a-z_]{1,24}$/.test(a.k) && typeof a.t === 'string')
-      .map((a) => ({ k: a.k, t: clean(a.t, 160), sev: int(a.sev, 1, 3) ?? 1 })).filter((a) => a.t);
+      .map((a) => ({ k: a.k, t: clean(a.t, 300), sev: int(a.sev, 1, 3) ?? 1 })).filter((a) => a.t);
   }
   return out;
 }
@@ -145,6 +152,19 @@ export function clean(text, max = 240) {
     .replace(/ {3,}/g, '  ')
     .trim()
     .slice(0, max);
+}
+
+/**
+ * Who plays a game, from its MCP client's declared name: MUSE for muse.ai's client (muse-minecraft-mcp), TEST SCRIPT
+ * for our checks and smoke tests (staging-check, *-smoke, *-check, e2e-*, ...), else the client's own name in capitals
+ * (letters, digits, space, . _ -, at most 24), or AGENT. The HUD never puts Muse's name on words Muse did not send.
+ */
+export function callerOf(name) {
+  const n = String(name ?? '').trim();
+  if (n === 'muse-minecraft-mcp') return 'MUSE';
+  if (/smoke|check|^e2e|test|^m4-|-trip$|sample/i.test(n)) return 'TEST SCRIPT';
+  const c = n.toUpperCase().replace(/[^A-Z0-9 ._-]/g, '').trim().slice(0, 24);
+  return c || 'AGENT';
 }
 
 /** Muse's own words with a call, at most this long on the stream. */
@@ -226,7 +246,11 @@ export function callLine(tool, args = {}) {
   const list = tool === 'play_sequence' && Array.isArray(args?.steps) ? args.steps : tool === 'play' ? [args] : [];
   const of = list.length;
   // every step in plain words and as Muse wrote it (the stream's trace never hides one)
-  const steps = list.slice(0, 16).map((st) => ({ say: plainStep(st), raw: clean(stepSummary(st), 64) }));
+  const argsOf = (st) => {
+    const a = st?.args && typeof st.args === 'object' ? st.args : Object.fromEntries(Object.entries(st ?? {}).filter(([k]) => !['skill', 'name', 'request_id', 'why', 'plan'].includes(k)));
+    try { return clean(JSON.stringify(a), 300); } catch { return ''; }
+  };
+  const steps = list.slice(0, 16).map((st) => ({ say: plainStep(st), raw: clean(stepSummary(st), 64), skill: String(st?.skill ?? st?.name ?? ''), args: argsOf(st) }));
   const plan = typeof args?.plan === 'string' ? cutWords(clean(args.plan, 2000), PLAN_MAX) : ''; // Muse's plan, cut at a word
   // the arguments exactly as Muse sent them (before the server reads them its way), for the stream's RAW console
   let raw = '';
@@ -318,8 +342,7 @@ export function replyHead(out, checked = '') {
       continue;
     }
     if (/^State \(game /.test(b) && checked) return clean(`state: ${checked.replace(/^Muse checked:\s*/, '')}`, ANSWER_MAX);
-    const head = first(b).replace(/ is still running(.*?); call get_state again.*$/, ' still running$1');
-    return clean(head, ANSWER_MAX);
+    return clean(first(b), ANSWER_MAX);
   }
   return clean(first(text), ANSWER_MAX);
 }
@@ -441,17 +464,24 @@ export function createTermFeed(o) {
             const key = `${sub.text.replace(/\d+/g, '#')}/${sub.of}`; // the same step, whatever its count says
             if (sub.done >= sub.of || key !== g.mineKey || now() - (g.mineAt ?? 0) >= 15_000) {
               const words = /\d+ of \d+/.test(sub.text) ? sub.text : `${sub.text.replace(/^mining /, 'mined ')} ${sub.done} of ${sub.of}`;
-              if (!(key === g.mineKey && sub.done === g.mineDone)) world.push({ k: 'world', t: clean(words, 100) });
+              if (!(key === g.mineKey && sub.done === g.mineDone)) world.push({ k: 'world', who: 'body', t: clean(words, 100) });
               Object.assign(g, { mineKey: key, mineAt: now(), mineDone: sub.done });
             }
           }
-          if (sub?.kind === 'bucket' && sub.text !== g.sub?.text) world.push({ k: 'world', t: clean(sub.text, 80) });
+          if (sub?.kind === 'bucket' && sub.text !== g.sub?.text) world.push({ k: 'world', who: 'body', t: clean(sub.text, 80) });
           g.sub = sub;
           const t = now();
           if (sub && !world.length && t - (g.subSentAt ?? 0) < 500) return;
           g.subSentAt = t;
           try { const hud = hudOf(s, g, null); o.send(s.id, { lines: [...world, ...(g.world ?? [])], sub, live: liveInfo(s, g), ...hud }); } catch { /* the video goes on without it */ }
         }) ?? (() => {});
+        // what the server set for the body (its care policy): a BODY · WORLD line of the server's
+        const off = s.body.on('server', (e) => {
+          const t = clean(e?.text, 160);
+          if (t) { try { o.send(s.id, { lines: [{ k: 'world', who: 'server', t }] }); } catch { /* the video goes on without it */ } }
+        });
+        const offProgress = g.offProgress;
+        g.offProgress = () => { try { offProgress(); } catch { /* gone */ } try { off?.(); } catch { /* gone */ } };
       } catch { g.offProgress = () => {}; }
     }
     return g;
@@ -491,7 +521,7 @@ export function createTermFeed(o) {
   };
   /** The Body advice as it stands, one entry per kind (the stream's note cards update in place). */
   const adviceOf = (structured) => (Array.isArray(structured?.advice)
-    ? structured.advice.slice(0, 4).map((a) => ({ k: /^[a-z_]{1,24}$/.test(String(a?.kind)) ? String(a.kind) : 'note', t: clean(a?.text, 160), sev: severityOf(a) })).filter((a) => a.t)
+    ? structured.advice.slice(0, 4).map((a) => ({ k: /^[a-z_]{1,24}$/.test(String(a?.kind)) ? String(a.kind) : 'note', t: clean(a?.text, 300), sev: severityOf(a) })).filter((a) => a.t)
     : undefined);
   /**
    * What the bot is doing between calls, for the stream's status line: a skill running (its words), or why nothing
@@ -532,21 +562,21 @@ export function createTermFeed(o) {
     const inv = snap?.inventory && typeof snap.inventory === 'object' ? snap.inventory : null;
     if (inv && g.prevInv) {
       const got = Object.entries(inv).filter(([k, n]) => Number(n) > Number(g.prevInv[k] ?? 0)).map(([k, n]) => countOf(Number(n) - Number(g.prevInv[k] ?? 0), k).replace(/^an? /, '1 '));
-      if (got.length) out.push({ k: 'world', t: clean(`got ${listOf(got.slice(0, 4))}${got.length > 4 ? ' and more' : ''}`, 120) });
+      if (got.length) out.push({ k: 'world', who: 'body', t: clean(`got ${listOf(got.slice(0, 4))}${got.length > 4 ? ' and more' : ''}`, 120) });
     }
     if (inv) g.prevInv = { ...inv };
     const mobs = Array.isArray(snap?.mobs) ? snap.mobs.filter((m) => m?.hostile && Number.isFinite(m.distance)) : [];
     const hp = snap?.health;
     if (Number.isFinite(hp) && Number.isFinite(g.prevHp) && hp > 0 && hp <= g.prevHp - 1) {
       const near = mobs.filter((m) => m.distance <= 8).sort((a, b) => a.distance - b.distance)[0];
-      out.push({ k: 'world', t: clean(`took ${Math.round(g.prevHp - hp)} damage, health ${Math.round(hp)}${near ? `, ${word(near.name)} ${near.distance} blocks away` : ''}`, 120) });
+      out.push({ k: 'world', who: 'body', t: clean(`took ${Math.round(g.prevHp - hp)} damage, health ${Math.round(hp)}${near ? `, ${word(near.name)} ${near.distance} blocks away` : ''}`, 120) });
     }
     if (Number.isFinite(hp) && hp > 0) g.prevHp = hp;
     for (const m of mobs.filter((x) => x.distance <= 12)) {
       g.mobSeen ??= new Map();
       if (now() - (g.mobSeen.get(m.name) ?? -1e9) < 60_000) continue;
       g.mobSeen.set(m.name, now());
-      out.push({ k: 'world', t: clean(`${word(m.name)} ${m.distance} blocks away`, 80) });
+      out.push({ k: 'world', who: 'world', t: clean(`${word(m.name)} ${m.distance} blocks away`, 80) });
     }
     return out;
   };
@@ -558,7 +588,7 @@ export function createTermFeed(o) {
     const state = structured?.state && !structured.state.joining ? structured.state : null;
     const inventory = snap?.inventory ?? state?.inventory ?? structured?.inventory ?? null;
     const equipment = snap?.equipment ?? structured?.equipment ?? state?.equipment ?? null;
-    const out = { game: { id: String(s.id ?? ''), s: Math.max(0, Math.round((now() - g.startedAt) / 1000)) } };
+    const out = { game: { id: String(s.id ?? ''), s: Math.max(0, Math.round((now() - g.startedAt) / 1000)) }, ...(s.caller ? { caller: s.caller } : {}) };
     if (inventory) out.inv = invOf(inventory, equipment);
     const p = snap?.position ?? state?.position ?? null;
     const y = Number.isFinite(p?.y) ? Math.floor(p.y) : null;
@@ -678,7 +708,8 @@ export function createTermFeed(o) {
         if (seen) lines.push({ k: 'checked', t: seen });
       }
       // the reply's head, for the RAW console: "< ..." with the call's number
-      if (rid !== undefined) { const head = replyHead(out, seen); if (head) lines.push({ k: 'reply', t: clean(`< ${head}`, ANSWER_MAX + 2), rid }); }
+      const code = out?.structuredContent?.code;
+      if (rid !== undefined) { const head = replyHead(out, seen); if (head) lines.push({ k: 'reply', t: clean(`< ${head}`, ANSWER_MAX + 2), rid, ...(typeof code === 'string' && code ? { code } : {}) }); }
       // a portal: the first line of the new world
       const dim = dimOf(s);
       if (dim && g.dim && dim !== g.dim) lines.push({ k: 'milestone', t: clean(`${PLACES[dim] ?? `entered ${word(dim)}`} at ${elapsed(g)}`) });
@@ -686,7 +717,9 @@ export function createTermFeed(o) {
       if (tool === 'end_game') { lines.push({ k: 'info', t: clean(`game over after ${elapsed(g)}`) }); emit(s, lines, st); drop(s.id); return; }
       // the call this reply answered, by its number in the game (its steps' results name it)
       const bind = (tool === 'play' || tool === 'play_sequence') ? (st.steps ?? []).find((x) => Number.isInteger(x?.call))?.call : undefined;
-      emit(s, lines, st, bind !== undefined ? { bind } : null);
+      const added = (tool === 'play' || tool === 'play_sequence') ? (st.steps ?? []).filter((x) => x?.step == null && Number.isInteger(x?.before))
+        .map((x) => ({ before: x.before, raw: clean(`${x.skill} ${JSON.stringify(x.args ?? {})}`, 120) })) : [];
+      emit(s, lines, st, bind !== undefined ? { bind, ...(added.length ? { added } : {}) } : null);
     },
     /** Every few seconds between calls: the status and what is happening now, with no lines (the picture lives). */
     tick(s) {
