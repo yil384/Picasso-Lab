@@ -1,7 +1,9 @@
 // test/liveview.test.js - the user sees the game only once live_view's HTML is shown (a production game, 2026-10-13,
 // g08370a: Muse, run as a background task in a long chat, went from start_game straight to play_sequence and never
 // called live_view): start_game's reply ends with the next step, and until live_view is called a play, play_sequence
-// or get_state reply starts with one line saying so, on the first call and every 5th after; the call itself runs.
+// or get_state reply starts with one line saying so, on the first call and every 5th after; the call itself runs. The
+// same for a play or play_sequence call without why or plan (g08370a sent neither, and the stream's thinking band
+// stayed empty).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,7 +17,7 @@ import { createWeb } from '../src/web.js';
 import { createLogger } from '../src/log.js';
 import { createMineAiBody } from '../src/mineai/body.js';
 import { MINEAI_SKILLS } from '../src/mineai/skills.js';
-import { LIVE_NEXT, LIVE_NUDGE } from '../src/mcp.js';
+import { LIVE_NEXT, LIVE_NUDGE, WHY_NUDGE } from '../src/mcp.js';
 import { fakeHosts } from './fake-mineai.js';
 
 const raw = (r) => r.content.map((x) => x.text).join('\n');
@@ -81,7 +83,7 @@ test('g08370a\'s opening: start_game, then play_sequence without live_view: the 
       { skill: 'collect', args: { block: 'cobblestone', n: 11 } },
       { skill: 'craft', args: { item: 'stone_pickaxe', n: 1 } },
     ] } });
-    assert.ok(raw(r).startsWith(`${LIVE_NUDGE}\n\n`), raw(r).slice(0, 200));
+    assert.ok(raw(r).startsWith(`${LIVE_NUDGE}\n\n${WHY_NUDGE}\n\n`), raw(r).slice(0, 200));
     assert.notEqual(r.structuredContent.code, 'BAD_ARGS');
     assert.equal(r.structuredContent.steps[0].skill, 'collect');
     // the log has the call as it was (the nudge is in the reply only)
@@ -90,5 +92,40 @@ test('g08370a\'s opening: start_game, then play_sequence without live_view: the 
     await c.close();
     await web.stop?.();
     await hosts.closeAll();
+  }
+});
+
+test('why and plan: a play call without them gets a line at the top on the first such call and every 5th; with both, none', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'whyplan-'));
+  const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
+  const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null });
+  const c = new Client({ name: 'test', version: '1' });
+  await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
+  try {
+    assert.equal(WHY_NUDGE, 'Viewers see your why and plan under the video: pass both on every play call.');
+    await c.callTool({ name: 'start_game', arguments: {} });
+    await c.callTool({ name: 'live_view', arguments: {} });
+    const both = { why: 'Logs for planks', plan: 'Logs, planks, a table, a pickaxe; if no trees, explore east' };
+    const step = { skill: 'collect', args: { block: 'oak_log', n: 1 } };
+    const calls = [
+      ['play', { ...step }], // neither: 1st
+      ['play', { ...step, ...both }], // both: not counted, no line
+      ['play', { ...step, why: both.why }], // no plan: 2nd
+      ['play_sequence', { steps: [step], plan: both.plan }], // no why: 3rd
+      ['get_state', {}], // not a play call
+      ['play', { ...step }], // 4th
+      ['play', { ...step }], // 5th
+      ['play_sequence', { steps: [step] }], // 6th: the line again
+    ];
+    const lined = [];
+    for (const [name, args] of calls) {
+      const r = await c.callTool({ name, arguments: args });
+      assert.notEqual(r.isError, true, raw(r));
+      lined.push(raw(r).startsWith(`${WHY_NUDGE}\n\n`));
+    }
+    assert.deepEqual(lined, [true, false, false, false, false, false, false, true]);
+  } finally {
+    await c.close();
+    await agent.stop();
   }
 });

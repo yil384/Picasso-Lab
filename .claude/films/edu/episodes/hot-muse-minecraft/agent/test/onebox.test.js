@@ -23,8 +23,8 @@ import { createTracker, goalOf, planText, GOAL_NAMES } from '../src/report.js';
 import { promptText } from '../src/mcp.js';
 import { fakeHosts } from './fake-mineai.js';
 
-// the reply as these tests read it: without the live view nudge at the top (test/liveview.test.js checks it)
-const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^Your user cannot see the game yet: [^\n]*\n\n/, '');
+// the reply as these tests read it: without the nudges at the top (test/liveview.test.js checks them)
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet|Viewers see your why and plan under the video): [^\n]*\n\n)+/, '');
 
 async function connect(url) {
   const c = new Client({ name: 'test', version: '1' });

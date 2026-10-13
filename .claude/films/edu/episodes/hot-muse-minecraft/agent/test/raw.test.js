@@ -17,8 +17,8 @@ import { callLine, cleanTerm, createTermFeed, replyHead, PLAN_MAX, RAW_MAX } fro
 import { callRow } from '../src/mcp.js';
 import { createUiPanel } from '../src/ui-panel.js';
 
-// the reply as these tests read it: without the live view nudge at the top (test/liveview.test.js checks it)
-const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^Your user cannot see the game yet: [^\n]*\n\n/, '');
+// the reply as these tests read it: without the nudges at the top (test/liveview.test.js checks them)
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet|Viewers see your why and plan under the video): [^\n]*\n\n)+/, '');
 const PLAN = 'Next: smelt the 5 raw iron, make a shield for the night, then the iron pickaxe and dig down to y -59 for diamonds. If no iron shows within 32 blocks, explore east along the ravine; if a skeleton finds me first, shield up and wall in. Then water bucket, obsidian from a lava pool with the bucket, flint from gravel, the portal frame on dry ground, light it and go through, then come back the same way before the lease ends.';
 
 test('raw: the arguments as Muse sent them, its plan cut at a word, cleaned for a public video; the answer paired with its call', () => {

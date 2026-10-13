@@ -113,6 +113,17 @@ INCIDENTS.ga13a88 = {
   66: (w) => { w.netherAt = { x: 12.5, y: 58, z: 18.5 }; },
 };
 
+INCIDENTS.g08370a = {
+  0: (w) => { w.position = { x: -258.5, y: 74, z: -11.5 }; },
+  // a zombie the fight reflex answered in the middle of the cobblestone
+  5: (w) => w.takeovers.push({ tool: 'collect_block', made: false, error: 'fight response for zombie#12 at 1,2,3 (2.0 blocks).' }),
+  // the water went into a bucket drop on the way down (production's go_to); the second fill needs the empty bucket
+  25: (w) => { w.inventory.delete('water_bucket'); w.inventory.set('bucket', 1); },
+  29: (w) => { w.blocks = [{ name: 'lava', found: 9, listed: [{ x: Math.floor(w.position.x) + 4, y: Math.floor(w.position.y) - 1, z: Math.floor(w.position.z), level: 0 }] }]; },
+  30: (w) => { w.inventory.set('flint', 1); }, // set a step early: the check reads the body's last status
+  33: (w) => { w.inventory.set('raw_iron', 1); w.inventory.set('cobblestone', 120); }, // and the blocks dug on the walks (404)
+};
+
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
   // 1: raw_chicken (refused before a hunt until 2026-10-12) is read as chicken now and hunted (src/tolerant.js); 18: production smelted the mutton again after its hitch, but here the
@@ -128,6 +139,8 @@ const EXPECTED = {
   // failed for the world's reasons (a flowing cell, reflexes, paths, one stone cell kept): not checked; 46: stopped by
   // Muse; 55: the stone hillside; 57: birch leaves in the frame, now refused before any obsidian is placed; 58: no frame
   // left to take back here
+  // 5: the zombie; 6: the death in the middle of the shelter (the fake's shelter is done); 23, 32: walks the world stopped
+  g08370a: { 5: 'INTERRUPTED', 6: null, 23: null, 32: null },
   ga13a88: { 27: null, 28: null, 31: null, 40: null, 41: null, 42: null, 46: null, 47: null, 52: null, 53: null, 55: 'FAILED', 57: 'FAILED', 58: null },
 };
 /** What a step's reply must say (by index). */
@@ -212,7 +225,7 @@ for (const [id, steps] of Object.entries(games)) {
     for (const o of out) {
       const want = o.i in expected ? expected[o.i] : 'ok';
       const where = `${id} step ${o.i} ${o.st.tool} ${JSON.stringify(o.st.args)}: ${o.result}`;
-      if (want === 'ok') assert.equal(o.status, 'confirmed', `no false failure: ${where}`);
+      if (want === 'ok') assert.equal(o.status, 'confirmed', `no false failure: ${where} ${process.env.REPLAY_SHOW ? o.text : ''}`);
       else if (want) assert.equal(o.code, want, `the right code: ${where}`);
       if (EXPECTED_TEXT[id]?.[o.i]) assert.match(o.text, EXPECTED_TEXT[id][o.i], where);
       if (o.code) assert.ok(RESULT_CODES.includes(o.code), `a known code: ${where}`);
@@ -235,7 +248,7 @@ for (const [id, steps] of Object.entries(games)) {
     assert.match(text, /^Game ended\.\n\nReport for game g\w+: goal /);
     assert.doesNotMatch(text, JARGON);
     assert.match(text, /\nThis game: \d+ actions? by Muse/, 'the attribution line');
-    assert.equal(report.goal, GOALS[id]);
+    assert.equal(report.goal, GOALS[id] ?? 'free');
     // the text lists the milestones reached in the order they came
     const times = (/\nMilestones: ([^\n]*)\./.exec(text)?.[1] ?? '').split(', ').map((m) => /(\d+):(\d\d)(?:;|$)/.exec(m)).filter(Boolean).map((m) => Number(m[1]) * 60 + Number(m[2]));
     assert.deepEqual(times, [...times].sort((a, b) => a - b), 'milestones in the order they came');

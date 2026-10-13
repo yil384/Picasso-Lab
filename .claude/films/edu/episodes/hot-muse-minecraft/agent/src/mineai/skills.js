@@ -714,6 +714,11 @@ export function plainer(tool, text, call = null) {
   t = t.replace(/(?:Pathfinder could not reach the target: )?planning_stalled: Path planning stalled for \d+ ms without a route commitment or meaningful displacement[^.]*\.(?: Repeated search invalidation does not renew this limit\.*)?/g,
     'the walk there got stuck (no way forward for 20 s).');
   t = t.replace(/(?:Pathfinder stopped: )?Full air was not observed at the breathing stop\./g, 'it stopped to breathe on the way and found no open air there.');
+  // g08370a: "Pathfinder stopped: no way there ...-115 6 -23., while replanning after a movement failure: The planned
+  // bucket drop did not confirm landing and water recovery.."
+  t = t.replace(/\.?,? while replanning after a movement failure: The planned bucket drop did not confirm landing and water recovery\.*/g, ', after a water-bucket drop on the way down did not land as planned.');
+  t = t.replace(/\.?,? while replanning after a movement failure: ([^.]*)\.*/g, (m, why) => `, after a move on the way failed (${why.trim().replace(/^./, (c) => c.toLowerCase())}).`);
+  t = t.replace(/(^|: )Pathfinder (?:stopped|could not reach the target): /g, '$1').replace(/\.\./g, '.');
   if (tool === 'collect_mob_drop') {
     // the mobs ran out near the bot (a big hunt goal): said plainly, with the way on (no skill breeds animals)
     const mob = String(call?.args?.mob_name ?? 'mob').replace(/_/g, ' ');

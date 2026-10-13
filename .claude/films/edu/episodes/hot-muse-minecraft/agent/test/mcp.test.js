@@ -22,8 +22,8 @@ async function connect(url) {
   await c.connect(new StreamableHTTPClientTransport(new URL(`${url}/mcp`)));
   return c;
 }
-// the reply as these tests read it: without the live view nudge at the top (test/liveview.test.js checks it)
-const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^Your user cannot see the game yet: [^\n]*\n\n/, '');
+// the reply as these tests read it: without the nudges at the top (test/liveview.test.js checks them)
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet|Viewers see your why and plan under the video): [^\n]*\n\n)+/, '');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const START = { adult: true };
 
