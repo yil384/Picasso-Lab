@@ -693,7 +693,9 @@ export function createWeb(opts = {}) {
     while (endedViews.size > ENDED_KEPT) endedViews.delete(endedViews.keys().next().value);
     for (const off of s.offs) { try { off?.(); } catch { /* ignore */ } }
     const attribution = typeof s.body?.attribution === 'function' ? (() => { try { return s.body.attribution(); } catch { return null; } })() : null;
-    log.event('session_end', { session: s.id, reason, ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } : {}) });
+    // who acted, as get_state says it: Muse directly, by its rules (which, with when each was set), the body on its own
+    const rulesNow = typeof s.body?.rules === 'function' ? (() => { try { return s.body.rules(); } catch { return null; } })() : null;
+    log.event('session_end', { session: s.id, reason, ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct, ...(attribution.rule != null ? { rule: attribution.rule, body: attribution.body, decidedPct: attribution.decidedPct, byRule: attribution.byRule, ...(rulesNow ? { rules: rulesNow.rules, set: rulesNow.set } : {}) } : {}) } } : {}) });
     const body = s.body;
     s.closed = !body ? Promise.resolve() : Promise.resolve()
       .then(() => body.close?.())

@@ -1,5 +1,5 @@
 {
- "about": "Muse's real steps in production games gb1cfe3 (2026-10-11), g64e8c5, g0793f1 and ga13a88 (2026-10-12) g08370a, g809e1b, g4ac86b and g71c9f5 (2026-10-13), from the agent's viewer_action rows: the skill, its arguments, whether it was ok and the first 120 characters of what production said (test/replay.test.js)",
+ "about": "Muse's real steps in production games gb1cfe3 (2026-10-11), g64e8c5, g0793f1 and ga13a88 (2026-10-12) g08370a, g809e1b, g4ac86b, g71c9f5 and g0a414c (2026-10-13), from the agent's viewer_action rows: the skill, its arguments, whether it was ok and the first 120 characters of what production said (test/replay.test.js)",
  "games": {
   "gb1cfe3": [
    {
@@ -2950,6 +2950,279 @@
     },
     "ok": true,
     "result": "went through the portal; you came out in the overworld at 212 79 116 (stepped out of the portal first); your own portal is at -24 66 94, 238 blocks away (the Ne"
+   }
+  ],
+  "g0a414c": [
+   {
+    "tool": "policy",
+    "args": {
+     "defend": "on",
+     "escape": "on",
+     "eat_below": 6
+    },
+    "ok": true,
+    "result": "your rules now: defend on (fight back, raise the shield, wall in when badly hurt); flee off (withdraw from a hostile mob); escape on (out of water for air, out "
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "oak_log",
+     "n": 8
+    },
+    "ok": true,
+    "result": "mined 8 oak_log and picked up 8 oak_log (8 of 8 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "oak_planks",
+     "n": 12
+    },
+    "ok": true,
+    "result": "crafted 12 oak_planks"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "crafting_table",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 crafting_table"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "wooden_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 wooden_pickaxe at a crafting table put down at -352 71 -12 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "cobblestone",
+     "n": 11
+    },
+    "ok": true,
+    "result": "mined 11 stone (stone drops cobblestone) and picked up 11 cobblestone (11 of 11 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stone_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 stone_pickaxe at a crafting table put down at -352 65 -12 (the table was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "furnace",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 furnace at a crafting table put down at -352 65 -12 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "coal_ore",
+     "n": 4
+    },
+    "ok": true,
+    "result": "mined 4 coal_ore (coal_ore drops coal) and picked up 4 coal (4 of 4 wanted)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "iron_ore",
+     "n": 8
+    },
+    "ok": true,
+    "result": "mined 8 iron_ore (iron_ore drops raw_iron) and picked up 8 raw_iron (8 of 8 wanted)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 8
+    },
+    "ok": true,
+    "result": "smelted 8 iron_ingot from 8 raw_iron with coal in the furnace at -352 49 -16 (the furnace was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "iron_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 iron_pickaxe at a crafting table put down at -352 49 -16 (the table was picked up again)"
+   },
+   {
+    "tool": "shield",
+    "args": {},
+    "ok": true,
+    "result": "crafted a shield and put it in its off-hand (its fight reflex raises it against arrows)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate_diamond_ore",
+     "n": 4
+    },
+    "ok": true,
+    "result": "mined 4 deepslate_diamond_ore (deepslate_diamond_ore drops diamond) and picked up 4 diamond (4 of 4 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "diamond_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 diamond_pickaxe at a crafting table put down at -352 1 -46 (the table was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "bucket",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 bucket at a crafting table put down at -352 1 -46 (the table was picked up again)"
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill"
+    },
+    "ok": true,
+    "result": "filled a bucket with water"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 14
+    },
+    "ok": false,
+    "result": "no lava pool within 16 blocks to make obsidian from. The nearest lava pool loaded is at -397 -42 -28, 51 blocks away: go_to a spot a few blocks from it first."
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -393,
+     "y": -42,
+     "z": -28
+    },
+    "ok": true,
+    "result": "walked to -393 -43 -28"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 14
+    },
+    "ok": false,
+    "result": "the step's time ran out while a reflex had the body (it fought a zombie, it fought a creeper); nothing is wrong with the step: send it again once the mobs are d"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 3
+    },
+    "ok": false,
+    "result": "the lava within 16 blocks is flowing, not a pool: obsidian forms on still lava. The nearest lava pool loaded is at -399 -44 26, 18 blocks away: go_to a spot a f"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -396,
+     "y": -44,
+     "z": 26
+    },
+    "ok": true,
+    "result": "walked to -397 -44 26"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 3
+    },
+    "ok": false,
+    "result": "the step's time ran out while a reflex had the body (it swam up for air); nothing is wrong with the step: send it again once the mobs are dealt with"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -398,
+     "y": -54,
+     "z": 61
+    },
+    "ok": true,
+    "result": "walked to -398 -53 61"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 3
+    },
+    "ok": false,
+    "result": "stopped: stopped through MCP [meanwhile on its own: it fought a skeleton, it fought a zombie]"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -400,
+     "y": -54,
+     "z": 61
+    },
+    "ok": false,
+    "result": "failed: the walk there got stuck (no way forward for 20 s). (walked to -405 -52 62, 5 blocks short of -400 -54 61) [meanwhile on its own: it fought a zombie]; y"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 3
+    },
+    "ok": false,
+    "result": "failed: 5 routes in a row stopped without breaking or gaining anything; the last: the walk there got stuck (no way forward for 20 s). Broke 0 matching blocks; i"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 1
+    },
+    "ok": false,
+    "result": "failed: 5 routes in a row stopped without breaking or gaining anything; the last: the walk there got stuck (no way forward for 20 s). Broke 0 matching blocks; i"
    }
   ]
  }

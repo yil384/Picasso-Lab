@@ -469,6 +469,8 @@ export function statusData(state, attribution) {
 /** How pressing an advice is, 1 to 3: 3 for health, lava, drowning or starving, 2 for a night that has come, else 1. */
 export function severityOf(a) {
   const t = String(a?.text ?? '').toLowerCase();
+  // the stuck detector and the time left: pressing, not dangerous
+  if (a?.kind === 'stuck' || a?.kind === 'time') return 2;
   if (/starving|lava|drown|low health|health \d|dying|burning|fire/.test(t) || /^(?:health|lava|air|fire)$/.test(String(a?.kind))) return 3;
   if (/^night \(|^night:|creeper|skeleton|zombie/.test(t)) return 2;
   return 1;

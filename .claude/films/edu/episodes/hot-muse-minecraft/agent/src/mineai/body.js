@@ -134,6 +134,8 @@ export const FRAME_GUARD = 160;
  * has been read this long after the arrival (the chunks come in over seconds; an early scan missed the portal it
  * stood in: production, 2026-10-11, every camera trip). */
 export const PORTAL_SETTLE_MS = 10_000;
+/** How long a search for obsidian may bring none in before it is stopped and said why (making one takes about 30 s). */
+export const OBSIDIAN_STALL_MS = 75_000;
 /** What a block placed into a cell simply replaces (nothing to dig first). */
 const REPLACEABLE = /^(air|cave_air|void_air|short_grass|tall_grass|grass|fern|large_fern|snow|dead_bush|vine|glow_lichen|seagrass|[a-z_]*_sapling|dandelion|poppy|blue_orchid|allium|azure_bluet|[a-z_]*_tulip|oxeye_daisy|cornflower|lily_of_the_valley|sunflower|lilac|rose_bush|peony)$/;
 
@@ -259,7 +261,7 @@ export function attributionOf(muse, { reflex = 0, care = 0, rule = null, body = 
   return { muse, rule, body: own, care, reflex, byRule: { ...byRule }, musePct, decidedPct, text };
 }
 
-export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs, careYieldMs, portalSettleMs = PORTAL_SETTLE_MS }) {
+export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs, careYieldMs, obsidianStallMs = OBSIDIAN_STALL_MS, portalSettleMs = PORTAL_SETTLE_MS }) {
   const emitter = new EventEmitter();
   emitter.setMaxListeners(50);
   let host = null;
@@ -382,6 +384,24 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     /** Muse's rules (start_game rules, the policy skill): set some; read them with when each was set. */
     setRules: (r, meta) => { if (care?.setRules) return care.setRules(r, meta); pendingRules = { r, meta }; return null; },
     rules: () => care?.rules?.() ?? null,
+    /**
+     * Why a kind of step makes no progress, and what else to do (the stuck advice of the MCP layer):
+     * {text, options: [{text, hint?}]}. kind: collect:<block>, go_to:<area>, build:<blueprint>, portal:<action>; last:
+     * the last such step ({args, result}).
+     */
+    stuckWhy: async (kind, last = null) => {
+      if (kind === 'collect:obsidian') return obsidianStuck(0);
+      const words = String(last?.result ?? '').replace(/^failed:\s*/, '').split(/[;(]/)[0].trim().slice(0, 140);
+      if (kind.startsWith('go_to:') && last?.args) {
+        const t = last.args;
+        return { text: `the walk to ${t.x} ${t.y} ${t.z} does not get there${words ? ` (${words})` : ''}`, options: [
+          { text: `come at it from another side: go_to ${t.x + 3} ${t.y} ${t.z}`, hint: { skill: 'go_to', args: { x: t.x + 3, y: t.y, z: t.z } } },
+          { text: `dig down beside it: go_to ${t.x} ${t.y - 1} ${t.z + 1}`, hint: { skill: 'go_to', args: { x: t.x, y: t.y - 1, z: t.z + 1 } } },
+          { text: 'or change the plan: a different spot or a different way to what you need' },
+        ] };
+      }
+      return { text: words ? `the last one said: ${words}` : 'nothing changed', options: [{ text: 'change the plan: a different spot, a different skill or a different order' }] };
+    },
     /** The number of Muse's call now (the MCP layer counts them): when a rule is set. */
     noteCall: (n) => care?.noteCall?.(n),
     careMode: () => careMode,
@@ -583,6 +603,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
    * give). Returns {output, stopped} or {error, code (theirs), ours (our code), said (our text)}.
    */
   async function act(call, deadline, ctl) {
+    const actAt = Date.now(); // the submission (a stall counts from here)
     if (DIRECT_TOOLS.has(call.tool)) { // answers at once with the action's output
       const data = await rpc(call.tool, call.args, 30_000);
       return data.state === 'error' ? { error: data.error } : { output: data };
@@ -630,6 +651,11 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     };
     ctl.cancel = cancel;
     const deaths = (d) => Number(d?.progress?.request?.evidence?.checkpoint?.targetDeathsObserved) || 0;
+    // a search for obsidian that brings none in for OBSIDIAN_STALL_MS is stopped and said why (production game g0a414c:
+    // "pending, 0 of 1" for 100 s a call, three calls in a row, while formed obsidian lay beside the bot)
+    const watch = call.tool === 'collect_block' && call.args?.block_name === 'obsidian' && call.args?.x === undefined;
+    let gainedN = 0;
+    let gainedAt = actAt;
     while (data.state === 'accepted' || data.state === 'pending') {
       ctl.actionId ??= data.actionId;
       // how far it got, as their checkpoint says (get_state shows it while a long step runs: F2 of the log hunt)
@@ -641,10 +667,14 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         const key = JSON.stringify(sub);
         if (key !== lastSub) { lastSub = key; emit('progress', { sub, skill: ctl.skill ?? null }); }
       }
+      if (watch && !cancelled) {
+        const g = Number(cp?.gained ?? cp?.collected ?? 0) || 0;
+        if (g > gainedN) { gainedN = g; gainedAt = Date.now(); } else if (Date.now() - gainedAt > obsidianStallMs) { ctl.stalled = { mined: gainedN }; await cancel(`no obsidian came in for ${Math.round(obsidianStallMs / 1000)} s`); }
+      }
       if (ctl.attack && !cancelled && deaths(data) > 0) { ctl.killed = deaths(data); await cancel(KILLED, { self: true }); }
       else if (ctl.stopped) await cancel(ctl.stopped);
       else if (left() <= 0) await cancel(`timed out after ${Math.round((ctl.limitMs ?? timeouts[ctl.skill] ?? 60_000) / 1000)} s`);
-      const ms = cancelled ? 15_000 : ctl.attack ? Math.max(500, Math.min(ATTACK_POLL_MS, waitFor())) : Math.max(1_000, waitFor());
+      const ms = cancelled ? 15_000 : ctl.attack ? Math.max(500, Math.min(ATTACK_POLL_MS, waitFor())) : watch ? Math.max(1_000, Math.min(5_000, waitFor())) : Math.max(1_000, waitFor());
       data = await rpc('wait_for_action', { action_id: ctl.actionId, timeout_ms: ms }, ms + RPC_SLACK_MS);
     }
     if (lastSub !== 'null') { lastSub = 'null'; emit('progress', { sub: null }); }
@@ -745,6 +775,60 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
    * within LAVA_NEAR blocks to make it from, away from the world spawn and from other players (their collect pours
    * water there, unguarded). Null when it may run.
    */
+  /**
+   * Obsidian loaded within r blocks of the bot that is not a frame (a lit portal's, or another game's or its own last
+   * frame): nearest first, [{x, y, z, d}].
+   */
+  async function formedObsidian(r) {
+    const p = latest.position;
+    if (!p) return [];
+    const data = await rpc('view_blocks', { find: { block_names: ['obsidian', 'nether_portal'], limit: 64 } }, 10_000).catch(() => null);
+    const finds = data?.result?.blocks?.find ?? [];
+    const listOf = (name) => (finds.find((f) => f?.name === name || f?.block === name)?.listed ?? (name === 'obsidian' ? finds[0]?.listed : finds[1]?.listed) ?? []);
+    const portalAt = new Set(listOf('nether_portal').map((q) => `${q.x},${q.y},${q.z}`));
+    const touchesPortal = (q) => [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => portalAt.has(`${q.x + dx},${q.y + dy},${q.z + dz}`));
+    const mine = new Set((lastPortal?.cells ?? []).map((c) => `${c.x},${c.y},${c.z}`));
+    const dim = dimension ?? 'overworld';
+    return listOf('obsidian').map(floorPos)
+      .filter((q) => !touchesPortal(q) && !mine.has(`${q.x},${q.y},${q.z}`) && !frames.has(frameKey(dim, q)))
+      .map((q) => ({ ...q, d: Math.hypot(q.x + 0.5 - p.x, q.y - p.y, q.z + 0.5 - p.z) }))
+      .filter((q) => q.d <= r).sort((a, b) => a.d - b.d);
+  }
+
+  /**
+   * Why a collect of obsidian makes no progress, in words with what else to do (the stall watchdog's reply, and the
+   * stuck advice): the nearest formed obsidian and what is around it (water over it, lava beside it), the nearest
+   * still lava pool, and a frame from 10.
+   */
+  async function obsidianStuck(mined = 0) {
+    const p = latest.position ? floorPos(latest.position) : null;
+    const near = await formedObsidian(12).catch(() => []);
+    const have = allItems(latest.inventory, latest.equipment).obsidian ?? 0;
+    const parts = [];
+    const options = [];
+    const q = near[0];
+    if (q) {
+      const box = await rpc('view_blocks', { box: { x: q.x, y: q.y, z: q.z, half_width: 1, half_height: 1 } }, 10_000).catch(() => null);
+      const seen = new Map();
+      const b = box?.result?.blocks?.box;
+      for (const layer of b?.layers ?? []) for (const row of layer.rows) row.blocks.forEach((name, i) => seen.set(`${b.center.x - b.halfWidth + i},${layer.y},${row.z}`, name));
+      const at = (dx, dy, dz) => seen.get(`${q.x + dx},${q.y + dy},${q.z + dz}`);
+      const beside = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]];
+      const water = at(0, 1, 0) === 'water' || beside.some(([dx, dy, dz]) => at(dx, dy, dz) === 'water');
+      const lava = beside.concat([[0, 1, 0], [0, -1, 0]]).some(([dx, dy, dz]) => at(dx, dy, dz) === 'lava');
+      parts.push(`the nearest formed obsidian is at ${q.x} ${q.y} ${q.z}, ${Math.round(q.d)} blocks away${water ? ', under or beside water (the water poured did not all go back into the bucket)' : ''}${lava ? ', with lava beside it' : ''}`);
+      if (water) options.push({ text: `scoop the water: bucket fill water at ${q.x} ${q.y + 1} ${q.z}, then collect obsidian again`, hint: { skill: 'bucket', args: { action: 'fill', liquid: 'water', pos: { x: q.x, y: q.y + 1, z: q.z } } } });
+      const side = beside.map(([dx, , dz]) => ({ x: q.x + dx, y: q.y, z: q.z + dz })).find((c) => !['lava', 'water'].includes(at(c.x - q.x, 0, c.z - q.z)));
+      if (side) options.push({ text: `stand right beside it: go_to ${side.x} ${side.y} ${side.z}, then collect obsidian 1`, hint: { skill: 'go_to', args: side } });
+    } else parts.push('no formed obsidian is loaded within 12 blocks');
+    const data = await rpc('view_blocks', { find: { block_names: ['lava'], limit: 64 } }, 10_000).catch(() => null);
+    const pool = (data?.result?.blocks?.find?.[0]?.listed ?? []).filter((l) => !Number.isFinite(l.level) || l.level === 0).map(floorPos)
+      .map((l) => ({ ...l, d: p ? Math.round(Math.hypot(l.x - p.x, l.y - p.y, l.z - p.z)) : 0 })).sort((a, b) => a.d - b.d)[0];
+    if (pool) options.push({ text: `make more at the still lava pool at ${pool.x} ${pool.y} ${pool.z}, ${pool.d} blocks away: go_to a spot a few blocks from it, then collect obsidian`, hint: { skill: 'go_to', args: { x: pool.x + 3, y: pool.y + 1, z: pool.z } } });
+    if (have >= 10) options.push({ text: `build nether_portal now: ${have} obsidian is enough when you carry 2 other blocks (cobblestone, dirt) for its top corners`, hint: { skill: 'build', args: { blueprint: 'nether_portal', material: 'obsidian' } } });
+    return { text: `no obsidian came in${mined ? ` after the first ${mined}` : ''}: ${parts.join('; ')}`, options };
+  }
+
   async function obsidianGuard() {
     const refuse = (result, code = 'FAILED') => ({ ok: false, result, code, delta: {} });
     const p = latest.position;
@@ -931,6 +1015,17 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         const g = await obsidianGuard();
         if (g?.note) plan.note = `${plan.note ? `${plan.note}; ` : ''}${g.note}`;
         else if (g) plan.refused = g;
+        // obsidian already formed next to the bot: mined at its own cells first (production game g0a414c, 2026-10-13:
+        // standing by formed obsidian, the search walked off to targets it could not reach, 0 of 1 for 9 minutes);
+        // the search makes the rest (a step of its own, counted from what the cells gave)
+        if (!plan.refused) {
+          const near = await formedObsidian(6);
+          if (near.length) {
+            const n = v.args.n;
+            const exact = near.slice(0, n).map((c) => ({ tool: 'collect_block', args: { block_name: 'obsidian', x: c.x, y: c.y, z: c.z }, optional: true }));
+            plan.calls = [...exact, ...plan.calls.map((c, k) => (k === 0 ? { ...c, topUp: n } : { ...c, topUp: n, rest: true }))];
+          }
+        }
       }
       // its frame's cells loaded first: just back through the portal, the chunks around are still coming in (the
       // staging checks, 2026-10-11: every cell "unloaded", no obsidian back)
@@ -959,9 +1054,18 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         let replaced = 0;
         const retried = new Set(); // calls tried again once after a reflex took the body over
         for (let i = 0; i < calls.length; i++) {
-          const call = calls[i];
+          let call = calls[i];
           if (ctl.stopped) break;
           ctl.actionId = null;
+          // a search after the exact cells: only for what they did not give
+          if (call.topUp) {
+            await refresh().catch(() => {});
+            const got = (allItems(latest.inventory, latest.equipment)[call.args.block_name] ?? 0) - (before[call.args.block_name] ?? 0);
+            const left = call.topUp - got;
+            if (left <= 0) continue;
+            if (call.rest) continue; // the first search call takes the rest (up to 32)
+            call = { ...call, args: { ...call.args, count: Math.min(32, left) } };
+          }
           // a craft's item counted before it: a craft a reflex cuts short may have made the item all the same
           let craftHad = null;
           if (call.tool === 'craft_item' && call.args?.items?.[0]) {
@@ -987,6 +1091,13 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped, call });
+          // the obsidian search that brought nothing in: why, and what else to do, at once
+          if (ctl.stalled && !res.ok) {
+            const why = await obsidianStuck(ctl.stalled.mined).catch(() => null);
+            res = { ok: false, code: 'FAILED', result: `${why?.text ?? `no obsidian came in for ${Math.round(obsidianStallMs / 1000)} s`}.${why?.options?.length ? ` Instead: ${why.options.map((o) => o.text).join('; or ')}` : ''}`, theirs: res.theirs };
+            ctl.stalled = null;
+            ctl.stopped = null;
+          }
           // their entry refuses a bot standing in the portal it just lit or came out of ("already occupies this nether_portal
           // after a recent arrival"); the game takes a bot through by itself once it has stood there long enough
           // (production game g71c9f5, 2026-10-13: enter failed, then the bot went through on its own while walking out).

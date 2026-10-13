@@ -101,7 +101,7 @@ export const EXTRA_DEFS = Object.freeze([
     'Make a shield and put it in your off-hand: from 1 iron ingot you carry, else raw iron smelted, else 1 iron ore mined (stone pickaxe) and smelted; planks from your wood. Your fight reflex raises it against arrows.',
     obj({}, [])],
   ['portal',
-    'A Nether portal. Build the frame first: build nether_portal from 12 obsidian, and 2 more on uneven ground (or place obsidian yourself, 4 wide and 5 tall, corners optional). light: light the frame with flint_and_steel you carry; enter: step into the lit portal and wait to arrive (in the Nether, enter again to come back). pos: a frame block or an inside cell; without pos, the frame your last build nether_portal made, or in the Nether the portal you came out of. dismantle: takes the obsidian of your last frame back, block by block (after a frame that failed). Never near the world spawn or another player. Take food along (the Nether has little); it enters with whatever it carries.',
+    'A Nether portal. Build the frame first: build nether_portal from 12 obsidian, or 10 with 2 other blocks you carry (cobblestone, dirt...) for its top corners, and 2 more on uneven ground (or place obsidian yourself, 4 wide and 5 tall, corners optional). light: light the frame with flint_and_steel you carry; enter: step into the lit portal and wait to arrive (in the Nether, enter again to come back). pos: a frame block or an inside cell; without pos, the frame your last build nether_portal made, or in the Nether the portal you came out of. dismantle: takes the obsidian of your last frame back, block by block (after a frame that failed). Never near the world spawn or another player. Take food along (the Nether has little); it enters with whatever it carries.',
     obj({ action: pick('light, enter, or dismantle (your own last frame\'s obsidian back)', ['light', 'enter', 'dismantle']), pos: POS, low_supplies: { type: 'boolean', description: 'kept for old clients; the body always enters' } }, ['action'])],
   ['armor',
     'Craft the best armor you can pay for (iron ingots, leather, gold or diamonds) and put it on, with any better piece or shield you carry.',
@@ -192,6 +192,18 @@ export function continuesLast(last, args, feet) {
 }
 
 /** Blueprint cells for build_structure: '#' the material, '.' dug clear; anchored as our build skill anchors them. */
+/** Blocks a portal frame's top corners may be instead of obsidian (any solid block will do). */
+export const FRAME_FILLERS = Object.freeze(['cobblestone', 'cobbled_deepslate', 'stone', 'dirt', 'andesite', 'diorite', 'granite', 'tuff', 'deepslate', 'netherrack', 'oak_planks', 'spruce_planks', 'birch_planks']);
+/** A portal frame's two top corners (the cells at the ends of its top row), from its cells. */
+export function portalCorners(cells) {
+  const frame = cells.filter((c) => c.block_name !== 'air');
+  const top = Math.max(...frame.map((c) => c.y));
+  const row = frame.filter((c) => c.y === top);
+  // the top row is 4 wide: its two ends are the cells farthest along the row
+  const along = row.every((c) => c.x === row[0].x) ? 'z' : 'x';
+  const sorted = [...row].sort((a, b) => a[along] - b[along]);
+  return sorted.length === 4 ? [sorted[0], sorted[3]] : [];
+}
 export function blueprintCells(blueprint, material, feet, headingDegrees) {
   const bp = BLUEPRINTS[blueprint];
   const f = facingOf((-Number(headingDegrees || 0) * Math.PI) / 180); // compass degrees -> mineflayer yaw
@@ -345,7 +357,20 @@ export function toTheirs(skill, args, ctx) {
       }
       const { cells, facing } = blueprintCells(args.blueprint, args.material, feet, ctx.heading);
       if (args.material === 'obsidian' || args.blueprint === 'nether_portal') { const guard = frameGuard(cells, ctx); if (guard) return guard; }
-      return { calls: [{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: true } }], note: `built facing ${facing}`, build: { blueprint: args.blueprint, material: args.material, cells, facing, feet } };
+      // a portal frame needs 10 obsidian: its top corners may be any block (production game g0a414c, 2026-10-13: 11
+      // obsidian carried, and 9 minutes spent on a 12th). With 10 or 11, the corners are a carried building block
+      const corners = args.blueprint === 'nether_portal' && args.material === 'obsidian' ? portalCorners(cells) : [];
+      const have = Number(ctx.inventory?.obsidian) || 0;
+      const filler = FRAME_FILLERS.filter((b) => (Number(ctx.inventory?.[b]) || 0) > 0);
+      let note = `built facing ${facing}`;
+      if (corners.length === 2 && have >= 10 && have < 12 && filler.length) {
+        const pool = filler.flatMap((b) => Array(Math.min(2, Number(ctx.inventory[b]) || 0)).fill(b)).slice(0, 2);
+        if (pool.length === 2 || have === 11) {
+          corners.slice(0, 12 - have).forEach((c, k) => { c.block_name = pool[k] ?? pool[0]; });
+          note += `; its top corners are ${[...new Set(corners.filter((c) => c.block_name !== 'obsidian').map((c) => c.block_name))].join(' and ')} (a frame needs 10 obsidian)`;
+        }
+      }
+      return { calls: [{ tool: 'build_structure', args: { blocks: cells, remove_wrong_blocks: true } }], note, build: { blueprint: args.blueprint, material: args.material, cells, facing, feet } };
     }
     case 'attack': {
       let target = args.target;
