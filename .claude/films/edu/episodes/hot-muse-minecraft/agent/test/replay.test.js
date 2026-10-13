@@ -193,7 +193,8 @@ const EXPECTED = {
   // 23: refused when that frame is unknown, released when g0793f1's replay (earlier in this file) left it there, as it did
   g809e1b: { 16: null, 17: null, 18: null, 23: null, 25: 'LAVA', 32: null, 36: null, 38: null, 40: null, 42: null, 44: null, 45: null },
   // the lit portal and the pool far off (20, 22), the explore that found no plains (29)
-  g4ac86b: { 20: 'FAILED', 22: 'LAVA', 29: null },
+  // 20: the lit portal at 49 93 161 no longer stops the collect: its frame is spared (runtime patch 0014)
+  g4ac86b: { 22: 'LAVA', 29: null },
   // 0: the zombie; 5: craft with no n, refused in production, runs now; the walks the world stopped (15, 24, 29);
   // Muse's stop (21)
   g71c9f5: { 0: 'DIED', 15: null, 21: null, 24: null, 29: null },
@@ -203,7 +204,7 @@ const EXPECTED = {
 const EXPECTED_TEXT = {
   g71c9f5: { 5: /^craft \{"item":"wooden_pickaxe","n":1\}: ok/ },
   g809e1b: { 31: /cleared \d+ cells of (stone and dirt|dirt and stone) for it first/, 34: /cleared \d+ cells of (stone and dirt|dirt and stone) for it first/ },
-  g4ac86b: { 20: /at 49 93 161\): collect obsidian could take its frame\. Go about 200 blocks from it first/, 28: /cleared \d+ cells of/, 33: /your own portal is at -?\d+ -?\d+ -?\d+, \d+ blocks away \(the Nether side led to an older portal/ },
+  g4ac86b: { 20: /a lit portal at 49 93 161 \(\d+ blocks away\) is loaded: its frame was left alone, the obsidian comes from lava or other obsidian/, 28: /cleared \d+ cells of/, 33: /your own portal is at -?\d+ -?\d+ -?\d+, \d+ blocks away \(the Nether side led to an older portal/ },
   // 55, 57: the stone hillside and the birch leaves are cleared first now, and the frames go up (g809e1b's fix)
   ga13a88: { 1: /^go_to \{"x":-20,"y":78,"z":236\}: ok/, 55: /cleared \d+ cells of stone for it first/, 57: /cleared \d+ cells of birch_leaves for it first/ },
 };
