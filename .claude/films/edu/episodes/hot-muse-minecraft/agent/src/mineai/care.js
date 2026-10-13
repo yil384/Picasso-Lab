@@ -1125,8 +1125,18 @@ export function createCare(deps) {
   async function reflexPolicy() {
     const pol = deps.policy?.();
     const eff = pol?.effective;
-    if (!eff?.combat || !pol.revision || now() - (memory.hideSetAt ?? 0) < 30_000) return;
+    if (!eff?.combat || !pol.revision) return;
+    // inside its own closed shelter the body stays put: no withdrawal and no digging by the fight reflex (g08370a: in
+    // its shelter at 5 health, the reflex "fled from skeleton" out of it, 14 blocks off, and was shot dead); outside,
+    // as before. A change of this applies at once; the rest at most every 30 s
+    const sit = deps.situation?.();
+    const p = sit?.position;
+    const sh = memory.shelter;
+    const enclosed = Boolean(sh && p && sh.feet.x === Math.floor(p.x) && sh.feet.z === Math.floor(p.z) && Math.abs(sh.feet.y - Math.floor(p.y)) <= 1);
+    if (now() - (memory.hideSetAt ?? 0) < 30_000 && memory.enclosedSet === enclosed) return;
     const combat = {};
+    if (eff.combat.retreat !== undefined && eff.combat.retreat === enclosed) combat.retreat = !enclosed;
+    if (eff.combat.terrain && eff.combat.terrain.dig === enclosed) combat.terrain = { ...eff.combat.terrain, dig: !enclosed };
     if (policy.defend === 'off') {
       if (eff.combat.melee !== false) combat.melee = false;
       if (eff.combat.bow !== false) combat.bow = false;
@@ -1140,8 +1150,9 @@ export function createCare(deps) {
     const food = eat && eff.food && eff.food.reflex !== undefined && eff.food.reflex !== eat ? { reflex: eat } : null;
     const escape = policy.escape !== 'off';
     const nav = eff.navigation && eff.navigation.escape_reflexes !== undefined && eff.navigation.escape_reflexes !== escape ? { escape_reflexes: escape } : null;
-    if (!Object.keys(combat).length && !food && !nav) return;
+    if (!Object.keys(combat).length && !food && !nav) { memory.enclosedSet = enclosed; return; }
     memory.hideSetAt = now();
+    memory.enclosedSet = enclosed;
     const changes = { ...(Object.keys(combat).length ? { combat } : {}), ...(food ? { food } : {}), ...(nav ? { navigation: nav } : {}) };
     const r = await deps.rpc('set_survival_policy', {
       operation: 'set', expected_revision: pol.revision, changes, lifetime: { kind: 'session' },

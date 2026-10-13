@@ -1,7 +1,8 @@
 // test/g08370a.test.js - what the owner's production game g08370a (2026-10-13) showed, one test each: a walk's failure
 // said "Pathfinder stopped: ..., while replanning after a movement failure: The planned bucket drop did not confirm
 // landing and water recovery.."; a fight and the death during Muse's shelter step were logged as Muse's and counted
-// nowhere. The opening (no live_view, no why or plan) is in test/liveview.test.js, the whole game in test/replay.test.js.
+// nowhere; in its closed shelter at 5 health the fight reflex withdrew it 14 blocks out, and it was shot. The opening
+// (no live_view, no why or plan) is in test/liveview.test.js, the whole game in test/replay.test.js.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -46,6 +47,31 @@ test('g08370a: a fight during Muse\'s shelter step is the reflex\'s, logged and 
     assert.ok(rows.some((x) => x.source === 'reflex' && /fled from zombie/.test(x.text)), JSON.stringify(rows));
     assert.ok(rows.some((x) => x.source === 'muse' && /closed itself in/.test(x.text)), 'the shelter is Muse\'s');
     assert.ok(body.attribution().reflex >= 1, 'counted as a reflex');
+  } finally {
+    await body.end?.('test over');
+    await hosts.closeAll();
+  }
+});
+
+test('g08370a: inside its closed shelter the fight reflex may not withdraw or dig out; outside it may again', async () => {
+  const log = createLogger({ dir: null, config, keep: 500 });
+  const hosts = fakeHosts(() => ({ inventory: { cobblestone: 64 } }));
+  const body = createMineAiBody({ config, log, hosts, gameId: 'gstay', username: 'Tst_rv_gstay', careTickMs: 30, careIdleMs: 50 });
+  await until(() => hosts.started[0]);
+  const fake = hosts.started[0].fake;
+  await body.ready;
+  try {
+    fake.world.timeOfDay = 15_000;
+    assert.ok(await until(() => fake.world.hide === 'when_exposed'), 'the usual knobs first');
+    assert.notEqual(fake.world.retreat, false);
+    const r = await body.run('shelter', {});
+    assert.equal(r.ok, true, r.result);
+    assert.ok(await until(() => fake.world.retreat === false && fake.world.combatDig === false), `in the shelter: retreat ${fake.world.retreat}, dig ${fake.world.combatDig}`);
+    const row = log.tail(500).filter((x) => x.kind === 'care_policy').at(-1);
+    assert.equal(row.retreat, false);
+    // out of it (its next walk): withdrawal and digging allowed again, at once
+    fake.world.position = { ...fake.world.position, x: fake.world.position.x + 20 };
+    assert.ok(await until(() => fake.world.retreat === true && fake.world.combatDig === true), 'out of the shelter');
   } finally {
     await body.end?.('test over');
     await hosts.closeAll();

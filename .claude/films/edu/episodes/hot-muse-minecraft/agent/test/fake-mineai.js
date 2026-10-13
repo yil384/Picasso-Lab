@@ -335,7 +335,7 @@ export async function startFakeMineAi(opts = {}) {
         inventory: { stacks: stacks() }, nearby: { players: world.players, hostiles: world.hostiles, mobs: world.mobs },
         activity: { owner: world.owner, activeAction: active },
       } },
-      survivalPolicy: { revision: world.revision, effective: { combat: { hide: world.hide, critical_health: world.critical, melee: world.melee, bow: world.melee }, food: { reflex: world.foodReflex }, navigation: { escape_reflexes: world.escape } } },
+      survivalPolicy: { revision: world.revision, effective: { combat: { hide: world.hide, critical_health: world.critical, melee: world.melee, bow: world.melee, retreat: world.retreat ?? true, terrain: { dig: world.combatDig ?? true, place: true } }, food: { reflex: world.foodReflex }, navigation: { escape_reflexes: world.escape } } },
     }));
     reg('read_recent_events', () => ({ action: 'read_recent_events', durationMs: 1, result: { status: 'succeeded', events: world.events.splice(0), remainingEventCount: 0 } }));
     reg('view_blocks', (a) => {
@@ -361,7 +361,9 @@ export async function startFakeMineAi(opts = {}) {
     reg('set_survival_policy', (a) => {
       if (a.expected_revision !== world.revision) return { action: 'set_survival_policy', durationMs: 1, result: { status: 'failed', error: '[POLICY_REVISION_STALE] stale' } };
       world.revision = `rev-${Number(world.revision.split('-')[1]) + 1}`;
-      if (a.operation === 'reset') { world.hide = 'when_recovery_possible'; world.critical = 8; world.foodReflex = 'full'; world.escape = true; world.melee = true; }
+      if (a.operation === 'reset') { world.hide = 'when_recovery_possible'; world.critical = 8; world.foodReflex = 'full'; world.escape = true; world.melee = true; world.retreat = true; world.combatDig = true; }
+      if (a.changes?.combat?.retreat !== undefined) world.retreat = a.changes.combat.retreat;
+      if (a.changes?.combat?.terrain?.dig !== undefined) world.combatDig = a.changes.combat.terrain.dig;
       if (a.changes?.food?.reflex) world.foodReflex = a.changes.food.reflex;
       if (a.changes?.navigation?.escape_reflexes !== undefined) world.escape = a.changes.navigation.escape_reflexes;
       if (a.changes?.combat?.melee !== undefined) world.melee = a.changes.combat.melee;
