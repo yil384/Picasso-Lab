@@ -47,6 +47,8 @@ const MAX_STEPS = 32;
 export const LIVE_NEXT = 'Next: call live_view now and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, before you play.';
 /** The top line of a play, play_sequence or get_state reply while live_view has not been called (the first, then every 5th). */
 export const LIVE_NUDGE = 'Your user cannot see the game yet: call live_view and show its HTML in your preview panel.';
+/** The top line of a play or play_sequence reply sent without why or plan (the first such call, then every 5th). */
+export const WHY_NUDGE = 'Viewers see your why and plan under the video: pass both on every play call.';
 const MAX_BODY = 64 * 1024; // the SDK's own default is 4 MiB, kept for the session's life in clientInfo
 const STATION_RADIUS = 24; // craft and smelt use a table or furnace this close (REUSE_RADIUS in src/stations.js)
 
@@ -748,6 +750,15 @@ export function createMcp(hooks) {
           // the user cannot see the game until live_view's HTML is shown (a production game, 2026-10-13, g08370a: Muse,
           // run as a background task, went from start_game straight to play_sequence): a line at the top of the reply,
           // on the first call without it and every 5th after; the call itself is never held up
+          // a play call without why or plan leaves the stream's thinking band empty (g08370a: none on any call): a line
+          // at the top too, on the first such call and every 5th after (below the live view's line when both apply)
+          if (['play', 'play_sequence'].includes(name)) safely(() => {
+            const g = game(entry);
+            const has = (v) => typeof v === 'string' && v.trim().length > 0;
+            if (!g || (has(args?.why) && has(args?.plan)) || !out?.content?.[0] || typeof out.content[0].text !== 'string') return;
+            g.wordlessCalls = (g.wordlessCalls ?? 0) + 1;
+            if (g.wordlessCalls % 5 === 1) out.content[0].text = `${WHY_NUDGE}\n\n${out.content[0].text}`;
+          });
           if (['play', 'play_sequence', 'get_state'].includes(name)) safely(() => {
             const g = game(entry);
             if (!g || g.liveViewed || !out?.content?.[0] || typeof out.content[0].text !== 'string') return;
