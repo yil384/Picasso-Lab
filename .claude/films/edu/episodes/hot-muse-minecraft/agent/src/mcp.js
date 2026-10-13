@@ -987,7 +987,9 @@ export function createMcp(hooks) {
       // a test caller (the smoke and check scripts) never spends a Facebook live (MCP_TEST_LIVE on lets it): the same
       // shape of answer, the 3D view instead of the video, and the camera stays where it is
       if (s.caller === 'TEST SCRIPT' && !hooks.testLives) {
-        safely(() => hooks.log.event('live_view_test', { session: sid8(), game: s.id, caller: s.caller, format }));
+        safely(() => hooks.log.event('live_view_test', { session: sid8(), game: s.id, caller: s.caller, format, record: Boolean(hooks.testRecord) }));
+        // MCP_TEST_RECORD: the camera films it for the recording only (how the recording is tested; no live video)
+        if (hooks.testRecord) safely(() => hooks.liveView?.(s, { waitMs: 0, local: true }));
         if (format === 'embed') return text(JSON.stringify({ format, game: s.id, live: false, state: 'test', camera_game: null, player: null, embed_url: null, video_url: null }));
         const html = liveViewHtml({ state: 'test', game: s.id, fb: false });
         const lines = [`Live view of game ${s.id}: test caller: no Facebook live (the live videos a day are few and kept for players). The game itself works.`,

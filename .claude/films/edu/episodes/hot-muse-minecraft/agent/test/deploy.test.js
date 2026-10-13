@@ -347,7 +347,10 @@ test('camera on staging: production\'s camera settings with staging\'s Paper; th
   for (const k of ['network_mode: "service:agent"', 'user: "${CAMERA_UID:-1014}:${CAMERA_GID:-1014}"', 'env_file: [ { path: camera.env, required: false } ]', 'cpus: 6', 'mem_limit: 3g', 'security_opt: [ "no-new-privileges:true" ]']) {
     assert.ok(stg.camera.text.includes(k) && prod.camera.text.includes(k), k);
   }
-  assert.match(stg.camera.text, /volumes: \[ "\.\.\/\.\.\/logs:\/logs", "console:\/console", "\$\{HOME\}\/workspace\/muse-minecraft\/camera\/auth:\/auth", "\.\.\/\.\.\/fb:\/fb:ro" \]/);
+  assert.match(stg.camera.text, /volumes: \[ "\.\.\/\.\.\/logs:\/logs", "console:\/console", "\$\{HOME\}\/workspace\/muse-minecraft\/camera\/auth:\/auth", "\.\.\/\.\.\/fb:\/fb:ro", "\$\{RECORD_HOST_DIR:-\.\.\/\.\.\/recordings\}:\/recordings" \]/);
+  // the recordings (src/recorder.js) under RECORD_HOST_DIR (deploy/.env), on for both
+  assert.match(prod.camera.text, /"\$\{RECORD_HOST_DIR:-\.\.\/\.\.\/recordings\}:\/recordings"/);
+  assert.equal(prod.camera.env.RECORD, '${RECORD:-on}');
   assert.match(prod.camera.text, /"\.\.\/\.\.\/fb:\/fb:ro"/);
   for (const s of [stg, prod]) for (const k of Object.keys(s.camera.env)) assert.ok(!/^FB_|STREAM_RTMP_URL/.test(k), `${k} belongs in camera.env, never the compose file`);
   const { calls } = push([]);

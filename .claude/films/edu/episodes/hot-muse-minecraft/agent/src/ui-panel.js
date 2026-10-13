@@ -717,6 +717,8 @@ export function createUiPanel(o) {
     },
     stop() { clearInterval(timer); timer = null; },
     get frames() { return frames; },
+    /** The game's age now in seconds (for the recording's timeline), or null. */
+    get gameS() { return gameS(); },
     /**
      * Since the last call: drawings, files written, layout searches so far, the drawing's time and the lag from an input
      * to its drawing (ms: p50, p99, max), the frame clock's ticks and its longest gap (a busy CPU shows there).
