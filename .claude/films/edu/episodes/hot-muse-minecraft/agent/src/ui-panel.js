@@ -464,10 +464,13 @@ export function createUiPanel(o) {
       runs.push({ tool: e.tool, args: e.args, count: 1, lastSent: e.sent, lastAgoS: e.agoS, firstSent: e.sent, ns: [e.n], newestState: e.answer.state, latestAnswer: e.reply, latestAnswerAt: e.replyAt });
     }
     // the advice: full text, when it was given, the verdict tied to it by time
-    const items = [...advice.values()].sort((a, z) => z.sev - a.sev || z.at - a.at).map((a) => {
-      const text = capital(a.text);
-      const lead = text.split(/[:;]\s/)[0]; // its first clause: "Night in about 68 s", "You carry 8 obsidian"
-      return { text, gist: lead.length <= 48 && lead !== text ? lead : '', givenAt: clockOf(a.gs), givenAtS: a.gs ?? 0 };
+    // stuck first (the line that helps most when Muse repeats itself), then by how pressing, the time left last
+    const rank = (a) => (a.kind === 'stuck' ? 0 : a.kind === 'time' ? 2 : 1);
+    const items = [...advice.values()].sort((a, z) => rank(a) - rank(z) || z.sev - a.sev || z.at - a.at).map((a) => {
+      // a stuck advice under its STUCK tag: what is not moving leads ("stuck:" is the tag's)
+      const text = capital(a.kind === 'stuck' ? String(a.text).replace(/^stuck:\s*/i, '') : a.text);
+      const lead = text.split(/[:;]\s|\.\s/)[0]; // its first clause: "Night in about 68 s", "You carry 8 obsidian"
+      return { text, gist: lead.length <= 48 && lead !== text ? lead : '', givenAt: clockOf(a.gs), givenAtS: a.gs ?? 0, ...(a.kind === 'stuck' || a.kind === 'time' ? { kind: a.kind } : {}) };
     });
     const adviceState = { items, follow: null, lastFollow: follow ? { atS: follow.gs ?? 0, at: clockOf(follow.gs), ok: follow.ok } : null };
     // BODY · WORLD: the body's own actions, what happened around it, the server's
@@ -568,7 +571,7 @@ export function createUiPanel(o) {
         const old = advice.get(k);
         const text = String(a.t).replace(/\s*\(time -?\d+\)/g, ''); // "Night (time 13608): ...": the ticks are for Muse, not the viewers
         const shape = text.replace(/\d+/g, '#'); // the same advice with its numbers moved on keeps the time it was given
-        advice.set(k, { text, gist: adviceGist(text), shape, sev: a.sev ?? 1, at: old?.shape === shape ? old.at : now(), gs: old?.shape === shape ? old.gs : gameS() });
+        advice.set(k, { kind: k, text, gist: adviceGist(text), shape, sev: a.sev ?? 1, at: old?.shape === shape ? old.at : now(), gs: old?.shape === shape ? old.gs : gameS() });
       }
       for (const k of [...advice.keys()]) if (!seen.has(k)) advice.delete(k);
     },
