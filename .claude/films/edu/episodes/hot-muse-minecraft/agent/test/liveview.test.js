@@ -26,7 +26,7 @@ test('live view: start_game says to call it next; the replies nudge on the first
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'liveview-'));
   const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
   const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null });
-  const c = new Client({ name: 'test', version: '1' });
+  const c = new Client({ name: 'player', version: '1' });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
   try {
     assert.equal(LIVE_NEXT, 'Next: call live_view now and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, before you play.');
@@ -99,7 +99,7 @@ test('why and plan: a play call without them gets a line at the top on the first
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'whyplan-'));
   const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
   const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null });
-  const c = new Client({ name: 'test', version: '1' });
+  const c = new Client({ name: 'player', version: '1' });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
   try {
     assert.equal(WHY_NUDGE, 'Viewers see your why and plan under the video: pass both on every play call.');

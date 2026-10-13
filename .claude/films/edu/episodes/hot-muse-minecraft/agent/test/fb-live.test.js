@@ -259,27 +259,29 @@ test('channel: the terminal of every game is kept; a stream that starts for a ga
   for (let i = 0; i < 46; i++) ch.term('g1', { lines: [{ k: 'ok', t: `line ${i}` }], status: i === 45 ? 'HP 18/20  FOOD 17/20  DAY 07:00' : '' });
   // the HUD's state of g1 (items, place, goal, advice, the game's age), kept for the stream that films it later
   ch.term('g1', { lines: [], inv: { diamond: 2, pick: 'iron' }, pos: { y: -42, place: 'deep caves' }, goal: { key: 'nether', title: 'The Nether', reached: false, list: [{ k: 'wooden_pickaxe', t: 'wooden pickaxe', atS: 41 }] }, adv: [{ k: 'night', t: 'night soon', sev: 2 }], game: { id: 'g1', s: 100 } });
+  const keptAt = Date.now();
   ch.start('g2', { player: 'Muse_bbbb' });
   ch.term('g2', { lines: [{ k: 'call', t: '> start_game' }, { k: 'advice', t: 'advice: night in 45 s' }], status: 'HP 20/20  FOOD 20/20  DAY 12:00' });
   ch.term('g2', { lines: [{ k: 'call', t: '> live_view' }] });
   ch.focus('g1');
-  await until(() => ch.live().state === 'live');
+  await until(() => ch.live().state === 'live', 30_000);
   const s = streams.made[0];
+  const offS = (Date.now() - keptAt) / 1000; // how long g1 was off camera, however slow this machine is
   assert.deepEqual(s.terms[0].lines.map((l) => l.t), ['> start_game', '...', ...Array.from({ length: 36 }, (_, i) => `line ${i + 10}`)]);
   assert.deepEqual([s.terms[0].inv, s.terms[0].pos, s.terms[0].goal.title, s.terms[0].adv[0].k, s.terms[0].game.id], [{ diamond: 2, pick: 'iron' }, { y: -42, place: 'deep caves' }, 'The Nether', 'night', 'g1']);
-  assert.ok(s.terms[0].game.s >= 100 && s.terms[0].game.s < 110, 'the game\'s age counts on while it is off camera');
+  assert.ok(s.terms[0].game.s >= 100 && s.terms[0].game.s <= 100 + offS + 1, `the game's age counts on while it is off camera: ${s.terms[0].game.s} after ${offS} s`);
   assert.equal(s.terms[0].status, 'HP 18/20  FOOD 17/20  DAY 07:00', 'never an empty status bar');
   ch.term('g1', { lines: [{ k: 'ok', t: 'new' }] });
   ch.term('g2', { lines: [{ k: 'ok', t: 'off camera' }] });
   assert.deepEqual(s.terms.at(-1).lines, [{ k: 'ok', t: 'new' }], 'the game on camera: its new lines only');
   const before = s.terms.length;
   ch.focus('g2');
-  await until(() => s.calls.at(-1) === 'follow Muse_bbbb');
+  await until(() => s.calls.at(-1) === 'follow Muse_bbbb', 30_000);
   assert.equal(s.terms.length, before + 1);
   assert.deepEqual(s.terms.at(-1).lines.map((l) => l.t), ['> start_game', 'advice: night in 45 s', '> live_view', 'off camera']);
   assert.equal(s.terms.at(-1).status, 'HP 20/20  FOOD 20/20  DAY 12:00');
   await ch.stop('g2');
-  await until(() => s.calls.at(-1) === 'follow Muse_aaaa');
+  await until(() => s.calls.at(-1) === 'follow Muse_aaaa', 30_000);
   assert.deepEqual(s.terms.at(-1).lines.map((l) => l.t).slice(-2), ['line 45', 'new'], 'back to g1: its terminal again');
   ch.term('g9', { lines: [{ k: 'call', t: 'x' }] });
   ch.term('bad id!', { lines: [{ k: 'call', t: 'x' }] });
@@ -387,7 +389,7 @@ test('profile target: a live video Facebook stored with a narrower privacy than 
   const ch = createLiveChannel({ graph, createStream: stubStreams(fake).create, log, stateFile: path.join(dir, 's.json'), privacy: 'EVERYONE', deleteAfter: true, pollMs: 25, settleMs: 20, sweepMs: 40 });
   const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
   const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams: ch, loopStatsMs: 0 });
-  const c = new Client({ name: 'fb-test', version: '1' });
+  const c = new Client({ name: 'fb-player', version: '1' });
   t.after(async () => { await c.close().catch(() => {}); await agent.stop('test over'); await ch.stopAll(); await fake.close(); fs.rmSync(dir, { recursive: true, force: true }); });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
   const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
@@ -578,7 +580,7 @@ test('MCP live_view with the channel: called before the stream is up it waits fo
   const dir = tmp();
   const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
   const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams: ch, loopStatsMs: 0 });
-  const c = new Client({ name: 'fb-test', version: '1' });
+  const c = new Client({ name: 'fb-player', version: '1' });
   t.after(async () => { await c.close().catch(() => {}); await agent.stop('test over'); fs.rmSync(dir, { recursive: true, force: true }); });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
   const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
@@ -608,7 +610,7 @@ test('MCP live_view: not live within the wait, it says so and when to ask again;
   const dir = tmp();
   const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
   const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams: ch, loopStatsMs: 0, mcpCallMs: 6_000 });
-  const c = new Client({ name: 'fb-test', version: '1' });
+  const c = new Client({ name: 'fb-player', version: '1' });
   t.after(async () => { await c.close().catch(() => {}); await agent.stop('test over'); fs.rmSync(dir, { recursive: true, force: true }); });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
   const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
@@ -627,7 +629,7 @@ test('MCP live_view: a refusal the channel waits out is said at once, with the r
   const dir = tmp();
   const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
   const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams: ch, loopStatsMs: 0 });
-  const c = new Client({ name: 'fb-test', version: '1' });
+  const c = new Client({ name: 'fb-player', version: '1' });
   t.after(async () => { await c.close().catch(() => {}); await agent.stop('test over'); fs.rmSync(dir, { recursive: true, force: true }); });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
   const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
@@ -724,4 +726,73 @@ test('end to end: a game on the channel -> the fake Graph API -> the camera stre
     if (sink.child.exitCode === null) sink.child.kill('SIGKILL');
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// 2026-10-13: the smoke games of one day used up the 20 live videos, and the owner's game got none
+test('a test caller (TEST SCRIPT) spends no Facebook live: the same answer shape, the 3D view, the camera untouched; MCP_TEST_LIVE lets it', async (t) => {
+  const { fake, rows, ch } = await channelOn(t);
+  const dir = tmp();
+  const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
+  const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams: ch, loopStatsMs: 0 });
+  const c = new Client({ name: 'muse-hudlast-smoke', version: '1' });
+  t.after(async () => { await c.close().catch(() => {}); await agent.stop('test over'); fs.rmSync(dir, { recursive: true, force: true }); });
+  await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
+  const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
+  ch.start(game, { player: 'Muse_test9' });
+  const r = await c.callTool({ name: 'live_view', arguments: {} });
+  assert.match(r.content[0].text, new RegExp(`^Live view of game ${game}: test caller: no Facebook live .*The game itself works\\.\\n3D view in a web page \\(plain link\\): http`));
+  assert.deepEqual({ ...r.structuredContent, html: undefined }, { format: 'html', game, state: 'test', live: false, camera_game: null, video_url: null, embed_url: null, html: undefined });
+  assert.match(r.structuredContent.html, /<p>Test caller: no Facebook live for game g\w+ \(tests never use the live videos a day\)\. The game goes on\.<\/p>/);
+  assert.doesNotMatch(r.structuredContent.html, /<iframe/);
+  const embed = JSON.parse((await c.callTool({ name: 'live_view', arguments: { format: 'embed' } })).content[0].text);
+  assert.deepEqual([embed.state, embed.live, embed.embed_url], ['test', false, null]);
+  await new Promise((res) => { setTimeout(res, 300); });
+  assert.equal(fake.videos.size, 0, 'no live video created');
+  assert.equal(ch.live().state, 'off', 'the camera was not asked for');
+  assert.ok(agent.log.tail(200).some((x) => x.kind === 'live_view_test' && x.game === game));
+  // the game itself goes on
+  assert.match((await c.callTool({ name: 'get_state', arguments: {} })).content[0].text, /HP|State/);
+  await c.callTool({ name: 'end_game', arguments: {} });
+  assert.ok(!rows.some((x) => x.k === 'fb_live_created'));
+  // MCP_TEST_LIVE=on: a test caller gets the live video (a deliberate check)
+  const dir2 = tmp();
+  const agent2 = await startAgent({ config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir2, MODEL_API_KEY: '', MCP_TEST_LIVE: 'on' }), fakeBot: true, print: () => {}, loadViewer: () => null, streams: ch, loopStatsMs: 0 });
+  const c2 = new Client({ name: 'muse-hudlast-smoke', version: '1' });
+  t.after(async () => { await c2.close().catch(() => {}); await agent2.stop('test over'); fs.rmSync(dir2, { recursive: true, force: true }); });
+  await c2.connect(new StreamableHTTPClientTransport(new URL(`${agent2.url}/mcp`)));
+  const g2 = /game (g\w+)/.exec((await c2.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
+  ch.start(g2, { player: 'Muse_test8' });
+  const r2 = await c2.callTool({ name: 'live_view', arguments: {} });
+  assert.equal(r2.structuredContent.state, 'live');
+  await ch.stop(g2);
+});
+
+test('at the cap, live_view tells Muse until when (UTC), that the game itself works and to keep playing; the game goes on', async (t) => {
+  const { ch } = await channelOn(t, { maxPerHour: 5, maxPerDay: 1 });
+  const dir = tmp();
+  const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '' });
+  const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams: ch, loopStatsMs: 0 });
+  t.after(async () => { await agent.stop('test over'); fs.rmSync(dir, { recursive: true, force: true }); });
+  // one live video used up the day
+  ch.start('g0', { player: 'Muse_aaaa' });
+  ch.focus('g0');
+  await until(() => ch.live().state === 'live', 30_000);
+  await ch.stop('g0');
+  await until(() => ch.live().state === 'off', 30_000);
+  const c = new Client({ name: 'muse-minecraft-mcp', version: '1' });
+  t.after(async () => { await c.close().catch(() => {}); });
+  await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
+  const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
+  ch.start(game, { player: 'Muse_cccc' });
+  const r = await c.callTool({ name: 'live_view', arguments: {} });
+  const until24 = new Date(Date.now() + 86_400_000).toISOString().slice(11, 16);
+  assert.match(r.content[0].text, new RegExp(`^Live view of game ${game}: the live view is at its daily limit until \\d\\d:\\d\\d UTC \\(in about \\d+ h \\d+ min\\): 1 live videos? in the last 24 hours, so Facebook does not block the account\\. The game itself works: keep playing, and call live_view again after that time\\.`), r.content[0].text.split('\n')[0]);
+  assert.match(r.structuredContent.html, /<p>Not live: the live view is at its daily limit until \d\d:\d\d UTC\. The game goes on\.<\/p>/);
+  assert.equal(r.structuredContent.state, 'capped');
+  assert.match(r.content[0].text, new RegExp(`limit until (${until24}|${new Date(Date.now() + 86_340_000).toISOString().slice(11, 16)}) UTC`), 'a day after the one live video');
+  // the game is unaffected: a play call and a look work, and no nudge to call live_view comes back
+  const p = await c.callTool({ name: 'play', arguments: { skill: 'collect', args: { block: 'oak_log', n: 1 }, why: 'Wood', plan: 'Then planks.' } });
+  assert.doesNotMatch(p.content[0].text, /cannot see the game yet/);
+  assert.match((await c.callTool({ name: 'get_state', arguments: {} })).content[0].text, /HP|State/);
+  await c.callTool({ name: 'end_game', arguments: {} });
 });

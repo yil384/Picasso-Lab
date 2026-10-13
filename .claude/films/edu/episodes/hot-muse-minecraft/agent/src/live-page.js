@@ -31,7 +31,8 @@ export function statusLine(v) {
   if (v.state === 'live' && v.ownerOnly) return `Live${g ? `: game ${g}` : ''}, but Facebook shows this video to its owner only.`;
   if (v.state === 'live') return `Live${g ? `: game ${g}` : ''}. One camera films the game that asked for the live view last.`;
   if (v.state === 'retrying') return 'Not live yet: the live video could not start; it is tried again by itself.';
-  if (v.state === 'capped') return 'Not live: the limit of live videos for now is reached.';
+  if (v.state === 'capped') return v.until ? `Not live: the live view is at its ${v.daily ? 'daily' : 'hourly'} limit until ${v.until} UTC. The game goes on.` : 'Not live: the limit of live videos for now is reached.';
+  if (v.state === 'test') return `Test caller: no Facebook live${g ? ` for game ${g}` : ''} (tests never use the live videos a day). The game goes on.`;
   if (['connecting', 'starting'].includes(v.state)) return `Joining: the live video${g ? ` of game ${g}` : ''} starts in a few seconds.`;
   if (v.state === 'ending' || v.state === 'waiting') return 'Waiting for the next game.';
   return v.fb === false ? 'Live video is off on this server.' : 'Waiting for the next game.';
@@ -54,7 +55,7 @@ export function liveViewHtml(v) {
   // the player at the video's own shape (square in the UI layout), as wide as the panel and no taller than it
   const [aw, ah] = /^\d{1,4}\/\d{1,4}$/.test(String(v.aspect ?? '')) ? String(v.aspect).split('/').map(Number) : [16, 9];
   const ratio = Math.round((aw / ah) * 10_000) / 10_000;
-  const live = v.embedUrl && isPlayerUrl(v.embedUrl) && v.state !== 'off' && v.state !== 'waiting';
+  const live = v.embedUrl && isPlayerUrl(v.embedUrl) && v.state !== 'off' && v.state !== 'waiting' && v.state !== 'test';
   const src = live ? `${v.embedUrl}&autoplay=true&mute=true` : '';
   const player = live
     ? `<div id="v" data-src="${esc(src)}"><iframe src="${esc(src)}" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe>`

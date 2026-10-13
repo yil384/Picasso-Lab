@@ -196,6 +196,10 @@ export function loadConfig(env = process.env) {
     trustProxy,
     trustedProxies,
     leaseMs: r.int('WEB_LEASE_MS', 600_000, 10_000, 86_400_000),
+    // a test caller (TEST SCRIPT: the smoke and check scripts, by their MCP client name) gets no Facebook live from
+    // live_view unless this is on: the live videos a day are few (FB_MAX_PER_DAY) and the owner's (2026-10-13: the
+    // smoke games of one day used up 20 and the owner's game got none)
+    testLives: r.bool('MCP_TEST_LIVE', false),
     maxSessions,
     // live MCP games one address may hold: connector users arrive from their agent's cloud, so many people can share an
     // address (probe T8 measures how many); set it to WEB_MAX_SESSIONS to cap MCP games only by the global limit
