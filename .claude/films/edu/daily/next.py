@@ -267,6 +267,13 @@ def mark(eid, status, mp4=None, morning=None, note=None, now=None, run=None):
     if status == 'delivered' and not (mp4 and os.path.exists(os.path.expanduser(mp4))):
         return None, 'delivered needs --mp4 pointing at the delivered video'
     e = state['episodes'].setdefault(eid, {})
+    # run.sh under launchd cannot list ~/Downloads (macOS privacy, TCC: it can create files there but not see the
+    # producer's), so its end-of-night check finds no mp4 and marks a delivered night failed (every launchd night since
+    # 2026-10-09). A "failed" from the same run never overwrites that run's verified delivery: it is kept as a note.
+    if status == 'failed' and e.get('status') == 'delivered' and run and e.get('run') == run and e.get('mp4'):
+        e['note'] = (e.get('note', '') + ' | ' if e.get('note') else '') + 'kept delivered over a same-run failed mark: ' + (note or '')
+        _, err = save_state(state)
+        return (e, None) if not err else (None, err)
     again = status == 'failed' and e.get('status') == 'failed' and run and e.get('run') == run
     e.update({'status': status, 'updated': (now or dt.datetime.now()).strftime('%Y-%m-%d %H:%M'),
               'episode_dir': ep['episode_dir']})
