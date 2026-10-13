@@ -213,6 +213,15 @@ export function spawnEncoder(o) {
   const child = spawnNiced(o.ffmpeg, o.args, o.nice ?? 0, { stdio: rtmp ? [...o.stdio.slice(0, 3), 'pipe'] : o.stdio, env: o.env ?? childEnv() });
   if (!rtmp) return { child, publisher: null, failure: () => null };
   let why = null;
+  // the same bytes into a file as well (a recording of the stream as it went out: src/recorder.js)
+  if (o.tee) {
+    try {
+      const ws = fs.createWriteStream(o.tee);
+      ws.on('error', () => {});
+      child.stdio[3].on('data', (d) => { ws.write(d); });
+      child.on('exit', () => ws.end());
+    } catch { /* the recording goes without it */ }
+  }
   const publisher = (o.createPublisher ?? createRtmpPublisher)({ url: o.output, event: o.event, timeoutMs: o.timeoutMs, ca: o.ca });
   publisher.on('error', (err) => {
     why = `the ingest: ${clip(err?.message ?? err, 200)}`;
@@ -1058,7 +1067,8 @@ export function createStreamService({ manager, log } = {}) {
           if (!validSource(body.source, body.view ?? id) || !/^[A-Za-z0-9_]{3,16}$/.test(String(body.player))) return json(res, 400, { error: 'source must be http://127.0.0.1:<port>/eyes/<view>/ and player a Minecraft name' });
           manager.start(id, { source: body.source, player: body.player });
         }
-        return json(res, 200, await manager.focus(id));
+        // local: a test's game filmed for the recording only, never on Facebook (MCP_TEST_RECORD)
+        return json(res, 200, await manager.focus(id, body.local === true ? { local: true } : {}));
       }
       if (id !== undefined && !ID_RE.test(id)) return json(res, 400, { error: 'bad id' });
       if (!id) return req.method === 'GET' ? json(res, 200, { enabled: manager.enabled, streams: manager.list() }) : json(res, 405, { error: 'use GET' });
@@ -1150,8 +1160,8 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000, refresh
       termChain.delete(id);
     },
     /** live_view asked for this game: the channel's camera films it from now on. The channel's state, or null. */
-    async focus(id) {
-      const r = await call('POST', `/streams/${encodeURIComponent(id)}/focus`, asks.get(id) ?? {}).catch(() => null);
+    async focus(id, { local = false } = {}) {
+      const r = await call('POST', `/streams/${encodeURIComponent(id)}/focus`, { ...(asks.get(id) ?? {}), ...(local ? { local: true } : {}) }).catch(() => null);
       return r?.status === 200 && r.body?.fb ? r.body : null;
     },
     /** The channel's state (GET /live), or null. */
