@@ -13,3 +13,10 @@ execute if score #f muse_cam_y matches 0 run function muse_cam:near
 execute if score #f muse_cam_y matches 0 run function muse_cam:above
 execute if score #f muse_cam_y matches 0 run tag @a[tag=muse_cam_target] add muse_cam_deep
 execute if score #f muse_cam_y matches 0 run scoreboard players set #on muse_cam_y 3
+# the evidence (muse_cam:note_new): the rule that picked the spot (1 the ring, 2 the nearest within 8 blocks, 3 from
+# above, 4 none outside: first person)
+execute if score #on muse_cam_y matches 1 run scoreboard players set #rl muse_cam_y 1
+execute if score #on muse_cam_y matches 2 if score #hv muse_cam_y matches 0 run scoreboard players set #rl muse_cam_y 2
+execute if score #on muse_cam_y matches 2 if score #hv muse_cam_y matches 1 run scoreboard players set #rl muse_cam_y 3
+execute if score #on muse_cam_y matches 3 run scoreboard players set #rl muse_cam_y 4
+function muse_cam:note_new

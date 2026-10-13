@@ -610,7 +610,16 @@ profile `camera`, `deploy/Dockerfile.camera`).
   out, 3.5 up), else the nearest good spot within 8 blocks, else 10 to 32 blocks above (the line may pass leaves), else
   the bot's own eyes (sealed in under rock; tried again every 2 s). A second without the enclosure and the view goes
   back. Checked on a local Paper (2026-10-12): open sky, the orbit; a canopy just over the roof, 3 out and 2 up under
-  it; leaves all round, 24 up; sealed in rock, first person. The camera player has night vision all the time (given again whenever it is gone: a respawn, a
+  it; leaves all round, 24 up; sealed in rock, first person.
+  The evidence of each new spot, for a view that went wrong (two night games filmed the bot down a column of leaves):
+  when the rule that picked it or the eye's block changes (the enclosed rules, and over the shoulder when the spot
+  falls back to the bot's head, at most every 5 s), the datapack keeps a record in storage `muse_cam:spot` (`rule`: 1
+  the ring, 2 the nearest within 8 blocks, 3 from above, 4 none outside, 11 the bot's eyes, 12 just ahead, 13 above its
+  head; the eye's and the bot's positions, the dimension, the bot's facing, the game time; the bot's column 24 blocks
+  up, the 16 blocks around its head and feet and the eye's 7 as `.` open, `L` leaves, `#` other), and the camera's
+  keep-alive asks the console for it once (`data get storage muse_cam:spot` when `cam_seq` moved past `cam_logged`):
+  Paper prints it in its log (`docker logs muse-minecraft-paper-1`, `data/logs/`): grep "Storage muse_cam:spot". Checked
+  on a local Paper: one line per new spot, none when nothing changed. The camera player has night vision all the time (given again whenever it is gone: a respawn, a
   dimension change), so a night or a cave is never black. The camera service only tags through the console:
   `muse_cam` on the camera, `muse_cam_third` for the view, `muse_cam_target` on the bot.
   The camera's yaw follows the bot's damped (it closes 30 % of the gap each tick, held on a server-only `marker`), so a
@@ -1118,8 +1127,10 @@ and Muse's panel under it:
 - **The HUD** (layout 2 of two dense layouts, the owner's pick, 2026-10-12; `../ui-art/hud-mockups.mjs`,
   `~/Downloads/muse-hud-final.png`): the full 16:9 game on top (1080x608) and an agent trace under it (472 px). A
   header: health, food, the time with dawn or dusk; Muse's share, the game's id and its age. THINKING across the top:
-  Muse's latest `why` (20 px, two lines, cut at a word), the two before it fading; before the first move, what is
-  happening and the goal. MUSE · TRACE on the left: the call's tool and every step in plain words beside the step as
+  Muse's latest `why` (20 px, two lines, cut at a word) and under it PLAN, Muse's latest plan in full (15 px, up to
+  five lines: 400 characters fit); the band is as tall as these (80 to 172 px) and the columns start under it; before
+  the first move, what is happening and the goal. The earlier words are in the state column, EARLIER THINKING under
+  the Body advice (newest first, each with its time, as many as fit). MUSE · TRACE on the left: the call's tool and every step in plain words beside the step as
   Muse wrote it (JetBrains Mono): done with its time, running with the body's sub-step, its count and a bar, queued,
   failed with the reason, skipped; under it RAW · WHAT MUSE SENT (2026-10-12, the owner: "the HUD doesn't show Muse's
   raw text"): every call newest first as `> tool {arguments}`, the arguments exactly as Muse sent them over MCP (before

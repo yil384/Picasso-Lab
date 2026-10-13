@@ -94,7 +94,8 @@ test('console: validated lines; a FIFO nobody reads fails at once instead of han
   ]);
   assert.ok(followCommands('MuseCam', 'Muse_g1', 'first')[0].includes('tag MuseCam remove muse_cam_third'), 'CAMERA_VIEW=first: the bot\'s head');
   const keep = keepFollowingCommands('MuseCam', 'Muse_g1').flat();
-  assert.deepEqual(keep, ['tag Muse_g1 add muse_cam_target']);
+  assert.deepEqual(keep, ['tag Muse_g1 add muse_cam_target', 'execute unless score cam_seq muse_cam_y = cam_logged muse_cam_y run data get storage muse_cam:spot',
+    'execute unless score cam_seq muse_cam_y = cam_logged muse_cam_y run scoreboard players operation cam_logged muse_cam_y = cam_seq muse_cam_y'], 'and the evidence of a new camera spot, into the server log once');
   assert.deepEqual(parkCommands('MuseCam'), ['tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', 'tag MuseCam remove muse_cam_ineye',
     'tag MuseCam remove muse_cam_inhead', 'execute as MuseCam run spectate', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
   for (const l of [...followCommands('MuseCam', 'Muse_g1').flat(), ...keep, ...parkCommands('MuseCam')]) await consoleCommand(file, l);
@@ -384,4 +385,10 @@ test('datapack: every function the camera\'s datapack calls is there, and every 
   assert.match(files.get('good'), /unless block ~0\.4 ~ ~ #muse_cam:open/, 'room around the eye');
   assert.match(files.get('enclosure'), /unless block ~1 ~1 ~ #muse_cam:open unless block ~-1 ~1 ~ #muse_cam:open/, 'enclosed: walls on all four sides too');
   assert.match(files.get('view'), /muse_cam_deep[^\n]*to_head/, 'no spot outside: the bot\'s own eyes');
+  // the evidence: a record when the rule or the eye's block changes (never every tick), with the blocks around
+  assert.match(files.get('choose'), /function muse_cam:note_new$/m);
+  assert.match(files.get('shoulder'), /if score #nc muse_cam_y matches \.\.0 unless score #sr muse_cam_y = #rl muse_cam_y run function muse_cam:note_shoulder/);
+  assert.match(files.get('note_new'), /run return 0\n/);
+  assert.equal((files.get('note_col').match(/function muse_cam:nb/g) ?? []).length, 25);
+  assert.match(files.get('note'), /scoreboard players add cam_seq muse_cam_y 1/);
 });
