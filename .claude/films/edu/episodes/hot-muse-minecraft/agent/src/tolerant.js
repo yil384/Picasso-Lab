@@ -154,6 +154,8 @@ export function tolerate(schema, args, ctx = {}) {
       if (typeof v === 'string' && /^(true|false)$/i.test(v.trim())) { changes.push(`${at}: "${v}" as ${v.trim().toLowerCase()}`); return v.trim().toLowerCase() === 'true'; }
       return v;
     }
+    // a rule switched with true or false where the skill takes on or off (policy: defend, flee, escape)
+    if (s.type === 'string' && typeof v === 'boolean' && s.enum?.includes('on') && s.enum?.includes('off')) { changes.push(`${at}: ${v} as ${v ? 'on' : 'off'}`); return v ? 'on' : 'off'; }
     if (s.type === 'string' && typeof v === 'string') {
       if (s.enum) {
         const r = nameOf(v, s.enum, { key, inventory: ctx.inventory, byInventory });

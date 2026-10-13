@@ -10,15 +10,18 @@ The body runs in advise mode (`MINEAI_CARE=advise`, the default since the advise
   for its items after a death.
 - **Every reply says what needs doing, under "Body advice".** Each item gives the facts (time to nightfall, food, tool
   durability, where the bot died) and the skill that would do it. Following the advice or not is Muse's choice.
-- **The body acts by itself only through its reflexes:**
-  - it fights back or flees when a hostile mob comes for it;
-  - it eats only when starving (food 4 or less);
-  - it surfaces for air, leaves fire and lava, and gets its footing back.
+- **The body acts by itself only by rules Muse sets** (since 2026-10-13). Every game starts with none: no reflex, and
+  nothing before Muse's first call. Muse sets them with start_game `rules` or the `policy` skill at any time:
+  - `defend`: fight back, raise the shield, wall in when badly hurt;
+  - `flee`: withdraw from a hostile mob;
+  - `escape`: out of water for air, out of fire and lava, footing back after a hit;
+  - `eat_below N`: eat the best food carried at food N or less.
 
-  Muse can switch each reflex off with the `policy` skill (`defend`, `eat`, `escape`). Each reflex that acts shows up
-  in the next reply under "On its own".
-- **The game counts who acted.** get_state and end_game report it, for example "This game: 47 actions by Muse,
-  4 reflexes (92% Muse)".
+  The start_game reply explains the trade-off: a rule acts within a second, Muse's calls take seconds to minutes, so
+  without defend and escape the bot dies more. Each action under a rule shows up in the next reply under "On its own"
+  as "by your rule ...".
+- **The game counts who acted.** get_state and end_game report it, for example "This game: 31 actions by Muse
+  directly, 7 by rules Muse set (defend, set at 0:12 with call 2), 0 by the body on its own (100% decided by Muse)".
 
 ## Before
 
@@ -51,12 +54,13 @@ authentication. Once is enough.
 The long prompt this line replaces (until 2026-10-12) is no longer needed: the server carries all of it.
 
 - **The rules, in the MCP server's `instructions`** (sent with `initialize`; src/mcp.js `instructionsText`):
-  - start_game with the goal, then live_view, its HTML shown as a web artifact;
+  - start_game with the goal, then live_view, its HTML shown as a web artifact (play is refused with NEED_LIVE_VIEW until
+    then; start_game `live: false` only when the user does not want to watch);
   - play_sequence, and get_state while a skill runs;
   - a why and a plan on every play and play_sequence call (why: one sentence, what and why; plan: the next few steps
     and the fallbacks, up to about 400 characters, longer is cut at a word; both shown live, the call's arguments as
     sent in the stream's RAW console, both kept in the report);
-  - the body has only reflexes, and the Body advice is Muse's to follow or not;
+  - the body acts only by rules Muse sets (none at the start), and the Body advice is Muse's to follow or not;
   - a call at least every 4 minutes;
   - after a death, pick_up within 5 minutes or start over;
   - a new plan after 3 failures of the same step;

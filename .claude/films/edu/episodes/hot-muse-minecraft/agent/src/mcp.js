@@ -22,6 +22,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { z } from 'zod';
 import { createTracker, goalOf, planText, lexiconFrom, GOAL_NAMES } from './report.js';
 import { HUNT_DROPS, dropOf } from './mineai/skills.js';
+import { describeRules } from './mineai/care.js';
 import { tolerate } from './tolerant.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -225,9 +226,9 @@ const REPLY_OUT = z.object({
   queue: z.object({ running: z.string().nullable(), waiting: z.number() }),
   changed: z.record(z.string(), z.number()).describe('inventory change of every finished step in this reply'),
   state: z.record(z.string(), z.any()).nullable().describe('health, food, pos, inventory, timeLeftS'),
-  onItsOwn: z.array(z.object({ seq: z.number(), agoS: z.number(), source: z.enum(['care', 'reflex']), kind: z.string(), ok: z.boolean(), text: z.string() }).loose()).optional().describe('what the body did by itself since your last reply (care: its own plans between your calls, full mode only; reflex: fights, meals, deaths)'),
+  onItsOwn: z.array(z.object({ seq: z.number(), agoS: z.number(), source: z.enum(['care', 'reflex', 'rule', 'body']), kind: z.string(), ok: z.boolean(), text: z.string() }).loose()).optional().describe('what the body did by itself since your last reply (care: its own plans between your calls, full mode only; reflex: fights, meals, deaths)'),
   advice: z.array(z.object({ kind: z.string(), text: z.string(), hint: z.object({ skill: z.string(), args: z.record(z.string(), z.any()) }).optional() }).loose()).optional().describe('what needs doing that the body will not do by itself, most urgent first; hint: a skill that would do it'),
-  attribution: z.object({ muse: z.number(), reflex: z.number(), care: z.number(), musePct: z.number().nullable() }).optional().describe('get_state: who acted this game (your skills, the body\'s reflexes, its own plans in full mode)'),
+  attribution: z.object({ muse: z.number(), reflex: z.number(), care: z.number(), musePct: z.number().nullable(), rule: z.number().optional(), body: z.number().optional(), decidedPct: z.number().nullable().optional() }).loose().optional().describe('get_state: who acted this game (your skills, the body\'s reflexes, its own plans in full mode)'),
 }).loose();
 
 /**
@@ -311,7 +312,7 @@ export function createMcp(hooks) {
   const careMode = hooks.careMode ?? 'advise';
   const CARE_TEXT = !skills.names.includes('armor') || careMode === 'off' ? ''
     : careMode === 'full' ? ' Between your calls the body looks after itself: it shelters at night (or sleeps when it carries a bed), eats and hunts when hungry, wears and crafts armor, crafts a spare before a tool breaks, and goes back for its items after a death; its reflexes fight or flee from mobs. Every reply says what it did on its own (structuredContent.onItsOwn); the policy skill changes it.'
-      : ' You plan everything: the body acts by itself only through its reflexes (it fights back or flees when attacked, eats only when starving at food 4 or less, surfaces for air, leaves fire and lava, gets its footing back), each of which the policy skill switches (defend, eat, escape). Every reply carries "Body advice": what needs doing that the body will not do by itself (night coming with no shelter or shield, low food, a tool about to break, items to recover after a death), with the facts and the skill that would do it (shelter and shield are skills too); following it or not is your decision. Replies also say what the reflexes did (structuredContent.onItsOwn), and get_state and end_game count who acted this game (structuredContent.attribution).';
+      : ' You decide everything: the body does nothing by itself, not even between your calls, except by rules you set (start_game rules, or the policy skill at any time): defend (fight back, raise the shield, wall in when badly hurt), flee (withdraw from a hostile mob), escape (out of water, fire and lava, back on its feet) and eat_below N (eat at food N or less). Every game starts with none. A rule acts within a second; your calls take seconds to minutes, and a zombie hits in one second: without defend and escape the bot dies more. Decide at the start. Every reply carries "Body advice": what needs doing (night coming with no shelter or shield, low food, a tool about to break, items to recover after a death), with the facts and the skill that would do it; it is information, the body does not act on it. Actions under your rules count as decided by you; get_state and end_game count who acted (structuredContent.attribution).';
   const now = hooks.now ?? Date.now; // the web's clock (leases, idle, repeats); call deadlines run on the real one
   const callMs = hooks.callMs ?? CALL_MS;
   /** How long a call waits for its steps: callMs less the time its reply takes to build, so the reply leaves within callMs. */
@@ -465,9 +466,9 @@ export function createMcp(hooks) {
 
   /** One thing the body did by itself, as a reply line: "- 41 s ago, night: closed itself in at ... (ok)". */
   const ownAgo = (e) => Math.max(0, Math.round((now() - Date.parse(e.at)) / 1000));
-  const ownLine = (e) => `- ${ownAgo(e)} s ago, ${e.source === 'reflex' ? 'reflex' : 'on its own'}, ${e.kind}: ${e.text}${e.ok === false ? ' (did not work)' : ''}`;
+  const ownLine = (e) => `- ${ownAgo(e)} s ago, ${e.source === 'rule' ? `by your rule ${e.rule}` : e.source === 'body' ? 'reflex, no rule of yours' : e.source === 'reflex' ? 'reflex' : 'on its own'}, ${e.kind}: ${e.text}${e.ok === false ? ' (did not work)' : ''}`;
   const adviceLine = (a) => `- ${a.text}${a.hint ? ` (to do it: ${a.hint.skill} ${JSON.stringify(a.hint.args ?? {})})` : ''}`;
-  const ownOut = (e) => ({ seq: e.seq, agoS: ownAgo(e), source: e.source, kind: e.kind, ok: e.ok !== false, text: e.text });
+  const ownOut = (e) => ({ seq: e.seq, agoS: ownAgo(e), source: e.source, kind: e.kind, ok: e.ok !== false, text: e.text, ...(e.rule ? { rule: e.rule, ruleSet: e.ruleSet ?? null } : {}) });
   /** The body's own actions a reply carries count as told once its HTTP response was written out in full. */
   function deliverOwnWhenSent(s, seq, extra) {
     const mark = () => { s.ownDelivered = Math.max(s.ownDelivered ?? 0, seq); };
@@ -533,7 +534,7 @@ export function createMcp(hooks) {
       state: shortState(s),
       ...(own.length ? { onItsOwn: own.map(ownOut) } : {}),
       ...(advice.length ? { advice } : {}),
-      ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } : {}),
+      ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct, ...(attribution.rule != null ? { rule: attribution.rule, body: attribution.body, decidedPct: attribution.decidedPct } : {}) } } : {}),
       ...more,
     };
     return { content: [{ type: 'text', text: body }], structuredContent: structured, ...(isError ? { isError: true } : {}) };
@@ -754,6 +755,8 @@ export function createMcp(hooks) {
       server.registerTool = (name, def, handler) => register(name, def, async (args, extra) => {
         const t0 = Date.now();
         const before = safely(() => game(entry), null);
+        // Muse's calls in its game, counted (a rule says with which call it was set)
+        if (before) { before.callNo = (before.callNo ?? 0) + 1; safely(() => before.body?.noteCall?.(before.callNo)); }
         let out = null;
         try {
           out = await handler(args, extra);
@@ -839,10 +842,12 @@ export function createMcp(hooks) {
       inputSchema: {
         adult: z.boolean().optional().describe('not needed (accepted from older prompts and ignored)'),
         live: z.boolean().optional().describe('default true: your user watches, and play waits for live_view. false only when your user said they do not want to watch'),
+        rules: z.object({ defend: z.boolean().optional(), flee: z.boolean().optional(), escape: z.boolean().optional(), eat_below: z.number().int().min(0).max(20).optional() }).optional()
+          .describe('your rules: what the body does by itself, without a call (none at the start); also the policy skill at any time'),
         game: z.string().max(64).optional().describe('the handle of a game to resume (from an earlier start_game reply)'),
         goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')} (default free), or your user's words ("kill 100 pigs"); the reply gives the plan`),
       },
-    }, async ({ game: handle, goal: goalRaw, live }, extra) => {
+    }, async ({ game: handle, goal: goalRaw, live, rules: rulesArg }, extra) => {
       let s = game(entry);
       let resumed = Boolean(s);
       if (handle && handle !== entry.handle) {
@@ -897,11 +902,18 @@ export function createMcp(hooks) {
         // the kills of the body's reflexes (a zombie the defend reflex killed counts for "kill 10 zombies")
         safely(() => s.body?.on?.('kill', (k) => safely(() => tracker.onKills(k?.mobs, k?.by ?? 'reflex'))));
       } else if (goalRaw) s.tracker.setGoal(readGoal(goalRaw, s), 'start_game');
+      // Muse's rules, given with start_game (the body acts by itself by these only; none at the start)
+      s.callNo = s.callNo ?? 1;
+      if (rulesArg && typeof s.body?.setRules === 'function') safely(() => s.body.setRules(rulesArg, { call: s.callNo }));
       // live: false only when the user does not want to watch (the default: they do, and play waits for live_view)
       if (live === false) s.liveOff = true;
       else if (live === true) s.liveOff = false;
       const plan = planText(s.tracker.goal, { lex, leaseMin });
-      return text(`${s.liveViewed || s.liveOff ? '' : `${LIVE_NEXT}\n\n`}${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\n${plan}\nTo resume this game from a new connection, call start_game with game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
+      // the rules: what is set, what each does, the trade-off, and to decide now (the owner, 2026-10-13)
+      const ri = safely(() => s.body?.rules?.() ?? null);
+      const anyRule = ri && Object.values(ri.rules ?? {}).some((v) => v === true || v > 0);
+      const rulesText = ri ? `\nYour rules (the body does nothing by itself but these; ${anyRule ? 'as set' : 'none set yet'}): ${describeRules(ri.rules)}. A rule acts within a second; your calls take seconds to minutes, and a zombie hits in one second: without defend and escape the bot dies more. Decide now: start_game with rules {defend, flee, escape, eat_below}, or the policy skill at any time (e.g. policy {"defend": "on", "escape": "on", "eat_below": 6}). What a rule does counts as decided by you.` : '';
+      return text(`${s.liveViewed || s.liveOff ? '' : `${LIVE_NEXT}\n\n`}${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\n${plan}${rulesText}\nTo resume this game from a new connection, call start_game with game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
     });
 
     server.registerTool('play', {
@@ -1038,7 +1050,7 @@ export function createMcp(hooks) {
       forget('you ended it with end_game');
       const out = text(`Game ended.${report ? `\n\n${report.text}\n\n` : attribution ? ` ${attribution.text}. ` : ' '}start_game gives you a new bot.`);
       const sc = {
-        ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct } } : {}),
+        ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct, ...(attribution.rule != null ? { rule: attribution.rule, body: attribution.body, decidedPct: attribution.decidedPct } : {}) } } : {}),
         ...(report ? { report: report.data } : {}),
       };
       return Object.keys(sc).length ? { ...out, structuredContent: sc } : out;

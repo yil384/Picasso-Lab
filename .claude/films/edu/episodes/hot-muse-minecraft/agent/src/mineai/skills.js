@@ -56,6 +56,7 @@ export const CARE_DEFAULTS = Object.freeze({ night: 'shelter', armor: 'craft', f
 export const CARE_KNOBS = Object.freeze({
   night: Object.freeze(['shelter', 'off']), armor: Object.freeze(['craft', 'wear', 'off']), food: Object.freeze(['hunt', 'eat', 'off']), tools: Object.freeze(['spare', 'off']),
   defend: Object.freeze(['on', 'off']), eat: Object.freeze(['hungry', 'starving', 'off']), escape: Object.freeze(['on', 'off']),
+  flee: Object.freeze(['on', 'off']),
 });
 
 /**
@@ -86,9 +87,10 @@ export const EXTRA_DEFS = Object.freeze([
     'Walk into unexplored land in a compass heading (0 north, 90 east, 180 south, 270 west) for 1 to 8 chunks; with biome, stop as soon as you stand in it.',
     obj({ heading: int('compass heading in degrees, 0 to 359', 0, 359), chunks: int('how far, in chunks of 16 blocks (default 1)', 1, 8), biome: NAME('a biome to look for, e.g. plains, desert, badlands') }, ['heading'])],
   ['policy',
-    'What the body does on its own for the rest of the game. You make the plans; the body acts by itself only through its reflexes, and each can be switched here: defend (on: fights back or flees when a hostile mob comes for it; off: never strikes, still flees), eat (starving: eats only at food 4 or less, the default; hungry: at food 14 or less; off: never on its own), escape (on: surfaces for air, leaves fire and lava, gets its footing back; off: leaves that to you). In fights: retreat_health, raw_food and fight (respond_to_threats or defend_only). Everything else (shelter at night, a shield, armor, food, spare tools, going back for its items after a death) is yours: each reply\'s "Body advice" says what needs doing and which skill would do it. No arguments: the defaults.',
+    'Your rules: what the body does by itself, without a call, for the rest of the game. Every game starts with none; set the ones you want (or start_game rules). defend on: fights back, raises its shield, walls itself in when badly hurt. flee on: withdraws from a hostile mob. escape on: out of water for air, out of fire and lava, back on its feet after a hit. eat_below N: eats the best food it carries at food N or less (0: never). A rule acts in a second, where your calls take seconds to minutes: without defend and escape the body dies more. Actions under a rule count as decided by you (each with when you set it). In fights: retreat_health, raw_food and fight (respond_to_threats or defend_only). Everything else (shelter, a shield, armor, food, tools, items after a death) is a call of yours; each reply\'s "Body advice" says what needs doing.',
     obj({
-      defend: pick('reflex: fight back or flee when attacked', CARE_KNOBS.defend), eat: pick('reflex: when it eats on its own', CARE_KNOBS.eat), escape: pick('reflex: air, fire, lava, footing', CARE_KNOBS.escape),
+      defend: pick('rule: fight back, shield, wall in when badly hurt', CARE_KNOBS.defend), flee: pick('rule: withdraw from a hostile mob', CARE_KNOBS.flee), escape: pick('rule: air, fire, lava, footing', CARE_KNOBS.escape),
+      eat_below: int('rule: eat at food N or less, 0 to 20 (0: never)', 0, 20), eat: pick('older form of eat_below: hungry (14), starving (4), off', CARE_KNOBS.eat),
       retreat_health: int('health 1 to 19 (default 10)', 1, 19), raw_food: pick('raw meat on its own', RAW_FOOD), fight: pick('fight or only defend', ['respond_to_threats', 'defend_only']),
       night: pick('full mode only: night', CARE_KNOBS.night), armor: pick('full mode only: armor', CARE_KNOBS.armor), food: pick('full mode only: food', CARE_KNOBS.food), tools: pick('full mode only: tools', CARE_KNOBS.tools),
     }, [])],
@@ -437,7 +439,7 @@ export function toTheirs(skill, args, ctx) {
     case 'shield': return { local: 'care', kind: 'shield', calls: [] };
     case 'policy': {
       // the care's knobs stay in the gateway (src/mineai/care.js); the rest goes to the runtime's survival policy
-      const knobs = Object.fromEntries(Object.keys(CARE_KNOBS).filter((k) => args[k] !== undefined).map((k) => [k, args[k]]));
+      const knobs = Object.fromEntries([...Object.keys(CARE_KNOBS), 'eat_below'].filter((k) => args[k] !== undefined).map((k) => [k, args[k]]));
       const theirs = ['retreat_health', 'fight', 'raw_food'].some((k) => args[k] !== undefined);
       const care = Object.keys(knobs).length ? knobs : theirs ? null : 'reset';
       if (!theirs && care !== 'reset') return { calls: [], care };

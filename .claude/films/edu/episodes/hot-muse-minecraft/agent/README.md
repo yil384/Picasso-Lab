@@ -231,6 +231,13 @@ and get to the Nether and back." The start page shows this line and the two step
 - **The report:** end_game returns it in full (text and `structuredContent.report`). It has the goal, the milestones
   with their times, the deaths, the attribution line, and the decision log. `game_report` gives it during the game.
 - **Ready prompts:** `play_to_the_nether` and `free_play` (argument `goal`).
+- **The live view, required** (the owner, 2026-10-13, after g71c9f5).
+  - On a server with a live video, play and play_sequence are refused with NEED_LIVE_VIEW until live_view has been
+    called in the game; nothing runs.
+  - start_game `live: false` opts out, for a user who said they do not want to watch.
+  - A live_view that answered capped, test or off counts as called. A server without a live video asks for nothing.
+  - get_state, set_goal, game_report and end_game stay allowed.
+  - Checks and e2e scripts start with `live: false`.
 - **The live view, nudged** (2026-10-13, game g08370a: Muse never called live_view). Until live_view is called in a
   game, start_game's reply ends with "Next: call live_view now and show the HTML it returns ...". Each play,
   play_sequence or get_state reply also starts with "Your user cannot see the game yet: ...", on the first such call and
@@ -2404,6 +2411,33 @@ once, the slow scripted player of `survive.mjs`, each game its whole 30-minute l
 | told in a reply / done before the game's last reply | 42 / 42 | 49 / 49 | 91 / 91 |
 
 **Against the gate (at most 1 death in 16): passed** (round 1: 1 in 8 and 3 in 8; the care off: 2 in 8).
+
+### Muse's rules (2026-10-13)
+
+The body acts on its own only by rules Muse sets. Every game starts with none: their reflexes are all off, and nothing
+runs before Muse's first call (the pre-call shelter of F17 is gone).
+
+- **Setting rules:** start_game `rules` {defend, flee, escape, eat_below}, or the `policy` skill at any time. The policy
+  skill takes on/off, or true/false.
+- **What each rule does:**
+  - defend: melee, bow and shield on, and hide when exposed;
+  - flee: retreat;
+  - escape: their escape reflexes (air, fire, lava, footing);
+  - eat_below N: their hunger reflex at starving (full from 14), plus our care eating the best food when idle at food N
+    or less.
+- **Where it is told:** the server instructions and the start_game reply explain each rule and the trade-off, and ask
+  Muse to decide at the start.
+- **Counting** (src/mineai/care.js, `attributionOf` in src/mineai/body.js):
+  - an action under a rule that is on counts as decided by Muse, with the rule, the game time it was set and the call it
+    was set with;
+  - a reflex whose rule is off counts as the body's own (it should not happen: their reflexes are off);
+  - full mode keeps the old reflexes.
+- **Feed and HUD** (src/terminal.js):
+  - Every update carries `rules: [{n, on, v?, setS?, call?}]`.
+  - Lines carry `src` (muse, rule or body), and for rule lines `rule`, `rs` (game seconds when set) and `rc` (the call).
+  - `st` carries `rule`, `body` and `dpct` (decided by Muse) next to `muse`, `reflex` and `pct`.
+  - `structuredContent.attribution` adds `rule`, `body` and `decidedPct`.
+- **Replays:** games from before rules are replayed with the old rules set (defend, flee, escape, eat_below 4).
 
 ### Muse holds the decisions: advise mode (2026-10-10)
 

@@ -1,5 +1,6 @@
 // test/g71c9f5.test.js - what production game g71c9f5 (2026-10-13) showed, one test each: the body's dig-in before the
-// first call left the hole open ("no blocks carried to close it over") and a zombie killed the bot; enter refused
+// first call left the hole open ("no blocks carried to close it over") and a zombie killed the bot (since the owner's
+// rules decision there is no pre-call care at all); enter refused
 // while the bot stood in the portal it had just lit ("already occupies this nether_portal after a recent arrival"), and
 // the game then took it through by itself. (craft without n: test/tolerant.test.js; the nudges and what the client reads:
 // test/liveview.test.js; the whole game: test/replay.test.js.)
@@ -18,29 +19,19 @@ const NOW = Date.parse('2026-10-13T16:54:10Z');
 const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 const until = async (fn, ms = 8000) => { const end = Date.now() + ms; while (Date.now() < end) { if (await fn()) return true; await sleep(25); } return false; };
 
-test('g71c9f5: before the first call the body digs three down and closes the hole over its head with what it dug', async () => {
+test('g71c9f5: the open hole before the first call (a zombie killed the bot as it walked out) is gone with the pre-call care itself: no action of its own (the owner, 2026-10-13)', async () => {
   const calls = [];
-  const inv = {};
   const state = { situation: { dimension: 'overworld', vitals: { health: 20, food: 20 }, clock: { timeOfDay: 15000 }, position: { x: 398.5, y: 77, z: -269.5, headingDegrees: 0 }, nearby: { hostiles: [{ name: 'zombie', kind: 'hostile', nearest: { distance: 12, position: { x: 405, y: 77, z: -269 } } }], mobs: [], players: [] }, lastDeath: null, activity: { owner: 'idle' } } };
   const care = createCare({
-    situation: () => state.situation, latest: () => ({ inventory: inv, equipment: {} }), stacks: () => [], refresh: async () => {},
-    act: async (call) => {
-      calls.push(call);
-      if (call.tool === 'navigate') { state.situation.position = { ...state.situation.position, y: call.args.y }; inv.dirt = 3; }
-      if (call.tool === 'build_structure') return { output: { action: 'build_structure', result: { status: 'succeeded', structure: { cells: 1, wrong: 0, placed: 1, left: [], missing: [], kept: [], supports: [], water: 0, passes: 1, complete: true } } } };
-      return { output: { action: call.tool, result: { status: 'succeeded' } } };
-    },
+    situation: () => state.situation, latest: () => ({ inventory: {}, equipment: {} }), stacks: () => [], refresh: async () => {},
+    act: async (call) => { calls.push(call); return { output: { action: call.tool, result: { status: 'succeeded' } } }; },
     rpc: async () => ({}), plan: () => ({ calls: [] }), idle: () => true, idleSince: () => NOW - 10_000, furnaceNear: () => false, tableNear: () => false,
     event: () => {}, now: () => NOW, tickMs: 1e9, mode: 'advise',
   });
   await care.tick();
-  assert.deepEqual(calls.map((c) => c.tool), ['navigate', 'pick_up_items', 'build_structure']);
-  assert.deepEqual(calls[2].args.blocks, [{ x: 398, y: 76, z: -270, block_name: 'dirt' }], 'the lid where the ground was, over its head');
-  assert.match(care.since(0).at(-1).text, /dug three blocks down and closed the hole over its head with dirt$/);
-  // it counts as its shelter: the night advice says it is inside, not that there is none
-  const advice = care.advice();
-  assert.ok(advice.some((a) => a.kind === 'waiting'), JSON.stringify(advice));
-  assert.equal(advice.some((a) => a.kind === 'night'), false);
+  assert.deepEqual(calls, []);
+  // the night advice says what to do instead: it is Muse's call (or a defend rule)
+  assert.ok(care.advice().some((a) => a.kind === 'night'));
 });
 
 test('g71c9f5: enter while standing in the portal it lit: the game takes it through by itself, or it steps out and enters after the cooldown', async () => {

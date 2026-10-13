@@ -49,6 +49,36 @@ export function describeReflexes(p = CARE_DEFAULTS, mode = 'advise') {
   ].join('; ');
 }
 
+/**
+ * Muse's rules (the owner's decision, 2026-10-13): the body acts on its own only by rules Muse set; every game starts
+ * with none. defend: fight back, raise the shield and wall itself in when badly hurt; flee: withdraw from a hostile
+ * mob; escape: get out of water (air), fire and lava, and catch itself when knocked off its feet; eat_below: eat the
+ * best food carried when food is at or below this (0: never).
+ */
+export const RULES = Object.freeze(['defend', 'flee', 'escape', 'eat_below']);
+export const RULES_OFF = Object.freeze({ defend: false, flee: false, escape: false, eat_below: 0 });
+/** The rules as the old reflexes ran (replays of games played before rules; MINEAI_CARE=full). */
+export const RULES_OLD = Object.freeze({ defend: true, flee: true, escape: true, eat_below: 4 });
+/** Which rule an action of their reflexes, or of ours, was taken under (a journal kind, or an in-step phrase). */
+export function ruleOf(kindOrText) {
+  const t = String(kindOrText ?? '');
+  if (/^(fight|hide|deflect)$|it fought|it hid|it blocked|shield in the off-hand/.test(t)) return 'defend';
+  if (/^flee$|got out of the way|fled|kept away/.test(t)) return 'flee';
+  if (/^(breath|fire|footing)$|swam up|fire or lava|footing/.test(t)) return 'escape';
+  if (/^eat$|it ate/.test(t)) return 'eat_below';
+  return null;
+}
+/** The rules in plain words, with what each costs or saves (the start_game reply, the policy skill). */
+export function describeRules(r = RULES_OFF) {
+  const on = (k) => (k === 'eat_below' ? r.eat_below > 0 : r[k] === true);
+  return [
+    `defend ${on('defend') ? 'on' : 'off'} (fight back, raise the shield, wall in when badly hurt)`,
+    `flee ${on('flee') ? 'on' : 'off'} (withdraw from a hostile mob)`,
+    `escape ${on('escape') ? 'on' : 'off'} (out of water for air, out of fire and lava, footing back after a hit)`,
+    `eat_below ${r.eat_below > 0 ? r.eat_below : 'off'} (eat the best food carried at that food level)`,
+  ].join('; ');
+}
+
 /** A shield is made only in the day before this time (the last minutes of daylight are for the shelter's blocks), and
  * only once the player has left the body alone this long. */
 export const SHIELD_BEFORE = 10_000;
@@ -735,7 +765,16 @@ export function createCare(deps) {
   const mode = deps.mode === 'full' ? 'full' : 'advise';
   let policy = { ...CARE_DEFAULTS };
   let performing = false; // a care routine the player asked for (shelter, shield skills): the player's action
-  const counts = { reflex: 0, care: 0 };
+  // who acted: reflex = every action of their reflexes (rule + body); rule = under a rule Muse set (byRule per rule);
+  // body = on its own (a reflex with its rule off); care = the body's own plans (full mode)
+  const counts = { reflex: 0, care: 0, rule: 0, body: 0, byRule: {} };
+  // advise mode: Muse's rules (none at the start); full mode: the old reflexes
+  let rules = { ...(mode === 'advise' ? RULES_OFF : RULES_OLD) };
+  const ruleSet = {}; // rule -> {value, atS (game time), call (Muse's call number)}
+  let callNo = 0;
+  const startedAt = now();
+  let ruleRun = null; // the rule an action of ours is taken under (eat_below)
+  const ruleOn = (k) => (k === 'eat_below' ? rules.eat_below > 0 : rules[k] === true);
   const memory = { cool: {}, recovered: null, shelter: null, slept: null, night: 0, wasNight: null };
   const journal = []; // {seq, at, kind, text, ok, source}
   let seq = 0;
@@ -757,18 +796,29 @@ export function createCare(deps) {
     // a death, or a tool about to break or broken, is something that happened to the body, not an action of its own:
     // logged (source event), never counted
     const happened = entry.kind === 'death' || entry.kind === 'tool';
-    if (!happened) counts[entry.reflex ? 'reflex' : 'care'] += 1;
-    const logSource = happened ? 'event' : entry.reflex ? 'reflex' : 'care-full';
+    // a reflex, or our action under a rule: by the rule when it is on (Muse decided it), else the body's own
+    // (an action of ours under a rule: ruleRun, while that routine runs; a reflex meanwhile is the reflex's)
+    const mine = !entry.reflex && Boolean(ruleRun);
+    const rule = happened ? null : entry.reflex ? ruleOf(entry.kind) : mine ? ruleRun : null;
+    const byRule = Boolean(rule && ruleOn(rule) && mode === 'advise');
+    if (!happened) {
+      if (entry.reflex || mine) {
+        if (entry.reflex) counts.reflex += 1;
+        if (byRule) { counts.rule += 1; counts.byRule[rule] = (counts.byRule[rule] ?? 0) + 1; } else counts.body += 1;
+      } else counts.care += 1;
+    }
+    const logSource = happened ? 'event' : byRule ? 'rule' : entry.reflex ? 'reflex' : 'care-full';
+    if (byRule) entry = { ...entry, rule, ruleSet: ruleSet[rule] ?? null };
     const prev = [...journal].reverse().find((x) => x.kind === entry.kind);
     if (prev && same(prev) === same(entry) && now() - Date.parse(prev.at) < 120_000) {
-      deps.event('care', { kind: entry.kind, source: logSource, ok: entry.ok, repeat: true, text: String(entry.text).slice(0, 300) });
+      deps.event('care', { kind: entry.kind, source: logSource, ok: entry.ok, repeat: true, ...(byRule ? { rule } : {}), text: String(entry.text).slice(0, 300) });
       return prev;
     }
-    const e = { seq: ++seq, at: new Date(now()).toISOString(), source: entry.reflex ? 'reflex' : 'care', ...entry };
+    const e = { seq: ++seq, at: new Date(now()).toISOString(), source: byRule ? 'rule' : entry.reflex ? (mode === 'advise' ? 'body' : 'reflex') : mine ? 'body' : 'care', ...entry };
     delete e.reflex;
     journal.push(e);
     while (journal.length > JOURNAL_KEPT) journal.shift();
-    deps.event('care', { kind: e.kind, source: logSource, ok: e.ok, text: String(e.text).slice(0, 300), ...(entry.ms != null ? { ms: entry.ms } : {}) });
+    deps.event('care', { kind: e.kind, source: logSource, ok: e.ok, ...(byRule ? { rule } : {}), text: String(e.text).slice(0, 300), ...(entry.ms != null ? { ms: entry.ms } : {}) });
     return e;
   };
 
@@ -986,32 +1036,6 @@ export function createCare(deps) {
         const here = () => { const q = deps.situation()?.position; return q ? { x: Math.floor(q.x), y: Math.floor(q.y), z: Math.floor(q.z) } : null; };
         let feet = here();
         if (!feet) return null;
-        // before the first call with too few blocks to close a shelter: only dug in, said as what it is (a production
-        // game, 2026-10-12, g0793f1: "could not close a shelter ... nothing to place against" with no blocks carried)
-        if (d.prePlay && shelterBlocks(inv()).total < SHELTER_SIZE) {
-          // three blocks down and the hole closed over its head with a block it dug: the lid goes where the ground was,
-          // against the hole's own walls (production game g71c9f5, 2026-10-13: two blocks down and left open, "no blocks
-          // carried to close it over"; a zombie came in and killed the bot as Muse's first step walked it out)
-          const g = await run([{ tool: 'navigate', args: { x: feet.x, y: feet.y - 3, z: feet.z } }], LIMITS.dig, ctl);
-          if (ctl.stopped) return stopped();
-          if (okOf(g)) await run([{ tool: 'pick_up_items', args: {} }], LIMITS.pickbed, ctl);
-          await deps.refresh();
-          let closed = false;
-          const block = okOf(g) ? shelterBlocks(inv()).list.find((b) => b.count > 0)?.name : null;
-          if (block && !ctl.stopped) {
-            const lid = await run([{ tool: 'build_structure', args: { blocks: [{ x: feet.x, y: feet.y - 1, z: feet.z, block_name: block }], remove_wrong_blocks: false } }], 15_000, ctl);
-            await deps.refresh();
-            closed = okOf(lid) && shelterVerdict(lid[0]?.out?.output?.result?.structure ?? null).closed;
-          }
-          // dug in once: it waits there (a production game, 2026-10-12, ga13a88: it dug two blocks deeper every 8 s for
-          // 2.5 minutes, 24 blocks down, and Muse's first collect found no path out)
-          memory.cool = { ...(memory.cool ?? {}), shelter: now() };
-          if (okOf(g)) memory.dugIn = here();
-          if (closed) memory.shelter = { feet: here() ?? { ...feet, y: feet.y - 3 }, cells: [], at: now(), checked: now(), night: isNight(deps.situation()?.clock?.timeOfDay) ? memory.night : memory.night + 1 };
-          return add({ kind: 'shelter', ok: okOf(g), ms: ms(), text: !okOf(g) ? `${d.why}: could not dig in where it stands (${errOf(g) ?? 'stopped'})`
-            : closed ? `${d.why}: dug three blocks down and closed the hole over its head with ${block}`
-              : `${d.why}: dug three blocks down to wait there (no block to close it over)` });
-        }
         // in water no wall holds and nothing can be dug: to the shore first (their navigate takes a column on water to
         // the nearest dry ground; staging lab spot 0 15000)
         if (deps.situation()?.position?.inWater && !d.check) {
@@ -1092,7 +1116,7 @@ export function createCare(deps) {
         // short of blocks: dirt from around, then the shelter again (once)
         // (never before the player's first call: a long collect there kept running into the player's own steps; a local
         // check, 2026-10-12)
-        if (!v.closed && v.short > 0 && !d.check && !d.prePlay && !fight()) {
+        if (!v.closed && v.short > 0 && !d.check && !fight()) {
           const want = v.short + 2;
           const g = await run([{ tool: 'collect_block', args: { block_name: 'dirt', count: want } }], LIMITS.gather, ctl);
           await deps.refresh();
@@ -1173,20 +1197,33 @@ export function createCare(deps) {
     const enclosed = Boolean(sh && p && sh.feet.x === Math.floor(p.x) && sh.feet.z === Math.floor(p.z) && Math.abs(sh.feet.y - Math.floor(p.y)) <= 1);
     if (now() - (memory.hideSetAt ?? 0) < 30_000 && memory.enclosedSet === enclosed) return;
     const combat = {};
-    if (eff.combat.retreat !== undefined && eff.combat.retreat === enclosed) combat.retreat = !enclosed;
-    if (eff.combat.terrain && eff.combat.terrain.dig === enclosed) combat.terrain = { ...eff.combat.terrain, dig: !enclosed };
-    if (policy.defend === 'off') {
-      if (eff.combat.melee !== false) combat.melee = false;
-      if (eff.combat.bow !== false) combat.bow = false;
+    let eat;
+    let escape;
+    if (mode === 'advise') {
+      // Muse's rules, and nothing else (none at the start): defend fights back, raises the shield and walls in when badly
+      // hurt; flee withdraws; escape gets out of water, fire, lava and back on its feet; eat_below eats (their reflex at
+      // starving for the long steps; ours at the rule's level when idle)
+      const want = { melee: rules.defend, bow: rules.defend, shield: rules.defend, hide: rules.defend ? 'when_exposed' : 'never', retreat: rules.flee && !enclosed };
+      for (const [k, v] of Object.entries(want)) if (eff.combat[k] !== undefined && eff.combat[k] !== v) combat[k] = v;
+      if (rules.defend && eff.combat.critical_health === 8) combat.critical_health = CRITICAL_HEALTH;
+      eat = rules.eat_below <= 0 ? 'never' : rules.eat_below >= 14 ? 'full' : 'starving';
+      escape = rules.escape;
     } else {
-      if (eff.combat.hide !== 'when_exposed') combat.hide = 'when_exposed';
-      if (eff.combat.critical_health === 8) combat.critical_health = CRITICAL_HEALTH;
-      if (memory.defendOff && eff.combat.melee === false) combat.melee = true;
-      if (memory.defendOff && eff.combat.bow === false) combat.bow = true;
+      if (eff.combat.retreat !== undefined && eff.combat.retreat === enclosed) combat.retreat = !enclosed;
+      if (policy.defend === 'off') {
+        if (eff.combat.melee !== false) combat.melee = false;
+        if (eff.combat.bow !== false) combat.bow = false;
+      } else {
+        if (eff.combat.hide !== 'when_exposed') combat.hide = 'when_exposed';
+        if (eff.combat.critical_health === 8) combat.critical_health = CRITICAL_HEALTH;
+        if (memory.defendOff && eff.combat.melee === false) combat.melee = true;
+        if (memory.defendOff && eff.combat.bow === false) combat.bow = true;
+      }
+      eat = policy.eat === 'auto' ? null : { hungry: 'full', starving: 'starving', off: 'never' }[policy.eat];
+      escape = policy.escape !== 'off';
     }
-    const eat = policy.eat === 'auto' ? (mode === 'advise' ? 'starving' : null) : { hungry: 'full', starving: 'starving', off: 'never' }[policy.eat];
+    if (eff.combat.terrain && eff.combat.terrain.dig === enclosed) combat.terrain = { ...eff.combat.terrain, dig: !enclosed };
     const food = eat && eff.food && eff.food.reflex !== undefined && eff.food.reflex !== eat ? { reflex: eat } : null;
-    const escape = policy.escape !== 'off';
     const nav = eff.navigation && eff.navigation.escape_reflexes !== undefined && eff.navigation.escape_reflexes !== escape ? { escape_reflexes: escape } : null;
     if (!Object.keys(combat).length && !food && !nav) { memory.enclosedSet = enclosed; return; }
     memory.hideSetAt = now();
@@ -1194,7 +1231,7 @@ export function createCare(deps) {
     const changes = { ...(Object.keys(combat).length ? { combat } : {}), ...(food ? { food } : {}), ...(nav ? { navigation: nav } : {}) };
     const r = await deps.rpc('set_survival_policy', {
       operation: 'set', expected_revision: pol.revision, changes, lifetime: { kind: 'session' },
-      reason: 'The body\'s reflexes as the player set them (the gateway care: defend, eat, escape).',
+      reason: mode === 'advise' ? 'The rules Muse set (defend, flee, escape, eat_below); none at the start.' : 'The body\'s reflexes as the player set them (the gateway care: defend, eat, escape).',
     }, 10_000);
     const ok = r?.result?.status === 'succeeded';
     if (ok) memory.defendOff = policy.defend === 'off';
@@ -1235,7 +1272,9 @@ export function createCare(deps) {
       // advise mode: the plans are the player's (advice() says what they are), except before the player's first call:
       // a new bot with hostile mobs near or at night shelters until then (F17 of the log hunt: a fresh bot fought a
       // skeleton from 20 to 10 health in the 4:45 before Muse's first call), told in the first reply as its own
-      const d = mode === 'advise' ? (memory.playerCalled ? null : prePlay(situation)) : decide(situation, { inventory: latest.inventory ?? {}, stacks: deps.stacks(), policy, memory, now: now(), canCraft, furnace: (latest.inventory?.furnace ?? 0) > 0 || deps.furnaceNear(), idleMs: now() - deps.idleSince() });
+      // advise mode: nothing of its own, not before the first call either (the owner, 2026-10-13); only Muse's rules: eat
+      // at eat_below when idle (their reflex eats only when starving)
+      const d = mode === 'advise' ? ruleAction(situation) : decide(situation, { inventory: latest.inventory ?? {}, stacks: deps.stacks(), policy, memory, now: now(), canCraft, furnace: (latest.inventory?.furnace ?? 0) > 0 || deps.furnaceNear(), idleMs: now() - deps.idleSince() });
       if (!d) return;
       const ctl = { skill: `care:${d.kind}`, actionId: null, stopped: null, cancel: null, attack: null, killed: 0 };
       const preemptible = d.kind !== 'recover';
@@ -1243,7 +1282,8 @@ export function createCare(deps) {
       const job = { kind: d.kind, ctl, preemptible, startedAt: now() };
       running = job;
       // the status is read again once it is done, so the next decision never acts on what it just changed
-      job.done = carry(d, ctl).catch((err) => add({ kind: d.kind, ok: false, text: `${d.why}: ${String(err?.message ?? err).slice(0, 200)}` }))
+      ruleRun = d.rule ?? null;
+      job.done = carry(d, ctl).finally(() => { ruleRun = null; }).catch((err) => add({ kind: d.kind, ok: false, text: `${d.why}: ${String(err?.message ?? err).slice(0, 200)}` }))
         .then((entry) => {
           if (entry && ctl.interruptions?.length) entry.text = `${entry.text} [meanwhile on its own: ${reflexWords(ctl.interruptions)}]`;
           return deps.refresh().catch(() => {});
@@ -1255,18 +1295,14 @@ export function createCare(deps) {
   }
 
   /** Before the player's first call: a shelter when hostile mobs are near or it is night, unless it stands in one. */
-  function prePlay(situation) {
-    if (policy.night === 'off' || cool('shelter', 45_000)) return null;
-    const danger = hostilesWithin(situation, 16).length > 0 || isNight(situation.clock?.timeOfDay);
-    if (!danger) return null;
-    const p = situation.position;
-    const sh = memory.shelter;
-    if (sh && p && sh.feet.x === Math.floor(p.x) && sh.feet.z === Math.floor(p.z) && Math.abs(sh.feet.y - Math.floor(p.y)) <= 1) return null;
-    // already dug in where it stands: it stays
-    const dug = memory.dugIn;
-    if (dug && p && dug.x === Math.floor(p.x) && dug.z === Math.floor(p.z) && Math.abs(dug.y - Math.floor(p.y)) <= 1) return null;
-    return { kind: 'shelter', why: 'waiting for your first call with hostile mobs near or at night', blocks: shelterBlocks(deps.latest().inventory ?? {}).total, check: false, prePlay: true };
+  /** What a rule of Muse's has the body do now, when idle: eat at eat_below (the best food carried). */
+  function ruleAction(situation) {
+    const food = situation?.vitals?.food;
+    if (!(rules.eat_below > 0) || !Number.isFinite(food) || food > rules.eat_below || food >= 20 || cool('eat', 30_000)) return null;
+    const meal = bestFood(deps.latest().inventory ?? {});
+    return meal ? { kind: 'eat', why: `rule eat_below ${rules.eat_below}`, food: meal, rule: 'eat_below' } : null;
   }
+
   const cool = (kind, ms) => memory.cool?.[kind] && now() - memory.cool[kind] < ms;
 
   /** The advice inputs, as decide's. */
@@ -1292,8 +1328,27 @@ export function createCare(deps) {
     /** A hunt found no mob of its kind left near the bot (advice: explore), or found some again (no more advice). */
     huntFoundNone(mob, pos) { memory.huntEmpty = { mob, at: now(), pos: pos ? { x: pos.x, y: pos.y, z: pos.z } : null }; },
     huntFound(mob) { if (memory.huntEmpty?.mob === mob) memory.huntEmpty = null; },
-    /** What the body did by itself this game: {reflex, care}. */
-    counts() { return { ...counts }; },
+    /** What the body did by itself this game: {reflex, care, rule, body, byRule}. */
+    counts() { return { ...counts, byRule: { ...counts.byRule } }; },
+    /** Muse's rules now, and when each was set: {rules, set: {rule: {value, atS, call}}}. */
+    rules() { return { rules: { ...rules }, set: JSON.parse(JSON.stringify(ruleSet)) }; },
+    /**
+     * Muse sets rules (start_game rules, the policy skill): only the ones given change; each remembers when (game time)
+     * and with which of Muse's calls. Their reflexes follow at the next tick. Returns the rules.
+     */
+    setRules(r = {}, { call = callNo } = {}) {
+      const atS = Math.round((now() - startedAt) / 1000);
+      for (const k of RULES) {
+        if (r[k] === undefined) continue;
+        const v = k === 'eat_below' ? Math.max(0, Math.min(20, Math.round(Number(r[k]) || 0))) : Boolean(r[k]);
+        rules[k] = v;
+        ruleSet[k] = { value: v, atS, call };
+      }
+      memory.hideSetAt = 0;
+      return { ...rules };
+    },
+    /** The number of Muse's call now (the MCP layer counts them), for when a rule was set. */
+    noteCall(n) { if (Number.isInteger(n)) callNo = n; },
     /** Their reflexes that acted during a step of the player's: counted, and logged as reflex rows (not in the journal:
      * the step's own reply says what they did). */
     reflexesInStep(list, tool) {
@@ -1301,7 +1356,13 @@ export function createCare(deps) {
       // skeleton made 13 rows); a phrase that says nothing (an unknown reflex) is not an action
       const phrases = [...new Set(list.map((x) => reflexWords([x])))].filter((w) => w && w !== 'one of its reflexes acted');
       counts.reflex += phrases.length;
-      for (const text of phrases) deps.event('care', { kind: 'in_step', source: 'reflex', step: tool, text });
+      for (const text of phrases) {
+        // under a rule Muse set, or the body's own (its rule off)
+        const rule = ruleOf(text);
+        const byRule = Boolean(rule && ruleOn(rule) && mode === 'advise');
+        if (byRule) { counts.rule += 1; counts.byRule[rule] = (counts.byRule[rule] ?? 0) + 1; } else counts.body += 1;
+        deps.event('care', { kind: 'in_step', source: byRule ? 'rule' : 'reflex', ...(byRule ? { rule } : {}), step: tool, text });
+      }
     },
     /** The player went back for a death's items (pick_up death_items): no more advice about that death. */
     recovered(key) { if (key) memory.recovered = key; },

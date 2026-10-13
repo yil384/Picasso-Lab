@@ -23,30 +23,17 @@ const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 const until = async (fn, ms = 6000) => { const end = Date.now() + ms; while (Date.now() < end) { if (await fn()) return true; await sleep(25); } return false; };
 const NOW = Date.parse('2026-10-12T22:25:10Z');
 
-test('ga13a88: before the first call the body digs in once and waits there, not two blocks deeper every 8 s', async () => {
+test('ga13a88 (since 2026-10-13): the dig-in before the first call is gone: nothing of its own, ever, but Muse\'s rules', async () => {
   const calls = [];
-  let t = NOW;
   const state = { situation: { dimension: 'overworld', vitals: { health: 20, food: 20 }, clock: { timeOfDay: 15000 }, position: { x: -23.5, y: 81, z: 234.5, headingDegrees: 0 }, nearby: { hostiles: [], mobs: [], players: [] }, lastDeath: null, activity: { owner: 'idle' } } };
   const care = createCare({
     situation: () => state.situation, latest: () => ({ inventory: {}, equipment: {} }), stacks: () => [], refresh: async () => {},
-    act: async (call) => {
-      calls.push(call);
-      if (call.tool === 'navigate') state.situation.position = { ...state.situation.position, y: call.args.y };
-      return { output: { action: call.tool, result: { status: 'succeeded' } } };
-    },
-    rpc: async () => ({}), plan: () => ({ calls: [] }), idle: () => true, idleSince: () => t - 10_000, furnaceNear: () => false, tableNear: () => false,
-    event: () => {}, now: () => t, tickMs: 1e9, mode: 'advise',
+    act: async (call) => { calls.push(call); return { output: { action: call.tool, result: { status: 'succeeded' } } }; },
+    rpc: async () => ({}), plan: () => ({ calls: [] }), idle: () => true, idleSince: () => NOW - 10_000, furnaceNear: () => false, tableNear: () => false,
+    event: () => {}, now: () => NOW, tickMs: 1e9, mode: 'advise',
   });
-  await care.tick();
-  assert.deepEqual(calls.map((c) => c.tool), ['navigate', 'pick_up_items']);
-  for (let i = 0; i < 5; i++) { t += 60_000; await care.tick(); } // production: every 8 s for 2.5 minutes
-  assert.equal(calls.filter((c) => c.tool === 'navigate').length, 1, 'dug in once');
-  assert.equal(state.situation.position.y, 78);
-  // moved away (a stranger's push, a fall): it may dig in again where it is, after the cool-down
-  state.situation.position = { x: -10.5, y: 70, z: 230.5, headingDegrees: 0 };
-  t += 60_000;
-  await care.tick();
-  assert.equal(calls.filter((c) => c.tool === 'navigate').length, 2);
+  for (let i = 0; i < 3; i++) await care.tick();
+  assert.deepEqual(calls, []);
 });
 
 test('ga13a88: a shelter closed at dusk is the coming night\'s: the advice says to wait in it, not that there is none', async () => {

@@ -62,7 +62,9 @@ test('g08370a: inside its closed shelter the fight reflex may not withdraw or di
   await body.ready;
   try {
     fake.world.timeOfDay = 15_000;
-    assert.ok(await until(() => fake.world.hide === 'when_exposed'), 'the usual knobs first');
+    // Muse's rules defend and flee on (without them their reflexes do nothing at all)
+    body.setRules({ defend: true, flee: true });
+    assert.ok(await until(() => fake.world.hide === 'when_exposed' && (fake.world.retreat ?? true) === true), `the rules first: ${fake.world.hide} ${fake.world.retreat} ${JSON.stringify(body.rules())}`);
     assert.notEqual(fake.world.retreat, false);
     const r = await body.run('shelter', {});
     assert.equal(r.ok, true, r.result);

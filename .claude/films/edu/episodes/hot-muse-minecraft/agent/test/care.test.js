@@ -518,19 +518,29 @@ test('advise: the reflex knobs in words', () => {
   assert.match(describeReflexes(CARE_DEFAULTS, 'full'), /at food 14 or less/);
 });
 
-test('advise loop: no plan carried out by itself, advice instead; its reflexes stay', async () => {
+test('advise loop: no plan carried out by itself, advice instead; a reflex with its rule off is the body\'s own, with the rule on Muse\'s', async () => {
   const rig = careRig({ mode: 'advise', situation: situation({ clock: { timeOfDay: 14000, phase: 'night' } }), inventory: { cobblestone: 20 } });
   rig.care.playerCalled(); // the player plays (before the first call a new bot shelters on its own: F17)
   rig.state.events.push({ type: 'survival_outcome', observedAt: new Date(NOW).toISOString(), payload: { source: 'hostile_reflex', evidence: { response: 'fight', cancelled: false, interrupted: null, outcome: { threats: [{ id: 3, name: 'zombie' }], attacks: 2, killedTargetIds: [3], explosions: 0, healthBefore: 20, healthAfter: 18 } } } });
   await rig.care.tick();
   assert.deepEqual(rig.calls, [], 'no shelter of its own');
   assert.equal(rig.care.advice()[0].kind, 'night');
-  assert.deepEqual(rig.care.since(0).map((e) => [e.source, e.kind]), [['reflex', 'fight']]);
-  assert.deepEqual(rig.care.counts(), { reflex: 1, care: 0 });
+  // no rule set (none at the start): the fight was the body's own
+  assert.deepEqual(rig.care.since(0).map((e) => [e.source, e.kind]), [['body', 'fight']]);
+  assert.deepEqual(rig.care.counts(), { reflex: 1, care: 0, rule: 0, body: 1, byRule: {} });
   // a tool about to break, or a death, is logged as something that happened, never counted as an action
   rig.care.add({ kind: 'tool', ok: false, text: 'its stone_pickaxe broke', reflex: true });
   rig.care.add({ kind: 'death', ok: false, text: 'died: was shot by Skeleton at 1 2 3' });
-  assert.deepEqual(rig.care.counts(), { reflex: 1, care: 0 });
+  assert.deepEqual(rig.care.counts(), { reflex: 1, care: 0, rule: 0, body: 1, byRule: {} });
+  // Muse sets defend (its call 4): the next fight is by its rule, with when the rule was set
+  rig.care.noteCall(4);
+  rig.care.setRules({ defend: true });
+  const fight = rig.care.add({ kind: 'fight', ok: true, text: 'fought zombie; health 20 -> 18', reflex: true });
+  assert.equal(fight.source, 'rule');
+  assert.equal(fight.rule, 'defend');
+  assert.deepEqual(fight.ruleSet, { value: true, atS: 0, call: 4 });
+  assert.deepEqual(rig.care.counts(), { reflex: 2, care: 0, rule: 1, body: 1, byRule: { defend: 1 } });
+  assert.deepEqual(rig.care.rules(), { rules: { defend: true, flee: false, escape: false, eat_below: 0 }, set: { defend: { value: true, atS: 0, call: 4 } } });
   assert.deepEqual(rig.events.filter((e) => ['tool', 'death'].includes(e.kind)).map((e) => e.source), ['event', 'event']);
   // the shelter skill: the same routine, as the player's action (no journal entry, counted as the player's)
   rig.state.situation.clock.timeOfDay = 14000;
@@ -556,12 +566,13 @@ test('advise in the body: the reflexes set as the knobs say (eat starving), attr
   const c = new Client({ name: 'test', version: '1' });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${url}/mcp`)));
   try {
-    assert.match(c.getInstructions?.() ?? '', /You plan everything: the body acts by itself only through its reflexes/);
+    assert.match(c.getInstructions?.() ?? '', /You decide everything: the body does nothing by itself, not even between your calls, except by rules you set \(start_game rules, or the policy skill at any time\)/);
     let r = await c.callTool({ name: 'start_game', arguments: { adult: true } });
     assert.ok(!r.isError, r.content[0].text);
+    assert.match(r.content.map((x) => x.text).join('\n'), /\nYour rules \(the body does nothing by itself but these; none set yet\): defend off \([^)]*\); flee off \([^)]*\); escape off \([^)]*\); eat_below off \([^)]*\)\. A rule acts within a second; your calls take seconds to minutes, and a zombie hits in one second: without defend and escape the bot dies more\. Decide now/);
     const fake = hosts.started[0].fake;
-    assert.ok(await until(() => fake.world.foodReflex === 'starving'), 'advise mode: the hunger reflex only when starving');
-    assert.equal(fake.world.hide, 'when_exposed');
+    // every game starts with no rule: their reflexes all off
+    assert.ok(await until(() => fake.world.foodReflex === 'never' && fake.world.escape === false && fake.world.melee === false && fake.world.hide === 'never' && fake.world.retreat === false), `${fake.world.foodReflex} ${fake.world.escape} ${fake.world.melee} ${fake.world.hide} ${fake.world.retreat}`);
     fake.world.timeOfDay = 15000;
     await sleep(200);
     assert.equal(fake.tools('build_structure').length, 0, 'no shelter by itself');
@@ -570,18 +581,21 @@ test('advise in the body: the reflexes set as the knobs say (eat starving), attr
     const t = r.content.map((x) => x.text).join('\n');
     assert.match(t, /Body advice \(the body will not do these by itself; your call\):\n- night \(time 15000\): no closed shelter around you.* \(to do it: shelter \{\}\)/);
     assert.equal(r.structuredContent.advice[0].hint.skill, 'shelter');
-    assert.match(t, /This game: 1 action by Muse, 0 reflexes \(100% Muse\)\.$/);
-    assert.deepEqual(r.structuredContent.attribution, { muse: 1, reflex: 0, care: 0, musePct: 100 });
-    // a reflex switched off through the policy skill
-    r = await c.callTool({ name: 'play', arguments: { skill: 'policy', args: { eat: 'off', escape: 'off' } } });
-    assert.match(r.content.map((x) => x.text).join('\n'), /its reflexes: fights back or flees when a hostile mob comes for it; never eats by itself; leaves air, fire, lava and footing to you/);
-    assert.ok(await until(() => fake.world.foodReflex === 'never' && fake.world.escape === false, 6000));
+    assert.match(t, /This game: 1 action by Muse directly, 0 by rules Muse set, 0 by the body on its own \(100% decided by Muse\)\.$/);
+    assert.deepEqual(r.structuredContent.attribution, { muse: 1, reflex: 0, care: 0, musePct: 100, rule: 0, body: 0, decidedPct: 100 });
+    // rules set mid-game with the policy skill (true and false read as on and off)
+    r = await c.callTool({ name: 'play', arguments: { skill: 'policy', args: { defend: true, escape: 'on', eat_below: 6 } } });
+    assert.match(r.content.map((x) => x.text).join('\n'), /your rules now: defend on \([^)]*\); flee off \([^)]*\); escape on \([^)]*\); eat_below 6 /);
+    assert.ok(await until(() => fake.world.foodReflex === 'starving' && fake.world.escape === true && fake.world.melee === true && fake.world.hide === 'when_exposed', 6000));
+    // a fight of the defend reflex now: by Muse's rule, with when it was set (call 4)
+    fake.world.events.push({ type: 'survival_outcome', observedAt: new Date().toISOString(), payload: { source: 'hostile_reflex', evidence: { response: 'fight', outcome: { response: 'fight', threats: [{ id: 3, name: 'zombie' }], killedTargetIds: [], attacks: 2, healthBefore: 20, healthAfter: 18 } } } });
+    assert.ok(await until(async () => /1 by rules Muse set \(defend, set at \d+:\d\d with call 4\)/.test((await c.callTool({ name: 'get_state', arguments: {} })).content.map((x) => x.text).join('\n')), 8000));
     r = await c.callTool({ name: 'play', arguments: { skill: 'shelter', args: {} } });
     assert.ok(fake.tools('build_structure').length > 0, 'the shelter skill builds');
     r = await c.callTool({ name: 'end_game', arguments: {} });
     // the report (the one-line prompt): who acted, and the advice declined, then followed with the shelter
-    assert.match(r.content[0].text, /^Game ended\.\n\nReport for game g\w+: goal free play;[\s\S]*\nThis game: 2 actions by Muse, 0 reflexes \(100% Muse\)\.\n/);
-    assert.match(r.content[0].text, /\n- \d+:\d\d \(no why given\) -> policy eat=off escape=off: ok\n- \d+:\d\d advice followed \(shelter\): night/);
+    assert.match(r.content[0].text, /^Game ended\.\n\nReport for game g\w+: goal free play;[\s\S]*\nThis game: 2 actions by Muse directly, 1 by rules Muse set \(defend, set at \d+:\d\d with call 4\), 0 by the body on its own \(100% decided by Muse\)\.\n/);
+    assert.match(r.content[0].text, /\n- \d+:\d\d \(no why given\) -> policy defend=on escape=on eat_below=6: ok\n/);
   } finally {
     await c.close();
     await web.stop?.();
@@ -651,13 +665,13 @@ test('care shield (F1 of the log hunt): a shield their guard reflex put straight
   assert.equal(rig.calls.filter((c) => c.tool === 'equip').length, 0, 'nothing more to equip');
 });
 
-test('advise (F17 of the log hunt): before the player\'s first call a new bot shelters from hostile mobs; after it, never on its own', async () => {
+test('advise (the owner, 2026-10-13): nothing on its own before the first call either, hostile mobs near or not (F17\'s pre-call shelter is gone)', async () => {
   const zombie = { name: 'zombie', kind: 'hostile', nearest: { distance: 9, position: { x: 18, y: 64, z: -3 } } };
   const results = { build_structure: { status: 'succeeded', structure: { cells: 15, correct: 15, placed: 13, dug: 0, wrong: 0, kept: [], left: [], supports: [] } } };
-  const rig = careRig({ mode: 'advise', situation: situation({ nearby: { mobs: [zombie] } }), inventory: { cobblestone: 20 }, results });
+  const rig = careRig({ mode: 'advise', situation: situation({ nearby: { mobs: [zombie] }, clock: { timeOfDay: 15000 } }), inventory: { cobblestone: 20 }, results });
   await rig.care.tick();
-  assert.deepEqual(rig.calls.map((c) => c.tool), ['build_structure']);
-  assert.match(rig.care.since(0)[0].text, /^waiting for your first call with hostile mobs near or at night: closed itself in/);
+  assert.deepEqual(rig.calls, [], 'no pre-call action');
+  assert.deepEqual(rig.care.since(0), []);
   const quiet = careRig({ mode: 'advise', situation: situation({ nearby: { mobs: [zombie] } }), inventory: { cobblestone: 20 }, results });
   quiet.care.playerCalled();
   await quiet.care.tick();
