@@ -1018,6 +1018,7 @@ export function createCare(deps) {
             && ((dx && (c.x - feet.x) * dx >= 1 && c.z === feet.z) || (dz && (c.z - feet.z) * dz >= 1 && c.x === feet.x)));
         };
         let fights = 0;
+        let dig = null;
         const build = async (cells) => {
           // never digs: a wall or roof cell that already holds a solid block is wall enough. A mob close by: the cells
           // between it and the bot first; a fight that takes the build over (their reflex strikes it back) is followed by
@@ -1048,8 +1049,9 @@ export function createCare(deps) {
         if (ctl.stopped) return stopped();
         const fight = () => /\b(fight|evade|hide|deflect) response for\b/.test(errOf(r) ?? '');
         // dig in (not after a fight took the body over: that is tried again once idle)
+        let dugAt = null; // the bottom of the hole it dug: the ground there is most of the shelter's walls
         if (!v.closed && !d.check && !fight()) {
-          const dig = async () => {
+          dig = async () => {
             const target = { x: feet.x, y: feet.y - 2, z: feet.z };
             let g = await run([{ tool: 'navigate', args: target }], LIMITS.dig, ctl);
             // standing above the ground (a tree, a ledge): down to the ground first, then into it
@@ -1063,6 +1065,7 @@ export function createCare(deps) {
             }
             if (okOf(g) && !ctl.stopped) await run([{ tool: 'pick_up_items', args: {} }], LIMITS.pickbed, ctl);
             await deps.refresh();
+            if (okOf(g)) dugAt = here() ?? null;
             return g;
           };
           const g = await dig();
@@ -1083,10 +1086,32 @@ export function createCare(deps) {
           if (ctl.stopped) return stopped();
           if (okOf(g)) {
             parts.push(`collected ${want} dirt for walls`);
+            // back into the hole it dug, not where the dirt was (production game g1dc967, 2026-10-13: it built where the
+            // collect ended, among the holes it had dug for the dirt, and 3 cells had nothing to place against)
+            if (dugAt && !ctl.stopped) {
+              const back = await run([{ tool: 'navigate', args: { x: dugAt.x, y: dugAt.y, z: dugAt.z } }], LIMITS.dig, ctl);
+              await deps.refresh();
+              if (ctl.stopped) return stopped();
+              if (okOf(back)) parts.push('went back down into its hole');
+            }
             feet = here() ?? feet;
             cells = layout();
             ({ r, v } = await build(cells));
           } else parts.push(`could not collect dirt for walls (${errOf(g) ?? 'stopped'})`);
+        }
+        // cells over a drop with nothing to place against: dug in where it stands, then the shelter again (once)
+        if (!v.closed && /nothing to place against/.test(v.why ?? '') && !d.check && !fight() && dig && !ctl.stopped) {
+          const here0 = here();
+          if (!dugAt || !here0 || here0.x !== dugAt.x || here0.z !== dugAt.z || here0.y !== dugAt.y) {
+            const g = await dig();
+            if (ctl.stopped) return stopped();
+            if (okOf(g)) {
+              parts.push('dug in where it stood, as cells there had nothing to place against');
+              feet = here() ?? feet;
+              cells = layout();
+              ({ r, v } = await build(cells));
+            }
+          }
         }
         // a shelter closed before dark is the coming night's (ga13a88: closed at dusk, then "no closed shelter around
         // you" all night, as the night counter moved on at nightfall)
@@ -1096,7 +1121,7 @@ export function createCare(deps) {
         if (fights) parts.push(`went on building through ${plural(fights, 'fight')}`);
         parts.push(v.closed
           ? `${d.check ? 'mended its shelter' : 'closed itself in'} at ${xyz(feet)} (${v.placed ? `placed ${plural(v.placed, 'block')}` : 'placed nothing'}${v.solid ? `, ${plural(v.solid, 'wall cell')} already solid` : ''}); it stays inside until your next call`
-          : `could not close a shelter at ${xyz(feet)} (${v.why ?? errOf(r) ?? 'stopped'})`);
+          : `could not close a shelter at ${xyz(feet)} (${v.why ?? errOf(r) ?? 'stopped'})${/nothing to place against/.test(v.why ?? '') ? `: the cells are over a drop; dig in (go_to ${feet.x} ${feet.y - 2} ${feet.z}) or go to flat ground and call shelter again` : /short of \d+/.test(v.why ?? '') ? ': collect dirt or cobblestone (13 make a shelter) and call shelter again' : ''}`);
         // a fight that took the body over, or chunks not loaded yet (just arrived): tried again once idle, no failure
         const transient = fight() || /not loaded/.test(v.why ?? '');
         // tried again once idle, 5 s on: a mob the fight reflex keeps answering would otherwise take every try over
