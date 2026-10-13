@@ -4,7 +4,7 @@
 // (src/terminal-panel.js); the agent sends it over the camera service's loopback caption endpoint, for the filmed game
 // only. Every line is ASCII, without tokens, keys, addresses or the names of other players.
 
-export const KINDS = Object.freeze(['call', 'ok', 'fail', 'advice', 'reflex', 'body', 'milestone', 'info', 'checked', 'follow', 'reply']);
+export const KINDS = Object.freeze(['call', 'ok', 'fail', 'advice', 'reflex', 'body', 'milestone', 'info', 'checked', 'follow', 'reply', 'world']);
 /** Why nothing runs, for the stream's status line: Muse sheltering or asleep for the night, looking, thinking. */
 export const IDLE_REASONS = Object.freeze(['waiting', 'checking', 'shelter', 'shelter_body', 'sleep', 'nether']);
 /** The kinds of the body's live sub-steps (src/mineai/body.js subStepOf). */
@@ -16,7 +16,7 @@ export function cleanTerm(u) {
   const lines = (Array.isArray(u?.lines) ? u.lines : []).slice(-40)
     .filter((l) => KINDS.includes(l?.k) && typeof l.t === 'string')
     .map((l) => {
-      const out = { k: l.k, t: clean(l.t) };
+      const out = { k: l.k, t: clean(l.t, l.k === 'reply' ? ANSWER_MAX + 2 : 240) }; // an answer whole: the HUD cuts it
       const say = typeof l.say === 'string' ? clean(l.say, 120) : '';
       if (say) out.say = say;
       const why = typeof l.why === 'string' ? clean(l.why, 80) : '';
@@ -153,6 +153,8 @@ export const WORDS_MAX = 140;
 export const PLAN_MAX = 400;
 /** A call's arguments as sent (the stream's RAW console), at most this long. */
 export const RAW_MAX = 1600;
+/** The first line of the server's answer to a call, at most this long (the HUD cuts it to its room when it draws). */
+export const ANSWER_MAX = 600;
 /** At most max characters: cut at a word, with "...", when longer (never mid-word). */
 export function cutWords(text, max) {
   const t = String(text ?? '').trim();
@@ -306,19 +308,20 @@ export function replyHead(out, checked = '') {
   const text = String(out?.content?.[0]?.text ?? '');
   const code = out?.structuredContent?.code;
   const first = (t) => t.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
-  if (out?.isError) return clean(`${code ? `${code}: ` : ''}${first(text)}`, 240);
+  if (out?.isError) return clean(`${code ? `${code}: ` : ''}${first(text)}`, ANSWER_MAX);
   for (const block of text.split(/\n\s*\n/)) {
     const b = block.trim();
     if (!b || /^On its own since/.test(b) || /^Body advice/.test(b)) continue;
     if (/^Finished since your last call:/.test(b)) {
       const step = b.split('\n').find((l) => /^\s*\d+\. /.test(l));
-      if (step) return clean(`finished: ${step.trim()}`, 240);
+      if (step) return clean(`finished: ${step.trim()}`, ANSWER_MAX);
       continue;
     }
-    if (/^State \(game /.test(b) && checked) return clean(`state: ${checked.replace(/^Muse checked:\s*/, '')}`, 240);
-    return clean(first(b), 240);
+    if (/^State \(game /.test(b) && checked) return clean(`state: ${checked.replace(/^Muse checked:\s*/, '')}`, ANSWER_MAX);
+    const head = first(b).replace(/ is still running(.*?); call get_state again.*$/, ' still running$1');
+    return clean(head, ANSWER_MAX);
   }
-  return clean(first(text), 240);
+  return clean(first(text), ANSWER_MAX);
 }
 /** A failure's reason in a few words: "no iron ore within 64 blocks". */
 export function shortWhy(result, max = 48) {
@@ -433,11 +436,21 @@ export function createTermFeed(o) {
       try {
         g.offProgress = s.body.on('progress', (e) => {
           const sub = e?.sub ?? null;
+          const world = [];
+          if (sub?.kind === 'mine' && Number.isFinite(sub.of) && Number.isFinite(sub.done) && sub.done > 0) {
+            const key = `${sub.text.replace(/\d+/g, '#')}/${sub.of}`; // the same step, whatever its count says
+            if (sub.done >= sub.of || key !== g.mineKey || now() - (g.mineAt ?? 0) >= 15_000) {
+              const words = /\d+ of \d+/.test(sub.text) ? sub.text : `${sub.text.replace(/^mining /, 'mined ')} ${sub.done} of ${sub.of}`;
+              if (!(key === g.mineKey && sub.done === g.mineDone)) world.push({ k: 'world', t: clean(words, 100) });
+              Object.assign(g, { mineKey: key, mineAt: now(), mineDone: sub.done });
+            }
+          }
+          if (sub?.kind === 'bucket' && sub.text !== g.sub?.text) world.push({ k: 'world', t: clean(sub.text, 80) });
           g.sub = sub;
           const t = now();
-          if (sub && t - (g.subSentAt ?? 0) < 500) return;
+          if (sub && !world.length && t - (g.subSentAt ?? 0) < 500) return;
           g.subSentAt = t;
-          try { o.send(s.id, { lines: [], sub, live: liveInfo(s, g), ...hudOf(s, g, null) }); } catch { /* the video goes on without it */ }
+          try { const hud = hudOf(s, g, null); o.send(s.id, { lines: [...world, ...(g.world ?? [])], sub, live: liveInfo(s, g), ...hud }); } catch { /* the video goes on without it */ }
         }) ?? (() => {});
       } catch { g.offProgress = () => {}; }
     }
@@ -509,10 +522,39 @@ export function createTermFeed(o) {
     const dawnS = ['sleep', 'shelter', 'shelter_body'].includes(reason) ? Math.round((23_000 - tod) / 20) : undefined;
     return { mode: 'idle', reason, ...(sinceS !== undefined ? { sinceS } : {}), ...(dawnS !== undefined ? { dawnS } : {}) };
   };
+  /**
+   * What happened in the world since the last update, from the body's own state (never Muse's words): items that came
+   * into the inventory ("got 8 oak logs"), damage taken (with the nearest hostile mob), a hostile mob coming within 12
+   * blocks (each kind at most once a minute). For the HUD's BODY · WORLD feed.
+   */
+  const worldOf = (g, snap) => {
+    const out = [];
+    const inv = snap?.inventory && typeof snap.inventory === 'object' ? snap.inventory : null;
+    if (inv && g.prevInv) {
+      const got = Object.entries(inv).filter(([k, n]) => Number(n) > Number(g.prevInv[k] ?? 0)).map(([k, n]) => countOf(Number(n) - Number(g.prevInv[k] ?? 0), k).replace(/^an? /, '1 '));
+      if (got.length) out.push({ k: 'world', t: clean(`got ${listOf(got.slice(0, 4))}${got.length > 4 ? ' and more' : ''}`, 120) });
+    }
+    if (inv) g.prevInv = { ...inv };
+    const mobs = Array.isArray(snap?.mobs) ? snap.mobs.filter((m) => m?.hostile && Number.isFinite(m.distance)) : [];
+    const hp = snap?.health;
+    if (Number.isFinite(hp) && Number.isFinite(g.prevHp) && hp > 0 && hp <= g.prevHp - 1) {
+      const near = mobs.filter((m) => m.distance <= 8).sort((a, b) => a.distance - b.distance)[0];
+      out.push({ k: 'world', t: clean(`took ${Math.round(g.prevHp - hp)} damage, health ${Math.round(hp)}${near ? `, ${word(near.name)} ${near.distance} blocks away` : ''}`, 120) });
+    }
+    if (Number.isFinite(hp) && hp > 0) g.prevHp = hp;
+    for (const m of mobs.filter((x) => x.distance <= 12)) {
+      g.mobSeen ??= new Map();
+      if (now() - (g.mobSeen.get(m.name) ?? -1e9) < 60_000) continue;
+      g.mobSeen.set(m.name, now());
+      out.push({ k: 'world', t: clean(`${word(m.name)} ${m.distance} blocks away`, 80) });
+    }
+    return out;
+  };
   /** The HUD's items, y and place, and the game's id and age, from the body now (else the last state a reply carried). */
   const hudOf = (s, g, structured) => {
     let snap = null;
     try { snap = s.body?.snapshot?.() ?? null; } catch { snap = null; }
+    g.world = worldOf(g, snap);
     const state = structured?.state && !structured.state.joining ? structured.state : null;
     const inventory = snap?.inventory ?? state?.inventory ?? structured?.inventory ?? null;
     const equipment = snap?.equipment ?? structured?.equipment ?? state?.equipment ?? null;
@@ -532,7 +574,8 @@ export function createTermFeed(o) {
       // the goal and its milestones, as the game's tracker has them (src/report.js; MCP games only)
       let goal = null;
       try { goal = s.tracker?.progress?.() ?? null; } catch { goal = null; }
-      o.send(s.id, { lines: lines.filter(Boolean).filter((l) => l.t), status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}), ...(goal ? { goal } : {}), ...hudOf(s, g, structured), ...(extra ?? {}) });
+      const hud = hudOf(s, g, structured);
+      o.send(s.id, { lines: [...lines.filter(Boolean).filter((l) => l.t), ...(g.world ?? [])], status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}), ...(goal ? { goal } : {}), ...hud, ...(extra ?? {}) });
     } catch { /* the video goes on without it */ }
   };
   const PLACES = { the_nether: 'entered the Nether', the_end: 'entered the End', overworld: 'back in the Overworld' };
@@ -635,7 +678,7 @@ export function createTermFeed(o) {
         if (seen) lines.push({ k: 'checked', t: seen });
       }
       // the reply's head, for the RAW console: "< ..." with the call's number
-      if (rid !== undefined) { const head = replyHead(out, seen); if (head) lines.push({ k: 'reply', t: clean(`< ${head}`, 240), rid }); }
+      if (rid !== undefined) { const head = replyHead(out, seen); if (head) lines.push({ k: 'reply', t: clean(`< ${head}`, ANSWER_MAX + 2), rid }); }
       // a portal: the first line of the new world
       const dim = dimOf(s);
       if (dim && g.dim && dim !== g.dim) lines.push({ k: 'milestone', t: clean(`${PLACES[dim] ?? `entered ${word(dim)}`} at ${elapsed(g)}`) });
