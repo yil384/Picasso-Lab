@@ -378,6 +378,8 @@ export function createUiPanel(o) {
   const st = { hp: null, food: null, clock: '', muse: null, reflex: null, pct: null };
   let calls = []; // newest first: {tool, say, words, raw, steps: [{say, raw, state, ms, why, sub}], at, gs, no, state: {kind, text, why}, msSum, checked, reflexes}
   let events = []; // the body's own: {kind: reflex|body|death, text, at}
+  let world = []; // what happened in the world, from the body's state (src/terminal.js worldOf): {kind: 'world', text, at, gs}
+  let landmarks = []; // milestones and dimension changes: {kind: 'milestone', text, at, gs}
   let thoughts = []; // Muse's words, newest first: {text, gs, call}
   let sub = null; // the body's live sub-step: {kind, text, done, of, left, first, at}
   let live = null; // what the agent says is happening: {mode, reason, step, sinceS, dawnS, at}
@@ -919,6 +921,48 @@ export function createUiPanel(o) {
     lastEventAt = now();
   }
 
+  // ----- the HUD's data, apart from its drawing (the design's input; state() returns them)
+  /** "8s", "42s", "3m", "1h": how long ago, for the RAW console's newest calls. */
+  const ago = (sec) => (sec < 60 ? `${Math.max(0, Math.floor(sec))}s` : sec < 3600 ? `${Math.floor(sec / 60)}m` : `${Math.floor(sec / 3600)}h`);
+  /**
+   * RAW: every call newest first as Muse sent it, runs of the same call with the same arguments as one entry (count,
+   * the latest time and answer): {tool, raw (its arguments, JSON as sent), count, gs (game seconds of the latest),
+   * clock ("12:05"), age ("8s", seconds since the latest), reply (the server's answer, whole: "< ..."), running (the play
+   * call running now), why, plan}
+   */
+  function rawEntries(t = now()) {
+    const out = [];
+    for (const c of calls) {
+      const last = out[out.length - 1];
+      if (last && last.tool === c.tool && last.raw === (c.raw || '{}') && !PLAY.test(c.tool)) { last.count += 1; continue; }
+      const runningNow = PLAY.test(c.tool) && c.state?.kind === 'run';
+      out.push({
+        tool: c.tool, raw: c.raw || '{}', count: 1, gs: c.gs, clock: Number.isFinite(c.gs) ? mmss(c.gs) : '', age: ago((t - c.at) / 1000), ageS: Math.round((t - c.at) / 1000),
+        reply: c.reply, running: runningNow, waiting: !c.reply && !PLAY.test(c.tool) && c.tool !== 'start_game', why: c.words || '', plan: c.plan || '',
+      });
+    }
+    return out;
+  }
+  /**
+   * BODY · WORLD: what the body did by itself and what happened around it, never Muse's words, newest first: the
+   * body's reflexes and own actions, deaths, items that came in, damage and the hostile mob near, mobs coming near,
+   * mining progress, water on lava, milestones and dimension changes: {kind: reflex|body|death|world|milestone, text,
+   * gs, clock}
+   */
+  function worldFeed() {
+    return [...events.map((e) => ({ kind: e.kind, text: e.text, at: e.at, gs: e.gs })), ...world, ...landmarks]
+      .sort((a, z) => z.at - a.at).map((e) => ({ kind: e.kind, text: e.text, gs: e.gs, clock: Number.isFinite(e.gs) ? mmss(e.gs) : '' }));
+  }
+  /** THINKING: Muse's words with its latest play call, its latest plan; noWhy when that call came without a why. */
+  function thinkingNow() {
+    const latest = calls.find((c) => PLAY.test(c.tool)) ?? null;
+    const plan = latestPlan();
+    return {
+      why: latest?.words || '', plan: plan?.plan ?? '', planGs: plan?.gs ?? null, gs: latest?.gs ?? null, call: latest?.no ?? null,
+      noWhy: Boolean(latest) && !latest.words, firstMove: !latest,
+    };
+  }
+
   const api = {
     width: W, height: H + T, over: T, fps, file: o.file ?? null,
     /** New lines from the agent ({k, t, say, words, of, ms, n, why, ak, tool, steps, c, s, pre, pt, pts}). */
@@ -937,8 +981,13 @@ export function createUiPanel(o) {
           // the server's answer to a call (its first line), by the call's number
           const c = Number.isInteger(l.rid) ? calls.find((x) => x.rid === l.rid) : null;
           if (c) c.reply = l.t;
+        } else if (l.k === 'world') {
+          world.unshift({ kind: 'world', text: l.t, at: now(), gs: gameS() });
+          world = world.slice(0, 40);
         } else if (l.k === 'milestone') {
           toast = { text: milestoneWords(l.t), at: now() };
+          landmarks.unshift({ kind: 'milestone', text: milestoneWords(l.t), at: now(), gs: gameS() });
+          landmarks = landmarks.slice(0, 20);
           const m = /at (\d+):(\d\d)$/.exec(l.t);
           const k = LINE_GOALS.find(([re]) => re.test(l.t))?.[1];
           if (k && !reachedLocal.has(k)) reachedLocal.set(k, m ? Number(m[1]) * 60 + Number(m[2]) : Math.round(gameS() ?? 0));
@@ -1020,7 +1069,7 @@ export function createUiPanel(o) {
     },
     /** Another game on camera: an empty HUD, with a note. */
     reset(note = '') {
-      calls = []; events = []; thoughts = [];
+      calls = []; events = []; thoughts = []; world = []; landmarks = [];
       sub = null; live = null; follow = null; toast = null; anchor = null; game = null; goal = null; inv = null; pos = null; over = null; newGoalAt = null;
       advice.clear();
       reachedLocal.clear();
@@ -1144,6 +1193,8 @@ export function createUiPanel(o) {
         sub, follow: follow?.text ?? null, advice: [...advice.entries()].map(([k, a]) => ({ k, text: a.text, sev: a.sev })),
         toast: toast?.text ?? null, st: { ...st }, clock: clockNow(), status: running() ? null : statusWords(now()),
         plan: latestPlan()?.plan ?? null, low: Math.round(LOW / s),
+        // the design's data (see rawEntries, worldFeed, thinkingNow)
+        raw: rawEntries(now()), world: worldFeed(), thinking: thinkingNow(),
         goal: goalNow(), newGoal: newGoalAt !== null && now() - newGoalAt < NEW_GOAL_MS, inv, pos, game: game ? { id: game.id, s: gameS() === null ? null : Math.floor(gameS()) } : null,
       };
     },

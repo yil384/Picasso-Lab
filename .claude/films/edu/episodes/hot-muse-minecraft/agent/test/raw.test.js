@@ -117,3 +117,56 @@ test('plan: optional on play and play_sequence, asked for in the instructions, n
   assert.ok(row.plan.length <= 400 && row.plan.endsWith('...'), row.plan);
   assert.equal(callRow('play', { skill: 'eat', args: {} }, { structuredContent: {} }, 'g1', 5).plan, undefined, 'optional');
 });
+
+test('the HUD\'s data for its next design: RAW entries (send time, runs of the same call as one, answers whole), the BODY · WORLD feed from the body\'s own state, THINKING without a why', () => {
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  let snap = { health: 20, food: 20, timeOfDay: 1000, inventory: {}, mobs: [], position: { x: 0, y: 64, z: 0 }, dimension: 'overworld' };
+  const handlers = [];
+  const game = { id: 'g08370a', body: { attribution: () => null, snapshot: () => snap, on: (n, fn) => { handlers.push(fn); return () => {}; } } };
+  const feed = createTermFeed({ send: (id, u) => p.term(cleanTerm(u)), now: () => t });
+  feed.reply(game, 'start_game', { adult: true }, { content: [{ text: 'New game g08370a: a new bot at a fresh spot.' }] });
+  // a play call without a why: THINKING says so
+  const a1 = { skill: 'collect', args: { block: 'obsidian', n: 14 } };
+  feed.call(game, 'play', a1);
+  t += 1000;
+  let st = p.state();
+  assert.deepEqual([st.thinking.noWhy, st.thinking.why, st.thinking.firstMove], [true, '', false]);
+  // Muse polls with get_state while the collect runs: one RAW entry for the run, its latest time and answer, whole
+  const long = 'collect {"block":"obsidian","n":14} is still running (2 more queued); call get_state again to keep waiting, or stop.';
+  for (let i = 0; i < 6; i++) {
+    t += 47_000;
+    const a = {};
+    feed.call(game, 'get_state', a);
+    feed.reply(game, 'get_state', a, { content: [{ text: `${long}\n\nState (game g08370a):` }] });
+  }
+  t += 12_000;
+  st = p.state();
+  assert.equal(st.raw.length, 3, 'the run of six get_state calls is one entry');
+  assert.deepEqual([st.raw[0].tool, st.raw[0].count, st.raw[0].age, st.raw[0].reply], ['get_state', 6, '12s', '< collect {"block":"obsidian","n":14} still running (2 more queued)']);
+  assert.deepEqual([st.raw[1].tool, st.raw[1].running, st.raw[1].raw], ['play', true, JSON.stringify(a1)]);
+  assert.match(st.raw[2].clock, /^\d+:\d\d$/);
+  assert.equal(cleanTerm({ lines: [{ k: 'reply', t: `< ${'word '.repeat(100)}`, rid: 1 }] }).lines[0].t.length, 501, 'an answer whole (up to 600 characters)');
+  // BODY · WORLD: items that came in, damage with the mob near, a mob coming near (once a minute), mining progress, water on lava
+  snap = { ...snap, inventory: { obsidian: 3, cobblestone: 12 } };
+  t += 5_000; feed.tick({ ...game, status: 'ready' });
+  snap = { ...snap, health: 14, mobs: [{ name: 'zombie', hostile: true, distance: 3, position: { x: 1, y: 64, z: 2 } }] };
+  t += 5_000; feed.tick({ ...game, status: 'ready' });
+  t += 5_000; feed.tick({ ...game, status: 'ready' });
+  handlers[0]({ sub: { kind: 'mine', text: 'mining obsidian', done: 3, of: 14 } });
+  t += 1_000;
+  handlers[0]({ sub: { kind: 'mine', text: 'mining obsidian', done: 4, of: 14 } });
+  t += 16_000;
+  handlers[0]({ sub: { kind: 'mine', text: 'mining obsidian', done: 5, of: 14 } });
+  handlers[0]({ sub: { kind: 'bucket', text: 'pouring water on lava' } });
+  p.term({ lines: [{ k: 'reflex', t: 'reflex: defending itself (zombie), then back to mining' }, { k: 'milestone', t: 'entered the Nether at 21:40' }] });
+  st = p.state();
+  const texts = st.world.map((e) => `${e.kind}: ${e.text}`);
+  for (const want of ['world: got 3 obsidian and 12 cobblestone', 'world: took 6 damage, health 14, zombie 3 blocks away', 'world: zombie 3 blocks away', 'world: mined obsidian 3 of 14', 'world: mined obsidian 5 of 14', 'world: pouring water on lava', 'reflex: defending itself (zombie)', 'milestone: Entered the Nether']) assert.ok(texts.includes(want), `${want} in ${JSON.stringify(texts)}`);
+  assert.ok(!texts.includes('world: mined obsidian 4 of 14'), 'mining progress at most every 15 s');
+  assert.equal(texts.filter((x) => x === 'world: zombie 3 blocks away').length, 1, 'a mob near once a minute');
+  assert.ok(st.world.every((e) => /^\d+:\d\d$/.test(e.clock)), 'each with its time');
+  // the current layout still draws with all of it
+  p.render(t);
+  assert.ok(p.frames >= 1);
+});
