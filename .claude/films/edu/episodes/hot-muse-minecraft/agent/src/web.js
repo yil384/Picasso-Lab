@@ -1347,6 +1347,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
         term: typeof opts.term === 'function' ? (id, u) => { try { opts.term(id, u); } catch { /* the video goes on without it */ } } : null,
         leaveQueue: (key) => { const i = waiting.findIndex((w) => w.key === key); if (i >= 0) waiting.splice(i, 1); },
         watching: (id) => { let n = 0; for (const k of viewSockets) if (k.gameId === id && !k.destroyed) n += 1; return n; },
+        serverReady: typeof opts.serverReady === 'function' ? opts.serverReady : null,
       });
       return mcp(req, res);
     }
