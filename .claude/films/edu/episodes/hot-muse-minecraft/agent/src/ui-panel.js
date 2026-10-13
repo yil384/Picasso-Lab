@@ -291,8 +291,9 @@ export function createUiPanel(o) {
   // ----- geometry, in the panel (the canvas has the toast's band T above it); px at 1080 wide, times s
   const PX = 20 * s; // the side margins
   const HDR = 38 * s; // the header strip
-  const BAND = 102 * s; // the thinking band under it (the latest words and the ones before; RAW has the rest)
-  const LOW = HDR + BAND; // the two columns start here
+  // the thinking band under the header is as tall as what it shows (Muse's latest words and its plan in full): the two
+  // columns start under it, at LOW
+  let LOW = HDR + 102 * s;
   const TX = PX; // the trace column
   const TW = 560 * s;
   const VR = TX + TW + 16 * s; // the rule between the columns
@@ -309,8 +310,6 @@ export function createUiPanel(o) {
     b.fillStyle = UI_COLORS.rule;
     const px1 = Math.max(1, Math.round(s));
     b.fillRect(PX, HDR, W - 2 * PX, px1);
-    b.fillRect(PX, LOW, W - 2 * PX, px1);
-    b.fillRect(VR, LOW + 10 * s, px1, H - LOW - 20 * s);
   }
 
   // ----- drawing helpers
@@ -485,17 +484,21 @@ export function createUiPanel(o) {
     return { ...DEFAULT_GOAL, list: DEFAULT_GOAL.list.map((k) => ({ k, t: GOAL_WORDS[k], atS: reachedLocal.get(k) ?? null })) };
   };
 
-  // ----- the band: Muse's words (the latest big, two before it fading); before any, what is happening and the goal
+  // ----- the band: Muse's latest words (big) and its latest plan in full under them (smaller, "PLAN"); the earlier
+  // words are in the state column (EARLIER THINKING); before any, what is happening and the goal. Its height is what
+  // it shows (between 80 and 172 px).
+  const QX = PX + 132 * s;
+  const QW = W - PX - QX - 15 * s;
+  /** Muse's latest plan, with the time of its call: the newest play call that had one. */
+  const latestPlan = () => calls.find((c) => PLAY.test(c.tool) && c.plan) ?? null;
   function drawBand(t) {
-    const c = createCanvas(W, Math.round(BAND));
-    const b = c.getContext('2d');
     const top = 11 * s;
-    label(b, 'Thinking', PX, top + 13 * s, { sq: UI_COLORS.muse });
-    const QX = PX + 132 * s;
-    const QW = W - PX - QX - 15 * s;
     const dyn = {};
     if (!thoughts.length) {
       // no words from Muse yet: what is happening, and the goal
+      const c = createCanvas(W, Math.round(102 * s));
+      const b = c.getContext('2d');
+      label(b, 'Thinking', PX, top + 13 * s, { sq: UI_COLORS.muse });
       b.font = font(600, 20);
       const l = fitText(b, statusWords(t), QW - 20 * s, 1);
       put(b, l[0], QX + 20 * s, top + 22 * s, { size: 20, weight: 600, color: UI_COLORS.soft });
@@ -505,27 +508,36 @@ export function createUiPanel(o) {
       put(b, fitText(b, words, QW, 1)[0], QX, top + 56 * s, { color: UI_COLORS.muted });
       b.font = font(500, 16);
       put(b, fitText(b, 'Muse’s own words with each command appear here', QW, 1)[0], QX, top + 84 * s, { size: 16, color: UI_COLORS.muted });
-      return { c, dyn };
+      return { c, dyn, h: c.height };
     }
-    const [lead, ...rest] = thoughts;
+    const lead = thoughts[0];
+    const plan = latestPlan();
+    // measure first: the words (two lines at most) and the plan (all of it: 400 characters fit in five lines)
+    const m = createCanvas(4, 4).getContext('2d');
+    m.font = font(600, 20);
+    const q = fitText(m, lead.text, QW - 15 * s, 2);
+    m.font = font(500, 15);
+    const pl = plan ? fitText(m, plan.plan, QW - 15 * s, 5) : [];
+    const h = Math.min(172 * s, Math.max(80 * s, top + q.length * 27 * s + (pl.length ? 14 * s + pl.length * 20 * s : 0) + 12 * s));
+    const c = createCanvas(W, Math.round(h));
+    const b = c.getContext('2d');
+    label(b, 'Thinking', PX, top + 13 * s, { sq: UI_COLORS.muse });
     put(b, [Number.isFinite(lead.gs) ? mmss(lead.gs) : '', lead.call ? `call ${lead.call}` : ''].filter(Boolean).join(' · '), PX, top + 37 * s, { face: mono(13), color: UI_COLORS.muted });
-    b.font = font(600, 20);
-    const q = fitText(b, lead.text, QW, 2);
     b.fillStyle = UI_COLORS.muse;
     b.fillRect(QX, top - 1 * s, 3 * s, q.length * 27 * s + 2 * s);
     q.forEach((l, i) => put(b, l, QX + 15 * s, top + 19 * s + i * 27 * s, { size: 20, weight: 600, color: UI_COLORS.quote }));
-    let y = top + q.length * 27 * s + 20 * s;
-    rest.slice(0, 1).forEach((th, i) => {
-      if (y > BAND - 6 * s) return;
-      b.globalAlpha = [0.6, 0.38][i];
-      const at = Number.isFinite(th.gs) ? mmss(th.gs) : '';
-      const aw = at ? put(b, at, QX + 15 * s, y, { face: mono(12.5), color: UI_COLORS.muted }) + 7 * s : 0;
-      b.font = font(500, 16);
-      put(b, fitText(b, th.text, QW - 15 * s - aw, 1)[0], QX + 15 * s + aw, y, { size: 16, color: UI_COLORS.soft });
+    if (pl.length) {
+      // the plan: Muse's next steps and fallbacks, as written (cut at a word at 400 characters by the agent)
+      let y = top + q.length * 27 * s + 14 * s + 13 * s;
+      label(b, 'Plan', PX, y, { sq: UI_COLORS.soft });
+      if (plan !== calls.find((x) => PLAY.test(x.tool))) put(b, Number.isFinite(plan.gs) ? `${mmss(plan.gs)}` : '', PX, y + 20 * s, { face: mono(12.5), color: UI_COLORS.muted });
+      b.fillStyle = 'rgba(174,182,198,0.35)';
+      b.fillRect(QX, y - 14 * s, 3 * s, pl.length * 20 * s + 2 * s);
+      b.globalAlpha = 0.92;
+      pl.forEach((l) => { put(b, l, QX + 15 * s, y, { size: 15, color: UI_COLORS.soft }); y += 20 * s; });
       b.globalAlpha = 1;
-      y += 26 * s;
-    });
-    return { c, dyn };
+    }
+    return { c, dyn, h };
   }
 
   // ----- the trace: the current call and its steps, then every earlier call
@@ -816,9 +828,32 @@ export function createUiPanel(o) {
         b.font = font(600, 15);
         put(b, fitText(b, `→ ${follow.ok ? 'Muse followed it' : 'Muse went on without it'}`, SW, 1)[0], 0, y, { size: 15, weight: 600, color: follow.ok ? UI_COLORS.ok : UI_COLORS.fail });
       }
+      if (follow && now() - follow.at < 300_000) y += 21 * s;
     } else if (!adv && !follow && y + 40 * s < H - LOW) {
       label(b, 'Body advice', 0, y, { sq: UI_COLORS.gold });
       put(b, 'Nothing pressing', 0, y + 22 * s, { size: 16, color: UI_COLORS.muted });
+      y += 22 * s;
+    }
+    // EARLIER THINKING: Muse's earlier words, newest first (its time, then the words), as many as fit, whole words
+    const bottom = H - LOW - 8 * s;
+    const earlier = thoughts.slice(1);
+    if (earlier.length && y + 22 * s + 26 * s <= bottom + 4 * s) {
+      y += 24 * s;
+      label(b, 'Earlier thinking', 0, y, { sq: UI_COLORS.muse });
+      y += 4 * s;
+      for (const th of earlier) {
+        if (y + 19 * s > bottom + 4 * s) break;
+        const at = Number.isFinite(th.gs) ? mmss(th.gs) : '';
+        b.font = mono(12.5);
+        const aw = at ? b.measureText(at).width + 8 * s : 0;
+        b.font = font(500, 15);
+        const lines = Math.max(1, Math.min(3, Math.floor((bottom + 4 * s - y) / (19 * s))));
+        const ls = fitText(b, th.text, SW - aw, lines);
+        y += 19 * s;
+        if (at) put(b, at, 0, y, { face: mono(12.5), color: UI_COLORS.muted });
+        ls.forEach((l, i) => put(b, l, aw, y + i * 19 * s, { size: 15, color: UI_COLORS.soft }));
+        y += (ls.length - 1) * 19 * s + 4 * s;
+      }
     }
     return c;
   }
@@ -838,7 +873,7 @@ export function createUiPanel(o) {
     if (PLAY.test(tool)) {
       sub = null;
       barShown = 0;
-      if (cmd.words) { thoughts.unshift({ text: cmd.words, gs: cmd.gs, call: null, cmd }); thoughts = thoughts.slice(0, 6); }
+      if (cmd.words) { thoughts.unshift({ text: cmd.words, gs: cmd.gs, call: null, cmd }); thoughts = thoughts.slice(0, 12); }
     }
     lastEventAt = now();
   }
@@ -1004,15 +1039,20 @@ export function createUiPanel(o) {
       const hk = JSON.stringify([st, clockNow(), game?.id, gameS(t) === null ? null : Math.floor(gameS(t))]);
       if (hk !== keys.header || !layers.header) { keys.header = hk; layers.header = drawHeader(t); }
       g.drawImage(layers.header, 0, T);
-      const bk = JSON.stringify([thoughts.slice(0, 3).map((x) => [x.text, x.call]), thoughts.length ? 0 : [statusWords(t), goal]]);
-      if (bk !== keys.band || !layers.band) { keys.band = bk; layers.band = drawBand(t); }
+      const bk = JSON.stringify([thoughts.slice(0, 1).map((x) => [x.text, x.call]), latestPlan()?.plan ?? '', thoughts.length ? 0 : [statusWords(t), goal]]);
+      if (bk !== keys.band || !layers.band) { keys.band = bk; layers.band = drawBand(t); LOW = HDR + layers.band.h; }
       g.drawImage(layers.band.c, 0, T + HDR);
+      // the rules: under the band, and between the columns
+      g.fillStyle = UI_COLORS.rule;
+      const px1 = Math.max(1, Math.round(s));
+      g.fillRect(PX, T + LOW, W - 2 * PX, px1);
+      g.fillRect(VR, T + LOW + 10 * s, px1, H - LOW - 20 * s);
       const cur = current();
-      const tk = JSON.stringify([calls.length, calls.slice(0, 8).map((c) => [c.no, c.state, c.checked, c.reply, c.steps.map((x) => x.state)]), events.length, sub && [sub.text, sub.done, sub.of], live?.step,
+      const tk = JSON.stringify([LOW, calls.length, calls.slice(0, 8).map((c) => [c.no, c.state, c.checked, c.reply, c.steps.map((x) => x.state)]), events.length, sub && [sub.text, sub.done, sub.of], live?.step,
         cur?.state?.kind === 'run' || calls.some((c) => !c.reply && !PLAY.test(c.tool) && c.tool !== 'start_game') ? sec : statusWords(t)]);
       if (tk !== keys.trace || !layers.trace) { keys.trace = tk; layers.trace = drawTrace(t); }
       g.drawImage(layers.trace.c, TX, T + LOW);
-      const sk = JSON.stringify([goal, [...reachedLocal], inv, pos, [...advice.entries()], follow && [follow.text, t - follow.at < 300_000], newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS]);
+      const sk = JSON.stringify([LOW, thoughts.slice(1, 8).map((x) => x.text), goal, [...reachedLocal], inv, pos, [...advice.entries()], follow && [follow.text, t - follow.at < 300_000], newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS]);
       if (sk !== keys.state || !layers.state) { keys.state = sk; layers.state = drawState(); }
       g.drawImage(layers.state, SX, T + LOW);
       // the moving parts: the running step's bar, a breathing dot by the words of what is happening, the toast
@@ -1103,6 +1143,7 @@ export function createUiPanel(o) {
         events: events.map((e) => ({ kind: e.kind, text: e.text })),
         sub, follow: follow?.text ?? null, advice: [...advice.entries()].map(([k, a]) => ({ k, text: a.text, sev: a.sev })),
         toast: toast?.text ?? null, st: { ...st }, clock: clockNow(), status: running() ? null : statusWords(now()),
+        plan: latestPlan()?.plan ?? null, low: Math.round(LOW / s),
         goal: goalNow(), newGoal: newGoalAt !== null && now() - newGoalAt < NEW_GOAL_MS, inv, pos, game: game ? { id: game.id, s: gameS() === null ? null : Math.floor(gameS()) } : null,
       };
     },

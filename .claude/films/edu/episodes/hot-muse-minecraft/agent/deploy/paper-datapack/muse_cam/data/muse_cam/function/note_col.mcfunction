@@ -1,0 +1,26 @@
+# the bot's column, from its feet 24 blocks up (muse_cam:note)
+execute positioned ~ ~0 ~ run function muse_cam:nb
+execute positioned ~ ~1 ~ run function muse_cam:nb
+execute positioned ~ ~2 ~ run function muse_cam:nb
+execute positioned ~ ~3 ~ run function muse_cam:nb
+execute positioned ~ ~4 ~ run function muse_cam:nb
+execute positioned ~ ~5 ~ run function muse_cam:nb
+execute positioned ~ ~6 ~ run function muse_cam:nb
+execute positioned ~ ~7 ~ run function muse_cam:nb
+execute positioned ~ ~8 ~ run function muse_cam:nb
+execute positioned ~ ~9 ~ run function muse_cam:nb
+execute positioned ~ ~10 ~ run function muse_cam:nb
+execute positioned ~ ~11 ~ run function muse_cam:nb
+execute positioned ~ ~12 ~ run function muse_cam:nb
+execute positioned ~ ~13 ~ run function muse_cam:nb
+execute positioned ~ ~14 ~ run function muse_cam:nb
+execute positioned ~ ~15 ~ run function muse_cam:nb
+execute positioned ~ ~16 ~ run function muse_cam:nb
+execute positioned ~ ~17 ~ run function muse_cam:nb
+execute positioned ~ ~18 ~ run function muse_cam:nb
+execute positioned ~ ~19 ~ run function muse_cam:nb
+execute positioned ~ ~20 ~ run function muse_cam:nb
+execute positioned ~ ~21 ~ run function muse_cam:nb
+execute positioned ~ ~22 ~ run function muse_cam:nb
+execute positioned ~ ~23 ~ run function muse_cam:nb
+execute positioned ~ ~24 ~ run function muse_cam:nb

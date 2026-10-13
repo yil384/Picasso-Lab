@@ -71,6 +71,14 @@ test('raw: the HUD\'s RAW console: newest first, the answers paired, the call ru
   // a frame draws (the console's wrapping and cutting)
   for (let i = 0; i < 3; i++) at(1_000);
   assert.ok(p.frames >= 4);
+  // the plan in full in the thinking band, which grows to hold it; a call without a plan keeps the last one shown
+  assert.equal(st.plan, a1.plan.length > 400 ? st.calls[0].plan : a1.plan);
+  const withPlan = at(10).low;
+  feed.call(game, 'play', { skill: 'eat', args: {}, why: 'A snack' });
+  st = at(100);
+  assert.deepEqual([st.thoughts.map((x) => x.text), st.plan === st.calls[1].plan], [['A snack', 'Iron next'], true], 'the earlier words go to EARLIER THINKING');
+  p.term({ lines: [{ k: 'call', t: '> play', tool: 'play', words: 'Short', of: 1, steps: [{ say: 'Eat something', raw: 'eat' }] }] });
+  assert.ok(at(10).low <= withPlan);
 });
 
 test('plan: optional on play and play_sequence, asked for in the instructions, never refused (cut at a word), logged, kept in the report, never seen by the body', async () => {
