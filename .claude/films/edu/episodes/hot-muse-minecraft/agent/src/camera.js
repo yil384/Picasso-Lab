@@ -228,7 +228,14 @@ export const followCommands = (camera, player, view = 'third') => [
   [`tag ${player} add muse_cam_target`],
 ];
 /** Every few seconds: the target tag again (the datapack asks for the ride again by itself every 5 s). */
-export const keepFollowingCommands = (camera, player) => [[`tag ${player} add muse_cam_target`]];
+export const keepFollowingCommands = (camera, player) => [[
+  `tag ${player} add muse_cam_target`,
+  // the evidence of the camera's last new spot (the datapack's muse_cam:note: the rule that chose it, the eye and the
+  // bot, the blocks around), into the server log once (Paper prints a command's answer there): asked for only when the
+  // datapack wrote a new one, so a view that went wrong can be rebuilt on a local server later
+  'execute unless score cam_seq muse_cam_y = cam_logged muse_cam_y run data get storage muse_cam:spot',
+  'execute unless score cam_seq muse_cam_y = cam_logged muse_cam_y run scoreboard players operation cam_logged muse_cam_y = cam_seq muse_cam_y',
+]];
 /** Between games: no target, the eye removed, stop riding and float high above the spot looking at the sky (cheap). */
 export const parkCommands = (camera) => [
   'tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', `tag ${camera} remove muse_cam_ineye`,

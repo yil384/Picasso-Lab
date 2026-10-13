@@ -14,3 +14,7 @@ scoreboard objectives add muse_cam_cd dummy
 scoreboard objectives add muse_cam_rr dummy
 # the orbit around a shut-in bot turns back with this
 scoreboard players set #m1 muse_cam_y -1
+# the evidence of the camera's spots (muse_cam:note): its number, and the last the camera service had printed to the
+# server log (deploy/paper-datapack; src/camera.js keepFollowingCommands asks for it when they differ)
+execute unless score cam_seq muse_cam_y matches 0.. run scoreboard players set cam_seq muse_cam_y 0
+execute unless score cam_logged muse_cam_y matches 0.. run scoreboard players set cam_logged muse_cam_y 0

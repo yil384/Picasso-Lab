@@ -183,6 +183,43 @@ const stories = {
     ].sort((a, b) => a[0] - b[0]);
   })(),
 
+  // a long game (made up for the sample: many calls, each with a why and a plan, long advice, a death, a counted goal
+  // set midway): the HUD after 40 minutes, a call running
+  long: v.story !== 'long' ? [] : (() => {
+    const G0 = Date.now() + 1_000;
+    const at = (gt, fn) => () => { skew = G0 + gt * 1000 - Date.now(); fn(); };
+    const reached = new Map([['wooden_pickaxe', 140], ['stone_pickaxe', 260], ['iron_ingot', 610], ['iron_pickaxe', 655], ['diamond', 1490], ['diamond_pickaxe', 1530]]);
+    let goalNow = { key: 'nether_and_back', title: 'Nether and back' };
+    const list = () => (goalNow.key === 'custom' ? [{ k: 'kill_pig', t: 'pigs killed', done: 7, of: 10, atS: null }] : milestonesOf('nether_and_back').map((m) => ({ k: m.key, t: m.short, atS: reached.get(m.key) ?? null })));
+    tracker = { progress: () => ({ ...goalNow, reached: false, list: list() }) };
+    carry = { diamond_pickaxe: 1, iron_ingot: 4, diamond: 1, obsidian: 6, bread: 5, cobblestone: 40, water_bucket: 1 };
+    worn = { offhand: 'shield' };
+    where = { x: 380, y: 33, z: -70 };
+    const moves = [
+      ['Lava pool at 360 34 -78 is close: walking over with the water bucket to make obsidian there', 'Go to the pool, pour water, mine what forms; 8 more for the frame. If the pool is too deep, pour at its edge and mine from the side; if mobs come, shield up first.', [{ skill: 'go_to', args: { x: 360, y: 35, z: -78 } }, { skill: 'collect', args: { block: 'obsidian', n: 8 } }]],
+      ['Health 9 after the skeleton: eating bread before anything else', 'Eat, then wall in for 30 s to heal; back to the pool after. If food runs out, hunt the cows at the ravine edge.', [{ skill: 'eat', args: {} }]],
+      ['Obsidian 6 of 14: two more pours on the far side of the pool', 'Pour twice more, mine 8; then gravel for flint by the river at 341 62 -40. Fallback: buy time with a shelter if night falls first.', [{ skill: 'bucket', args: { action: 'pour', liquid: 'water' } }, { skill: 'collect', args: { block: 'obsidian', n: 8 } }]],
+      ['The owner asked for 10 pigs first: hunting the herd near the river', 'Hunt 10 pigs in two calls, cook them at the furnace; then back to the obsidian. If the pigs scatter, wait for them by the water.', [{ skill: 'hunt', args: { mob: 'pig', n: 5 } }, { skill: 'hunt', args: { mob: 'pig', n: 5 } }]],
+    ];
+    const out = [];
+    let t = 0;
+    const earlyWhys = ['Wood first: logs, planks and a table for the first pickaxe', 'Stone next: 12 cobblestone for a stone pickaxe and a furnace', 'Iron at the ravine wall: 5 ore and coal for the furnace', 'Iron pickaxe done: digging down to y -59 for diamonds', 'Diamond found at y -58: two more for the pickaxe', 'Diamond pickaxe crafted: a bucket next, then water for obsidian'];
+    earlyWhys.forEach((why, i) => {
+      t = 120 + i * 260;
+      out.push([0.3 + i * 0.2, at(t, () => { call('play_sequence', { why, plan: 'Then the next part of the plan, as the goal says.', steps: [{ skill: 'collect', args: { block: 'stone', n: 4 } }] }); })]);
+      out.push([0.4 + i * 0.2, at(t + 30, () => { done(); feed.reply(game, 'play_sequence', argsOf('play_sequence'), reply({ steps: [{ call: i + 1, n: 1, step: 1, skill: 'collect', args: { block: 'stone', n: 4 }, status: 'confirmed', result: 'mined 4 stone', ms: 20_000 }], state: state(18, 15, 6_000) })); })]);
+    });
+    out.push([2.0, at(1800, () => { call('get_state', {}); feed.reply(game, 'get_state', argsOf('get_state'), reply({ steps: [], state: state(9, 12, 13_400), onItsOwn: [{ seq: 1, agoS: 30, source: 'reflex', kind: 'defend', ok: true, text: 'defending itself (skeleton), then back to walking' }],
+      advice: [{ kind: 'health', text: 'health 9/20 and a skeleton 12 blocks away: eat now and wall in for 30 s before you walk on; your shield is in the off-hand and raises against arrows by reflex, but two more hits at this health are dangerous', hint: { skill: 'eat', args: {} } }] })); })]);
+    moves.forEach(([why, plan, steps], i) => {
+      t = 1830 + i * 300;
+      out.push([2.3 + i * 0.4, at(t, () => { att = { muse: 120 + i * 4, reflex: 9, musePct: 93 }; call('play_sequence', { why, plan, steps }); if (i === 3) { goalNow = { key: 'custom', title: 'kill 10 pigs', text: 'kill 10 pigs' }; } })]);
+      if (i < 3) out.push([2.5 + i * 0.4, at(t + 60, () => { done(); feed.reply(game, 'play_sequence', argsOf('play_sequence'), reply({ steps: steps.map((x, k) => ({ call: 7 + i, n: k + 1, step: k + 1, skill: x.skill, args: x.args, status: 'confirmed', result: 'done', ms: 25_000 })), state: state(16, 14, 14_000) })); })]);
+    });
+    out.push([3.9, at(2735, () => { q = { ...q, busy: true, running: { call: { no: 10 }, step: 1, skill: 'hunt', args: { mob: 'pig', n: 5 } } }; subStep({ kind: 'fight', text: 'fighting a pig, 3 hits' }); })]);
+    return out;
+  })(),
+
   // daylight, a portal: an action, waiting for Muse, the portal, the Nether, Muse looking
   portal: [
     [0.3, () => feed.reply(game, 'start_game', { adult: true }, reply({ steps: [], state: state(20, 20, 2_250) }))],
