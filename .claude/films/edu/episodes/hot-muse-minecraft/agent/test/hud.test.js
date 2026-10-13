@@ -11,7 +11,8 @@ import { fileURLToPath } from 'node:url';
 import { drawHud, hudSig } from '../src/hud.js';
 import { GOAL_TITLES } from '../src/goals.js';
 import { createUiPanel } from '../src/ui-panel.js';
-import { callerOf } from '../src/terminal.js';
+import { callerOf, replyHead, cleanTerm } from '../src/terminal.js';
+import { planText } from '../src/report.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -169,4 +170,51 @@ test('panel: drawn again for new content at once, for the clocks and progress on
   assert.ok(f.lagMs.max <= 33 + 200, JSON.stringify(f.lagMs));
   assert.equal(p.hud(t).state.currentCall.steps[0].state, 'ok');
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+// before the first play call, as production feeds it: start_game (its answer with the goal's plan), live_view, the body's
+// dig-in, the care policy (muse-hud-live-hole.png: the lower half of both columns was empty)
+function preCall(caller, goalKey, goalList) {
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const plan = planText({ key: goalKey, title: goalKey, text: goalKey === 'custom' ? 'kill 3 pigs' : null, parts: goalKey === 'custom' ? [{ kind: 'kill', target: 'pig', n: 3 }] : null }, { leaseMin: 30 });
+  const start = `New game g88e230: a new bot at a fresh spot with an empty inventory.\n${plan}\nTo resume this game from a new connection, call start_game with game: "h_secret".\n\nSkills (use play or play_sequence):\n- collect`;
+  p.term(cleanTerm({ caller, game: { id: 'g88e230', s: 4 }, goal: { key: goalKey, title: goalKey === 'custom' ? 'kill 3 pigs' : 'Nether and back', text: null, list: goalList }, st: { hp: 20, food: 20, clock: 'DAY 12:57', ticks: 6900, muse: 0, reflex: 2, pct: 0 },
+    lines: [{ k: 'call', t: '> start_game', tool: 'start_game', raw: '{"adult":true}', rid: 1 }, { k: 'reply', t: `< ${replyHead({ content: [{ text: start }] })}`, rid: 1 }], pos: { y: 82, place: 'surface, birch forest' } }));
+  t += 2000; p.term(cleanTerm({ lines: [{ k: 'world', t: 'Care policy set: hide when exposed, critical health 10, eat starving', who: 'server' }] }));
+  t += 3000; p.term(cleanTerm({ lines: [{ k: 'world', t: 'Got 1 dirt', who: 'body' }] }));
+  t += 5000; p.term(cleanTerm({ lines: [{ k: 'call', t: '> live_view', tool: 'live_view', raw: '{}', rid: 2 }, { k: 'reply', t: '< Live view of game g88e230: live on Facebook since 05:41:26 UTC.', rid: 2 }] }));
+  t += 4000;
+  p.render(t);
+  return { p, at: () => t, step: (ms) => { t += ms; } };
+}
+const MILESTONES = ['wooden_pickaxe', 'stone_pickaxe', 'iron_ingot', 'iron_pickaxe', 'diamond', 'diamond_pickaxe', 'water_bucket', 'obsidian', 'flint_and_steel', 'portal_frame', 'nether', 'back'].map((k) => ({ k, t: k.replace(/_/g, ' '), atS: null }));
+
+test('HUD before the first play call: how to read it in the NOW area, RAW grown into what is left, no hole over 30 px; gone with the first play call', () => {
+  for (const caller of ['MUSE', 'TEST SCRIPT', 'CLAUDE DESKTOP']) {
+    for (const [goalKey, list] of [['nether_and_back', MILESTONES], ['free', MILESTONES], ['custom', [{ k: 'kill_pig', t: 'pigs killed', done: 0, of: 3, atS: null }]]]) {
+      const { p, at, step } = preCall(caller, goalKey, list);
+      const h = p.hud(at());
+      const what = `${caller}, ${goalKey}`;
+      assert.ok(h.layout.fillers.card >= 1, `${what}: the card`);
+      assert.ok(h.layout.leftGap <= 30 && h.layout.rightGap <= 30, `${what}: gaps ${h.layout.leftGap} / ${h.layout.rightGap}`);
+      assert.ok(h.layout.rawLines >= 6, `${what}: RAW ${h.layout.rawLines} lines`);
+      assert.deepEqual(h.qa.problems, [], what);
+      // the first play call: the card is gone
+      step(1000);
+      p.term(cleanTerm({ lines: [{ k: 'call', t: '> play_sequence', tool: 'play_sequence', words: 'Wood first', of: 1, rid: 3, raw: '{}', steps: [{ say: 'Mine 4 oak logs', raw: 'collect oak_log 4', skill: 'collect', args: '{"block":"oak_log","n":4}' }] }], live: { mode: 'run', c: 1, s: 1 } }));
+      step(1000);
+      p.render(at());
+      const h2 = p.hud(at());
+      assert.equal(h2.layout.fillers.card, undefined, `${what}: no card once a play call came`);
+      assert.deepEqual(h2.qa.problems, [], `${what}, after`);
+    }
+  }
+});
+
+test('feed: a new game\'s answer carries the goal\'s plan to RAW, never the resume line with its handle', () => {
+  const text = 'New game g1: a new bot at a fresh spot with an empty inventory.\nGoal: Nether and back. The plan:\n1. wooden pickaxe: collect logs\nTo resume this game from a new connection, call start_game with game: "h_SECRET123".\nThe bot is still joining the world: call get_state in a few seconds.\n\nSkills:\n- collect';
+  const h = replyHead({ content: [{ text }] });
+  assert.equal(h, 'New game g1: a new bot at a fresh spot with an empty inventory. Goal: Nether and back. The plan: 1. wooden pickaxe: collect logs');
+  assert.ok(!/SECRET|resume/i.test(h));
 });

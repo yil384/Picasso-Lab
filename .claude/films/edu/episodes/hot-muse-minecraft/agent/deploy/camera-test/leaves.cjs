@@ -2,7 +2,7 @@
 // datapack (a flat world, online-mode off, port 25599, its console read from a FIFO): the bot in a hole two deep in the
 // top of a canopy (0:24: the camera behind it over the leaves, no bot in the picture), at the bottom of a shaft through
 // one (0:37); a walk under a canopy, open ground and a hole in open ground as controls. For each: the shoulder rule
-// (#sr: 13 above its head, 15 3.2 behind), the eye, whether the straight line from the eye to the bot's eyes crosses a
+// (#sr: 13 straight above its head, 15 3.2 behind, 16-20 from above at an angle), the eye, its angle down to the bot, whether the straight line from the eye to the bot's eyes crosses a
 // leaf or dirt block (the camera draws leaves opaque), and the evidence record.
 //   node deploy/camera-test/leaves.cjs <console fifo> <server log>
 const mineflayer = require('../../node_modules/mineflayer');
@@ -17,6 +17,9 @@ const SCEN = [
   { name: 'walking under a canopy 4 up', leaves: [[-8, -57, -8, 8, -55, 8]], air: [], bot: [0.5, -61, 0.5] },
   { name: 'open ground', leaves: [], air: [], bot: [0.5, -61, 0.5] },
   { name: 'a hole two deep in open ground (dirt walls)', leaves: [], dirt: [[-4, -64, -4, 4, -62, 4]], air: [[0, -63, 0, 0, -62, 0]], bot: [0.5, -63, 0.5] },
+  // how every game opens: the body digs two blocks down before the first call (here with grass and a tree beside it)
+  { name: 'the spawn dig-in, a tree two blocks to its right', leaves: [[-5, -57, -2, -1, -55, 2]], dirt: [[-6, -64, -6, 6, -62, 6], [-3, -61, 0, -3, -58, 0]], air: [[0, -63, 0, 0, -62, 0]], bot: [0.5, -63, 0.5] },
+  { name: 'a hole two deep under a canopy 4 up', leaves: [[-8, -58, -8, 8, -56, 8]], dirt: [[-6, -64, -6, 6, -62, 6]], air: [[0, -63, 0, 0, -62, 0]], bot: [0.5, -63, 0.5] },
 ];
 const inBox = (b, x, y, z) => x >= b[0] && x <= b[3] && y >= b[1] && y <= b[4] && z >= b[2] && z <= b[5];
 (async () => {
@@ -58,7 +61,12 @@ const inBox = (b, x, y, z) => x >= b[0] && x <= b[3] && y >= b[1] && y <= b[4] &
         if (leaf || dirt) { blocked = `${leaf ? 'leaves' : 'dirt'} at ${x} ${y} ${z}`; break; }
       }
     }
-    console.log(JSON.stringify({ scene: sc.name, sr: Number(sr), eye: eye && eye.map((v) => Math.round(v * 100) / 100), lineToEyes: blocked || 'clear', evidenceRule: ev }));
+    // the camera's angle down to the bot's eyes and its distance
+    const to = [sc.bot[0], sc.bot[1] + 1.62, sc.bot[2]];
+    const d = eye ? eye.map((v, k) => to[k] - v) : null;
+    const pitch = d ? Math.round((Math.atan2(-d[1], Math.hypot(d[0], d[2])) * 180) / Math.PI) : null;
+    const dist = d ? Math.round(Math.hypot(...d) * 10) / 10 : null;
+    console.log(JSON.stringify({ scene: sc.name, sr: Number(sr), eye: eye && eye.map((v) => Math.round(v * 100) / 100), pitch, dist, lineToEyes: blocked || 'clear', evidence: ev }));
     con('tag Tbot remove muse_cam_target');
     con('kill @e[type=minecraft:item_display,tag=muse_cam_eye]');
     await sleep(300);

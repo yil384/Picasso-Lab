@@ -342,6 +342,11 @@ export function replyHead(out, checked = '') {
       continue;
     }
     if (/^State \(game /.test(b) && checked) return clean(`state: ${checked.replace(/^Muse checked:\s*/, '')}`, ANSWER_MAX);
+    // a new game: its first line and the goal's plan (what the player was told to do), never the resume line (its handle
+    // resumes the game from any connection) or the note that the bot is still joining
+    if (/^(?:New|Resumed) game /.test(b)) {
+      return cutWords(clean(b.split('\n').map((l) => l.trim()).filter((l) => l && !/^To resume this game/.test(l) && !/game: "/.test(l) && !/^The bot is still joining/.test(l)).join(' '), 4000), ANSWER_MAX);
+    }
     return clean(first(b), ANSWER_MAX);
   }
   return clean(first(text), ANSWER_MAX);

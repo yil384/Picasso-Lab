@@ -400,6 +400,14 @@ test('datapack: every function the camera\'s datapack calls is there, and every 
   }
   assert.match(files.get('shoulder'), /#vb muse_cam_y matches 20\.\. run scoreboard players set #hd muse_cam_y 1/);
   assert.match(files.get('sight_try'), /positioned ~ ~-0\.5 ~ facing entity/);
+  // hidden from behind (a hole it dug in): from above at an angle first, each spot with room and both lines clear, the
+  // first that is clear taken, straight down only when none is (g942044, g88e230: only the top of its head)
+  const oh = files.get('overhead');
+  assert.deepEqual([...oh.matchAll(/run scoreboard players set #ao muse_cam_y (\d+)$/gm)].map((m) => Number(m[1])), [16, 17, 18, 19, 20, 21]);
+  assert.equal((oh.match(/function muse_cam:overhead_at/g) ?? []).length, 6);
+  assert.match(files.get('overhead_at'), /unless block ~0\.4 ~ ~ #muse_cam:open run return 0[\s\S]*function muse_cam:sight_try/);
+  const sh = files.get('shoulder');
+  assert.ok(sh.indexOf('function muse_cam:overhead') > sh.indexOf('set #sr muse_cam_y 13') && sh.indexOf('function muse_cam:overhead') < sh.lastIndexOf('set #sr muse_cam_y 15'), 'after straight down, before the spots behind');
   assert.match(files.get('note_new'), /run return 0\n/);
   assert.equal((files.get('note_col').match(/function muse_cam:nb/g) ?? []).length, 25);
   assert.match(files.get('note'), /scoreboard players add cam_seq muse_cam_y 1/);

@@ -607,13 +607,17 @@ profile `camera`, `deploy/Dockerfile.camera`).
   while the bot is seen from it (2026-10-13, production game gc950fd: two blocks down in a hole it dug in a forest
   canopy, the camera behind it in the open over the leaves, a picture of leaves and no bot): a straight line from the
   bot's eyes and one from its shoulders to the spot, through open blocks only (`muse_cam:sight_try`, quarter-block
-  steps). No spot behind has seen it for a second (a hole, a shaft, a burrow under leaves): straight above its head
-  looking down (else just ahead of its face, else its eyes); seen again for a second, back behind it, so a moment's
+  steps). No spot behind has seen it for a second (a hole, a shaft, a burrow under leaves): from above at an angle, the
+  first of six that has room and both lines clear (`muse_cam:overhead`: 2.5 back and 4 up, 58 degrees down; 2.5 to its
+  right, to its left; 2 back and 5.5 up, 70 degrees; 2.5 in front, its face; 1.5 back and 2.5 up under a low canopy),
+  else straight above its head looking down (only its hair: g942044 and g88e230 opened so, the body digs in before the
+  first call), else just ahead of its face, else its eyes; seen again for a second, back behind it, so a moment's
   step down changes nothing. The camera draws leaves opaque (fast graphics), so no line of sight anywhere passes
   through leaves. Checked on a local Paper (`deploy/camera-test/leaves.cjs`, the replay): the hole two deep in a canopy top
-  went from behind (a line to its eyes through the leaf wall) to above its head with a clear line; the bottom of a
-  shaft through a canopy, above its head; a walk under a canopy 4 up and open ground, 3.2 behind; a hole two deep in
-  open ground, above its head. When the bot is enclosed for a second
+  went from behind (a line to its eyes through the leaf wall) to 2.5 back and 4 up (58 degrees, 4.7 blocks) with both
+  lines clear; the spawn dig-in beside a tree and a hole in open ground, the same; a hole under a canopy 4 up, 1.5 back
+  and 2.5 up (59 degrees); the bottom of a shaft through a canopy, straight down (nothing else sees it); a walk under a
+  canopy 4 up and open ground, 3.2 behind. When the bot is enclosed for a second
   (a roof right above its head that is not leaves, and walls on all four sides at head height: its night shelter, a
   sealed hole; a tunnel or a shaft is followed over the shoulder) the eye moves outside to look at it, in either view,
   and only to a spot `muse_cam:good` accepts, checked again every tick: open air with 0.4 blocks of room all round (the
@@ -631,7 +635,7 @@ profile `camera`, `deploy/Dockerfile.camera`).
   gc950fd the shoulder's record waited for a rule the last game had left in place, and the spots behind the bot were
   never recorded), the datapack keeps a record in storage `muse_cam:spot` (`rule`: 1
   the ring, 2 the nearest within 8 blocks, 3 from above, 4 none outside, 11 the bot's eyes, 12 just ahead, 13 above its
-  head, 14 and 15 behind it; `hidden` 1 when no spot behind had seen the bot for a second, `seen` 1 when one sees it
+  head, 14 and 15 behind it, 16 to 21 from above at an angle; `hidden` 1 when no spot behind had seen the bot for a second, `seen` 1 when one sees it
   now; the eye's and the bot's positions, the dimension, the bot's facing, the game time; the bot's column 24 blocks
   up, the 16 blocks around its head and feet and the eye's 7 as `.` open, `L` leaves, `#` other), and the camera's
   keep-alive asks the console for it once (`data get storage muse_cam:spot` when `cam_seq` moved past `cam_logged`):
@@ -1173,7 +1177,14 @@ and Muse's panel under it:
   a hole dug before the first call) count on its side, with the reflexes, as the percentage does. The goal band's title
   column is as wide as the title (120 to 210 px: "Nether and back" ran into the milestone grid at a fixed 120), and
   the QA sees icons as well as text (`test/hud.test.js`: every preset title, a long plain-words goal, a long counted
-  goal). The advice's tick count ("Night (time 13608): ...") is Muse's, not the viewers': the HUD leaves it out. The three states played through the real
+  goal). The advice's tick count ("Night (time 13608): ...") is Muse's, not the viewers': the HUD leaves it out.
+  Before the first play call (2026-10-13; the lower half of both columns was empty), NOW carries HOW TO READ THIS for a
+  viewer who just came in: who plays (the caller's name) through MCP and that its calls are in RAW exactly as sent, that
+  its why and plan come with each play call, and the colours (violet the caller, amber the body on its own, grey the
+  server), as full as the room allows; the advice says what will show there and the event list what it is. RAW takes
+  the rest: a new game's answer now carries the goal's plan, as the server gave it (never the resume line: its handle
+  resumes the game from any connection), cut at a word within 600 characters. The card is gone with the first play
+  call. `test/hud.test.js` checks that state for three callers and three goals: no gap over 30 px, RAW at least 6 lines. The three states played through the real
   pipeline (`scripts/ui-sample.mjs --story design --design ../ui-art/hud-final/states.json --state nowhy|long|fresh`) in
   the camera image: `~/Downloads/muse-hud-port-*.png`; 30.2 frames a second, gaps p99 50 ms. `test/hud.test.js` checks
   the layout the design measured and its QA (no text over another or out of its column).
