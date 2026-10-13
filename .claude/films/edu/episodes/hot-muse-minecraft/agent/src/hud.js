@@ -842,16 +842,22 @@ function latestRows(x, y, w, draw, opts) {
 }
 
 /* ---------- 4b. right column: the body's advice, the body and the world, earlier whys ---------- */
+// an advice's tag: STUCK (red, the most useful line when Muse repeats itself), TIME (amber, one line)
+const ADV_TAG = { stuck: ['STUCK', K.fail], time: ['TIME', K.body] };
+const tagW = (it) => (ADV_TAG[it.kind] ? capsW(ADV_TAG[it.kind][0], 9) + 14 : 0);
+const adviceWrap = (it, w) => wrap(cap1(it.text), UI(500, 14), w - 12, tagW(it));
 function adviceLines(w, budget) {
-  // first item at least 3 lines (or all it has), others at least 1; spare lines go to the items in order
+  // first item at least 3 lines (or all it has), others at least 1, the time left one line; spare lines go to the
+  // items in order
   const items = (st.advice.items || []), f2 = UI(500, 14);
-  const full = items.map((it) => wrap(cap1(it.text), f2, w - 12));
-  const n = full.map((l, i) => Math.min(l.length, i === 0 ? 3 : 1));
+  const full = items.map((it) => adviceWrap(it, w));
+  const cap = (i) => (items[i].kind === 'time' ? 1 : Infinity);
+  const n = full.map((l, i) => Math.min(l.length, i === 0 ? 3 : 1, cap(i)));
   let spare = budget - n.reduce((a, b) => a + b, 0);
-  for (let i = 0; i < n.length && spare > 0; i++) { const add = Math.min(spare, full[i].length - n[i]); n[i] += add; spare -= add; }
+  for (let i = 0; i < n.length && spare > 0; i++) { const add = Math.min(spare, Math.min(full[i].length, cap(i)) - n[i]); n[i] += add; spare -= add; }
   return full.map((l, i) => clamp(l, n[i], f2, w - 12));
 }
-const adviceMinLines = () => { const items = st.advice.items || []; return items.map((it, i) => Math.min(wrap(cap1(it.text), UI(500, 14), RW - 12).length, i === 0 ? 3 : 1)).reduce((a, b) => a + b, 0); };
+const adviceMinLines = () => { const items = st.advice.items || []; return items.map((it, i) => Math.min(adviceWrap(it, RW).length, i === 0 && it.kind !== 'time' ? 3 : 1)).reduce((a, b) => a + b, 0); };
 // what will show there, in as many lines as the budget allows (with the rules said above, the one row also does)
 const noAdviceLines = (w, budget = 99) => {
   const long = wrap(`None given to ${callerWord} yet: the body's warnings (night, hunger, lava, mobs) show here, with whether ${callerWord} took them.`, UI(500, 13), w);
@@ -859,7 +865,7 @@ const noAdviceLines = (w, budget = 99) => {
   return budget >= long.length ? long : budget >= short.length ? short : explainH() ? null : long;
 };
 // with no advice before the first play call: one row, or the lines that say what will show there (when there is room)
-const adviceFullLines = () => ((st.advice.items || []).length ? (st.advice.items || []).map((it) => wrap(cap1(it.text), UI(500, 14), RW - 12).length).reduce((a, b) => a + b, 0) : !st.currentCall ? noAdviceLines(RW).length : 0);
+const adviceFullLines = () => ((st.advice.items || []).length ? (st.advice.items || []).map((it) => (it.kind === 'time' ? 1 : adviceWrap(it, RW).length)).reduce((a, b) => a + b, 0) : !st.currentCall ? noAdviceLines(RW).length : 0);
 function adviceVerdict() {
   // [glyph, words, colour]; a verdict about older advice is never shown against the current one
   const ad = st.advice, items = ad.items || [], at = items[0].givenAt;
@@ -949,11 +955,20 @@ function adviceModule(x, y, w, draw, budget) {
     const gist = it.gist && cap1(it.text).startsWith(it.gist) ? it.gist : '';
     const lines = L[idx];
     if (draw) {
-      rect(x, yy + 4, 3, 13 + (lines.length - 1) * ROW, K.body);
+      const tag = ADV_TAG[it.kind];
+      rect(x, yy + 4, 3, 13 + (lines.length - 1) * ROW, tag ? tag[1] : K.body);
       lines.forEach((l, li) => {
         const by = yy + 15 + li * ROW;
-        if (li === 0 && gist && l.startsWith(gist)) { const gw = T(gist, x + 12, by, f1, K.t1); T(l.slice(gist.length), x + 12 + gw, by, f2, K.t2); }
-        else T(l, x + 12, by, f2, K.t2);
+        let lx = x + 12;
+        if (li === 0 && tag) {
+          // the tag, a chip before the first line
+          const cw = capsW(tag[0], 9);
+          rrect(lx, by - 11, cw + 8, 14, 3, tag[1]);
+          caps(tag[0], lx + 4, by - 1, 9, K.base);
+          lx += tagW(it);
+        }
+        if (li === 0 && gist && l.startsWith(gist)) { const gw = T(gist, lx, by, f1, K.t1); T(l.slice(gist.length), lx + gw, by, f2, K.t2); }
+        else T(l, lx, by, f2, K.t2);
       });
     }
     yy += lines.length * ROW + 3;

@@ -464,3 +464,27 @@ test('HUD hotbar: owned items full colour with their count, the best pickaxe hel
   assert.ok(d.texts.includes('3') && d.texts.includes('1'));
   assert.ok(!d.texts.includes('0'));
 });
+
+test('HUD advice: STUCK first and prominent (what is not moving, the alternatives), TIME as a one-line warning; QA clean', () => {
+  const { p, step, now } = rulesGame();
+  step(5000);
+  p.term(cleanTerm({ adv: [
+    { k: 'night', t: 'night in about 60 s: no closed shelter around you', sev: 2 },
+    { k: 'time', t: '4 min left in this game; the goal still needs: the portal frame, the Nether, back in the Overworld', sev: 2 },
+    { k: 'stuck', t: 'stuck: collect obsidian (0 of 10 after 75 s); no formed obsidian within reach. Try: bucket fill water next to the lava pool at 12 40 -8; or explore 64 blocks east for another pool', sev: 2 },
+  ] }));
+  step(1000);
+  const h = p.hud(now()).state;
+  assert.deepEqual(h.advice.items.map((it) => it.kind ?? 'other'), ['stuck', 'other', 'time']);
+  assert.match(h.advice.items[0].text, /^Collect obsidian \(0 of 10 after 75 s\)/, 'the tag says "stuck"');
+  const d = drawnTexts(p, now());
+  assert.deepEqual(d.qa, []);
+  assert.ok(d.texts.some((x) => /^Collect obsidian \(0 of 10 after 75 s\)/.test(x)), 'what is not moving leads');
+  assert.ok(d.texts.some((x) => /Try: bucket fill water/.test(x)) || d.texts.some((x) => /^Try:|bucket fill water/.test(x)), 'the alternatives');
+  // one line: its lead and the rest of that line, cut with an ellipsis; nothing of it on a second line
+  const at = d.texts.findIndex((x) => /^4 min left in this game/.test(x));
+  assert.ok(at >= 0, 'the time left');
+  assert.match(d.texts[at + 1], /…$|Overworld$/, 'cut on its one line');
+  assert.ok(!d.texts.some((x) => /^(?:Overworld|the Nether, back|back in the Overworld)/.test(x)), 'no second line');
+  for (const ch of 'STUCK') assert.ok(d.texts.includes(ch), 'the STUCK tag');
+});
