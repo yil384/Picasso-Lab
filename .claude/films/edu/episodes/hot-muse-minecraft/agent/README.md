@@ -603,22 +603,36 @@ profile `camera`, `deploy/Dockerfile.camera`).
   start), every tick: the camera rides an invisible display entity (`item_display`, tag `muse_cam_eye`) teleported
   to the spot behind the bot, and the client interpolates each teleport over `teleport_duration` (6 ticks), so the
   follow is a smooth, damped one and the bot's sudden turns become short swings; the farthest of three spots with open
-  air on the way wins, so a wall pulls the camera in instead of hiding the bot. When the bot is enclosed for a second
+  air on the way wins, so a wall pulls the camera in instead of hiding the bot. A spot behind the bot is used only
+  while the bot is seen from it (2026-10-13, production game gc950fd: two blocks down in a hole it dug in a forest
+  canopy, the camera behind it in the open over the leaves, a picture of leaves and no bot): a straight line from the
+  bot's eyes and one from its shoulders to the spot, through open blocks only (`muse_cam:sight_try`, quarter-block
+  steps). No spot behind has seen it for a second (a hole, a shaft, a burrow under leaves): straight above its head
+  looking down (else just ahead of its face, else its eyes); seen again for a second, back behind it, so a moment's
+  step down changes nothing. The camera draws leaves opaque (fast graphics), so no line of sight anywhere passes
+  through leaves. Checked on a local Paper (`deploy/camera-test/leaves.cjs`, the replay): the hole two deep in a canopy top
+  went from behind (a line to its eyes through the leaf wall) to above its head with a clear line; the bottom of a
+  shaft through a canopy, above its head; a walk under a canopy 4 up and open ground, 3.2 behind; a hole two deep in
+  open ground, above its head. When the bot is enclosed for a second
   (a roof right above its head that is not leaves, and walls on all four sides at head height: its night shelter, a
   sealed hole; a tunnel or a shaft is followed over the shoulder) the eye moves outside to look at it, in either view,
   and only to a spot `muse_cam:good` accepts, checked again every tick: open air with 0.4 blocks of room all round (the
   eye never touches a block, so the picture never shows one from inside: production game ga13a88 showed the dark
   inside of a shelter's roof from an eye left just above it) and a straight line from it to the bot's eyes through open
   air until within 3.2 blocks of the bot (it sees the shelter, not a tree or rock). The best first: the orbit's ring (5
-  out, 3.5 up), else the nearest good spot within 8 blocks, else 10 to 32 blocks above (the line may pass leaves), else
+  out, 3.5 up), else the nearest good spot within 8 blocks, else 10 to 32 blocks above (through open air only; until
+  2026-10-13 the line could pass leaves, and with leaves drawn opaque that was a picture of the canopy), else
   the bot's own eyes (sealed in under rock; tried again every 2 s). A second without the enclosure and the view goes
   back. Checked on a local Paper (2026-10-12): open sky, the orbit; a canopy just over the roof, 3 out and 2 up under
   it; leaves all round, 24 up; sealed in rock, first person.
   The evidence of each new spot, for a view that went wrong (two night games filmed the bot down a column of leaves):
-  when the rule that picked it or the eye's block changes (the enclosed rules, and over the shoulder when the spot
-  falls back to the bot's head, at most every 5 s), the datapack keeps a record in storage `muse_cam:spot` (`rule`: 1
+  when the rule that picked it or the eye's block changes (the enclosed rules, and every change of the spot over the
+  shoulder, at most every 5 s; a new bot's first spot always, `function muse_cam:fresh` from the camera service: in
+  gc950fd the shoulder's record waited for a rule the last game had left in place, and the spots behind the bot were
+  never recorded), the datapack keeps a record in storage `muse_cam:spot` (`rule`: 1
   the ring, 2 the nearest within 8 blocks, 3 from above, 4 none outside, 11 the bot's eyes, 12 just ahead, 13 above its
-  head; the eye's and the bot's positions, the dimension, the bot's facing, the game time; the bot's column 24 blocks
+  head, 14 and 15 behind it; `hidden` 1 when no spot behind had seen the bot for a second, `seen` 1 when one sees it
+  now; the eye's and the bot's positions, the dimension, the bot's facing, the game time; the bot's column 24 blocks
   up, the 16 blocks around its head and feet and the eye's 7 as `.` open, `L` leaves, `#` other), and the camera's
   keep-alive asks the console for it once (`data get storage muse_cam:spot` when `cam_seq` moved past `cam_logged`):
   Paper prints it in its log (`docker logs muse-minecraft-paper-1`, `data/logs/`): grep "Storage muse_cam:spot". Checked
@@ -1143,8 +1157,23 @@ and Muse's panel under it:
   (every width measured once and kept, so a redraw takes about 15 ms on the Mac); `src/ui-panel.js` keeps what the
   agent sends and turns it into the design's state (`hudState()`: who plays from the MCP client, MUSE or TEST SCRIPT;
   each step as sent; the answers with their times and codes; the advice in full with when it was given; the steps the
-  server added; the goal before a set_goal; the body's, the world's and the server's events) and draws it once per
-  change of what it shows (the clocks: each second); every frame copies it. The three states played through the real
+  server added; the goal before a set_goal; the body's, the world's and the server's events) and draws it when what it
+  shows changed: new content (a call, an answer, a step done, the advice, the goal) at once, at most every 150 ms;
+  what moves with the clock (the clocks, the ages, a step's progress, the stats, the hotbar) once a second. A state
+  that differs from the last only there keeps its layout (`hudSig`; the search runs again for new content). Each
+  drawing is written to the panel file once; between drawings ffmpeg reads the same file and the video shows it, so
+  no frame is written for nothing (2026-10-13: redrawing and writing all 30 frames a second, the camera image on
+  picasso managed 16.5-17.8 a second at a load of 50-70, the HUD standing still up to 1.3-6 s). Measured in the camera
+  image (`--cpus 6` as production, the design sample's ffmpeg, 4 busy threads for the game client, a running call fed
+  like a game: progress every 0.5 s, a look every 3 s): the frame clock 29.0 a second, gaps p99 87 ms; 1.6 drawings a
+  second, a drawing 14 ms (p99 36), an input on the HUD in 42 ms (p99 60); with 10 busy threads on the 6 CPUs, a
+  drawing 53 ms (p99 88), an input on the HUD in 77 ms (p99 93), the sample's video 897 frames in 29.9 s either way.
+  The camera's `stream_stats` carry the HUD's numbers each minute (`hud`: drawings, files, a drawing's time, the lag).
+  The share with no actions by either side reads "no actions yet" on a neutral grey rule; the body's own plans (care,
+  a hole dug before the first call) count on its side, with the reflexes, as the percentage does. The goal band's title
+  column is as wide as the title (120 to 210 px: "Nether and back" ran into the milestone grid at a fixed 120), and
+  the QA sees icons as well as text (`test/hud.test.js`: every preset title, a long plain-words goal, a long counted
+  goal). The advice's tick count ("Night (time 13608): ...") is Muse's, not the viewers': the HUD leaves it out. The three states played through the real
   pipeline (`scripts/ui-sample.mjs --story design --design ../ui-art/hud-final/states.json --state nowhy|long|fresh`) in
   the camera image: `~/Downloads/muse-hud-port-*.png`; 30.2 frames a second, gaps p99 50 ms. `test/hud.test.js` checks
   the layout the design measured and its QA (no text over another or out of its column).

@@ -225,7 +225,8 @@ export const followCommands = (camera, player, view = 'third') => [
     `tag ${camera} ${view === 'first' ? 'remove' : 'add'} muse_cam_third`, `tag ${camera} remove muse_cam_ineye`, `tag ${camera} remove muse_cam_inhead`,
     `effect give ${camera} minecraft:night_vision infinite 0 true`, `tp ${camera} ${player}`,
   ],
-  [`tag ${player} add muse_cam_target`],
+  // the datapack's counters for a new bot (its first spot into the evidence, seen until shown otherwise)
+  [`tag ${player} add muse_cam_target`, 'function muse_cam:fresh'],
 ];
 /** Every few seconds: the target tag again (the datapack asks for the ride again by itself every 5 s). */
 export const keepFollowingCommands = (camera, player) => [[
@@ -238,7 +239,7 @@ export const keepFollowingCommands = (camera, player) => [[
 ]];
 /** Between games: no target, the eye removed, stop riding and float high above the spot looking at the sky (cheap). */
 export const parkCommands = (camera) => [
-  'tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', `tag ${camera} remove muse_cam_ineye`,
+  'tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', 'kill @e[type=minecraft:marker,tag=muse_cam_try]', `tag ${camera} remove muse_cam_ineye`,
   `tag ${camera} remove muse_cam_inhead`, `execute as ${camera} run spectate`, `execute as ${camera} at @s run tp @s ~ 250 ~ ~ -90`,
 ];
 
@@ -902,6 +903,8 @@ export function createCameraStream(o) {
           clientFps: s.clientFps, captureFps: Math.round(((now.frame - last.frame) / sec) * 10) / 10, dup: Number(p.dup_frames) || 0, drop: Number(p.drop_frames) || 0,
           speed: p.speed ?? null, clientCpu: pct(now.c, last.c), clientMB: s.clientTree ? Math.round(s.clientTree.rssMB) : null,
           xvfbCpu: pct(now.x, last.x), ffmpegCpu: pct(now.f, last.f), ffmpegMB: f ? Math.round(f.rssMB) : null, camera: s.state,
+          // the HUD (src/ui-panel.js perf): its drawings and files written, a drawing's time, an input's lag to its drawing
+          ...(typeof panel?.perf === 'function' ? { hud: panel.perf() } : {}),
         });
       }
       last = now;

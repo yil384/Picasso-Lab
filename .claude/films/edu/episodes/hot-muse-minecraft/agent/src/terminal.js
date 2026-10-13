@@ -417,7 +417,10 @@ export function checkedLine(state, dim) {
   return parts.length ? clean(`Muse checked: ${parts.join(', ')}`, 160) : '';
 }
 
-/** The status line as numbers for the stream's status row: {hp, food, clock, muse, reflex, pct}. */
+/**
+ * The status line as numbers for the stream's status row: {hp, food, clock, muse, reflex, pct}. reflex is the body's
+ * side of the share: its reflexes and its own plans (care), as musePct counts them.
+ */
 export function statusData(state, attribution) {
   const st = {};
   if (Number.isFinite(state?.health)) st.hp = Math.round(state.health);
@@ -428,7 +431,7 @@ export function statusData(state, attribution) {
   if (Number.isFinite(state?.time) && clock !== 'NETHER' && clock !== 'END') st.ticks = ((Math.floor(state.time) % 24_000) + 24_000) % 24_000;
   if (attribution && Number.isFinite(attribution.muse)) {
     st.muse = attribution.muse;
-    st.reflex = attribution.reflex ?? 0;
+    st.reflex = (attribution.reflex ?? 0) + (Number.isFinite(attribution.care) ? attribution.care : 0);
     if (Number.isFinite(attribution.musePct)) st.pct = attribution.musePct;
   }
   return st;

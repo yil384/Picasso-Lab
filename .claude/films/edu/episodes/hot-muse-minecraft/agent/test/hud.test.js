@@ -8,7 +8,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { drawHud } from '../src/hud.js';
+import { drawHud, hudSig } from '../src/hud.js';
+import { GOAL_TITLES } from '../src/goals.js';
 import { createUiPanel } from '../src/ui-panel.js';
 import { callerOf } from '../src/terminal.js';
 
@@ -62,4 +63,110 @@ test('HUD: the caller is named from the MCP client; an empty game draws', () => 
   assert.equal(h.state.thinking.hasWhy, false);
   assert.deepEqual(h.qa.problems, []);
   assert.deepEqual(['muse-minecraft-mcp', 'staging-check', 'muse-dec85ec-smoke', 'e2e-iron-switch', 'Claude Desktop', '', '#!'].map(callerOf), ['MUSE', 'TEST SCRIPT', 'TEST SCRIPT', 'TEST SCRIPT', 'CLAUDE DESKTOP', 'AGENT', 'AGENT']);
+});
+
+const clone = (x) => JSON.parse(JSON.stringify(x));
+const noProblems = (g, st, what) => { const r = drawHud(g, st, { reuse: false }); assert.deepEqual(r.qa.problems, [], what); return r; };
+
+test('HUD goal band: every preset title, a long plain-words goal and a long counted goal fit their columns (the QA sees icons too)', () => {
+  createUiPanel({ width: 1080, height: 472, over: 72 });
+  const g = createCanvas(1080, 1080).getContext('2d');
+  // gc950fd: "Nether and back" ran into the grid's water bucket at a fixed 120 px title column
+  for (const title of Object.values(GOAL_TITLES)) {
+    for (const variant of ['next first', 'all done, long times']) {
+      const st = clone(STATES.nowhy);
+      st.goal.title = title;
+      if (variant === 'next first') st.goal.list.forEach((m, i) => Object.assign(m, i === 0 ? { state: 'next', done: null, progress: '2/3' } : { state: 'todo', done: null }));
+      else st.goal.list.forEach((m) => Object.assign(m, { state: 'done', done: '62:13' }));
+      noProblems(g, st, `${title}, ${variant}`);
+    }
+  }
+  // a long plain-words goal, with and without a title of its own
+  const words = 'build a big wooden house next to the river with a garden, a fence all around it and torches on every wall, then wait there for the night';
+  for (const title of ['', 'a house by the river, with a garden and a fence~']) {
+    const st = clone(STATES.long);
+    st.goal = { kind: 'text', key: 'custom', title, text: words, new: false };
+    noProblems(g, st, `plain words, title "${title}"`);
+  }
+  // a counted goal at the longest title the server makes (40 characters), three parts, the goal before it
+  const st = clone(STATES.long);
+  st.goal.title = 'collect 64 cobblestone, craft 20 torche~';
+  st.goal.parts = [
+    { key: 'get_cobblestone', label: 'Cobblestone collected', icon: 'stone_pickaxe', done: 12, of: 64 },
+    { key: 'make_torch', label: 'Torches made', icon: 'star', done: 3, of: 20 },
+    { key: 'kill_pig', label: 'Pigs killed', icon: 'sword', done: 1, of: 3 },
+  ];
+  noProblems(g, st, 'a long counted goal');
+});
+
+test('HUD stats: no actions by either side yet shows no share, on a neutral rule; one by the body alone is 0 % / 100 %', () => {
+  createUiPanel({ width: 1080, height: 472, over: 72 });
+  const c = createCanvas(1080, 1080), g = c.getContext('2d');
+  const drawn = [];
+  const fill = g.fillText.bind(g);
+  g.fillText = (s, x, y) => { drawn.push(s); fill(s, x, y); };
+  const st = clone(STATES.fresh);
+  st.stats.museShare = { pct: null, muse: null, reflex: null };
+  noProblems(g, st, 'no actions');
+  assert.ok(drawn.includes('no actions yet'));
+  assert.ok(!drawn.some((s) => /%/.test(s)), 'no percentage');
+  const px = (x) => [...g.getImageData(x, 608, 1, 1).data.slice(0, 3)];
+  assert.deepEqual(px(40), px(1040), 'one colour across');
+  assert.deepEqual(px(40), [0x4e, 0x56, 0x67], 'the neutral grey');
+  drawn.length = 0;
+  st.stats.museShare = { pct: 0, muse: 0, reflex: 1 };
+  noProblems(g, st, 'the body alone');
+  assert.ok(drawn.includes('0%') && drawn.some((s) => /^reflexes 100%/.test(s)), drawn.filter((s) => /%/.test(s)).join(' | '));
+});
+
+test('HUD layout: kept while only what moves with the clock changes, searched again for new content, the same as a fresh search', () => {
+  createUiPanel({ width: 1080, height: 472, over: 72 });
+  const g = createCanvas(1080, 1080).getContext('2d');
+  const st = clone(STATES.long);
+  const r0 = drawHud(g, st, {});
+  const moved = clone(st);
+  moved.now.gameS += 7; moved.now.gameClock = '44:01'; moved.stats.gameClock = '44:01'; moved.stats.hp = 13; moved.thinking.lastCallAgoS += 0.4;
+  if (moved.currentCall) { moved.currentCall.running = '0:19'; for (const sp of moved.currentCall.steps) if (sp.elapsed) sp.elapsed = '0:12'; }
+  for (const e of moved.raw.entries) e.agoS += 7;
+  assert.equal(hudSig(moved), hudSig(st), 'the content is the same');
+  const r1 = drawHud(g, moved, {});
+  assert.equal(r1.searches, r0.searches, 'no search for a state that only moved with the clock');
+  assert.deepEqual(r1.layout, drawHud(g, moved, { reuse: false }).layout, 'and the layout a fresh search finds');
+  const more = clone(moved);
+  more.raw.entries.unshift({ ...more.raw.entries[0], n: 999, tool: 'get_state', args: '{}', playCallNo: null, hasWhy: false, answer: { state: 'answered', waitingS: null, hudText: null, code: null }, reply: 'state: HP 13, food 20' });
+  more.raw.runs.unshift({ ...more.raw.runs[0], tool: 'get_state', args: '{}', count: 1, ns: [999], newestState: 'answered', latestAnswer: 'state: HP 13, food 20' });
+  more.raw.total += 1;
+  assert.notEqual(hudSig(more), hudSig(moved));
+  const r2 = drawHud(g, more, {});
+  assert.equal(r2.searches, r1.searches + 2, 'a new call: searched again (the fresh search above counted one)');
+  assert.deepEqual(r2.qa.problems, []);
+});
+
+test('panel: drawn again for new content at once, for the clocks and progress once a second; only new drawings are written', () => {
+  const dir = fs.mkdtempSync(path.join(process.env.TMPDIR || '/tmp', 'hud-write-'));
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t, file: path.join(dir, 'panel.bmp') });
+  p.term({ caller: 'MUSE', game: { id: 'g1', s: 10 }, lines: [{ k: 'call', t: '> play_sequence', tool: 'play_sequence', words: 'Wood first', of: 2, rid: 1, raw: '{}',
+    steps: [{ say: 'Mine 4 oak logs', raw: 'collect oak_log 4', skill: 'collect', args: '{"block":"oak_log","n":4}' }, { say: 'Craft 8 oak planks', raw: 'craft oak_planks 8', skill: 'craft', args: '{"item":"oak_planks","n":8}' }] }],
+    live: { mode: 'run', c: 1, s: 1 } });
+  p.write(t);
+  p.perf();
+  const mtime = () => fs.statSync(path.join(dir, 'panel.bmp')).mtimeMs;
+  // 20 frames in the same second with the body's progress moving: nothing drawn, nothing written
+  for (let i = 0; i < 20; i++) { t += 33; if (i % 5 === 0) p.term({ sub: { kind: 'mine', text: 'mining oak log', done: i / 5, of: 4 } }); p.write(t); }
+  let f = p.perf();
+  assert.equal(f.draws, 0, 'progress waits for the second');
+  assert.equal(f.writes, 0);
+  // the next second: drawn and written once
+  t = 1_001_000 + 5; p.write(t);
+  f = p.perf();
+  assert.deepEqual([f.draws, f.writes], [1, 1]);
+  assert.match(String(p.hud(t).state.currentCall.steps[0].sub.done), /^3$/);
+  // a step done (content): drawn at the next frame, not a second later
+  t += 200; p.term({ live: { mode: 'run', c: 1, s: 2 } }); t += 33; p.write(t);
+  f = p.perf();
+  assert.deepEqual([f.draws, f.writes], [1, 1]);
+  assert.ok(f.lagMs.max <= 33 + 200, JSON.stringify(f.lagMs));
+  assert.equal(p.hud(t).state.currentCall.steps[0].state, 'ok');
+  fs.rmSync(dir, { recursive: true, force: true });
 });

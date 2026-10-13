@@ -6,16 +6,19 @@
 //
 // This module keeps what the agent sends (src/terminal.js, cleaned again by the service) and turns it into the HUD
 // state, the shape of the design's data (hudState()); src/hud.js draws that state with the mock-up's own drawing code.
-// The layout and every wrap run once per change of what is shown (the clocks: once a second), into a canvas of their
-// own; each frame (30 a second) copies it. Each frame is an uncompressed 32-bit BMP with alpha (the band over the
-// video is see-through but for the overlays), renamed over the panel file, which ffmpeg reads again for every frame
-// (src/stream.js).
+// The HUD is drawn again when what it shows changed: an input that changes its content (a call, an answer, a step done,
+// the advice, the goal) at once (at most every 150 ms), what moves with the clock (the clocks, the ages, a step's
+// progress, the stats, the hotbar) once a second; a state that differs from the last only there keeps its layout
+// (src/hud.js hudSig). Each drawing is written once, as an uncompressed 32-bit BMP with alpha (the band over the video
+// is see-through but for the overlays), renamed over the panel file, which ffmpeg reads again for every frame
+// (src/stream.js): between two drawings the video shows the last one, with no frame written (on picasso at a load of
+// 69, redrawing and writing all 30 frames a second fell to 16 a second, the HUD standing still up to 1.3 s).
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { drawHud, ICON_SIZES } from './hud.js';
+import { drawHud, hudSig, ICON_SIZES } from './hud.js';
 
 const require = createRequire(import.meta.url);
 
@@ -25,6 +28,8 @@ export const UI_COLORS = Object.freeze({ base: '#07090d', band: '#0b0e14', muse:
 const PLAY = /^(?:play|play_sequence)$/;
 /** The video's height in the 1080x1080 frame: the HUD's coordinates are the frame's. */
 const VIDEO_H = 608;
+/** The least time between two drawings for a change of content (a burst of inputs is drawn once). */
+const MIN_DRAW_GAP_MS = 150;
 
 /** The icon for a command or a sub-step, from its words or its kind. */
 export function iconFor(words, kind = '') {
@@ -186,11 +191,9 @@ export function createUiPanel(o) {
   };
   for (const n of Object.keys(images)) for (const z of ICON_SIZES) iconAt(n, z);
 
+  // the HUD, drawn once per change of what it shows, in the 1080 frame's coordinates moved up to the panel's
   const canvas = createCanvas(W, H + T);
-  const g = canvas.getContext('2d');
-  // the HUD drawn once per change of what it shows, in the 1080 frame's coordinates moved up to the panel's
-  const layer = createCanvas(W, H + T);
-  const lg = layer.getContext('2d');
+  const lg = canvas.getContext('2d');
   const top = VIDEO_H - T; // the panel's first row in the frame
 
   // ----- what is shown
@@ -218,11 +221,18 @@ export function createUiPanel(o) {
   let lastEventAt = now();
   let frames = 0;
   let timer = null;
-  let version = 0; // every input moves it: the HUD is drawn again
+  let version = 0; // every input moves it: the HUD is looked at again
   let callTotal = 0; // every call of the game (the list keeps the newest 120)
-  let drawnKey = '';
+  let drawnKey = ''; // the second and the timed flags of the last drawing
+  let drawnSig = null; // the content of the last drawing (src/hud.js hudSig)
+  let seenVersion = -1;
+  let changedAt = null; // the first input since the last drawing (the HUD's lag)
+  let lastDrawAt = -Infinity;
+  let unwritten = false; // a drawing not in the panel file yet
   let lastLayout = null;
   let lastQa = null;
+  const perf = { draws: 0, writes: 0, searches: 0, searchBase: 0, ms: [], lag: [], ticks: 0, gapMax: 0, lastTick: null };
+  function bump() { version += 1; if (changedAt === null) changedAt = now(); }
 
   const gameS = (t = now()) => (game && Number.isFinite(game.s) ? game.s + (t - game.at) / 1000 : null);
   const ticksNow = () => (anchor ? (((anchor.ticks + anchor.rate * (now() - anchor.at)) % 24_000) + 24_000) % 24_000 : null);
@@ -264,7 +274,7 @@ export function createUiPanel(o) {
 
   // ----- the inputs
   function addCall(l) {
-    version += 1;
+    bump();
     const tool = l.tool ?? (/^> ([a-z_]+)/.exec(l.t)?.[1] ?? 'call');
     const steps = Array.isArray(l.steps) && l.steps.length ? l.steps : PLAY.test(tool) ? [{ say: l.say || '', raw: String(l.t).replace(/^> [a-z_]+:?\s*/, '') }] : [];
     const ready = tool === 'start_game'; // start_game's line comes with its reply: the game is there
@@ -462,7 +472,7 @@ export function createUiPanel(o) {
     width: W, height: H + T, over: T, fps, file: o.file ?? null,
     /** New lines from the agent ({k, t, say, words, of, ms, n, why, ak, tool, steps, c, s, pre, pt, pts}). */
     push(lines) {
-      version += 1;
+      bump();
       for (const l of lines ?? []) {
         if (!l || typeof l.t !== 'string') continue;
         if (l.k === 'call') addCall(l);
@@ -493,7 +503,7 @@ export function createUiPanel(o) {
         } else if (l.k === 'follow') follow = { text: l.t, ok: Boolean(l.ok) || /^Followed/.test(l.t), at: now(), gs: gameS() };
         else if (l.k === 'advice') {
           const k = l.ak ?? 'note';
-          const text = l.t.replace(/^advice:\s*/i, '');
+          const text = l.t.replace(/^advice:\s*/i, '').replace(/\s*\(time -?\d+\)/g, '');
           const old = advice.get(k);
           const shape = text.replace(/\d+/g, '#');
           advice.set(k, { text, gist: adviceGist(text), shape, sev: old?.sev ?? 1, at: old?.shape === shape ? old.at : now(), gs: old?.shape === shape ? old.gs : gameS() });
@@ -503,7 +513,7 @@ export function createUiPanel(o) {
     /** The status numbers (st) for the header. */
     status(text, data) {
       if (!data) return;
-      version += 1;
+      bump();
       if (Number.isFinite(data.ticks)) {
         const t = now();
         let rate = anchor?.rate ?? 0.02;
@@ -523,8 +533,9 @@ export function createUiPanel(o) {
         const k = a.k ?? 'note';
         seen.add(k);
         const old = advice.get(k);
-        const shape = a.t.replace(/\d+/g, '#'); // the same advice with its numbers moved on keeps the time it was given
-        advice.set(k, { text: a.t, gist: adviceGist(a.t), shape, sev: a.sev ?? 1, at: old?.shape === shape ? old.at : now(), gs: old?.shape === shape ? old.gs : gameS() });
+        const text = String(a.t).replace(/\s*\(time -?\d+\)/g, ''); // "Night (time 13608): ...": the ticks are for Muse, not the viewers
+        const shape = text.replace(/\d+/g, '#'); // the same advice with its numbers moved on keeps the time it was given
+        advice.set(k, { text, gist: adviceGist(text), shape, sev: a.sev ?? 1, at: old?.shape === shape ? old.at : now(), gs: old?.shape === shape ? old.gs : gameS() });
       }
       for (const k of [...advice.keys()]) if (!seen.has(k)) advice.delete(k);
     },
@@ -540,7 +551,7 @@ export function createUiPanel(o) {
         if (goal && sig(goal) !== sig(u.goal)) { newGoalAt = now(); prevGoal = goal; }
         goal = u.goal;
       }
-      version += 1;
+      bump();
       if (Number.isInteger(u.bind) && !calls.some((x) => x.no === u.bind)) bind(calls.find((x) => PLAY.test(x.tool) && x.no === null), u.bind);
       if (Number.isInteger(u.bind) && Array.isArray(u.added)) { const c = calls.find((x) => x.no === u.bind); if (c) c.added = u.added; }
       if (typeof u.caller === 'string' && u.caller) caller = u.caller;
@@ -574,7 +585,7 @@ export function createUiPanel(o) {
     },
     /** Another game on camera: an empty HUD, with a note. */
     reset(note = '') {
-      version += 1;
+      bump();
       calls = []; events = []; thoughts = []; world = []; landmarks = []; callTotal = 0;
       sub = null; live = null; follow = null; toast = null; anchor = null; game = null; goal = null; prevGoal = null; inv = null; pos = null; over = null; newGoalAt = null;
       caller = 'MUSE';
@@ -586,21 +597,44 @@ export function createUiPanel(o) {
     },
 
 
-    /** One frame at time t (ms): the HUD drawn again when what it shows changed (its clocks: each second), then copied. */
+    /**
+     * One frame at time t (ms): the HUD drawn again when its content changed (at once, at most every 150 ms) or a
+     * second went by (its clocks, the progress, the stats), else the last drawing as it is.
+     */
     render(t = now()) {
-      const key = `${version}|${Math.floor(t / 1000)}|${newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS}|${toast && t - toast.at < 6_000}`;
-      if (key !== drawnKey) {
-        drawnKey = key;
+      const timed = `${Math.floor(t / 1000)}|${newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS}|${toast && t - toast.at < 6_000}`;
+      let state = null, sig = null, content = false;
+      let draw = timed !== drawnKey;
+      if (!draw && version !== seenVersion && t - lastDrawAt >= MIN_DRAW_GAP_MS) {
+        seenVersion = version;
+        state = hudState(t);
+        sig = hudSig(state);
+        draw = content = sig !== drawnSig;
+        if (!draw && changedAt !== null) changedAt = null; // only what moves with the clock: the next second shows it
+      }
+      if (draw) {
+        state ??= hudState(t);
+        sig ??= hudSig(state);
+        const t0 = process.hrtime.bigint();
         lg.setTransform(1, 0, 0, 1, 0, 0);
         lg.clearRect(0, 0, W, H + T);
         lg.setTransform(s, 0, 0, s, 0, -top * s);
-        const r = drawHud(lg, hudState(t), { icon: iconAt, qa: Boolean(o.qa) });
+        const r = drawHud(lg, state, { icon: iconAt, qa: Boolean(o.qa) });
         lg.setTransform(1, 0, 0, 1, 0, 0);
+        const ms = Number(process.hrtime.bigint() - t0) / 1e6;
         lastLayout = r.layout;
         lastQa = r.qa;
+        perf.draws += 1;
+        perf.searches = r.searches; // so far (src/hud.js counts them)
+        if (perf.ms.length < 4000) perf.ms.push(ms);
+        if (content && changedAt !== null && perf.lag.length < 4000) perf.lag.push(t - changedAt + ms); // input to drawing done
+        changedAt = null;
+        drawnKey = timed;
+        drawnSig = sig;
+        seenVersion = version;
+        lastDrawAt = t;
+        unwritten = true;
       }
-      g.clearRect(0, 0, W, H + T);
-      g.drawImage(layer, 0, 0);
       frames += 1;
       return canvas;
     },
@@ -609,9 +643,13 @@ export function createUiPanel(o) {
       api.render(t);
       return Buffer.concat([bmpHeader, canvas.toBuffer('raw')]);
     },
+    /** The frame into the panel file, when it was drawn again (ffmpeg shows the last one meanwhile). */
     write(t = now()) {
       if (!api.file) return;
       api.render(t);
+      if (!unwritten) return;
+      unwritten = false;
+      perf.writes += 1;
       const tmp = `${api.file}.tmp`;
       const fd = fs.openSync(tmp, 'w');
       try { fs.writeSync(fd, bmpHeader); fs.writeSync(fd, canvas.toBuffer('raw')); } finally { fs.closeSync(fd); }
@@ -621,11 +659,32 @@ export function createUiPanel(o) {
     start() {
       if (timer || !api.file) return;
       api.write();
-      timer = setInterval(() => { try { api.write(); } catch { /* the video goes on with the last frame */ } }, 1000 / fps);
+      perf.lastTick = Date.now();
+      timer = setInterval(() => {
+        const t = Date.now();
+        perf.ticks += 1;
+        perf.gapMax = Math.max(perf.gapMax, t - perf.lastTick);
+        perf.lastTick = t;
+        try { api.write(); } catch { /* the video goes on with the last frame */ }
+      }, 1000 / fps);
       timer.unref?.();
     },
     stop() { clearInterval(timer); timer = null; },
     get frames() { return frames; },
+    /**
+     * Since the last call: drawings, files written, layout searches so far, the drawing's time and the lag from an input
+     * to its drawing (ms: p50, p99, max), the frame clock's ticks and its longest gap (a busy CPU shows there).
+     */
+    perf() {
+      const q = (a) => {
+        if (!a.length) return null;
+        const v = [...a].sort((x, y) => x - y), at = (p) => Math.round(v[Math.min(v.length - 1, Math.floor(p * v.length))] * 10) / 10;
+        return { p50: at(0.5), p99: at(0.99), max: at(1) };
+      };
+      const out = { draws: perf.draws, writes: perf.writes, searches: perf.searches - perf.searchBase, drawMs: q(perf.ms), lagMs: q(perf.lag), ticks: perf.ticks, tickGapMaxMs: perf.gapMax };
+      Object.assign(perf, { draws: 0, writes: 0, ms: [], lag: [], ticks: 0, gapMax: 0, searchBase: perf.searches });
+      return out;
+    },
     /** The HUD state as drawn (the design's data shape), its layout and its QA. */
     hud: (t = now()) => ({ state: hudState(t), layout: lastLayout, qa: lastQa }),
     state: () => {
