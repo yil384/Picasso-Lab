@@ -12,7 +12,6 @@
 // One MCP session = at most one guest bot, with the same leases and logging as the web page (src/web.js gives the
 // hooks); games are also capped per address, and MCP sessions themselves are capped in number and body size. When
 // every bot is in use, start_game answers with the caller's place in the queue and an estimate.
-// The game is for adults: start_game needs adult: true, which the agent sets only after its user has confirmed 18+.
 // Replies and the server instructions carry no links and never ask the agent to open or show anything; where to watch
 // is data that only the read-only live_view tool returns. A game is resumed from a new connection with a separate
 // random handle (never the control token), valid while that game lives. Each MCP client's protocol version and the
@@ -44,6 +43,10 @@ const IDLE_MS = 5 * 60_000; // a game nobody has called for 5 minutes (and that 
 const IDLE_SESSION_MS = 10 * 60_000; // an MCP session without a game is dropped after 10 minutes without calls
 const JOIN_WAIT_MS = 30_000;
 const MAX_STEPS = 32;
+/** start_game's last line, until live_view is called in the game. */
+export const LIVE_NEXT = 'Next: call live_view now and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, before you play.';
+/** The top line of a play, play_sequence or get_state reply while live_view has not been called (the first, then every 5th). */
+export const LIVE_NUDGE = 'Your user cannot see the game yet: call live_view and show its HTML in your preview panel.';
 const MAX_BODY = 64 * 1024; // the SDK's own default is 4 MiB, kept for the session's life in clientInfo
 const STATION_RADIUS = 24; // craft and smelt use a table or furnace this close (REUSE_RADIUS in src/stations.js)
 
@@ -222,7 +225,7 @@ const REPLY_OUT = z.object({
 }).loose();
 
 /**
- * @param {object} hooks from createWeb: newSession(req, adult, {key, address}), lookup(token), startAction(s, tool,
+ * @param {object} hooks from createWeb: newSession(req, {key, address}), lookup(token), startAction(s, tool,
  *   args), stateText(s), stopSession(s, reason), endSession(s, reason), links(s, base) -> {eyes, watch} (live_view
  *   only), liveVideo(s) -> {videoUrl, embedUrl} | null, leaveQueue(key), within(promise, ms), TIMEOUT, log, now(),
  *   clientKey(req), base(req), leaseMs, initLimiter (take(key)), limits {sessions, perAddress}, callMs (tests),
@@ -231,31 +234,30 @@ const REPLY_OUT = z.object({
  */
 /**
  * The server's instructions (the initialize result): the standing rules a long prompt used to carry, so one line from
- * the user is enough ("I'm 18 or older. Play Minecraft on <url> and get to the Nether and back.").
+ * the user is enough ("Play Minecraft on <url> and get to the Nether and back.").
  */
 export function instructionsText({ callMs = 90_000, leaseMin = 30, idleMin = 5, skillNames = '', skillCount = 0, care = '', live = true } = {}) {
   return [
     'Muse plays Minecraft: you play your own bot in a survival Minecraft world, by yourself: once the game has started, play on without asking your user anything. Use only these tools, not the server\'s web pages.',
     'Rules:',
-    '1. Adults (18+) only: start_game needs adult: true. Set it only when your user has said in this conversation that they are 18 or older; never assume it, and if they have not said it, ask them first.',
-    `2. Start: start_game, with goal when your user named one (${GOAL_NAMES.join(', ')}, or their words: the server counts goals like "kill 100 pigs", "collect 64 cobblestone", "craft 20 torches", "reach y -59", "build a hut", "survive 2 nights"); its reply has the plan, with how to do each part${live ? '. Then call live_view and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, so your user sees the game' : ''}.`,
-    '3. A new goal: whenever your user gives a new or changed goal during the game, call set_goal with it (their words, or a preset) before you play on; the stream, every reply\'s state and the report follow the goal set last, and the report keeps every goal with its time.',
-    `4. Play: play_sequence for several steps in a row (play for one); each reply carries the results and the state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A big count (100 pigs, 500 blocks) takes many steps: a step takes at most 64, so split it across calls and watch the goal's count in each reply.`,
-    '5. why and plan: pass both on every play and play_sequence call. why: one short sentence in plain words, what you are doing and why. plan: your next few steps and what you will do if one fails, in your own words (up to about 400 characters). Viewers of the live stream see both as your own words, and the report keeps them.',
-    `6. ${care ? care.trim() : 'You make every plan: the body runs the skills you send.'}`,
-    `7. Time: call at least every 4 minutes; a game with no calls for ${idleMin} minutes ends. A game lasts ${leaseMin} min.`,
-    '8. Deaths: after a death, either pick_up with death_items: true within 5 minutes (the items despawn) or start over where you respawned.',
-    '9. Failures: if the same step fails 3 times, change your plan instead of sending it again.',
-    '10. The end: when the goal is reached, the game ends or you stop, call end_game: its reply is the full report (the goal, milestones with times, deaths with causes, who acted, and a decision log from your why texts and the advice you followed or declined); show it to your user as it is. game_report gives the same during the game.',
+    `1. Start: start_game, with goal when your user named one (${GOAL_NAMES.join(', ')}, or their words: the server counts goals like "kill 100 pigs", "collect 64 cobblestone", "craft 20 torches", "reach y -59", "build a hut", "survive 2 nights"); its reply has the plan, with how to do each part${live ? '. Then call live_view and show the HTML it returns, exactly as returned, as a web artifact in your preview panel, so your user sees the game' : ''}.`,
+    '2. A new goal: whenever your user gives a new or changed goal during the game, call set_goal with it (their words, or a preset) before you play on; the stream, every reply\'s state and the report follow the goal set last, and the report keeps every goal with its time.',
+    `3. Play: play_sequence for several steps in a row (play for one); each reply carries the results and the state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A big count (100 pigs, 500 blocks) takes many steps: a step takes at most 64, so split it across calls and watch the goal's count in each reply.`,
+    '4. why and plan: pass both on every play and play_sequence call. why: one short sentence in plain words, what you are doing and why. plan: your next few steps and what you will do if one fails, in your own words (up to about 400 characters). Viewers of the live stream see both as your own words, and the report keeps them.',
+    `5. ${care ? care.trim() : 'You make every plan: the body runs the skills you send.'}`,
+    `6. Time: call at least every 4 minutes; a game with no calls for ${idleMin} minutes ends. A game lasts ${leaseMin} min.`,
+    '7. Deaths: after a death, either pick_up with death_items: true within 5 minutes (the items despawn) or start over where you respawned.',
+    '8. Failures: if the same step fails 3 times, change your plan instead of sending it again.',
+    '9. The end: when the goal is reached, the game ends or you stop, call end_game: its reply is the full report (the goal, milestones with times, deaths with causes, who acted, and a decision log from your why texts and the advice you followed or declined); show it to your user as it is. game_report gives the same during the game.',
     `The skills this server offers (${skillCount}): ${skillNames}. The play tool's description gives each one's arguments; this list is the server's own, so use it rather than notes about another server.`,
   ].join('\n');
 }
 
-/** The text of a ready prompt: what the user asks for, and that their age is theirs to state (never assumed). */
+/** The text of a ready prompt: what the user asks for. */
 export function promptText(goal = 'free') {
   const g = String(goal).trim() || 'free';
   const what = g === 'nether_and_back' ? 'get to the Nether and back' : g === 'free' ? 'play for as long as the game lasts' : `play toward this goal: ${g}`;
-  return `Play Minecraft yourself with this server's tools and ${what} (start_game with goal: "${g}"). Before start_game, ask me whether I am 18 or older unless I have already said so in this conversation; start only if I say yes. Then follow the server's rules: live view first, a why on every call, call end_game at the end and show me its report.`;
+  return `Play Minecraft yourself with this server's tools and ${what} (start_game with goal: "${g}"). Then follow the server's rules: live view first, a why on every call, call end_game at the end and show me its report.`;
 }
 
 /**
@@ -270,7 +272,7 @@ export function callRow(tool, args, out, game, ms, session = null) {
   if (typeof a.plan === 'string' && a.plan.trim()) words.plan = cutWords(a.plan.replace(/\s+/g, ' '), PLAN_MAX);
   const summary = tool === 'play' ? { skill: a.skill ?? null, args: brief(a.args) }
     : tool === 'play_sequence' ? { steps: (a.steps ?? []).slice(0, 16).map((st) => `${st?.skill ?? '?'} ${brief(st?.args)}`) }
-      : tool === 'start_game' ? { adult: a.adult === true, resume: Boolean(a.game) }
+      : tool === 'start_game' ? { resume: Boolean(a.game) }
         : tool === 'get_state' ? { full: a.full === true } : {};
   const sc = out?.structuredContent ?? {};
   const text = (out?.content ?? []).map((c) => c?.text ?? '').join('\n');
@@ -743,6 +745,15 @@ export function createMcp(hooks) {
         let out = null;
         try {
           out = await handler(args, extra);
+          // the user cannot see the game until live_view's HTML is shown (a production game, 2026-10-13, g08370a: Muse,
+          // run as a background task, went from start_game straight to play_sequence): a line at the top of the reply,
+          // on the first call without it and every 5th after; the call itself is never held up
+          if (['play', 'play_sequence', 'get_state'].includes(name)) safely(() => {
+            const g = game(entry);
+            if (!g || g.liveViewed || !out?.content?.[0] || typeof out.content[0].text !== 'string') return;
+            g.unseenCalls = (g.unseenCalls ?? 0) + 1;
+            if (g.unseenCalls % 5 === 1) out.content[0].text = `${LIVE_NUDGE}\n\n${out.content[0].text}`;
+          });
           // the game's report: the call, its why, the advice before it, the milestones (src/report.js)
           safely(() => {
             const g = game(entry) ?? before;
@@ -804,14 +815,13 @@ export function createMcp(hooks) {
     }
 
     server.registerTool('start_game', {
-      description: `Adults (18+) only: set adult to true only after your user has confirmed they are 18 or older. Starts your own Minecraft bot in a survival world (a NEW bot at a fresh spot with an empty inventory), or resumes the game of this connection, or (game set to the handle an earlier start_game reply gave) that game from an earlier connection. A game lasts ${leaseMin} min and ends after ${IDLE_MS / 60_000} min without calls. When every bot is in use, the reply gives your place in the queue and an estimate. Returns the skills, the state and a handle to resume the game. Call this first.`,
+      description: `Starts your own Minecraft bot in a survival world (a NEW bot at a fresh spot with an empty inventory), or resumes the game of this connection, or (game set to the handle an earlier start_game reply gave) that game from an earlier connection. A game lasts ${leaseMin} min and ends after ${IDLE_MS / 60_000} min without calls. When every bot is in use, the reply gives your place in the queue and an estimate. Returns the skills, the state and a handle to resume the game. Call this first.`,
       inputSchema: {
-        adult: z.boolean().describe('true only when your user has said in this conversation that they are 18 or older'),
+        adult: z.boolean().optional().describe('not needed (accepted from older prompts and ignored)'),
         game: z.string().max(64).optional().describe('the handle of a game to resume (from an earlier start_game reply)'),
         goal: z.string().max(120).optional().describe(`what to play for: ${GOAL_NAMES.join(', ')} (default free), or your user's words ("kill 100 pigs"); the reply gives the plan`),
       },
-    }, async ({ adult, game: handle, goal: goalRaw }, extra) => {
-      if (adult !== true) return fail('This game is for adults (18+) only. Ask your user to confirm they are 18 or older, then call start_game with adult: true.');
+    }, async ({ game: handle, goal: goalRaw }, extra) => {
       let s = game(entry);
       let resumed = Boolean(s);
       if (handle && handle !== entry.handle) {
@@ -831,7 +841,7 @@ export function createMcp(hooks) {
       }
       if (!s) {
         try {
-          s = hooks.newSession(null, adult, { key: entry.key, address: entry.address });
+          s = hooks.newSession(null, { key: entry.key, address: entry.address });
         } catch (e) { return fail(`could not start: ${e.message}`); }
         forget(null);
         entry.token = s.token;
@@ -857,7 +867,7 @@ export function createMcp(hooks) {
         safely(() => s.body?.on?.('kill', (k) => safely(() => tracker.onKills(k?.mobs, k?.by ?? 'reflex'))));
       } else if (goalRaw) s.tracker.setGoal(readGoal(goalRaw, s), 'start_game');
       const plan = planText(s.tracker.goal, { lex, leaseMin });
-      return text(`${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\n${plan}\nTo resume this game from a new connection, call start_game with adult: true and game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
+      return text(`${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\n${plan}\nTo resume this game from a new connection, call start_game with game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}${s.liveViewed ? '' : `\n\n${LIVE_NEXT}`}`);
     });
 
     server.registerTool('play', {
@@ -924,6 +934,7 @@ export function createMcp(hooks) {
     }, async ({ format = 'html' }, extra) => {
       let s;
       try { s = need(entry); } catch (e) { return fail(e.message); }
+      s.liveViewed = true; // the nudge in the replies stops (LIVE_NUDGE)
       const l = hooks.links(s, entry.base);
       if (format === 'link') return text(JSON.stringify({ format: 'link', game: s.id, first_person_url: l.eyes, behind_url: l.watch }));
       // the Facebook live channel: the camera is pointed at this game and the call waits for Facebook to show it

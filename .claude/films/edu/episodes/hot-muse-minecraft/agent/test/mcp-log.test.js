@@ -41,7 +41,7 @@ test('mcp log: every call, its code, its steps and the advice shown; schema refu
     const calls = rows.filter((x) => x.kind === 'mcp_call');
     assert.deepEqual(calls.map((x) => x.tool).filter((t) => t !== 'get_state'), ['start_game', 'play', 'play']);
     const [start, ok, need] = calls.filter((x) => x.tool !== 'get_state');
-    assert.equal(start.adult, true);
+    assert.equal('adult' in start, false, 'no age logged');
     assert.ok(start.game && /^g/.test(start.game));
     assert.equal(ok.skill, 'craft');
     assert.match(ok.args, /oak_planks/);

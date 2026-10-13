@@ -41,7 +41,7 @@ The body runs in advise mode (`MINEAI_CARE=advise`, the default since the advise
 ## The prompt: one line (paste into a new muse.ai chat)
 
 ```
-I'm 18 or older. Play Minecraft on https://play-staging.picasso-lab.com/mcp and get to the Nether and back.
+Play Minecraft on https://play-staging.picasso-lab.com/mcp and get to the Nether and back.
 ```
 
 On production the address is `https://play.picasso-lab.com/mcp`. If muse.ai has no integration for the address yet,
@@ -51,7 +51,6 @@ authentication. Once is enough.
 The long prompt this line replaces (until 2026-10-12) is no longer needed: the server carries all of it.
 
 - **The rules, in the MCP server's `instructions`** (sent with `initialize`; src/mcp.js `instructionsText`):
-  - adult only from the user's own statement;
   - start_game with the goal, then live_view, its HTML shown as a web artifact;
   - play_sequence, and get_state while a skill runs;
   - a why and a plan on every play and play_sequence call (why: one sentence, what and why; plan: the next few steps

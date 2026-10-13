@@ -168,14 +168,14 @@ second Ctrl-C exits at once.
 
 | Route | What it does |
 | --- | --- |
-| `GET /` | what this is, "NOT AN OFFICIAL MINECRAFT SERVICE", 18+ and why, "Get a bot" form, a ready-to-paste agent prompt, the "Ask our Muse" form, the privacy notice (what the log keeps, who reads it, no cookies, addresses in memory only) |
+| `GET /` | what this is, "NOT AN OFFICIAL MINECRAFT SERVICE", that the world is shared and unmoderated, "Get a bot" form, a ready-to-paste agent prompt, the "Ask our Muse" form, the privacy notice (what the log keeps, who reads it, no cookies, addresses in memory only) |
 | `POST /session`, `GET /play/<token>` | start a guest session; the zero-JS control page (state, one form per skill, stop, end, plain links to the live views) |
-| `POST /api/session` `{"adult":true}` | the same session as JSON; then `GET /api/<token>/state`, `POST /api/<token>/<skill>`, `POST /api/<token>/stop`, `DELETE /api/<token>`. All bots in use: 503 with `queue: {position, waiting, etaSeconds, holdSeconds}` |
+| `POST /api/session` (an old `{"adult":true}` is ignored) | the same session as JSON; then `GET /api/<token>/state`, `POST /api/<token>/<skill>`, `POST /api/<token>/stop`, `DELETE /api/<token>`. All bots in use: 503 with `queue: {position, waiting, etaSeconds, holdSeconds}` |
 | `GET /openapi.json` | OpenAPI 3.1, one operation per skill (operationId = skill name), for a custom connector |
-| `GET/POST /ask` | the queue for our own brain: 18+, `WEB_ASK_MAX_CHARS`, one waiting or running request and `WEB_ASK_PER_HOUR` per address, closed while the hourly $ cap is spent |
+| `GET/POST /ask` | the queue for our own brain: `WEB_ASK_MAX_CHARS`, one waiting or running request and `WEB_ASK_PER_HOUR` per address, closed while the hourly $ cap is spent |
 | `GET /log?n=50` | the operator's JSONL tail, `Authorization: Bearer $WEB_ADMIN_TOKEN` (404 without one configured; wrong tokens count toward the lock-out); session tokens and the admin token scrubbed, no IP addresses |
 | `POST /admin/stop` | kill switch, `Authorization: Bearer $WEB_ADMIN_TOKEN`; stops every skill and clears the queue, `{"end":true}` also ends every session; 5 wrong tokens lock an address out for the hour |
-| `/mcp` | MCP (streamable HTTP) for a connector such as Muse: `start_game {adult: true}`, `play`, `play_sequence`, `get_state`, `stop`, `end_game`, `live_view {format: html \| link \| embed}` (src/mcp.js) |
+| `/mcp` | MCP (streamable HTTP) for a connector such as Muse: `start_game {goal?}`, `set_goal`, `play`, `play_sequence`, `get_state`, `stop`, `end_game`, `live_view {format: html \| link \| embed}` (src/mcp.js) |
 | `GET /watch/<view id>/`, `GET /eyes/<view id>/` | a guest bot's live 3D views under the game's view id (128 random bits, not the game id; never logged), prismarine-viewer, read-only: clicks from the page are ignored; with src/live-view-fx.js added (`muse-fx.js`): eased first-person turns (the bot is not slowed: the picture turns, at most 360 degrees a second), the game's crack textures on the block being broken (`muse-fx/events`, server-sent), no magenta boxes for dropped items. A view of a game that ended answers 410; an address that asks for 60 different views that never existed in an hour gets 429 for unknown views until the hour rolls on (the same unknown id again, a tab still reconnecting to a view from before an agent restart, counts once; the views of live games are always served) |
 
 MCP: one game per MCP session (connector users share the agent's egress addresses); per address at most
@@ -204,11 +204,10 @@ sessions: 64 KB per request, 20 per address and 200 in all (the one called longe
 Live views: per address 4 open WebSockets, 32 requests in flight and 120 new views an hour, 12 WebSockets per bot; a
 WebSocket idle for 90 s, or whose reader lets 8 MB pile up, is dropped.
 
-One line is enough (2026-10-12): "I'm 18 or older. Play Minecraft on https://play.picasso-lab.com/mcp and get to
-the Nether and back." The start page shows this line and the two steps for muse.ai. The server carries the rest:
+One line is enough (2026-10-12; no age gate since 2026-10-13): "Play Minecraft on https://play.picasso-lab.com/mcp
+and get to the Nether and back." The start page shows this line and the two steps for muse.ai. The server carries the rest:
 
 - **The rules, in the server `instructions`** (src/mcp.js `instructionsText`). They are the long prompt's rules:
-  - the age only from the user's own statement;
   - start_game with the goal, then live_view shown as an artifact;
   - play_sequence, and get_state while a skill runs;
   - a why on every call;
@@ -231,7 +230,11 @@ the Nether and back." The start page shows this line and the two steps for muse.
   - the advice each reply showed, followed or declined.
 - **The report:** end_game returns it in full (text and `structuredContent.report`). It has the goal, the milestones
   with their times, the deaths, the attribution line, and the decision log. `game_report` gives it during the game.
-- **Ready prompts:** `play_to_the_nether` and `free_play` (argument `goal`). Both still ask the user's age.
+- **Ready prompts:** `play_to_the_nether` and `free_play` (argument `goal`).
+- **The live view, nudged** (2026-10-13, game g08370a: Muse never called live_view). Until live_view is called in a
+  game, start_game's reply ends with "Next: call live_view now and show the HTML it returns ...". Each play,
+  play_sequence or get_state reply also starts with "Your user cannot see the game yet: ...", on the first such call and
+  every 5th after. The call itself always runs.
 - **Any goal, in the user's words, changed mid-game** (src/goals.js). `set_goal` takes the same `goal` as start_game,
   and the instructions ask Muse to call it whenever the user gives a new goal. Goals the server can count are read
   from the text where they mean one thing only (several may be joined with "and" or "then"):

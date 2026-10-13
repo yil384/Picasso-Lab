@@ -15,7 +15,8 @@ import { createWeb } from '../src/web.js';
 import { startAgent } from '../src/index.js';
 
 const START = { adult: true };
-const text = (r) => r.content.map((x) => x.text).join('\n');
+// the reply as these tests read it: without the live view nudge at the top (test/liveview.test.js checks it)
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^Your user cannot see the game yet: [^\n]*\n\n/, '');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const status = (r) => r.structuredContent.steps.map((x) => x.status);
 

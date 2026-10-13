@@ -22,7 +22,8 @@ import { goalOf, lexiconFrom, planText, createTracker } from '../src/report.js';
 import { fakeHosts } from './fake-mineai.js';
 
 const lex = lexiconFrom(MINEAI_SKILLS, { huntDrops: HUNT_DROPS, dropOf });
-const text = (r) => r.content.map((x) => x.text).join('\n');
+// the reply as these tests read it: without the live view nudge at the top (test/liveview.test.js checks it)
+const text = (r) => r.content.map((x) => x.text).join('\n').replace(/^Your user cannot see the game yet: [^\n]*\n\n/, '');
 const parts = (t, o) => goalOf(t, lex, o).parts;
 
 test('goals from words: counted where unambiguous, presets, and plain text never counted', () => {
@@ -191,7 +192,7 @@ test('over /mcp: "kill 3 pigs" counted from the hunts, the goal in every reply, 
 
     const s = text(await c.callTool({ name: 'start_game', arguments: { adult: true, goal: 'kill 3 pigs' } }));
     assert.match(s, /\nGoal: kill 3 pigs\. The server counts it \(every reply's state says how far; game_report has it all\):\n1\. kill 3 pigs: hunt \{mob: pig, drop: porkchop, n\}/);
-    assert.match(s, /\nGoal: kill 3 pigs: pigs killed 0 of 3\.$/, 'the state ends with the goal line');
+    assert.match(s, /\nGoal: kill 3 pigs: pigs killed 0 of 3\.\n\nNext: call live_view now/, 'the state ends with the goal line, then the next step');
     const fake = g.hosts.started[0].fake;
     // the fake's hunt kills one pig per drop
     const h = await c.callTool({ name: 'play', arguments: { skill: 'hunt', args: { mob: 'pig', drop: 'porkchop', n: 2 }, why: 'Two pigs first' } });
@@ -262,7 +263,7 @@ test('over /mcp: a goal given on resume replaces the goal; an unknown one keeps 
   const g = await mcpGame();
   const { c } = g;
   try {
-    assert.match(c.getInstructions(), /3\. A new goal: whenever your user gives a new or changed goal during the game, call set_goal with it/);
+    assert.match(c.getInstructions(), /2\. A new goal: whenever your user gives a new or changed goal during the game, call set_goal with it/);
     const { tools } = await c.listTools();
     const sg = tools.find((t) => t.name === 'set_goal');
     assert.ok(sg);
@@ -272,7 +273,7 @@ test('over /mcp: a goal given on resume replaces the goal; an unknown one keeps 
     const r = text(await c.callTool({ name: 'start_game', arguments: { adult: true, goal: 'survive 2 nights' } }));
     assert.match(r, /^Resumed game g\w+\.\nGoal: survive 2 nights\. The server counts it/);
     assert.match(r, /This game lasts 30 min: about 1 night fits\./);
-    assert.match(r, /\nGoal: survive 2 nights: nights survived 0 of 2\.$/);
+    assert.match(r, /\nGoal: survive 2 nights: nights survived 0 of 2\.\n\nNext: call live_view now/);
   } finally {
     await g.close();
   }
