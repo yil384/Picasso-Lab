@@ -12,6 +12,8 @@
 // the middle of it. What the body did by itself is kept in a journal the MCP replies and the state carry.
 
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import net from 'node:net';
 import { EventEmitter } from 'node:events';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -90,16 +92,52 @@ const keyOf = (p) => `${Math.floor(p.x)},${Math.floor(p.y)},${Math.floor(p.z)}`;
  * entries (a frame stands in the shared world after its game ended).
  */
 const FRAMES = new Map();
+/**
+ * Where bots of this process came out of a portal, per Minecraft server: "host:port" -> Map("dimension:x,y,z" -> game
+ * id). The portals stay in the shared world after their games, and every later trip through the same Nether portal
+ * comes back there (production games g4ac86b and ga13a88, 2026-10-13: both came back at 49 93 161); a refusal near one
+ * says it is that portal, not a stranger's.
+ */
+const RETURNS = new Map();
+/** The games whose bodies live in this process: a frame or a return portal of no live game is released (below). */
+const LIVE_GAMES = new Set();
+/**
+ * Portals of ended games are released, not dismantled (the owner's question after g4ac86b and g809e1b, 2026-10-13: both
+ * were refused collect obsidian near "a lit portal" that was a leftover of our own earlier games, g0793f1's frame and
+ * the portal every Nether trip comes back to). Nobody plays them after their game; dismantling needs a bot; and the game
+ * makes a new return portal when one is gone. So a frame or a return portal of no live game protects nothing: collect
+ * obsidian runs near it. The registries are kept in MINEAI_DATA_DIR (portals.json), so they outlive a restart.
+ */
+const portalsFile = (config) => (config.mineai?.dataDir ? path.join(config.mineai.dataDir, 'portals.json') : null);
+function loadPortals(config, server) {
+  const file = portalsFile(config);
+  if (!file) return;
+  try {
+    const all = JSON.parse(fs.readFileSync(file, 'utf8'))?.[server] ?? {};
+    for (const [k, g] of all.frames ?? []) if (typeof k === 'string' && typeof g === 'string') FRAMES.get(server).set(k, g);
+    for (const [k, gs] of all.returns ?? []) if (typeof k === 'string' && Array.isArray(gs)) RETURNS.get(server).set(k, new Set(gs.filter((g) => typeof g === 'string')));
+  } catch { /* none yet, or unreadable: start empty */ }
+}
+function savePortals(config, server) {
+  const file = portalsFile(config);
+  if (!file) return;
+  try {
+    let all = {};
+    try { all = JSON.parse(fs.readFileSync(file, 'utf8')) ?? {}; } catch { all = {}; }
+    all[server] = { frames: [...FRAMES.get(server)].slice(-2000), returns: [...RETURNS.get(server)].map(([k, gs]) => [k, [...gs].slice(-20)]).slice(-500) };
+    fs.writeFileSync(file, JSON.stringify(all));
+  } catch { /* the registry stays in memory */ }
+}
 /** How far (blocks, flat) another game's obsidian keeps a collect obsidian from running: about what is loaded. */
 export const FRAME_GUARD = 160;
+/** How far (blocks, flat) from a lit portal its chunks are no longer loaded for the bot, about: where collect obsidian may run. */
+export const LIT_CLEAR = 200;
 /** After coming out of a portal, the blocks around are trusted to say whether it is still lit only once a whole scan
  * has been read this long after the arrival (the chunks come in over seconds; an early scan missed the portal it
  * stood in: production, 2026-10-11, every camera trip). */
 export const PORTAL_SETTLE_MS = 10_000;
-/** Rock a nether_portal frame should not be cut into (their build may keep such a cell). */
-const ROCK = new Set(['stone', 'deepslate', 'tuff', 'granite', 'diorite', 'andesite', 'calcite', 'basalt', 'blackstone', 'netherrack', 'dripstone_block', 'smooth_basalt']);
-/** The rock of the deep, where their build kept frame cells (deepslate, tuff). */
-const DEEP_ROCK = new Set(['deepslate', 'tuff']);
+/** What a block placed into a cell simply replaces (nothing to dig first). */
+const REPLACEABLE = /^(air|cave_air|void_air|short_grass|tall_grass|grass|fern|large_fern|snow|dead_bush|vine|glow_lichen|seagrass|[a-z_]*_sapling|dandelion|poppy|blue_orchid|allium|azure_bluet|[a-z_]*_tulip|oxeye_daisy|cornflower|lily_of_the_valley|sunflower|lilac|rose_bush|peony)$/;
 
 /** Their temporary station's verification hitches (a placed furnace or table not yet seen), worth one more try. */
 export const STATION_HITCH = /consumption of [a-z_]+ was not observed|NO_LOADED_MATCHING_TARGETS\] Observed 0 loaded (crafting_table|furnace) blocks/;
@@ -222,14 +260,28 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   const server = `${config.mc.host}:${config.mc.port}`;
   if (!CONTAINERS.has(server)) CONTAINERS.set(server, new Map());
   const containers = CONTAINERS.get(server);
-  if (!FRAMES.has(server)) FRAMES.set(server, new Map());
+  if (!FRAMES.has(server)) { FRAMES.set(server, new Map()); RETURNS.set(server, new Map()); loadPortals(config, server); }
   const frames = FRAMES.get(server);
+  LIVE_GAMES.add(gameId);
   const frameKey = (dim, p) => `${dim}:${keyOf(p)}`;
+  const returns = RETURNS.get(server);
+  const near4 = (k, dim, p) => { const [d, xyz] = k.split(':'); if (d !== dim) return false; const [x, y, z] = xyz.split(',').map(Number); return Math.abs(x - p.x) <= 4 && Math.abs(y - p.y) <= 4 && Math.abs(z - p.z) <= 4; };
+  /** A portal bots of this server came out of, within 4 blocks of p in this dimension: its games, else null. */
+  const knownReturn = (dim, p) => [...returns].find(([k]) => near4(k, dim, p))?.[1] ?? null;
+  /**
+   * A lit portal at p left by ended games (a frame one of them built, or a portal they came out of) and by none that
+   * lives: released (collect obsidian may run near it). Its own frame is not (portal dismantle takes that back).
+   */
+  const leftover = (dim, p) => {
+    const owners = new Set([...frames].filter(([k]) => near4(k, dim, p)).map(([, g]) => g));
+    for (const g of knownReturn(dim, p) ?? []) owners.add(g);
+    return owners.size > 0 && ![...owners].some((g) => g === gameId || (LIVE_GAMES.has(g)));
+  };
   /** Obsidian cells of other games in this dimension within r blocks (flat) of p. */
   const othersObsidian = (p, r) => {
     const out = [];
     for (const [k, owner] of frames) {
-      if (owner === gameId) continue;
+      if (owner === gameId || !LIVE_GAMES.has(owner)) continue; // its own, or an ended game's (released)
       const [dim, xyzs] = k.split(':');
       if (dim !== (dimension ?? 'overworld')) continue;
       const [x, y, z] = xyzs.split(',').map(Number);
@@ -386,7 +438,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (dimension && dim !== dimension) {
       event('dimension', { from: dimension, to: dim, pos: s.position ? floorPos(s.position) : null });
       care?.arrived(dim, s.position ? floorPos(s.position) : null);
-      if (s.position) arrivals[dim] = { pos: floorPos(s.position), at: Date.now() };
+      if (s.position) {
+        arrivals[dim] = { pos: floorPos(s.position), at: Date.now() };
+        const key = frameKey(dim, floorPos(s.position));
+        returns.set(key, new Set([...(returns.get(key) ?? []), gameId]));
+        savePortals(config, server);
+      }
       // the blocks seen around belong to the dimension left: scanned again here (the portal back among them)
       scan = { blocks: [], at: 0, from: null };
       setTimeout(() => { scanBlocks(true); }, 2_000).unref?.();
@@ -645,18 +702,13 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // the log hunt: three frames in deepslate and tuff each used 10 or 11 obsidian for nothing); the bottom row is meant
     // to be in the ground
     if (!near) {
-      const bottom = Math.min(...ys);
-      // tree leaves in the frame or inside it: their build keeps them (ga13a88: "2 cells kept the birch_leaves already
-      // there", 10 obsidian placed for nothing, then a dismantle); clear them first, or go to open ground
-      const leaves = cells.map((c) => seen.get(`${c.x},${c.y},${c.z}`)).filter((n) => /_leaves$/.test(n ?? ''));
-      if (leaves.length) return { ok: false, result: `${leaves.length === 1 ? 'a cell' : `${leaves.length} cells`} where the portal frame would stand ${leaves.length === 1 ? 'holds' : 'hold'} ${[...new Set(leaves)].join(' and ')}, which the build cannot clear: collect the tree there first (its logs; the leaves go with it), or build it on open ground`, code: 'FAILED', delta: {} };
-      // inside rock: most of the frame's cells above the ground row are rock, or deep rock (deepslate, tuff) is in it; a
-      // frame against a hillside on the surface digs its stone cells as usual (a staging bench, 2026-10-12: two stone
-      // cells on a slope were refused)
-      const rock = cells.filter((c) => c.block_name !== 'air' && c.y > bottom).map((c) => seen.get(`${c.x},${c.y},${c.z}`)).filter((n) => ROCK.has(n));
-      const above = cells.filter((c) => c.block_name !== 'air' && c.y > bottom).length;
-      if (rock.length * 2 > above || rock.filter((n) => DEEP_ROCK.has(n)).length >= 2) return { ok: false, result: `the frame would be cut into rock (${rock.length} of its cells hold ${[...new Set(rock)].join(' and ')}): build it on open ground, where its sides and top stand in the air (go_to a spot with flat ground and open sky first)`, code: 'FAILED', delta: {} };
-      return null;
+      // what stands where the frame and its inside go: the body clears it first, cell by cell, before any obsidian is
+      // placed (production game g809e1b, 2026-10-13: 8 builds failed on a hillside and in trees, "cut into rock",
+      // "2 cells kept the stone and dirt", "cells hold oak_leaves", and the game ran out; their build keeps a cell its
+      // own dig is refused, so the obsidian placed was spent). A frame cell that already holds obsidian stays.
+      const clear = cells.map((c) => ({ x: c.x, y: c.y, z: c.z, frame: c.block_name !== 'air', name: seen.get(`${c.x},${c.y},${c.z}`) }))
+        .filter((c) => c.name && !REPLACEABLE.test(c.name) && !(c.frame && c.name === 'obsidian'));
+      return clear.length ? { clear } : null;
     }
     return { ok: false, result: `${near.name} at ${near.x} ${near.y} ${near.z} is next to where the portal frame would stand: build it on dry ground away from lava and water (go_to a spot with flat ground and open sky first)`, code: near.name === 'lava' ? 'LAVA' : 'FAILED', delta: {} };
   }
@@ -674,8 +726,21 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (!p) return refuse('the body does not know where it stands yet; try again in a moment');
     const other = othersObsidian(p, FRAME_GUARD)[0];
     if (other) return refuse(`another player's obsidian (a portal frame) is at ${other.x} ${other.y} ${other.z}, within ${FRAME_GUARD} blocks: collect obsidian could take it. Go farther away first`);
-    const lit = scan.blocks.find((b) => b.name === 'nether_portal');
-    if (lit) return refuse(`a lit portal is loaded near by (at ${lit.nearest.x} ${lit.nearest.y} ${lit.nearest.z}): collect obsidian could take its frame. Go farther away first (portal dismantle takes back your own frame)`);
+    // a lit portal loaded now (read fresh: the scan of the blocks around is up to a few seconds old)
+    const seenLit = await rpc('view_blocks', { find: { block_names: ['nether_portal'], limit: 1 } }, 10_000).catch(() => null);
+    const litNow = seenLit?.result?.blocks?.find?.[0]?.listed?.[0] ?? null;
+    const lit = litNow ? { nearest: floorPos(litNow) } : scan.blocks.find((b) => b.name === 'nether_portal');
+    if (lit && leftover('overworld', lit.nearest)) event('portal_released', { at: floorPos(lit.nearest) });
+    else if (lit) {
+      // how far, whose (a portal trips come back to, left by earlier games), and a point far enough away to go to (g4ac86b:
+      // "go farther away" sent Muse 300 blocks off; it took the portal for another player's)
+      const q = lit.nearest;
+      const far = Math.round(Math.hypot(q.x - p.x, q.z - p.z));
+      const k = far > 0 ? (LIT_CLEAR - far) / far : 1;
+      const to = { x: Math.round(p.x + (p.x - q.x) * k), y: Math.floor(p.y), z: Math.round(p.z + (p.z - q.z) * k) };
+      const whose = knownReturn('overworld', q) ? 'the portal Nether trips on this server come back to (another game is using it now)' : 'a lit portal';
+      return refuse(`${whose} is loaded ${far} blocks away (at ${q.x} ${q.y} ${q.z}): collect obsidian could take its frame. Go about ${LIT_CLEAR} blocks from it first, for example go_to ${to.x} ${to.y} ${to.z} (in legs of up to 256 blocks; portal dismantle takes back your own frame)`);
+    }
     // still lava (a source, level 0) is what obsidian forms from: flowing lava near by does not count, and their collect
     // would walk to the nearest source anywhere (F2 of the log hunt: accepted at the surface next to flowing lava, it
     // walked 95 blocks out and 120 down for 315 s; refused deep down with no source near)
@@ -817,7 +882,16 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         const knobs = care?.setPolicy(plan.care === 'reset' ? null : plan.care);
         return `; its reflexes: ${describeReflexes(knobs, careMode)}${careMode === 'full' ? `; on its own between your calls: ${describeCare(knobs)}` : ''}`;
       })() : '';
-      if (!plan.refused && tool === 'build' && v.args.blueprint === 'nether_portal' && plan.build) plan.refused = await portalSite(plan.build.cells);
+      if (!plan.refused && tool === 'build' && v.args.blueprint === 'nether_portal' && plan.build) {
+        const site = await portalSite(plan.build.cells);
+        if (site?.clear) {
+          // the frame's cells cleared first (dug out with the best tool carried); a cell that will not clear stops the
+          // build before any obsidian is placed
+          plan.calls = [...site.clear.map((c) => ({ tool: 'collect_block', args: { block_name: c.name, x: c.x, y: c.y, z: c.z }, quiet: true, clearing: true })), ...plan.calls];
+          const kinds = [...new Set(site.clear.map((c) => c.name))];
+          plan.note = `${plan.note ? `${plan.note}; ` : ''}cleared ${plural(site.clear.length, 'cell')} of ${kinds.join(' and ')} for it first`;
+        } else plan.refused = site;
+      }
       if (!plan.refused && tool === 'collect' && v.args.block === 'obsidian') plan.refused = await obsidianGuard();
       // its frame's cells loaded first: just back through the portal, the chunks around are still coming in (the
       // staging checks, 2026-10-11: every cell "unloaded", no obsidian back)
@@ -872,6 +946,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped, call });
+          // a cell of the portal's site that would not clear: nothing placed yet, said so
+          if (!res.ok && call.clearing) res = { ...res, result: `could not clear the cell at ${call.args.x} ${call.args.y} ${call.args.z} (${call.args.block_name}) where the portal frame goes: ${res.result.replace(/^failed: /, '')}; no obsidian was placed. Build it a few blocks away, on open ground` };
           // their reflexes that acted during the call count as the body's own (F10 of the log hunt: in-step fights were in
           // no count, and the share of Muse's actions read too high)
           const inStep = [...new Set((out.output?.interruptions ?? []).map(String))];
@@ -1010,6 +1086,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       // the obsidian this game put down (or may have): no other game's collect takes it, and dismantle takes it back
       const cells = tool === 'place' ? [v.args.pos] : built.cells.filter((c) => c.block_name === 'obsidian');
       for (const c of cells) frames.set(frameKey(dimension ?? 'overworld', c), gameId);
+      savePortals(config, server);
     }
     // a Nether portal frame built (or tried): the portal skill lights and enters it without a pos (in this dimension),
     // and dismantle takes its obsidian back
@@ -1030,6 +1107,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       if (got > 0 && r.ok) r = { ...r, result: `took back ${got} obsidian from your last frame${why ? ` (${why})` : ''}` };
       if (got > 0 && lastPortal) {
         for (const c of lastPortal.cells) frames.delete(frameKey(lastPortal.dimension, c));
+        savePortals(config, server);
         lastPortal = null;
       }
     }
@@ -1038,6 +1116,13 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (['go_to', 'explore'].includes(tool) && !r.ok && latest.position) r = { ...r, result: `${r.result}; you are now at ${floorPos(latest.position).x} ${floorPos(latest.position).y} ${floorPos(latest.position).z}` };
     if (tool === 'explore' && r.ok && latest.position) r = { ...r, result: `${r.result === 'done' ? 'explored' : r.result}; you are now at ${floorPos(latest.position).x} ${floorPos(latest.position).y} ${floorPos(latest.position).z}` };
     if (tool === 'portal' && r.ok && v.args.action === 'enter') r = { ...r, result: r.result.replace(/went through the portal( into the \S+)? at/, `went through the portal; you came out in the ${{ the_nether: 'Nether', the_end: 'End' }[dimension] ?? dimension} at`) };
+    // back in the Overworld somewhere else than its own portal: the Nether side linked to an older portal (g4ac86b came
+    // back 165 blocks from the frame it built)
+    if (tool === 'portal' && r.ok && v.args.action === 'enter' && (dimension ?? 'overworld') === 'overworld' && lastPortal?.dimension === 'overworld' && latest.position) {
+      const f = lastPortal.frame;
+      const off = Math.round(Math.hypot(f.x - latest.position.x, f.z - latest.position.z));
+      if (off > 16) r = { ...r, result: `${r.result}; your own portal is at ${f.x} ${f.y} ${f.z}, ${off} blocks away (the Nether side led to an older portal, as the game links each Nether portal to the nearest one)` };
+    }
     // a pickup said only "done" (g0793f1): what came back
     if (tool === 'pick_up' && r.ok && /^done\b/.test(r.result)) {
       const got = Object.fromEntries(Object.entries(delta).filter(([, n]) => n > 0));
@@ -1073,6 +1158,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
   function end(reason) {
     if (ended) return;
     ended = reason;
+    LIVE_GAMES.delete(gameId); // its frames and return portals are released
     body.connected = false;
     body.viewerPort = null;
     body.eyesPort = null;

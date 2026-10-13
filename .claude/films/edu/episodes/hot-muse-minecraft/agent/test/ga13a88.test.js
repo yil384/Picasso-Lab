@@ -1,7 +1,7 @@
 // test/ga13a88.test.js - what the owner's long production run (game ga13a88, 2026-10-12, to the Nether and back)
 // showed, one test each: the body's own dig-in before the first call ran again every 8 s (24 blocks down, and the first
 // collect found no path out); a shelter closed at dusk was "no closed shelter" all night; the path search's words; a
-// walk that ended 2 blocks short counted as a failure; birch leaves in a portal frame cost 10 obsidian; a dismantle's
+// walk that ended 2 blocks short counted as a failure; birch leaves in a portal frame cost 10 obsidian (now cleared); a dismantle's
 // cells that held another block; bucket {block: water}. The whole game is in test/replay.test.js.
 
 import test from 'node:test';
@@ -96,7 +96,7 @@ test('ga13a88: bucket {block: water} is bucket {liquid: water}', () => {
   assert.deepEqual(MINEAI_SKILLS.validate('bucket', t.args), { ok: true, args: { action: 'fill', liquid: 'water' } });
 });
 
-test('ga13a88: leaves where a portal frame would stand refuse the build before any obsidian is placed; a dismantle says which cells held something else', async () => {
+test('ga13a88: leaves where a portal frame would stand are cleared before any obsidian is placed (g809e1b); a dismantle says which cells held something else', async () => {
   const hosts = fakeHosts(() => ({ inventory: { obsidian: 14, flint_and_steel: 1, diamond_pickaxe: 1 } }));
   const body = createMineAiBody({ config, log, hosts, gameId: 'gleaves', username: 'Tst_rv_gleaves', careTickMs: 30, careIdleMs: 50 });
   await until(() => hosts.started[0]);
@@ -107,12 +107,11 @@ test('ga13a88: leaves where a portal frame would stand refuse the build before a
     const feet = Math.floor(fake.world.position.y);
     fake.world.boxAt = (x, y) => (y >= feet + 1 ? 'birch_leaves' : 'air');
     const r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
-    assert.equal(r.ok, false);
-    assert.match(r.result, /^\d+ cells where the portal frame would stand hold birch_leaves, which the build cannot clear: collect the tree there first \(its logs; the leaves go with it\), or build it on open ground$/);
-    assert.equal(fake.world.inventory.get('obsidian'), 14, 'no obsidian placed');
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /cleared \d+ cells of birch_leaves for it first\)$/);
+    assert.equal(fake.world.inventory.get('obsidian') ?? 0, 2, 'the frame took 12');
     // a frame built, then taken back where its cells hold another block: said plainly, once
     fake.world.boxAt = null;
-    assert.equal((await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, true);
     fake.world.fail.collect_block = 'The requested cell at -10,91,154 is birch_leaves, not obsidian. Broke 0 matching blocks; inventory gained 0/1 requested items.';
     const d = await body.run('portal', { action: 'dismantle' });
     assert.match(d.result, /^took back no obsidian from your last frame \(\d+ cells held birch_leaves, not obsidian\)$/);
