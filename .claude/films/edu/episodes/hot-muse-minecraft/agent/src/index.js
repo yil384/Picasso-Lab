@@ -22,6 +22,7 @@ import { createLLM } from './llm.js';
 import { createBody } from './body.js';
 import { createBrain } from './brain.js';
 import { createWeb } from './web.js';
+import { createServerReady } from './mc-ready.js';
 import { createStreamManager, createRemoteStreamManager, managerConfig } from './stream.js';
 import { createCameraManager } from './camera.js';
 import { consoleLine } from './stations.js';
@@ -492,8 +493,11 @@ export async function startAgent(opts = {}) {
     return brain;
   } : undefined;
 
+  // start_game first asks whether the Minecraft server is up (right after a restart it is not yet): not in the fake world
+  const serverReady = opts.serverReady !== undefined ? opts.serverReady
+    : opts.fakeBot ? null : createServerReady({ host: config.mc.host, port: config.mc.port, version: config.mc.version });
   const web = createWeb({
-    config, log, meter, makeBrain, askNotice, liveVideo, liveView, mcpCallMs: opts.mcpCallMs,
+    config, log, meter, makeBrain, askNotice, liveVideo, liveView, mcpCallMs: opts.mcpCallMs, serverReady,
     // the terminal under the live video (the vertical layout): the lines go to the stream of the game, if it has one
     term: typeof streams?.term === 'function' ? (id, u) => streams.term(id, u) : null,
     ...(mineai ? { skills: MINEAI_SKILLS, careMode: config.mineai.care ?? 'advise', startTimeoutMs: config.mineai.startMs + 30_000 } : {}),

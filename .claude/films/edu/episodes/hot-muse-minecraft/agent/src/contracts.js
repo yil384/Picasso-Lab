@@ -307,6 +307,7 @@ export const RESULT_CODES = Object.freeze([
   'INVENTORY_FULL',
   'DIED',
   'NOT_STARTED', // no game (start_game first), the game ended, or the bot is not in the world yet
+  'SERVER_STARTING', // start_game: the Minecraft server is still starting (a restart a moment ago): call start_game again in a few seconds
   'DUPLICATE', // a re-sent play / play_sequence: the first call's result (none of its steps failed), nothing run again
   'NOT_HUNGRY', // eat at a full food bar (20/20): harmless, nothing was eaten or used, the steps after it still run
   'BODY_RESTARTED', // the bot's body stopped during the step and is being started again (BODY=mineai; once per game)
