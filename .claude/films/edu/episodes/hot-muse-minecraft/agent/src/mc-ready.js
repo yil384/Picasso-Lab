@@ -35,6 +35,7 @@ export function createServerReady(o) {
     const t0 = now();
     if (now() - okAt < trustMs) return { ok: true, waitedMs: 0 };
     let error = await once();
+    if (!error) return { ok: true, waitedMs: 0 }; // up at the first ask: no wait (the ping's own time is not one)
     while (error && now() - t0 < (waitMs ?? 0) && !signal?.aborted) {
       await new Promise((r) => { const t = setTimeout(r, everyMs); t.unref?.(); });
       error = await once();

@@ -21,6 +21,8 @@ test('mc-ready: pings until the server answers (bounded), then believes it for a
   assert.equal(r.ok, true);
   assert.equal(n, 3, 'two refusals, then the answer');
   assert.deepEqual(await ready({ waitMs: 5_000 }), { ok: true, waitedMs: 0 }, 'believed without asking again');
+  const atOnce = createServerReady({ host: '127.0.0.1', port: 25565, ping: async () => { await new Promise((r) => setTimeout(r, 30)); return {}; } });
+  assert.deepEqual(await atOnce({ waitMs: 5_000 }), { ok: true, waitedMs: 0 }, 'up at the first ask: no wait (not logged)');
   assert.equal(n, 3);
   const never = createServerReady({ host: '127.0.0.1', port: 25565, everyMs: 10, ping: async () => { throw Object.assign(new Error('timed out'), { code: 'ETIMEDOUT' }); } });
   const r2 = await never({ waitMs: 50 });
