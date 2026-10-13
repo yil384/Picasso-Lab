@@ -83,7 +83,7 @@ test('nether: a frame that kept rock fails, is never continued at that site, and
   } finally { await body.close(); }
 });
 
-test('nether: the portal site is read around the frame: water next to it, or nothing readable, refuses the build', async () => {
+test('nether: the portal site is read around the frame: water next to it, or nothing readable, refuses the build; rock and leaves are cleared first', async () => {
   const { body, fake } = await netherBody({ obsidian: 14 });
   try {
     fake.world.boxAt = (x, y) => (y === 62 ? 'water' : 'air');
@@ -93,19 +93,44 @@ test('nether: the portal site is read around the frame: water next to it, or not
     fake.world.boxAt = (x, y) => (y === 66 ? 'lava' : 'air');
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
     assert.equal(r.code, 'LAVA');
-    // F7 of the log hunt: a frame cut into rock is refused before any obsidian is spent
+    // a frame in rock (F7 of the log hunt), in a hillside or in trees (production game g809e1b, 2026-10-13: 8 builds
+    // failed and the game ran out): the body clears the frame's cells first, then builds; a cell that will not clear
+    // stops it before any obsidian is placed
     fake.world.boxAt = (x, y) => (y >= 64 ? 'deepslate' : 'stone');
+    fake.world.fail.collect_block = 'The requested cell could not be dug: it is protected.';
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
-    assert.match(r.result, /^the frame would be cut into rock \(10 of its cells hold deepslate\)/);
-    // two stone cells of a hillside on the surface: built as usual
-    fake.world.boxAt = (x, y) => (y === 64 && x % 2 === 0 ? 'stone' : y < 64 ? 'stone' : 'air');
+    assert.equal(r.ok, false);
+    assert.match(r.result, /^could not clear the cell at -?\d+ -?\d+ -?\d+ \((deepslate|stone)\) where the portal frame goes: .*; no obsidian was placed\. Build it a few blocks away, on open ground/);
+    assert.equal(fake.tools('build_structure').length, 0, 'nothing placed');
+    delete fake.world.fail.collect_block;
+    const before = fake.tools('collect_block').length;
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
-    assert.doesNotMatch(r.result, /cut into rock/);
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /\(built facing \w+; cleared 18 cells of (stone and deepslate|deepslate and stone) for it first\)$/);
+    const digs = fake.tools('collect_block').slice(before);
+    assert.equal(digs.length, 18, 'each cell dug at its place');
+    assert.ok(digs.every(({ args: d }) => Number.isInteger(d.x) && Number.isInteger(d.y) && Number.isInteger(d.z) && ['stone', 'deepslate'].includes(d.block_name)), JSON.stringify(digs[0]));
+    // leaves of a tree where the frame goes (g809e1b's last three tries, ga13a88's third frame): cleared the same way
+    await body.run('portal', { action: 'dismantle' });
+    fake.world.inventory.set('obsidian', 14);
+    fake.world.boxAt = (x, y) => (y >= 66 ? 'oak_leaves' : y < 64 ? 'stone' : 'air');
+    r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /cleared \d+ cells of (stone and oak_leaves|oak_leaves and stone) for it first/);
+    // open ground: only the ground row, where the bottom of the frame goes, is dug (grass is simply replaced)
+    await body.run('portal', { action: 'dismantle' });
+    fake.world.inventory.set('obsidian', 14);
+    fake.world.boxAt = (x, y) => (y < 64 ? 'stone' : y === 64 ? 'short_grass' : 'air');
+    const open = fake.tools('collect_block').length;
+    r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
+    assert.equal(r.ok, true, r.result);
+    assert.ok(fake.tools('collect_block').length - open <= 4, 'the ground row only');
+    assert.doesNotMatch(r.result, /short_grass/);
     fake.world.boxAt = null;
     fake.world.viewFail = true;
     r = await body.run('build', { blueprint: 'nether_portal', material: 'obsidian' });
     assert.match(r.result, /could not be read/);
-    assert.equal(fake.tools('build_structure').length, 1, 'only the hillside frame was placed');
+    assert.equal(fake.tools('build_structure').length, 3, 'the frames on cleared rock, cleared leaves and open ground');
   } finally { await body.close(); }
 });
 
@@ -150,7 +175,7 @@ test('nether: collect obsidian runs only near lava, in the Overworld, with no ot
     b.fake.world.blocks = [lava(-148, 60, 150), { name: 'nether_portal', found: 6, listed: [{ x: -150, y: 64, z: 151 }] }];
     await b.body.rescan();
     r = await b.body.run('collect', { block: 'obsidian', n: 4 });
-    assert.match(r.result, /^a lit portal is loaded near by/);
+    assert.match(r.result, /^a lit portal is loaded \d+ blocks away \(at -150 64 151\): collect obsidian could take its frame\. Go about 200 blocks from it first, for example go_to -?\d+ -?\d+ -?\d+ \(in legs of up to 256 blocks/);
     // in the Nether: never
     a.fake.world.dimension = 'the_nether';
     await a.body.refresh();

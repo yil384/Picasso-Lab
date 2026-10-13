@@ -106,7 +106,7 @@ INCIDENTS.ga13a88 = {
   // the second site was a hillside of stone; the third had birch leaves where the frame would stand
   55: (w) => { w.boxAt = (x, y) => (y >= Math.floor(w.position.y) + 1 ? 'stone' : 'air'); },
   56: (w) => { w.boxAt = null; },
-  57: (w) => { w.boxAt = (x, y) => (y >= Math.floor(w.position.y) + 1 ? 'birch_leaves' : 'air'); },
+  57: (w) => { w.boxAt = (x, y) => (y >= Math.floor(w.position.y) + 1 ? 'birch_leaves' : 'air'); w.inventory.set('obsidian', 14); },
   58: (w) => { w.boxAt = null; },
   // the obsidian back from the frames that failed
   64: (w) => { w.inventory.set('obsidian', 14); },
@@ -124,6 +124,43 @@ INCIDENTS.g08370a = {
   33: (w) => { w.inventory.set('raw_iron', 1); w.inventory.set('cobblestone', 120); }, // and the blocks dug on the walks (404)
 };
 
+const LAVA_NEAR = (w) => { w.blocks = [{ name: 'lava', found: 9, listed: [{ x: Math.floor(w.position.x) + 4, y: Math.floor(w.position.y) - 1, z: Math.floor(w.position.z), level: 0 }] }]; };
+const LIT = (x, y, z) => (w) => { w.blocks = [{ name: 'lava', found: 9, listed: [{ x: Math.floor(w.position.x) + 4, y: Math.floor(w.position.y) - 1, z: Math.floor(w.position.z), level: 0 }] }, { name: 'nether_portal', found: 6, listed: [{ x, y, z }] }]; };
+const POOL_AWAY = (w) => { w.blocks = [{ name: 'lava', found: 9, listed: [{ x: Math.floor(w.position.x) + 30, y: Math.floor(w.position.y) - 20, z: Math.floor(w.position.z) - 8, level: 0 }] }]; };
+const GROUND = (kind) => (w) => { const feet = Math.floor(w.position.y); w.boxAt = (x, y) => (y >= feet + 2 ? (kind === 'rock' ? 'stone' : 'oak_leaves') : y >= feet ? (kind === 'rock' ? 'stone' : 'air') : 'dirt'); };
+INCIDENTS.g809e1b = {
+  0: (w) => { w.position = { x: 372.5, y: 122, z: 171.5 }; },
+  // a lit portal loaded 140 blocks off (g0793f1's frame, unknown to this process): refused, with where to go
+  19: (w) => { w.inventory.set('cobblestone', 120); },
+  22: LIT(272, 88, 67), // a step early: the bot's scan of the blocks around is read after a step
+  25: POOL_AWAY,
+  27: LAVA_NEAR,
+  28: (w) => { w.inventory.set('flint', 2); },
+  // the hillside: stone and dirt where the frame goes, cleared first now; then the frames on the mountain, rock and
+  // oak leaves, each built on a cleared site
+  31: GROUND('rock'),
+  33: (w) => { w.boxAt = null; },
+  34: (w) => { GROUND('rock')(w); w.inventory.set('obsidian', 14); },
+  35: (w) => { w.boxAt = null; },
+  42: (w) => { GROUND('leaves')(w); w.inventory.set('obsidian', 14); },
+  43: (w) => { w.boxAt = null; },
+};
+INCIDENTS.g4ac86b = {
+  0: (w) => { w.position = { x: 140.5, y: 96, z: 311.5 }; },
+  5: (w) => { w.inventory.set('dirt', 13); },
+  // the portal Nether trips come back to (ga13a88's, from an earlier process): refused, with where to go
+  19: LIT(49, 93, 161), // a step early: the bot's scan of the blocks around is read after a step
+  22: POOL_AWAY,
+  24: LAVA_NEAR,
+  25: (w) => { w.inventory.set('flint', 2); },
+  28: GROUND('rock'),
+  29: (w) => { w.boxAt = null; },
+  30: (w) => { w.inventory.set('obsidian', 14); },
+  32: (w) => { w.netherAt = { x: 12.5, y: 58, z: 18.5 }; },
+  // the Nether side led back to the older portal at 49 93 161
+  33: (w) => { w.overworldAt = { x: 49.5, y: 93, z: 161.5 }; },
+};
+
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
   // 1: raw_chicken (refused before a hunt until 2026-10-12) is read as chicken now and hunted (src/tolerant.js); 18: production smelted the mutton again after its hitch, but here the
@@ -137,19 +174,27 @@ const EXPECTED = {
   // 0: production's first collect found no path out of the 24-block shaft the pre-play dig made (fixed, and the fake
   // never dug it): ok here; 1: go_to {pos}, refused in production, runs; the bucket fills, walks and the frame that
   // failed for the world's reasons (a flowing cell, reflexes, paths, one stone cell kept): not checked; 46: stopped by
-  // Muse; 55: the stone hillside; 57: birch leaves in the frame, now refused before any obsidian is placed; 58: no frame
-  // left to take back here
+  // Muse; 55, 57: the stone hillside and the birch leaves are cleared first and built on; 58: not checked
   // 5: the zombie; 6: the death in the middle of the shelter (the fake's shelter is done); 23, 32: walks the world stopped
   g08370a: { 5: 'INTERRUPTED', 6: null, 23: null, 32: null },
-  ga13a88: { 27: null, 28: null, 31: null, 40: null, 41: null, 42: null, 46: null, 47: null, 52: null, 53: null, 55: 'FAILED', 57: 'FAILED', 58: null },
+  // the walks the world stopped (16, 18), Muse's stop (17), the lit portal and the pools (23, 25: refused as in
+  // production), the frames after the first two (36 to 45: built or not, the world's business here)
+  // 23: refused when that frame is unknown, released when g0793f1's replay (earlier in this file) left it there, as it did
+  g809e1b: { 16: null, 17: null, 18: null, 23: null, 25: 'LAVA', 32: null, 36: null, 38: null, 40: null, 42: null, 44: null, 45: null },
+  // the lit portal and the pool far off (20, 22), the explore that found no plains (29)
+  g4ac86b: { 20: 'FAILED', 22: 'LAVA', 29: null },
+  ga13a88: { 27: null, 28: null, 31: null, 40: null, 41: null, 42: null, 46: null, 47: null, 52: null, 53: null, 58: null },
 };
 /** What a step's reply must say (by index). */
 const EXPECTED_TEXT = {
-  ga13a88: { 1: /^go_to \{"x":-20,"y":78,"z":236\}: ok/, 57: /hold birch_leaves, which the build cannot clear: collect the tree there first/ },
+  g809e1b: { 31: /cleared \d+ cells of (stone and dirt|dirt and stone) for it first/, 34: /cleared \d+ cells of (stone and dirt|dirt and stone) for it first/ },
+  g4ac86b: { 20: /at 49 93 161\): collect obsidian could take its frame\. Go about 200 blocks from it first/, 28: /cleared \d+ cells of/, 33: /your own portal is at -?\d+ -?\d+ -?\d+, \d+ blocks away \(the Nether side led to an older portal/ },
+  // 55, 57: the stone hillside and the birch leaves are cleared first now, and the frames go up (g809e1b's fix)
+  ga13a88: { 1: /^go_to \{"x":-20,"y":78,"z":236\}: ok/, 55: /cleared \d+ cells of stone for it first/, 57: /cleared \d+ cells of birch_leaves for it first/ },
 };
 
 /** The goal each game played for. */
-const GOALS = { gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
+const GOALS = { g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
 /** A why for a step, as Muse writes them (the fixtures predate why in the log). */
 const whyOf = (i, st) => `Step ${i}: ${[st.tool, ...Object.values(st.args ?? {}).filter((v) => typeof v !== 'object')].join(' ')} for the goal`;
 

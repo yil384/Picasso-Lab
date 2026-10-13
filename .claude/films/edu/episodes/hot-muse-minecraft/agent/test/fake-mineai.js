@@ -222,8 +222,11 @@ export async function startFakeMineAi(opts = {}) {
         // world.netherPortalAt: the Nether portal's block when the bot comes out a step off it; entering aims there
         if (world.dimension !== 'overworld' && world.netherPortalAt && (a.x !== world.netherPortalAt.x || a.z !== world.netherPortalAt.z)) return { status: 'failed', error: `Expected active nether_portal at (${a.x}, ${a.y}, ${a.z}); observed air.` };
         const back = world.dimension !== 'overworld';
+        // the way back comes out where the bot went in (one portal pair), or at world.overworldAt (an older portal the
+        // Nether side links to, as production game g4ac86b's did)
+        if (!back) world.enteredFrom = { ...world.position };
         world.dimension = back ? 'overworld' : 'the_nether';
-        world.position = back ? { x: a.x + 0.5, y: a.y, z: a.z + 0.5 } : { ...world.netherAt };
+        world.position = back ? { ...(world.overworldAt ?? world.enteredFrom ?? { x: a.x + 0.5, y: a.y, z: a.z + 0.5 }) } : { ...world.netherAt };
         world.inPortal = !back && world.netherPortalAt ? { ...world.netherPortalAt } : { x: Math.floor(world.position.x), y: Math.floor(world.position.y), z: Math.floor(world.position.z) };
         return { status: 'succeeded', navigation: { end: { ...world.position } } };
       }
