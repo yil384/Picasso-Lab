@@ -82,7 +82,8 @@ test('sub-steps: the body carrying out a command, from the runtime\'s checkpoint
   feed.call(game, 'play', { skill: 'collect', args: { block: 'obsidian', n: 14 } });
   assert.equal(handlers.length, 1, 'subscribed once');
   handlers[0]({ sub: { kind: 'mine', text: 'obsidian 1 of 14', done: 1, of: 14 } });
-  assert.deepEqual([sent.at(-1).lines, sent.at(-1).sub, sent.at(-1).live.mode], [[], { kind: 'mine', text: 'obsidian 1 of 14', done: 1, of: 14 }, 'idle'], 'with what is happening (the step running, when the queue says)');
+  assert.deepEqual([sent.at(-1).lines.filter((l) => l.k !== 'world'), sent.at(-1).sub, sent.at(-1).live.mode], [[], { kind: 'mine', text: 'obsidian 1 of 14', done: 1, of: 14 }, 'idle'], 'with what is happening (the step running, when the queue says)');
+  assert.deepEqual(sent.at(-1).lines, [{ k: 'world', t: 'obsidian 1 of 14' }], 'and the mining progress for BODY · WORLD');
   clock += 200;
   handlers[0]({ sub: { kind: 'mine', text: 'obsidian 2 of 14', done: 2, of: 14 } });
   assert.equal(sent.at(-1).sub.text, 'obsidian 1 of 14', 'within 500 ms: not sent');
