@@ -45,6 +45,7 @@ services:
       WEB_MAX_SESSIONS: "8"
       # 30 minutes, as production; a long Muse run (docs/MUSE-LONG-RUN.md) sets STAGING_LEASE_MS in deploy/.env
       WEB_LEASE_MS: "${STAGING_LEASE_MS:-1800000}"
+      MCP_TEST_RECORD: "${MCP_TEST_RECORD:-on}"
     volumes: [ "../../logs:/logs", "console:/console", "../../mineai-data:/mineai-data" ]
     ports: [ "172.24.0.1:7851:8787" ]
     networks: { mc: { ipv4_address: 10.77.79.11 } }
@@ -70,7 +71,9 @@ services:
       MC_CONSOLE: /console/console.in
       CAMERA_GL: cpu
       CAMERA_MODS: sodium
-    volumes: [ "../../logs:/logs", "console:/console", "${HOME}/workspace/muse-minecraft/camera/auth:/auth", "../../fb:/fb:ro" ]
+      RECORD: "${RECORD:-on}"
+      RECORD_DIR: /recordings
+    volumes: [ "../../logs:/logs", "console:/console", "${HOME}/workspace/muse-minecraft/camera/auth:/auth", "../../fb:/fb:ro", "${RECORD_HOST_DIR:-../../recordings}:/recordings" ]
     tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
     cpus: 6
     mem_limit: 3g

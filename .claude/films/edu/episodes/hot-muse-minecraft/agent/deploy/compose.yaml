@@ -44,6 +44,9 @@ services:
       WEB_MAX_SESSIONS: "8"
       # 30 minutes; a long Muse run sets PROD_LEASE_MS in deploy/.env (docs/MUSE-LONG-RUN.md) and removes it after
       WEB_LEASE_MS: "${PROD_LEASE_MS:-1800000}"
+      # a test caller's live_view films its game for the recording only, never on Facebook (a test never takes the
+      # camera from a player's game): how the recording is smoke-tested
+      MCP_TEST_RECORD: "${MCP_TEST_RECORD:-on}"
     volumes: [ "../logs:/logs", "console:/console", "../mineai-data:/mineai-data" ]
     ports: [ "172.24.0.1:7850:8787" ]
     networks: { mc: { ipv4_address: 10.77.77.11 } }
@@ -106,7 +109,11 @@ services:
       CAMERA_GL: cpu
       # the tuned picture (README "Real-client camera"): Sodium, fast leaves, render distance 5, drawn at 960x540
       CAMERA_MODS: sodium
-    volumes: [ "../logs:/logs", "console:/console", "../../camera/auth:/auth", "../../fb:/fb:ro" ]
+      # the recordings of every game it films (src/recorder.js, README "Recordings"): the clean game, the stream as it
+      # went out, the HUD's timeline, under RECORD_HOST_DIR (deploy/.env) per game; 150 GB at most, 30 days
+      RECORD: "${RECORD:-on}"
+      RECORD_DIR: /recordings
+    volumes: [ "../logs:/logs", "console:/console", "../../camera/auth:/auth", "../../fb:/fb:ro", "${RECORD_HOST_DIR:-../../recordings}:/recordings" ]
     tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
     cpus: 6
     mem_limit: 3g

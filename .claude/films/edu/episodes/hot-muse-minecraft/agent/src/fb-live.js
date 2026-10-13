@@ -292,6 +292,7 @@ export function createLiveChannel(o) {
     try { stream.term({ lines, status: t.status, ...(t.st ? { st: t.st } : {}), ...(t.live ? { live: t.live } : {}), ...('sub' in t ? { sub: t.sub } : {}), ...hud }); } catch { /* the video goes on without it */ }
   };
   const asked = new Map(); // id -> when live_view asked for a game the channel does not have yet
+  const askedLocal = new Set(); // of those, the tests' games asked for the recording only
   let focus = null; // the game the camera films
   let b = null; // the broadcast: {id, game, state, videoUrl, embedUrl, createdAt, liveAt, publishing, stream, timer, status}
   let failures = [];
@@ -431,7 +432,8 @@ export function createLiveChannel(o) {
    * Live only on demand: a game is filmed only after live_view asked for it (a game that merely started, a staging
    * check or a bench never goes live). The games that asked, newest request first.
    */
-  const wanted = () => [...games.values()].filter((g) => g.requestedAt > 0).sort((x, y) => y.requestedAt - x.requestedAt);
+  // a real game before a test's (filmed for the recording only): a test never takes the camera from a player
+  const wanted = () => [...games.values()].filter((g) => g.requestedAt > 0).sort((x, y) => (x.local ? 1 : 0) - (y.local ? 1 : 0) || y.requestedAt - x.requestedAt);
   /** The game the camera should film: the one whose live_view request came last. */
   const pick = () => wanted()[0]?.id ?? null;
 
@@ -455,14 +457,23 @@ export function createLiveChannel(o) {
     swept ??= sweep();
     await swept;
     focus = pick();
+    // recording only (no live video: the cap, a long rest after failures) and the live video can start now: over to it
+    if (b?.local && !b.test && focus && !games.get(focus)?.local && !closing && restingUntil <= now() && !capped()) await finish('the live video can start now', b);
     if (b && (closing || !focus)) { await finish(closing ? 'the service stopped' : 'no game that asked for it is left'); return; }
     if (closing || !focus) return;
     if (!b) {
-      if (restingUntil > now()) return;
+      // a test's game asked for the recording only: never a live video
+      if (games.get(focus)?.local) { if (o.record) beginLocal('test'); return; }
+      if (restingUntil > now()) {
+        // a long rest (a refusal only a person can fix): the game is still filmed for the recording
+        if (o.record && restingUntil - now() >= 60_000) beginLocal('failing');
+        return;
+      }
       cap = capped();
       if (cap) {
         event('fb_capped', { game: focus, why: cap.why, untilS: Math.ceil((cap.until - now()) / 1000) });
         setTimeout(() => kick(), Math.max(1_000, cap.until - now() + 50)).unref?.();
+        if (o.record) beginLocal('capped'); // Facebook is one output: the camera films for the recording anyway
         return;
       }
       await begin();
@@ -474,12 +485,36 @@ export function createLiveChannel(o) {
       b.game = focus;
       event('fb_camera', { broadcast: b.id, from, to: focus });
       let moving;
-      try { moving = b.stream.follow(g.player); } catch (err) { moving = Promise.reject(err); }
+      try { moving = b.stream.follow(g.player, focus); } catch (err) { moving = Promise.reject(err); }
       // follow() empties the terminal before its first wait: what the new game has done so far goes in now, before
       // any new line of it
       backfill(focus, b.stream);
       try { await moving; } catch (err) { event('fb_error', { what: 'move the camera', message: clip(err?.message ?? err) }); }
-      graph.updateLive(b.id, { title: titleFor(title, focus) }).catch(() => {});
+      if (b.id) graph.updateLive(b.id, { title: titleFor(title, focus) }).catch(() => {});
+    }
+  }
+
+  /** The camera films the focused game with no live video: the stream goes to the recording (src/recorder.js). */
+  function beginLocal(why) {
+    const game = games.get(focus);
+    if (!game) return;
+    const me = { id: null, local: true, test: why === 'test', why, videoId: null, game: focus, state: 'recording', createdAt: now(), liveAt: now(), publishing: false, stream: null, timer: null, status: null, videoUrl: null, embedUrl: null };
+    b = me;
+    try {
+      const stream = o.createStream({ ...(o.streamOptions ?? {}), output: 'record', record: { ...o.record, game: focus }, player: game.player, event: (k, d) => event(k, { session: focus, local: true, ...d }) });
+      me.stream = stream;
+      backfill(focus, stream);
+      stream.finished.then((res) => {
+        if (b !== me || me.state === 'ending') return;
+        event('fb_local_lost', { game: me.game, reason: clip(res?.reason ?? 'the stream ended', 200) });
+        b = null;
+        rest();
+      });
+      Promise.resolve().then(() => stream.start()).catch(() => {});
+      event('fb_local', { game: focus, why });
+    } catch (err) {
+      if (b === me) b = null;
+      event('fb_error', { what: 'the recording-only stream', message: clip(err?.message ?? err) });
     }
   }
 
@@ -517,7 +552,7 @@ export function createLiveChannel(o) {
       const now0 = games.get(me.game) && games.get(me.game).requestedAt > 0 ? me.game : pick();
       me.game = now0;
       me.state = 'connecting';
-      const stream = o.createStream({ ...(o.streamOptions ?? {}), output: ingest, player: games.get(now0).player, event: (k, d) => event(k, { session: now0, broadcast: me.id, ...d }) });
+      const stream = o.createStream({ ...(o.streamOptions ?? {}), output: ingest, player: games.get(now0).player, ...(o.record ? { record: { ...o.record, game: now0 } } : {}), event: (k, d) => event(k, { session: now0, broadcast: me.id, ...d }) });
       me.stream = stream;
       backfill(now0, stream);
       stream.on?.('stream_publishing', () => { me.publishing = true; me.publishingAt = now(); poll(me, Math.min(settleMs + 100, pollMs)); });
@@ -613,8 +648,9 @@ export function createLiveChannel(o) {
       if (closing || !ID_RE.test(String(id)) || !NAME_RE.test(String(player ?? ''))) return null;
       const known = games.get(id);
       if (known) { known.seenAt = now(); return { id }; }
-      const g = { id, player, startedAt: now(), seenAt: now(), requestedAt: asked.get(id) ?? 0, offs: [] };
+      const g = { id, player, startedAt: now(), seenAt: now(), requestedAt: asked.get(id) ?? 0, local: askedLocal.has(id), offs: [] };
       asked.delete(id);
+      askedLocal.delete(id);
       games.set(id, g);
       if (typeof body?.on === 'function') {
         try {
@@ -638,11 +674,12 @@ export function createLiveChannel(o) {
       return kick();
     },
     /** live_view asked for this game: the camera films it from now on (until another game asks). Returns live(). */
-    focus(id) {
+    focus(id, { local = false } = {}) {
       if (!ID_RE.test(String(id))) return api.live();
       const g = games.get(id);
-      if (g) { g.requestedAt = now(); g.seenAt = now(); } else {
+      if (g) { g.requestedAt = now(); g.seenAt = now(); if (local) g.local = true; } else {
         asked.set(id, now());
+        if (local) askedLocal.add(id);
         for (const [k, t] of asked) if (now() - t > 120_000) asked.delete(k);
       }
       kick();
@@ -651,11 +688,14 @@ export function createLiveChannel(o) {
     /** What the channel shows now: state off | starting | connecting | live | ending, the game on camera, the video. */
     live() {
       const asked = pick();
-      const resting = !b && asked && restingUntil > now();
-      const capNow = !b && asked && !resting && cap && cap.until > now() ? cap : null;
+      // recording only: the live video's own state (capped, retrying) for Muse; "recording" for a test's game
+      const loc = b?.local && b.state !== 'ending' ? b : null;
+      const resting = (!b || loc) && asked && restingUntil > now();
+      const capNow = (!b || loc) && asked && !resting && cap && cap.until > now() ? cap : null;
       return {
         fb: true,
-        state: b ? (b.state === 'ending' ? 'ending' : b.state) : asked ? (resting ? 'retrying' : capNow ? 'capped' : 'starting') : 'off',
+        state: loc ? (loc.test ? 'recording' : resting ? 'retrying' : capNow ? 'capped' : 'starting') : b ? (b.state === 'ending' ? 'ending' : b.state) : asked ? (resting ? 'retrying' : capNow ? 'capped' : 'starting') : 'off',
+        ...(loc ? { recording: true } : {}),
         game: b?.game ?? asked,
         videoUrl: b?.videoUrl ?? null,
         embedUrl: b?.embedUrl ?? null,

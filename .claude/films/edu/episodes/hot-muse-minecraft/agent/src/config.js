@@ -200,6 +200,9 @@ export function loadConfig(env = process.env) {
     // live_view unless this is on: the live videos a day are few (FB_MAX_PER_DAY) and the owner's (2026-10-13: the
     // smoke games of one day used up 20 and the owner's game got none)
     testLives: r.bool('MCP_TEST_LIVE', false),
+    // with it on, a test caller's live_view has the camera film its game for the recording only (RECORD on the camera
+    // service), never on Facebook: how the recording is tested without spending a live video
+    testRecord: r.bool('MCP_TEST_RECORD', false),
     maxSessions,
     // live MCP games one address may hold: connector users arrive from their agent's cloud, so many people can share an
     // address (probe T8 measures how many); set it to WEB_MAX_SESSIONS to cap MCP games only by the global limit
@@ -403,7 +406,18 @@ export function loadConfig(env = process.env) {
   }
 
   if (problems.length) throw new ConfigError(problems);
-  return deepFreeze({ root: ROOT, model, mc, web, body, mineai, caps, memory, log, stream, fb });
+  // the recordings of the games the camera films (the camera service; src/recorder.js): the clean game, the stream as it
+  // went out, the HUD's timeline, per game under RECORD_DIR; old ones out by age and by the total size
+  const record = {
+    on: r.bool('RECORD', false),
+    root: r.str('RECORD_DIR', '') ? path.resolve(r.str('RECORD_DIR', '')) : path.join(ROOT, 'recordings'),
+    maxBytes: r.int('RECORD_MAX_GB', 150, 1, 10_000) * 2 ** 30,
+    keepDays: r.int('RECORD_KEEP_DAYS', 30, 1, 3_650),
+    crf: r.int('RECORD_CRF', 18, 10, 35),
+    preset: r.oneOf('RECORD_PRESET', 'veryfast', ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium']),
+    nice: r.int('RECORD_NICE', 10, 0, 19),
+  };
+  return deepFreeze({ root: ROOT, model, mc, web, body, mineai, caps, memory, log, stream, fb, record });
 }
 
 /** The process-wide config, read from process.env at first import. */

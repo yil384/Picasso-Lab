@@ -358,10 +358,10 @@ export async function startAgent(opts = {}) {
   // waiting early when another game has taken the camera since. Otherwise STREAM_VIDEO_URL while the game's stream runs.
   // Returns {fb, state, game, camera, videoUrl, embedUrl, liveSince, error, retryInS}.
   const pause = (ms) => new Promise((r) => { setTimeout(r, ms).unref?.(); });
-  const liveView = async (gameId, { waitMs = 0, signal = null } = {}) => {
+  const liveView = async (gameId, { waitMs = 0, signal = null, local = false } = {}) => {
     if (typeof streams?.focus === 'function') {
       const t0 = Date.now();
-      let st = await Promise.resolve(streams.focus(gameId)).catch(() => null);
+      let st = await Promise.resolve(streams.focus(gameId, local ? { local: true } : {})).catch(() => null);
       if (st?.fb) {
         let elsewhere = 0; // since when the camera has been live on another game
         while (Date.now() + 1_000 < t0 + waitMs && !signal?.aborted) {

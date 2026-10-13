@@ -1342,7 +1342,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (p === '/mcp') {
       mcp ??= createMcp({
         newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log, now, clientKey, base,
-        leaseMs: web.leaseMs, testLives: Boolean(web.testLives), initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs, skills: opts.skills, careMode: opts.careMode,
+        leaseMs: web.leaseMs, testLives: Boolean(web.testLives), testRecord: Boolean(web.testRecord), initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs, skills: opts.skills, careMode: opts.careMode,
         links: (s, b) => ({ eyes: `${b}/eyes/${s.viewId}/`, watch: `${b}/watch/${s.viewId}/` }),
         liveVideo: (s) => { try { return opts.liveVideo?.(s.id) ?? null; } catch { return null; } },
         liveView: opts.liveView ? (s, o) => Promise.resolve(opts.liveView(s.id, o)).catch(() => null) : null,
