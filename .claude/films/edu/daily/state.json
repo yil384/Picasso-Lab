@@ -39,24 +39,57 @@
    "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-09_L01-04"
   },
   "L02-01": {
-   "status": "failed",
-   "updated": "2026-10-09 14:01",
+   "status": "delivered",
+   "updated": "2026-10-10 06:12",
    "episode_dir": "episodes/l02-01",
    "morning": "2026-10-10",
    "run": "2026-10-09_120004",
-   "note": "run.sh: no checked mp4 after 4 round(s), exit 1; exit 1; session 4429cb9d-6618-4588-b317-1678d50a8685 | success: You've hit your session limit · resets 4:10pm (America/Los_Angeles)",
-   "attempts": 2
+   "note": "film rendered and verified 04:34 on 10-09; x_post written the morning after",
+   "attempts": 2,
+   "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-10_L02-01/L02-01_half_the_transformer_en.mp4",
+   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-10_L02-01"
   },
   "L02-02": {
    "status": "delivered",
-   "updated": "2026-10-10 02:36",
+   "updated": "2026-10-10 06:12",
    "episode_dir": "episodes/l02-02",
-   "morning": "2026-10-10",
+   "morning": "2026-10-11",
    "run": "2026-10-10_020005",
-   "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-10_L02-02/L02-02_the_gate_en.mp4",
-   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-10_L02-02",
-   "note": "run.sh: no checked mp4 after 4 round(s), exit 0; exit 0; session 5c0cef73-6fda-42ad-ae37-97773e7c1b00 | success: Still nothing to do: no tasks are running, there is no operator note, and all five files are in the deli",
-   "attempts": 1
+   "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-11_L02-02/L02-02_the_gate_en.mp4",
+   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-11_L02-02",
+   "note": "made by the 19:00 catch-up on 10-09, verified; moved to 10-11",
+   "attempts": 2
+  },
+  "L02-03": {
+   "status": "delivered",
+   "updated": "2026-10-12 08:30",
+   "episode_dir": "episodes/l02-03",
+   "morning": "2026-10-12",
+   "run": "2026-10-11_120004",
+   "note": "rendered 10-11, verified format; post written the morning after (usage limits)",
+   "attempts": 2,
+   "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-12_L02-03/L02-03_positional-encoding_en.mp4",
+   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-12_L02-03"
+  },
+  "L02-04": {
+   "status": "delivered",
+   "updated": "2026-10-12 08:30",
+   "episode_dir": "episodes/l02-04",
+   "morning": "2026-10-13",
+   "run": "2026-10-12_020005",
+   "note": "rendered 10-11, verified format; post written 10-12 (usage limits); moved to 10-13",
+   "attempts": 2,
+   "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-13_L02-04/L02-04_rope_rotation_en.mp4",
+   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-13_L02-04"
+  },
+  "L03-01": {
+   "status": "delivered",
+   "updated": "2026-10-13 03:03",
+   "episode_dir": "episodes/l03-01",
+   "morning": "2026-10-14",
+   "run": "2026-10-13_020005",
+   "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-14_L03-01/L03-01_attention_who_listens_en.mp4",
+   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-14_L03-01"
   }
  },
  "about": "Daily-episode state, read and written by next.py (mark). guest_policy: 'skip' (default) or 'narration-only' for guest lectures whose speaker has not said yes; speaker_ok: {'L09': {'voice_clips': true, 'slides_on_screen': true, 'date': 'YYYY-MM-DD', 'note': '...'}}; skip: episode ids the user dropped."

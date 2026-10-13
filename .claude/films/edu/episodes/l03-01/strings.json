@@ -1,0 +1,204 @@
+{
+ "en": {
+  "mic": "Prof. Ding · lecture 3",
+  "end": [
+   "After Prof. Yufei Ding's CSE 291P, Lecture 3",
+   "Every token listens to every token.",
+   "UC San Diego · Picasso Lab"
+  ],
+  "fine": [
+   "Vaswani et al. 2017; the \"too tired / too wide\" pair: Google Research blog, 2017.",
+   "Threads redrawn after J. Alammar, The Illustrated Transformer (2018). The narration is a synthetic voice."
+  ],
+  "title": [
+   "Attention",
+   "Who Is Listening to Whom?"
+  ],
+  "strip": "CSE 291P · Lecture 3 · UC San Diego",
+  "sent0": "The animal didn't cross the street",
+  "sent1": "because it was too tired.",
+  "q": "?",
+  "wide": "wide.",
+  "thrT": "reading 'it'",
+  "thrS": "a trained model, redrawn after her slide 6",
+  "w0": "The",
+  "w1": "animal",
+  "w2": "didn't",
+  "w3": "cross",
+  "w4": "the",
+  "w5": "street",
+  "w6": "because",
+  "w7": "it",
+  "w8": "was",
+  "w9": "too",
+  "w10": "tired",
+  "wit": "it",
+  "thrN": "thick = looks hard",
+  "qkvT": "every token gets three",
+  "qL": "query",
+  "qS": [
+   "what I am",
+   "looking for"
+  ],
+  "kL": "key",
+  "kS": [
+   "my name tag"
+  ],
+  "vL": "value",
+  "vS": [
+   "what I hand",
+   "over"
+  ],
+  "qkvS": "three lists of numbers, made by three learned matrices",
+  "dotT": "a score for every pair",
+  "dotF": "query of 'it' · key of 'animal'",
+  "dotS": "= a score: multiply number by number, add it all up",
+  "nA": "'it'",
+  "nB": "'animal'",
+  "b_the": "the",
+  "b_animal": "animal",
+  "b_cross": "cross",
+  "b_street": "street",
+  "b_tired": "tired",
+  "smT": "softmax: scores into shares",
+  "toy": "toy numbers",
+  "sum1": "all together: 100%",
+  "hs7": "her slide 7",
+  "f7q": [
+   "Q, K, V:",
+   "three learned",
+   "matrices"
+  ],
+  "f7a": "softmax(QKᵀ/√dₖ) V",
+  "cred7": "figure: Vaswani et al., 2017",
+  "one1": "= 1",
+  "one2": "= 1",
+  "gap7": [
+   "gap",
+   "of 2"
+  ],
+  "mixT": "then: mix the values",
+  "vA": [
+   "value 1",
+   "× 0.119"
+  ],
+  "vT": [
+   "value 2",
+   "× 0.881"
+  ],
+  "vN": "token one's new vector",
+  "vToy": "toy sentence: the new 'it' is about 58% 'animal'",
+  "hs8": "her slide 8",
+  "fix8a": "assumed: independent, mean 0, variance 1",
+  "x8": "with 64 numbers: about 8 times wider",
+  "skT": [
+   "skip the",
+   "÷ √dₖ ..."
+  ],
+  "tkT": [
+   "÷ √dₖ =",
+   "the temperature knob"
+  ],
+  "toy8": "same toy scores",
+  "x8b": "8 times wider",
+  "tny": "tiny gradients: learning stalls",
+  "sus": "the 2017 paper: \"we suspect\"",
+  "hdT": "many heads, one sentence",
+  "h1": [
+   "one head:",
+   "the animal"
+  ],
+  "h2": [
+   "another:",
+   "tired"
+  ],
+  "h3": [
+   "a third:",
+   "something else"
+  ],
+  "hdS": "each head: its own query, key and value matrices",
+  "h2T": "two heads reading 'it'",
+  "h2S": "redrawn after her slide 9",
+  "v0": "The",
+  "v1": "animal",
+  "v2": "didn't",
+  "v3": "cross",
+  "v4": "the",
+  "v5": "street",
+  "v6": "because",
+  "v7": "it",
+  "v8": "was",
+  "v9": "too",
+  "v10": "tired",
+  "vit": "it",
+  "hd1": "head 1",
+  "hd2": "head 2",
+  "both": [
+   "the new 'it':",
+   "a bit of both"
+  ],
+  "hs10": "her slide 10",
+  "cred10": "figure: Vaswani et al., 2017",
+  "mixL": [
+   "one more",
+   "matrix"
+  ],
+  "glue": [
+   "glued",
+   "together"
+  ],
+  "xz": [
+   "x in,",
+   "z out:",
+   "same size"
+  ],
+  "h8": "8 heads",
+  "d512": [
+   "512 ÷ 8",
+   "= 64"
+  ],
+  "cost": [
+   "all heads:",
+   "about one",
+   "full-size",
+   "head"
+  ],
+  "allT": "who listens to whom?",
+  "allA": "everyone, to everyone",
+  "bill": "1,000 tokens: 1,000,000 scores, per head, per layer",
+  "next": "next: the KV cache",
+  "cap": {
+   "n0": "The animal didn't cross the street|because it was too tired. So, what is 'it'?",
+   "n1": "The animal, of course.|Now change one word: because it was too wide.|Now 'it' is the street.",
+   "n2": "Same 'it', same spot. Only the other words decide.|A language model has to work that out|with arithmetic, for every word it reads.|Lecture 3 of Prof. Yufei Ding's CSE 291P|at UC San Diego starts right here.",
+   "c15": "And the first is why we want to have attention.",
+   "n3": "Here is one trained model reading 'it'.|The sentence is cut into tokens,|words or pieces of words,|and 'it' draws a thread to every token in the sentence.|The thickest threads run to 'the animal'.",
+   "c1": "So attention, again, is like aggregation|of the information from other tokens.",
+   "n4": "Aggregation:|'it' pulls a little information out of every token.|The question is how much from each.",
+   "n5": "So every token is turned into three vectors,|three lists of numbers, by three learned matrices.",
+   "n6": "Think of a party.|The query is the question card you hold up:|what am I looking for?|The key is your name tag, what you show the others.|And the value is the parcel|you hand over when you get picked.",
+   "n7": "'it' holds its question card up to every name tag.|To score a match, multiply the query and the key|number by number, and add it all up.|That's a dot product:|big when the two point the same way.",
+   "n8": "Then softmax turns the scores|into shares that add up to one.|With toy numbers, 'it' gives 58 percent|of its attention to 'animal', 21 to 'tired',|13 to 'street', and crumbs to the rest.",
+   "n9": "Her slide writes the whole recipe in one line:|every query against every key,|divided by the square root of dₖ,|softmaxed, then used to mix the values.|dₖ is how many numbers each query and key holds.|Here is her two-token example, after the softmax.",
+   "c23": "So that's why if you sum up each line,|you will add up to one.",
+   "n10": "Row one: 0.119 and 0.881.|Row two: 0.182 and 0.818.|Softmax only sees gaps:|0.881 just means the second score|was 2 higher than the first.",
+   "n11": "Then the mix.|Token one's new vector is 0.119 of the first value|plus 0.881 of the second,|like paint poured by a recipe.|In our toy sentence,|the new 'it' comes out mostly 'animal'.",
+   "n12": "Now the odd step: why divide by the square root of dₖ?|Her slide marks it self study,|so here is the short version.",
+   "n13": "Variance measures spread.|A dot product adds up dₖ products.|If the numbers are independent,|with mean zero and variance one, its variance is dₖ:|with 64 numbers, scores spread about 8 times wider.|Dividing by the square root of dₖ|brings the spread back to one.",
+   "n14": "Skip the division and watch.|Same toy scores, 8 times wider:|'animal' takes essentially everything,|and every other share rounds to zero.",
+   "n15": "A softmax that is all or nothing|hardly moves when nudged,|so its gradients, the nudges training runs on,|become tiny, and learning stalls.|Dividing by the square root of dₖ|is the temperature knob from our Lecture 1 episode,|set for you.",
+   "n16": "One honest footnote: the 2017 paper itself only says|its authors suspect this is the reason.",
+   "n17": "One pattern is not enough, though.|'it' needs a link to the animal it names,|and another to the word that describes it.",
+   "c11": "So that's why sometimes we want to use different head|to capture different relationships among the tokens.",
+   "n18": "So attention runs several heads:|copies of this whole recipe, side by side,|each with its own query, key and value matrices,|each free to look for something different.",
+   "n19": "On her slide, one head links 'it' to 'the animal',|and another links it to 'tired'.|So the new 'it' carries a bit of both.",
+   "n20": "Then the heads' outputs are glued back together|and mixed by one more matrix.|Call a token's numbers going in x, and coming out z.",
+   "c27": "If you look at the x and the z, you will find|that usually they will have the same number of elements.",
+   "n21": "So each token comes out the same size it went in.|And each head works with fewer numbers per token.",
+   "c12": "And the default we have here|is this dimension just equals|the hidden dimension of x|divided by the number of heads.",
+   "n22": "The 2017 base model had 512 numbers per token|and 8 heads, so 64 per head,|and all the heads together cost about the same|as one full-size head.|That 64 is the dₖ we divided by.",
+   "n23": "So, who is listening to whom?|'it' listens to every token and takes a share from each:|that is how the other words decide what 'it' means.|And every token does the same.|That's the power, and the bill:|a thousand tokens means a million scores,|in every head of every layer.",
+   "n24": "Next time: the KV cache."
+  }
+ }
+}
