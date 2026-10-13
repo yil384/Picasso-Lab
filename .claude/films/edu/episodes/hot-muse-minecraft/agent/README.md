@@ -434,7 +434,8 @@ with no model goes from an empty inventory to a wooden pickaxe with one `play_se
 12 planks, 4 sticks, a table, the pickaxe, with a `request_id`), whose steps run on in the game's queue while
 `get_state` waits for them (`structuredContent`). The game is strict: no step is retried, and a failed or cancelled
 step fails the check (the body still fights back on its own; a mob it cannot deal with fails the step). It always ends the game, so its bot leaves the server. While a new agent or Paper starts, the checks
-wait (up to 2 minutes for the page, and `start_game` again every 5 s). They refuse play.picasso-lab.com. `--prod`
+wait (up to 2 minutes for the page; `start_game` again 5 s after "could not start", or after the time a
+`SERVER_STARTING` reply names, while more than 2 minutes are left). A spot without logs says what was nearby. They refuse play.picasso-lab.com. `--prod`
 goes on only when they pass and the files to deploy did not change while they ran (a hash taken before staging).
 
 Measured on picasso (2026-10-07, n = 2, natural: a fresh world and no console commands; Easy, locked daylight): the
@@ -1890,6 +1891,8 @@ Every failure, with its cause:
   2.3 s after the bot landed in one of 8 fresh regions being generated at once, before the chunks around it had
   arrived, so the region looked closed. Waiting for the chunks around a new spot (we wait a fixed 3 s), or trying a
   collect that found no path once more, would cover it.
+  (2026-10-13: a spread bot's first scan is now read only once it sees anything notable, scanning again every 2 s
+  for up to 30 s; `settleAfterSpread` in src/index.js, its `spread` log event carries `scans` and `notable`.)
 - A scripted session through https://play-staging.picasso-lab.com/mcp (start_game, `play_sequence` with a
   `request_id`, the same call again, the same `request_id` with other steps, get_state, `live_view`, end_game):
   `craft_batch {items: [oak_planks 12, stick 4, crafting_table 1, wooden_pickaxe 1]}` after 4 oak logs failed both

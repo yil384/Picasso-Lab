@@ -292,11 +292,11 @@ function routeBody({ collectMs = 0, failCraft = null } = {}) {
   };
 }
 
-async function serveRoute(t, body) {
+async function serveRoute(t, body, { serverReady } = {}) {
   const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: '', MODEL_API_KEY: '' });
   const events = [];
   const log = { event: (type, d) => events.push({ type, ...d }), tail: () => [] };
-  const web = createWeb({ config, log, makeBody: () => routeBody(body), mcpCallMs: 400 });
+  const web = createWeb({ config, log, makeBody: () => routeBody(body), mcpCallMs: 400, serverReady });
   const { url } = await web.start();
   t.after(() => web.stop());
   return { url, events };
@@ -315,6 +315,28 @@ test('staging-check: plays the route through /mcp, waits for a skill that outliv
   assert.match(text, /PASS: wooden pickaxe in [\d.]+ s/);
   assert.match(text, /end_game -> game g\w+ ended/);
   assert.ok(events.some((e) => e.type === 'session_end'), 'the game was ended, so its bot left');
+});
+
+// A fresh Paper's first start makes the world, longer than start_game waits (the open-source stack's first run,
+// 2026-10-13: its check gave up at the first SERVER_STARTING): the check tries again after the time the reply names,
+// while more than two minutes of its limit are left.
+test('staging-check: SERVER_STARTING is tried again after the time it names, then the route passes; with under two minutes left it fails at once', async (t) => {
+  let asks = 0;
+  const starting = async (w) => { asks += 1; return asks <= 2 ? { ok: false, waitedMs: w.waitMs, error: 'ECONNREFUSED' } : { ok: true, waitedMs: 0 }; };
+  const { url } = await serveRoute(t, {}, { serverReady: starting });
+  const out = [];
+  const paused = [];
+  assert.equal(await runCheck({ base: url, minutes: 5, print: (l) => out.push(l), pause: async (ms) => { paused.push(ms); } }), 0, out.join('\n'));
+  assert.deepEqual(paused, [15_000, 15_000], 'twice, as long as start_game said');
+  assert.equal(out.filter((l) => /start_game: SERVER_STARTING: .*; trying again in 15 s$/.test(l)).length, 2, out.join('\n'));
+  assert.match(out.join('\n'), /PASS: wooden pickaxe/);
+
+  const { url: url2 } = await serveRoute(t, {}, { serverReady: async (w) => ({ ok: false, waitedMs: w.waitMs, error: 'ECONNREFUSED' }) });
+  const out2 = [];
+  const paused2 = [];
+  assert.equal(await runCheck({ base: url2, minutes: 1, print: (l) => out2.push(l), pause: async (ms) => { paused2.push(ms); } }), 1);
+  assert.deepEqual(paused2, []);
+  assert.match(out2.at(-1), /^staging-check: FAIL: start_game: SERVER_STARTING/);
 });
 
 test('staging-check: strict; a failed step fails the check and the game still ends; production is refused', async (t) => {

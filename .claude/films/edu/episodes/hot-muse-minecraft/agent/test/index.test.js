@@ -16,7 +16,7 @@ import { createLogger, readJsonl } from '../src/log.js';
 import { FORBIDDEN_PARAMS } from '../src/llm.js';
 import { EventEmitter } from 'node:events';
 import { createRequire } from 'node:module';
-import { startAgent, usernameFor, privateName, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts, spreadSpots, leaseWarning } from '../src/index.js';
+import { startAgent, usernameFor, privateName, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts, spreadSpots, leaseWarning, settleAfterSpread, SPREAD_SCAN_MS } from '../src/index.js';
 import { consoleLine } from '../src/stations.js';
 import { start } from './mock-llm.js';
 
@@ -44,6 +44,47 @@ test('SPREAD_SPOTS: pairs of whole block coordinates, in order; anything else is
   assert.throws(() => spreadSpots('1800 0; 5'), /pairs of whole/);
   assert.throws(() => spreadSpots('1800.5 0'), /pairs of whole/);
   assert.throws(() => spreadSpots('a b'), /pairs of whole/);
+});
+
+// A spread bot at a spot nobody visited (the open-source stack's first run, 2026-10-13): the chunks there arrive seconds
+// after it lands, and a scan before them sees nothing, so the first state had no wood. A fake clock: wait() only
+// advances it.
+function spreadBody({ landAfter = 2, emptyScans = 0 } = {}) {
+  let refreshes = 0;
+  let scans = 0;
+  let seen = [];
+  const body = {
+    bot: { entity: { position: { x: 0, y: 80, z: 0 } } },
+    refresh: async () => { refreshes += 1; if (refreshes >= landAfter) body.bot.entity.position = { x: 291, y: 92, z: 182 }; },
+    rescan: async () => { scans += 1; seen = scans > emptyScans ? [{ name: 'stone', count: 64 }, { name: 'oak_log', count: 9 }] : []; },
+    snapshot: () => ({ nearbyBlocks: seen }),
+  };
+  return body;
+}
+function fakeClock() {
+  const c = { t: 0, waits: [] };
+  c.wait = async (ms) => { c.waits.push(ms); if (ms !== 10_000) c.t += ms; }; // the rescan's 10 s cap never wins here
+  c.now = () => c.t;
+  return c;
+}
+
+test('spread: the first scan of the new spot is read once it sees something; an empty one (chunks not there yet) is tried again, bounded', async () => {
+  const c = fakeClock();
+  assert.deepEqual(await settleAfterSpread(spreadBody({ emptyScans: 0 }), { x: 0, z: 0 }, c), { scans: 1, notable: 2 }, 'chunks there at once: one scan');
+  assert.equal(c.waits.filter((ms) => ms === 500).length, 2, 'landed at the second look');
+
+  const c2 = fakeClock();
+  assert.deepEqual(await settleAfterSpread(spreadBody({ emptyScans: 3 }), { x: 0, z: 0 }, c2), { scans: 4, notable: 2 }, 'three empty scans, then the chunks');
+  assert.equal(c2.waits.filter((ms) => ms === 2_000).length, 3, '2 s between scans');
+
+  const c3 = fakeClock();
+  const r = await settleAfterSpread(spreadBody({ emptyScans: 1e9 }), { x: 0, z: 0 }, c3);
+  assert.equal(r.notable, 0, 'never anything: gives up');
+  assert.equal(r.scans, SPREAD_SCAN_MS / 2_000 + 1, 'after SPREAD_SCAN_MS of scans');
+
+  const c4 = fakeClock();
+  const noSnap = { ...spreadBody(), snapshot: undefined };
+  assert.deepEqual(await settleAfterSpread(noSnap, { x: 0, z: 0 }, c4), { scans: 1, notable: 1 }, 'a body without snapshot(): one scan, as before');
 });
 
 test('usernames: the house bot keeps MC_USERNAME, guests get a valid name of their own', () => {
