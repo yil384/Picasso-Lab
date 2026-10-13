@@ -100,6 +100,8 @@ export function createRecording(o) {
     hud(u, gs = null) { line({ t: now(), gs, u }); },
     /** The HUD's whole state. */
     snap(state, gs = null) { line({ t: now(), gs, snap: state }); },
+    /** A piece the HUD put over the video (concept B: a toast, a banner, a floater, the action bar) with its times. */
+    event(ev, gs = null) { line({ t: now(), gs, ev }); },
     close() { try { hud?.end(); } catch { /* gone */ } hud = null; },
   };
 }

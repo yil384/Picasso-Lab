@@ -1,5 +1,7 @@
-// src/ui-panel.js - the HUD in the live video (STREAM_LAYOUT=ui, the camera's side), the final design
-// (ui-art/hud-final/FINAL-SPEC.md, its mock-up ui-art/hud-final/index.html): the stats strip, the goal band, Muse's why
+// src/ui-panel.js - the HUD in the live video (STREAM_LAYOUT=ui, the camera's side). Two designs draw it: concept B
+// "Speedrun broadcast" (o.design 'b', the default since 2026-10-13: src/hud-b.js, over the whole frame: toasts,
+// floaters, banners and the action bar over the video, the broadcast package under it), and the final design before it
+// (o.design 'final', STREAM_HUD=final; ui-art/hud-final/FINAL-SPEC.md, its mock-up ui-art/hud-final/index.html): the stats strip, the goal band, Muse's why
 // and plan (or one honest line when it sent none), NOW (the call running, its steps as Muse sent them, the body carrying
 // them out) beside the body's advice and the BODY · WORLD events, and RAW across the bottom (every call as sent, newest
 // first, with the server's answer); the inventory hotbar and the toasts over the video's bottom corners.
@@ -19,6 +21,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { drawHud, hudSig, ICON_SIZES } from './hud.js';
+import { createHudB } from './hud-b.js';
 
 const require = createRequire(import.meta.url);
 
@@ -159,6 +162,8 @@ const resultWords = (t) => String(t ?? '').replace(/^ok\s+/, '').replace(/\s*\(\
  * @param {string} [o.assets]         icons and fonts (assets/muse-ui)
  * @param {() => number} [o.now]
  * @param {boolean} [o.qa]            outline every text problem in red (the mock-up's ?qa=1)
+ * @param {'b'|'final'} [o.design]    the HUD's design: B (the default; o.over must be the video's height, 608 at 1080)
+ * @param {(ev: object) => void} [o.onEvent]  B's toasts, banners, floaters, action-bar lines as scheduled (the recording)
  */
 export function createUiPanel(o) {
   const { createCanvas, Image, registerFont } = require('canvas');
@@ -234,7 +239,16 @@ export function createUiPanel(o) {
   let unwritten = false; // a drawing not in the panel file yet
   let lastLayout = null;
   let lastQa = null;
-  const perf = { draws: 0, writes: 0, searches: 0, searchBase: 0, ms: [], lag: [], ticks: 0, gapMax: 0, lastTick: null, errors: 0, lastError: null };
+  let callSeq = 0; // every call's id in this panel
+  let playSeq = 0; // the game's play calls, counted here until the server's number is known
+  const perf = { draws: 0, writes: 0, searches: 0, searchBase: 0, ms: [], lag: [], ticks: 0, gapMax: 0, lastTick: null, errors: 0, lastError: null, composes: 0, cms: [] };
+  // concept B: its own layers over the whole frame (the video's place see-through but for what moves over it)
+  const design = o.design ?? 'b';
+  const hb = design === 'b'
+    ? createHudB({ createCanvas, icon: iconAt, has: (n) => Boolean(images[n]), emit: (ev) => { try { o.onEvent?.({ ...ev, gs: gameS(ev.start ?? ev.at ?? now()) }); } catch { /* best effort */ } } })
+    : null;
+  let bSec = null;
+  let bEpoch = '';
   function bump() { version += 1; if (changedAt === null) changedAt = now(); }
 
   const gameS = (t = now()) => (game && Number.isFinite(game.s) ? game.s + (t - game.at) / 1000 : null);
@@ -286,6 +300,7 @@ export function createUiPanel(o) {
       steps: steps.map((x) => ({ say: x.say || x.raw, raw: x.raw || '', skill: x.skill || String(x.raw || '').split(' ')[0], args: parseArgs(x.args), state: 'queued', ms: 0 })),
       replyGs: null, replyCode: null, added: [],
       state: PLAY.test(tool) ? { kind: 'run' } : { kind: 'ok' }, msSum: 0, checked: null, goal: ready && goal ? goal.title : null,
+      id: ++callSeq, seqNo: PLAY.test(tool) ? ++playSeq : null,
     };
     calls.unshift(cmd);
     calls = calls.slice(0, 120);
@@ -367,7 +382,7 @@ export function createUiPanel(o) {
         if (state === 'next' && m.k === 'obsidian' && inv) progress = `${Math.min(inv.obsidian ?? 0, 14)}/14`;
         if (state === 'next' && m.k === 'diamond' && inv && (inv.diamond ?? 0) > 0) progress = `${inv.diamond}/3`;
         const icon = GOAL_ICONS[m.k] ?? (images[m.k] ? m.k : partIcon(m.k));
-        return { key: m.k, label: GOAL_WORDS[m.k] ?? capital(m.t), icon: iconOf(icon, 'star'), state, done: m.atS != null ? mmss(m.atS) : null, ...(progress ? { progress } : {}) };
+        return { key: m.k, label: GOAL_WORDS[m.k] ?? capital(m.t), icon: iconOf(icon, 'star'), state, done: m.atS != null ? mmss(m.atS) : null, doneS: m.atS ?? null, ...(progress ? { progress } : {}) };
       }),
     };
   }
@@ -399,7 +414,7 @@ export function createUiPanel(o) {
       museShare: { pct, ...(Number.isFinite(st.muse) && Number.isFinite(st.reflex) && st.muse + st.reflex > 0 ? { muse: st.muse, reflex: st.reflex } : { muse: null, reflex: null }),
         // Muse's rules (servers that count them): actions by its rules, by the body on its own, decided by Muse %
         ...(Number.isFinite(st.rule) ? { rule: st.rule, body: st.body ?? 0, dpct: Number.isFinite(st.dpct) ? st.dpct : null } : {}) },
-      gameId: game?.id ?? '', gameClock: mmss(gs),
+      gameId: game?.id ?? '', gameClock: mmss(gs), ticks: nether || st.clock === 'END' ? null : tk,
     };
     // the inventory hotbar: the items that matter, in this order
     const iv = inv ?? {};
@@ -428,7 +443,7 @@ export function createUiPanel(o) {
       const states = stepStates(latest);
       const runningNow = latest.state?.kind === 'run';
       currentCall = {
-        no: latest.no ?? '?', tool: latest.tool, sent: clockOf(latest.gs), state: runningNow ? 'running' : latest.state?.kind === 'ok' ? 'ok' : 'fail',
+        id: latest.id, sentS: latest.gs, no: latest.no ?? '?', tool: latest.tool, sent: clockOf(latest.gs), state: runningNow ? 'running' : latest.state?.kind === 'ok' ? 'ok' : 'fail',
         running: mmss((t - latest.at) / 1000), doneIn: latest.msSum > 0 ? secs(latest.msSum) : '',
         steps: latest.steps.map((x, i) => {
           const k = states[i] === 'skip' ? 'queued' : states[i];
@@ -449,8 +464,13 @@ export function createUiPanel(o) {
       const waiting = !c.reply && !PLAY.test(c.tool) && c.tool !== 'start_game';
       return {
         n: calls.length - idx, tool: c.tool, args: c.raw || '{}', sentS: c.gs, sent: clockOf(c.gs), agoS: (t - c.at) / 1000, playCallNo: PLAY.test(c.tool) ? (c.no ?? '?') : null, hasWhy: Boolean(c.words),
-        answer: { state: isRun ? 'running' : waiting ? 'waiting' : 'answered', waitingS: waiting ? (t - c.at) / 1000 : null, hudText: isRun ? `running ${mmss((t - c.at) / 1000)}` : null, code: c.replyCode ?? null },
+        answer: { state: isRun ? 'running' : waiting ? 'waiting' : 'answered', waitingS: waiting ? (t - c.at) / 1000 : null, hudText: isRun ? `running ${mmss((t - c.at) / 1000)}` : null, code: c.replyCode ?? null,
+          atS: c.replyGs ?? null, text: c.reply ? c.reply.replace(/^<\s*/, '') : '' },
         reply: c.reply ? c.reply.replace(/^<\s*/, '') : null, replyAt: clockOf(c.replyGs),
+        // what concept B reads: the call's id here, its steps as objects, the why and plan, its state, its time
+        id: c.id, callNo: PLAY.test(c.tool) ? (c.no ?? c.seqNo) : null, why: c.words || null, plan: c.plan || null, state: c.state?.kind ?? 'ok', ms: c.msSum || 0,
+        steps: c.steps.map((x) => ({ skill: x.skill, args: x.args ?? {}, say: x.say, state: x.state, ...(x.result ? { result: x.result } : {}), ...(x.why ? { why: x.why } : {}) })),
+        ...(c.tool === 'set_goal' ? { goal: (parseArgs(c.raw)?.goal ?? String(c.say || '').replace(/^A new goal:\s*/, '')) || null } : {}),
       };
     });
     const runs = [];
@@ -478,7 +498,7 @@ export function createUiPanel(o) {
       ...events.map((e) => ({ at: e.at, gs: e.gs, who: e.src === 'rule' ? 'rule' : 'body', kind: e.kind, text: e.text, ...(e.src === 'rule' ? { rule: e.rule, ruleSet: Number.isFinite(e.rs) ? clockOf(e.rs) : null, ruleCall: e.rc ?? null, ruleVia: e.rv ?? null } : {}) })),
       ...world.map((e) => ({ at: e.at, gs: e.gs, who: e.who ?? 'body', kind: e.who === 'server' ? 'policy' : 'world', text: e.text })),
       ...landmarks.map((e) => ({ at: e.at, gs: e.gs, who: 'world', kind: 'milestone', text: e.text })),
-    ].sort((a, z) => z.at - a.at).map((e) => ({ at: clockOf(e.gs), who: e.who, kind: e.kind, text: e.text, ...(e.who === 'rule' ? { rule: e.rule, ruleSet: e.ruleSet, ruleCall: e.ruleCall, ...(e.ruleVia ? { ruleVia: e.ruleVia } : {}) } : {}) }));
+    ].sort((a, z) => z.at - a.at).map((e) => ({ at: clockOf(e.gs), atS: Number.isFinite(e.gs) ? e.gs : null, who: e.who, kind: e.kind, text: e.text, ...(e.who === 'rule' ? { rule: e.rule, ruleSet: e.ruleSet, ruleCall: e.ruleCall, ...(e.ruleVia ? { ruleVia: e.ruleVia } : {}) } : {}) }));
     return {
       caller, now: { gameS: gs, gameClock: mmss(gs) }, stats, position: { y: Number.isFinite(pos?.y) ? pos.y : '–', place: pos?.place ?? '' },
       goal: goalState(goalNow(), fresh), inventory, thinking, earlierThinking, currentCall, raw: { total: Math.max(callTotal, calls.length), entries, runs },
@@ -488,11 +508,54 @@ export function createUiPanel(o) {
         .filter(Boolean).sort((a, z) => z.at - a.at).map(({ label, title }) => ({ label, title }))[0] ?? null,
       rules: rules ? rulesState() : null,
       sheltered: sheltered ? { since: clockOf(sheltered.gs) } : null,
+      over: over || null,
     };
   }
 
+  // concept B's frame: the HUD layer when what it shows may have changed (an input, at most every 150 ms; the second,
+  // for its clocks; a toast leaving or reaching its home), then the pieces that move over it, composed when the
+  // picture changed (every frame only while something moves)
+  function renderB(t) {
+    const sec = Math.floor(t / 1000);
+    const ep = hb.epoch(t);
+    const due = sec !== bSec || ep !== bEpoch || (version !== seenVersion && t - lastDrawAt >= MIN_DRAW_GAP_MS);
+    lg.setTransform(s, 0, 0, s, 0, -top * s);
+    if (due) {
+      const content = version !== seenVersion;
+      seenVersion = version; bSec = sec; bEpoch = ep; lastDrawAt = t;
+      const t0 = process.hrtime.bigint();
+      let drew = false;
+      try { drew = hb.update(hudState(t), t, { qa: Boolean(o.qa) }); } catch (e) {
+        perf.errors += 1;
+        perf.lastError = String(e?.stack ?? e?.message ?? e).split('\n').slice(0, 3).join(' | ').slice(0, 300);
+      }
+      bEpoch = hb.epoch(t);
+      if (drew) {
+        const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+        perf.draws += 1;
+        if (perf.ms.length < 4000) perf.ms.push(ms);
+        if (content && changedAt !== null && perf.lag.length < 4000) perf.lag.push(t - changedAt + ms);
+      }
+      if (content) changedAt = null;
+    }
+    const t1 = process.hrtime.bigint();
+    let changed = false;
+    try { changed = hb.compose(lg, t); } catch (e) {
+      perf.errors += 1;
+      perf.lastError = String(e?.stack ?? e?.message ?? e).split('\n').slice(0, 3).join(' | ').slice(0, 300);
+    }
+    lg.setTransform(1, 0, 0, 1, 0, 0);
+    if (changed) {
+      perf.composes += 1;
+      if (perf.cms.length < 4000) perf.cms.push(Number(process.hrtime.bigint() - t1) / 1e6);
+      unwritten = true;
+    }
+    frames += 1;
+    return canvas;
+  }
+
   const api = {
-    width: W, height: H + T, over: T, fps, file: o.file ?? null,
+    width: W, height: H + T, over: T, fps, file: o.file ?? null, design,
     /** New lines from the agent ({k, t, say, words, of, ms, n, why, ak, tool, steps, c, s, pre, pt, pts}). */
     push(lines) {
       bump();
@@ -628,7 +691,8 @@ export function createUiPanel(o) {
     /** Another game on camera: an empty HUD, with a note. */
     reset(note = '') {
       bump();
-      calls = []; events = []; thoughts = []; world = []; landmarks = []; callTotal = 0; sheltered = null;
+      calls = []; events = []; thoughts = []; world = []; landmarks = []; callTotal = 0; sheltered = null; playSeq = 0;
+      hb?.reset();
       sub = null; live = null; follow = null; toast = null; rules = null; rulesToast = null; anchor = null; game = null; goal = null; prevGoal = null; inv = null; pos = null; over = null; newGoalAt = null;
       caller = 'MUSE';
       advice.clear();
@@ -644,6 +708,7 @@ export function createUiPanel(o) {
      * second went by (its clocks, the progress, the stats), else the last drawing as it is.
      */
     render(t = now()) {
+      if (hb) return renderB(t);
       const timed = `${Math.floor(t / 1000)}|${newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS}|${toast && t - toast.at < 6_000}|${rulesToast && t - rulesToast.at < 6_000}`;
       let state = null, sig = null, content = false;
       let draw = timed !== drawnKey;
@@ -732,12 +797,13 @@ export function createUiPanel(o) {
         const v = [...a].sort((x, y) => x - y), at = (p) => Math.round(v[Math.min(v.length - 1, Math.floor(p * v.length))] * 10) / 10;
         return { p50: at(0.5), p99: at(0.99), max: at(1) };
       };
-      const out = { draws: perf.draws, writes: perf.writes, searches: perf.searches - perf.searchBase, drawMs: q(perf.ms), lagMs: q(perf.lag), ticks: perf.ticks, tickGapMaxMs: perf.gapMax, ...(perf.errors ? { errors: perf.errors, lastError: perf.lastError } : {}) };
-      Object.assign(perf, { draws: 0, writes: 0, ms: [], lag: [], ticks: 0, gapMax: 0, searchBase: perf.searches, errors: 0, lastError: null });
+      const out = { draws: perf.draws, writes: perf.writes, searches: perf.searches - perf.searchBase, drawMs: q(perf.ms), lagMs: q(perf.lag), ticks: perf.ticks, tickGapMaxMs: perf.gapMax, ...(perf.errors ? { errors: perf.errors, lastError: perf.lastError } : {}),
+        ...(hb ? { design: 'b', composes: perf.composes, composeMs: q(perf.cms) } : {}) };
+      Object.assign(perf, { draws: 0, writes: 0, ms: [], lag: [], ticks: 0, gapMax: 0, searchBase: perf.searches, errors: 0, lastError: null, composes: 0, cms: [] });
       return out;
     },
     /** The HUD state as drawn (the design's data shape), its layout and its QA. */
-    hud: (t = now()) => ({ state: hudState(t), layout: lastLayout, qa: lastQa }),
+    hud: (t = now()) => (hb ? { state: hudState(t), layout: null, qa: hb.qa, model: hb.model, plan: hb.plan } : { state: hudState(t), layout: lastLayout, qa: lastQa }),
     state: () => {
       const cur = current();
       return {

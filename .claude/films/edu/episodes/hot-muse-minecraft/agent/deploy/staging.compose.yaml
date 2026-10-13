@@ -75,7 +75,7 @@ services:
       RECORD_DIR: /recordings
     volumes: [ "../../logs:/logs", "console:/console", "${HOME}/workspace/muse-minecraft/camera/auth:/auth", "../../fb:/fb:ro", "${RECORD_HOST_DIR:-../../recordings}:/recordings" ]
     tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
-    cpus: 6
+    cpus: ${CAMERA_CPUS:-6}
     mem_limit: 3g
     pids_limit: 1024
     shm_size: 256m

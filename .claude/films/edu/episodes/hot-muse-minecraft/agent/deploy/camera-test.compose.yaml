@@ -66,6 +66,11 @@ services:
       CAMERA_MODS: "${CAMERA_MODS:-sodium}"
       CAMERA_CHUNK_THREADS: "${CAMERA_CHUNK_THREADS:-0}"
       CAMERA_JVM_ARGS: "${CAMERA_JVM_ARGS:-}"
+      # the HUD's design (b or final), the promo film's 1920x1080 client, the recordings (into ../../streams/rec)
+      STREAM_HUD: "${STREAM_HUD:-b}"
+      CAMERA_FILM: "${CAMERA_FILM:-off}"
+      RECORD: "${RECORD:-off}"
+      RECORD_DIR: /streams/rec
     volumes: [ "../../logs:/logs", "../../streams:/streams", "console:/console", "${HOME}/workspace/muse-minecraft/camera/auth:/auth" ]
     tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
     cpus: ${CAMERA_CPUS:-12}
