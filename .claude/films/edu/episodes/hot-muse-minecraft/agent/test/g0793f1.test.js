@@ -78,10 +78,10 @@ test('g0793f1: the body\'s own shelter before the first call with no blocks only
   });
   await care.tick();
   assert.deepEqual(calls.map((c) => c.tool), ['navigate', 'pick_up_items']);
-  assert.equal(calls[0].args.y, 44);
+  assert.equal(calls[0].args.y, 43, 'three down (g71c9f5: the lid goes where the ground was)');
   const [entry] = care.since(0);
   assert.equal(entry.ok, true);
-  assert.match(entry.text, /dug two blocks down to wait there \(no blocks carried to close it over\)$/);
+  assert.match(entry.text, /dug three blocks down to wait there \(no block to close it over\)$/);
 });
 
 test('g0793f1: a step whose time ran out while a reflex fought is tried once more, then INTERRUPTED in plain words; a pickup says what came back', async () => {

@@ -202,7 +202,8 @@ test('MCP: each call and its results reach the game\'s stream as terminal lines'
   const c = new Client({ name: 'term-test', version: '1' });
   t.after(async () => { await c.close().catch(() => {}); await agent.stop('test over'); fs.rmSync(dir, { recursive: true, force: true }); });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
-  const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text)[1];
+  // live: false (the user does not watch): play needs no live_view first on this server with a stream
+  const game = /game (g\w+)/.exec((await c.callTool({ name: 'start_game', arguments: { adult: true, live: false } })).content[0].text)[1];
   await c.callTool({ name: 'play_sequence', arguments: { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 2 } }] } });
   await c.callTool({ name: 'end_game', arguments: {} });
   const lines = updates.filter((u) => u.id === game).flatMap((u) => u.lines.map((l) => `${l.k} ${l.t}`));

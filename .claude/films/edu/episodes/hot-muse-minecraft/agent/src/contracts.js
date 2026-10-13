@@ -307,6 +307,7 @@ export const RESULT_CODES = Object.freeze([
   'INVENTORY_FULL',
   'DIED',
   'NOT_STARTED', // no game (start_game first), the game ended, or the bot is not in the world yet
+  'NEED_LIVE_VIEW', // play / play_sequence before live_view in a game whose user watches (start_game live: false if not): nothing was run
   'SERVER_STARTING', // start_game: the Minecraft server is still starting (a restart a moment ago): call start_game again in a few seconds
   'DUPLICATE', // a re-sent play / play_sequence: the first call's result (none of its steps failed), nothing run again
   'NOT_HUNGRY', // eat at a full food bar (20/20): harmless, nothing was eaten or used, the steps after it still run

@@ -41,7 +41,7 @@ test('ga13a88: before the first call the body digs in once and waits there, not 
   assert.deepEqual(calls.map((c) => c.tool), ['navigate', 'pick_up_items']);
   for (let i = 0; i < 5; i++) { t += 60_000; await care.tick(); } // production: every 8 s for 2.5 minutes
   assert.equal(calls.filter((c) => c.tool === 'navigate').length, 1, 'dug in once');
-  assert.equal(state.situation.position.y, 79);
+  assert.equal(state.situation.position.y, 78);
   // moved away (a stranger's push, a fall): it may dig in again where it is, after the cool-down
   state.situation.position = { x: -10.5, y: 70, z: 230.5, headingDegrees: 0 };
   t += 60_000;

@@ -498,6 +498,8 @@ export async function startAgent(opts = {}) {
     : opts.fakeBot ? null : createServerReady({ host: config.mc.host, port: config.mc.port, version: config.mc.version });
   const web = createWeb({
     config, log, meter, makeBrain, askNotice, liveVideo, liveView, mcpCallMs: opts.mcpCallMs, serverReady,
+    // a server with a live video (the stream service or the Facebook channel): play waits for live_view (src/mcp.js)
+    liveEnabled: Boolean(streams),
     // the terminal under the live video (the vertical layout): the lines go to the stream of the game, if it has one
     term: typeof streams?.term === 'function' ? (id, u) => streams.term(id, u) : null,
     ...(mineai ? { skills: MINEAI_SKILLS, careMode: config.mineai.care ?? 'advise', startTimeoutMs: config.mineai.startMs + 30_000 } : {}),

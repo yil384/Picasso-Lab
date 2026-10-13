@@ -938,6 +938,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             // carried and worn: a fresh shield goes to the off-hand when their guard reflex takes it (F1 of the log hunt)
             craftHad = { item, count: Number(count) || 1, have: allItems(latest.inventory, latest.equipment)[item] ?? 0, tables: latest.inventory?.crafting_table ?? 0 };
           }
+          // a pause of ours between their calls (a portal's cooldown)
+          if (call.tool === 'wait') { await new Promise((r) => { setTimeout(r, Math.min(call.ms ?? 1_000, Math.max(0, deadline - Date.now()))); }); continue; }
           let out = await act(call, deadline, ctl);
           // a call with alternatives (a way out of a portal: one side, else the other): the next when this one failed
           for (const alt of call.alts ?? []) {
@@ -953,6 +955,25 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped, call });
+          // their entry refuses a bot standing in the portal it just lit or came out of ("already occupies this nether_portal
+          // after a recent arrival"); the game takes a bot through by itself once it has stood there long enough
+          // (production game g71c9f5, 2026-10-13: enter failed, then the bot went through on its own while walking out).
+          // Up to 8 s for that; else out of the opening, the game's cooldown, and in once more
+          if (!res.ok && call.tool === 'enter_nether_portal' && /already occupies this nether_portal/i.test(`${res.result} ${res.theirs ?? ''}`) && !retried.has(`occupied:${i}`)) {
+            retried.add(`occupied:${i}`);
+            const was = dimension ?? 'overworld';
+            for (let w = 0; w < 16 && (dimension ?? 'overworld') === was && !ctl.stopped; w++) { await new Promise((r) => { setTimeout(r, 500); }); await refresh().catch(() => {}); }
+            if ((dimension ?? 'overworld') !== was) {
+              const at = latest.position ? floorPos(latest.position) : null;
+              res = { ok: true, result: `went through the portal at ${at ? `${at.x} ${at.y} ${at.z}` : 'its other side'} (the game took the bot through as it stood in the portal)`, code: null };
+            } else if (!ctl.stopped) {
+              const a = call.args;
+              const [first, ...alts] = [[3, 0], [-3, 0], [0, 3], [0, -3]].map(([dx, dz]) => ({ x: a.x + dx, y: a.y, z: a.z + dz }));
+              calls.splice(i + 1, 0, { tool: 'navigate', args: first, alts, optional: true, quiet: true }, { tool: 'wait', ms: 4_000, quiet: true }, call);
+              parts.push({ ok: true, result: 'it was standing in the portal: stepped out of it to enter again after the game\'s cooldown', code: null });
+              continue;
+            }
+          }
           // a cell of the portal's site that would not clear: nothing placed yet, said so
           if (!res.ok && call.clearing) res = { ...res, result: `could not clear the cell at ${call.args.x} ${call.args.y} ${call.args.z} (${call.args.block_name}) where the portal frame goes: ${res.result.replace(/^failed: /, '')}; no obsidian was placed. Build it a few blocks away, on open ground` };
           // their reflexes that acted during the call count as the body's own (F10 of the log hunt: in-step fights were in

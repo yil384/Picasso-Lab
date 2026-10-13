@@ -247,7 +247,8 @@ async function replay(id, steps) {
     for (const [i, st] of steps.entries()) {
       INCIDENTS[id]?.[i]?.(fake.world);
       const r = await c.callTool({ name: 'play', arguments: { skill: st.tool, args: st.args, why: whyOf(i, st) } });
-      const text = r.content.map((x) => x.text).join('\n');
+      // the reply without the nudges at the top (test/liveview.test.js checks them)
+      const text = r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet: |Viewers see your why and plan under the video: |Next: call live_view now)[^\n]*\n\n)+/, '');
       const step = r.structuredContent?.steps?.at(-1) ?? null;
       out.push({ i, st, text, code: r.structuredContent?.code ?? null, status: step?.status ?? (r.isError ? 'refused' : null), result: step?.result ?? text.split('\n')[0], advice: r.structuredContent?.advice ?? [] });
     }

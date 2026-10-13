@@ -989,15 +989,28 @@ export function createCare(deps) {
         // before the first call with too few blocks to close a shelter: only dug in, said as what it is (a production
         // game, 2026-10-12, g0793f1: "could not close a shelter ... nothing to place against" with no blocks carried)
         if (d.prePlay && shelterBlocks(inv()).total < SHELTER_SIZE) {
-          const g = await run([{ tool: 'navigate', args: { x: feet.x, y: feet.y - 2, z: feet.z } }], LIMITS.dig, ctl);
+          // three blocks down and the hole closed over its head with a block it dug: the lid goes where the ground was,
+          // against the hole's own walls (production game g71c9f5, 2026-10-13: two blocks down and left open, "no blocks
+          // carried to close it over"; a zombie came in and killed the bot as Muse's first step walked it out)
+          const g = await run([{ tool: 'navigate', args: { x: feet.x, y: feet.y - 3, z: feet.z } }], LIMITS.dig, ctl);
           if (ctl.stopped) return stopped();
           if (okOf(g)) await run([{ tool: 'pick_up_items', args: {} }], LIMITS.pickbed, ctl);
           await deps.refresh();
+          let closed = false;
+          const block = okOf(g) ? shelterBlocks(inv()).list.find((b) => b.count > 0)?.name : null;
+          if (block && !ctl.stopped) {
+            const lid = await run([{ tool: 'build_structure', args: { blocks: [{ x: feet.x, y: feet.y - 1, z: feet.z, block_name: block }], remove_wrong_blocks: false } }], 15_000, ctl);
+            await deps.refresh();
+            closed = okOf(lid) && shelterVerdict(lid[0]?.out?.output?.result?.structure ?? null).closed;
+          }
           // dug in once: it waits there (a production game, 2026-10-12, ga13a88: it dug two blocks deeper every 8 s for
           // 2.5 minutes, 24 blocks down, and Muse's first collect found no path out)
           memory.cool = { ...(memory.cool ?? {}), shelter: now() };
           if (okOf(g)) memory.dugIn = here();
-          return add({ kind: 'shelter', ok: okOf(g), ms: ms(), text: okOf(g) ? `${d.why}: dug two blocks down to wait there (no blocks carried to close it over)` : `${d.why}: could not dig in where it stands (${errOf(g) ?? 'stopped'})` });
+          if (closed) memory.shelter = { feet: here() ?? { ...feet, y: feet.y - 3 }, cells: [], at: now(), checked: now(), night: isNight(deps.situation()?.clock?.timeOfDay) ? memory.night : memory.night + 1 };
+          return add({ kind: 'shelter', ok: okOf(g), ms: ms(), text: !okOf(g) ? `${d.why}: could not dig in where it stands (${errOf(g) ?? 'stopped'})`
+            : closed ? `${d.why}: dug three blocks down and closed the hole over its head with ${block}`
+              : `${d.why}: dug three blocks down to wait there (no block to close it over)` });
         }
         // in water no wall holds and nothing can be dug: to the shore first (their navigate takes a column on water to
         // the nearest dry ground; staging lab spot 0 15000)
