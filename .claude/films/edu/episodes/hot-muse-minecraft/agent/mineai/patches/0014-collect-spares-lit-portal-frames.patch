@@ -1,0 +1,59 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0014: collect_block's search never takes obsidian from a lit nether portal's frame (an obsidian block with a portal
+block on one of its faces); an exact cell still can (a frame its builder takes back). With every loaded obsidian in
+lit frames, the request has nothing to mine and casts obsidian from lava with its water bucket instead. A production
+game (2026-10-13, g71c9f5) mined 12 obsidian out of the shared return portal of earlier games, and the next trip back
+from the Nether came out 238 blocks away. With a test (collect-block).
+
+diff --git a/src/actions/collect-block/collect-block.test.ts b/src/actions/collect-block/collect-block.test.ts
+--- a/src/actions/collect-block/collect-block.test.ts
++++ b/src/actions/collect-block/collect-block.test.ts
+@@ -200,3 +200,13 @@
+   assert.deepEqual(await mineAfterLanding(late.run, facts(late.calls, landed + 60_000)), noPath);
+   assert.deepEqual(late.calls, { run: 1, settle: 0 });
+ });
++
++test("Patched for Muse plays Minecraft (picasso-lab), 0014: obsidian touching a lit portal is a working frame", async () => {
++  const { inLitPortalFrame } = await import("./collect-block.js");
++  const portal = new Set(["1,65,0", "1,66,0", "1,67,0", "2,65,0", "2,66,0", "2,67,0"]);
++  const bot = { blockAt: (v: Vec3) => ({ name: portal.has(`${v.x},${v.y},${v.z}`) ? "nether_portal" : "air" }) } as unknown as Pick<Bot, "blockAt">;
++  assert.equal(inLitPortalFrame(bot, { x: 0, y: 66, z: 0 }), true, "a side of the frame");
++  assert.equal(inLitPortalFrame(bot, { x: 1, y: 64, z: 0 }), true, "the bottom");
++  assert.equal(inLitPortalFrame(bot, { x: 0, y: 64, z: 0 }), false, "a corner touches no portal block");
++  assert.equal(inLitPortalFrame(bot, { x: 10, y: 64, z: 10 }), false, "obsidian elsewhere");
++});
+diff --git a/src/actions/collect-block/collect-block.ts b/src/actions/collect-block/collect-block.ts
+--- a/src/actions/collect-block/collect-block.ts
++++ b/src/actions/collect-block/collect-block.ts
+@@ -94,6 +94,16 @@
+     exactTarget: request.exactTarget,
+     scaffolding: request.scaffolding,
+   });
++}
++
++/**
++ * Patched for Muse plays Minecraft (picasso-lab), 0014: an obsidian block that touches a lit nether portal (a portal
++ * block on one of its six faces) is part of a working portal's frame: taking it breaks the portal, and with it every
++ * way back that links there (a shared world's return portal).
++ */
++export function inLitPortalFrame(bot: Pick<Bot, "blockAt">, position: { x: number; y: number; z: number }): boolean {
++  const faces = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
++  return faces.some(([dx, dy, dz]) => bot.blockAt(asVec3({ x: position.x + dx, y: position.y + dy, z: position.z + dz }))?.name === "nether_portal");
+ }
+ 
+ export function inventoryStop(
+@@ -301,7 +311,11 @@
+         // a lava source. The process makes pools targets only when it has nothing
+         // to mine and water in the bucket.
+         cast: blockMatchesSelector("obsidian", request.selector) ? useItemAt : null,
+-        matches: (block: MinecraftBlock) => blockMatchesSelector(block.name, request.selector),
++        // Patched for Muse plays Minecraft (picasso-lab), 0014: a lit portal's frame is never taken by a search
++        // (an exact cell still is: a frame its builder takes back). With every loaded obsidian in lit frames, the
++        // request has nothing to mine and casts from lava instead.
++        matches: (block: MinecraftBlock) => blockMatchesSelector(block.name, request.selector)
++          && !(exactCell === null && block.name === "obsidian" && inLitPortalFrame(bot, block.position)),
+         canMine,
+         matchingStateIds: target.blockStateIds,
+         ...(exactCell !== null && { exactTarget: exactCell }),

@@ -130,8 +130,6 @@ function savePortals(config, server) {
 }
 /** How far (blocks, flat) another game's obsidian keeps a collect obsidian from running: about what is loaded. */
 export const FRAME_GUARD = 160;
-/** How far (blocks, flat) from a lit portal its chunks are no longer loaded for the bot, about: where collect obsidian may run. */
-export const LIT_CLEAR = 200;
 /** After coming out of a portal, the blocks around are trusted to say whether it is still lit only once a whole scan
  * has been read this long after the arrival (the chunks come in over seconds; an early scan missed the portal it
  * stood in: production, 2026-10-11, every camera trip). */
@@ -758,16 +756,16 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const seenLit = await rpc('view_blocks', { find: { block_names: ['nether_portal'], limit: 1 } }, 10_000).catch(() => null);
     const litNow = seenLit?.result?.blocks?.find?.[0]?.listed?.[0] ?? null;
     const lit = litNow ? { nearest: floorPos(litNow) } : scan.blocks.find((b) => b.name === 'nether_portal');
-    if (lit && leftover('overworld', lit.nearest)) event('portal_released', { at: floorPos(lit.nearest) });
-    else if (lit) {
-      // how far, whose (a portal trips come back to, left by earlier games), and a point far enough away to go to (g4ac86b:
-      // "go farther away" sent Muse 300 blocks off; it took the portal for another player's)
+    // a lit portal's frame is never taken (runtime patch 0014: their search skips obsidian touching a portal block; the
+    // owner, 2026-10-13, after g71c9f5 mined the shared return portal): said in the reply, and the obsidian comes from
+    // lava or other obsidian
+    let litNote = null;
+    if (lit) {
       const q = lit.nearest;
       const far = Math.round(Math.hypot(q.x - p.x, q.z - p.z));
-      const k = far > 0 ? (LIT_CLEAR - far) / far : 1;
-      const to = { x: Math.round(p.x + (p.x - q.x) * k), y: Math.floor(p.y), z: Math.round(p.z + (p.z - q.z) * k) };
-      const whose = knownReturn('overworld', q) ? 'the portal Nether trips on this server come back to (another game is using it now)' : 'a lit portal';
-      return refuse(`${whose} is loaded ${far} blocks away (at ${q.x} ${q.y} ${q.z}): collect obsidian could take its frame. Go about ${LIT_CLEAR} blocks from it first, for example go_to ${to.x} ${to.y} ${to.z} (in legs of up to 256 blocks; portal dismantle takes back your own frame)`);
+      const whose = knownReturn('overworld', q) ? 'the portal Nether trips on this server come back to' : 'a lit portal';
+      litNote = `${whose} at ${q.x} ${q.y} ${q.z} (${far} blocks away) is loaded: its frame was left alone, the obsidian comes from lava or other obsidian`;
+      event('portal_spared', { at: floorPos(q), far });
     }
     // still lava (a source, level 0) is what obsidian forms from: flowing lava near by does not count, and their collect
     // would walk to the nearest source anywhere (F2 of the log hunt: accepted at the surface next to flowing lava, it
@@ -787,7 +785,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     if (spawnAt && lava.some((l) => Math.hypot(l.x - spawnAt.x, l.z - spawnAt.z) <= SPAWN_GUARD)) return refuse(`the lava near by is within ${SPAWN_GUARD} blocks of the world spawn, where new players arrive: make obsidian somewhere else`, 'LAVA');
     const players = (status?.nearby?.players ?? []).map((x) => x?.position).filter(Boolean);
     if (players.some((q) => lava.some((l) => Math.hypot(q.x - l.x, q.y - l.y, q.z - l.z) <= 8))) return refuse('another player is next to the lava near by: make obsidian somewhere else', 'LAVA');
-    return null;
+    return litNote ? { note: litNote } : null;
   }
 
   /**
@@ -927,7 +925,11 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           plan.note = `${plan.note ? `${plan.note}; ` : ''}cleared ${plural(site.clear.length, 'cell')} of ${kinds.join(' and ')} for it first`;
         } else plan.refused = site;
       }
-      if (!plan.refused && tool === 'collect' && v.args.block === 'obsidian') plan.refused = await obsidianGuard();
+      if (!plan.refused && tool === 'collect' && v.args.block === 'obsidian') {
+        const g = await obsidianGuard();
+        if (g?.note) plan.note = `${plan.note ? `${plan.note}; ` : ''}${g.note}`;
+        else if (g) plan.refused = g;
+      }
       // its frame's cells loaded first: just back through the portal, the chunks around are still coming in (the
       // staging checks, 2026-10-11: every cell "unloaded", no obsidian back)
       if (!plan.refused && plan.dismantle) await loadedCells(plan.calls.map((c) => c.args), 15_000);

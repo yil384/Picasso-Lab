@@ -1,9 +1,9 @@
 // test/portals.test.js - what production games g809e1b and g4ac86b (2026-10-13) showed about portals: collect obsidian
 // was refused near "a lit portal" that was a leftover of our own earlier games (g0793f1's frame, and the portal every
 // Nether trip comes back to); the Nether side led back to that older portal, far from the frame the bot built. Ended
-// games' frames and return portals are released (collect obsidian runs near them) and kept on disk across a restart; a
-// return portal another live game uses is named as such, with a place far enough away; and coming back far from its own
-// frame says so. (Clearing a frame's site before building: test/nether.test.js.)
+// games' unlit frames are released (collect obsidian runs near them) and the registries are kept on disk across a
+// restart; a lit portal's frame is never taken (runtime patch 0014), and the reply says so; and coming back far from its
+// own frame says so. (Clearing a frame's site before building: test/nether.test.js.)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -58,14 +58,14 @@ test('portals: an ended game\'s frame and return portal are released; one a live
     a.body.end?.('test over');
     r = await b.body.run('collect', { block: 'obsidian', n: 4 });
     assert.equal(r.ok, true, r.result);
-    assert.ok(log.tail(500).some((x) => x.kind === 'portal_released'));
+    assert.match(r.result, /its frame was left alone, the obsidian comes from lava or other obsidian/, 'the lit frame spared (runtime patch 0014)');
   } finally {
     await b.body.close?.();
     await hosts.closeAll();
   }
 });
 
-test('portals: a lit portal of unknown origin is refused with how far it is and a place far enough away', async () => {
+test('portals: a lit portal of unknown origin: its frame is left alone (runtime patch 0014), the collect runs, the reply says so', async () => {
   const config = loadConfig({ MODEL_API_KEY: '', LOG_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'portals-u-')), MC_PORT: '25912' });
   const log = createLogger({ dir: null, config, keep: 500 });
   const hosts = fakeHosts(() => ({ inventory: {} }));
@@ -75,8 +75,9 @@ test('portals: a lit portal of unknown origin is refused with how far it is and 
     b.fake.world.blocks = [pool(142, 63, 311), lit(49, 93, 161)];
     await b.body.rescan();
     const r = await b.body.run('collect', { block: 'obsidian', n: 4 });
-    assert.equal(r.ok, false);
-    assert.match(r.result, /^a lit portal is loaded 176 blocks away \(at 49 93 161\): collect obsidian could take its frame\. Go about 200 blocks from it first, for example go_to 153 64 332 \(in legs of up to 256 blocks/);
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /\(a lit portal at 49 93 161 \(176 blocks away\) is loaded: its frame was left alone, the obsidian comes from lava or other obsidian\)$/);
+    assert.ok(log.tail(500).some((x) => x.kind === 'portal_spared'));
   } finally {
     await b.body.close?.();
     await hosts.closeAll();
@@ -97,7 +98,7 @@ test('portals: the registries outlive a restart (MINEAI_DATA_DIR/portals.json): 
     await b.body.rescan();
     const r = await b.body.run('collect', { block: 'obsidian', n: 4 });
     assert.equal(r.ok, true, r.result);
-    assert.ok(log.tail(500).some((x) => x.kind === 'portal_released'));
+    assert.match(r.result, /a lit portal at 272 88 67 \(\d+ blocks away\) is loaded: its frame was left alone/);
     // and the file keeps what this process learns
     b.fake.world.inventory.set('obsidian', 14);
     assert.equal((await b.body.run('build', { blueprint: 'nether_portal', material: 'obsidian' })).ok, true);

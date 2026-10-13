@@ -175,7 +175,9 @@ test('nether: collect obsidian runs only near lava, in the Overworld, with no ot
     b.fake.world.blocks = [lava(-148, 60, 150), { name: 'nether_portal', found: 6, listed: [{ x: -150, y: 64, z: 151 }] }];
     await b.body.rescan();
     r = await b.body.run('collect', { block: 'obsidian', n: 4 });
-    assert.match(r.result, /^a lit portal is loaded \d+ blocks away \(at -150 64 151\): collect obsidian could take its frame\. Go about 200 blocks from it first, for example go_to -?\d+ -?\d+ -?\d+ \(in legs of up to 256 blocks/);
+    // a lit portal's frame is never taken (runtime patch 0014): the collect runs and says so
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /\(a lit portal at -150 64 151 \(\d+ blocks away\) is loaded: its frame was left alone, the obsidian comes from lava or other obsidian\)$/);
     // in the Nether: never
     a.fake.world.dimension = 'the_nether';
     await a.body.refresh();
