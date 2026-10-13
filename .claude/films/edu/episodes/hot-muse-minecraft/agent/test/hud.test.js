@@ -38,6 +38,18 @@ test('HUD: the design\'s three states drawn as the design measured them, with no
   }
 });
 
+test('HUD: the why\'s age is the age of the call that carried it, not of a newer call', () => {
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  p.term({ lines: [{ k: 'call', t: '> play_sequence', tool: 'play_sequence', words: 'Wood first', plan: 'Then a pickaxe', of: 1, steps: [{ say: 'Mine 4 oak logs', raw: 'collect oak_log 4' }], raw: '{}', rid: 1 }], game: { id: 'g1', s: 13 } });
+  t += 22_000;
+  p.term({ lines: [{ k: 'call', t: '> get_state', tool: 'get_state', raw: '{}', rid: 2 }] });
+  t += 3_000;
+  const th = p.hud(t).state.thinking;
+  assert.equal(Math.round(th.lastCallAgoS), 25, 'the why was sent 25 s ago; the newest call (a look) 3 s ago');
+  assert.deepEqual([th.why, th.plan, th.whyAt], ['Wood first', 'Then a pickaxe', '0:13']);
+});
+
 test('HUD: the caller is named from the MCP client; an empty game draws', () => {
   let t = 1_000_000;
   const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });

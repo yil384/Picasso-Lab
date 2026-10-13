@@ -393,7 +393,7 @@ export function createUiPanel(o) {
     const latest = current();
     const thinking = {
       hasWhy: Boolean(latest?.words), why: latest?.words || null, plan: latest?.words ? (latest.plan || null) : null,
-      whyCall: latest?.no ?? '?', whyAt: clockOf(latest?.gs), lastCallAgoS: calls[0] ? (t - calls[0].at) / 1000 : 0, // the age of the newest call: an old why never reads as current
+      whyCall: latest?.no ?? '?', whyAt: clockOf(latest?.gs), lastCallAgoS: latest ? (t - latest.at) / 1000 : 0, // the age of the call that carried the why (and its plan): an old why never reads as current
       latestPlayCall: latest ? { no: latest.no ?? '?', tool: latest.tool, sent: clockOf(latest.gs) } : null,
     };
     const earlierThinking = thoughts.filter((x) => x.cmd !== latest).map((x) => ({ at: clockOf(x.gs), why: x.text }));
