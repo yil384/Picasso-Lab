@@ -624,9 +624,18 @@ profile `camera`, `deploy/Dockerfile.camera`).
   eye never touches a block, so the picture never shows one from inside: production game ga13a88 showed the dark
   inside of a shelter's roof from an eye left just above it) and a straight line from it to the bot's eyes through open
   air until within 3.2 blocks of the bot (it sees the shelter, not a tree or rock). The best first: the orbit's ring (5
-  out, 3.5 up), else the nearest good spot within 8 blocks, else 10 to 32 blocks above (through open air only; until
-  2026-10-13 the line could pass leaves, and with leaves drawn opaque that was a picture of the canopy), else
-  the bot's own eyes (sealed in under rock; tried again every 2 s). A second without the enclosure and the view goes
+  out, 3.5 up), else the nearest good spot 5.4 to 8.9 blocks away (2026-10-13: every spot outside 5.4 blocks or more
+  from the bot, so the line runs 2.2 blocks or more through open air before the shelter; gaf8c9e took one 3.6 blocks
+  away beside the trench the bot had dug and filmed a dirt wall across the frame), else 10 to 32 blocks above (through open air only; until
+  2026-10-13 the line could pass leaves, and with leaves drawn opaque that was a picture of the canopy), else the place
+  from outside with no line to the shelter (`muse_cam:far`: 8 out and 8 up, or 3 out and 12 up, with 4 blocks of open
+  line toward the bot: trees all round), else
+  the bot's own eyes (sealed in under rock; tried again every 2 s). Room inside (a hut) and a spot behind the bot that
+  sees it there (both lines): that view first (`muse_cam:inside`). The HUD says SHELTERED over the video while the body
+  is closed in, until the next play call. Replayed (`deploy/camera-test/sealed.cjs`): dug in with a roof beside a
+  trench, under a canopy, a cell built on the ground, a cell cut into a hillside: the orbit 5.3 blocks away, 4.3 blocks
+  of open line; trees all round from 1 block up: from 12 up and 3 out, 74 degrees (first person before); sealed in rock
+  all round: first person (nothing outside). A second without the enclosure and the view goes
   back. Checked on a local Paper (2026-10-12): open sky, the orbit; a canopy just over the roof, 3 out and 2 up under
   it; leaves all round, 24 up; sealed in rock, first person.
   The evidence of each new spot, for a view that went wrong (two night games filmed the bot down a column of leaves):
@@ -1184,7 +1193,10 @@ and Muse's panel under it:
   server), as full as the room allows; the advice says what will show there and the event list what it is. RAW takes
   the rest: a new game's answer now carries the goal's plan, as the server gave it (never the resume line: its handle
   resumes the game from any connection), cut at a word within 600 characters. The card is gone with the first play
-  call. `test/hud.test.js` checks that state for three callers and three goals: no gap over 30 px, RAW at least 6 lines. The three states played through the real
+  call. `test/hud.test.js` checks that state for three callers and three goals: no gap over 30 px, RAW at least 6 lines.
+  The body's own actions reach BODY · WORLD between calls (the feed reads the body's journal every 5 s), stamped when
+  they happened (g43884a's dig-in at 0:02 showed as 0:59, when the next reply carried it). The thinking band is as
+  tall as the why and plan when nothing earlier runs on under them (76 px only with earlier whys); RAW gets the rest. The three states played through the real
   pipeline (`scripts/ui-sample.mjs --story design --design ../ui-art/hud-final/states.json --state nowhy|long|fresh`) in
   the camera image: `~/Downloads/muse-hud-port-*.png`; 30.2 frames a second, gaps p99 50 ms. `test/hud.test.js` checks
   the layout the design measured and its QA (no text over another or out of its column).

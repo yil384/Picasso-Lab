@@ -176,15 +176,38 @@ function drawHotbar() {
     T(c, sx + s - 3, sy + s - 4, MONO(500, 13), it.count ? K.t1 : K.t4, 'right');
   });
 }
-function drawToast() {
-  // a new goal (set_goal), else a milestone (6 s): a flat lower-third in the video's bottom right
-  const goalToast = st.goal && st.goal.new && st.goal.toast;
-  if (!goalToast && !st.toast) return;
+// the body closed itself in for the night (a shelter): the camera films the shelter from outside, the bot is inside
+function drawSheltered() {
+  if (!st.sheltered) return;
   REG = [0, 1080, 'video'];
+  const n = st.inventory.length, hotW = n * 40 + (n - 1) * 4 + 8;
+  const x = 16 + hotW + 10, y = VH - 16 - 48, h = 48;
+  // short of room beside a toast: fewer words, else nothing while the toast shows
+  const tb = toastBox(), room = (tb ? 1080 - 16 - tb.w - 10 : 1080 - 16) - x;
+  const line = [st.sheltered.since ? `closed itself in at ${st.sheltered.since}, until the next call` : 'closed itself in, until the next call', 'until the next call']
+    .find((l) => Math.max(W(l, UI(500, 14)), capsW('SHELTERED', 10)) + 64 <= room);
+  if (!line) return;
+  const w = Math.max(W(line, UI(500, 14)), capsW('SHELTERED', 10)) + 46 + 18;
+  rrect(x, y, w, h, 6, 'rgba(7,9,13,0.86)');
+  rect(x, y + 8, 3, h - 16, K.body);
+  icon('house', x + 14, y + 12, 24);
+  caps('SHELTERED', x + 46, y + 19, 10, K.body);
+  T(line, x + 46, y + 38, UI(500, 14), K.t1);
+}
+// the toast in the video's bottom right: its label, title and width, or null
+function toastBox() {
+  const goalToast = st.goal && st.goal.new && st.goal.toast;
+  if (!goalToast && !st.toast) return null;
   const label = goalToast ? 'NEW GOAL' : (st.toast.label || 'MILESTONE');
   const title = goalToast ? st.goal.toast.replace(/^New goal:\s*/i, '') : st.toast.title;
-  const tw = W(title, UI(600, 18));
-  const w = Math.max(tw, capsW(label, 10)) + 46 + 18, h = 48;
+  return { label, title, w: Math.max(W(title, UI(600, 18)), capsW(label, 10)) + 46 + 18 };
+}
+function drawToast() {
+  // a new goal (set_goal), else a milestone (6 s): a flat lower-third in the video's bottom right
+  const tb = toastBox();
+  if (!tb) return;
+  REG = [0, 1080, 'video'];
+  const { label, title, w } = tb, h = 48;
   const x = 1080 - 16 - w, y = VH - 16 - h;
   rrect(x, y, w, h, 6, 'rgba(7,9,13,0.86)');
   rect(x, y + 8, 3, h - 16, K.t1);
@@ -384,6 +407,9 @@ const WHY_GUT = 32;                    // between the why and the plan
 // (nothing cut first, then the two sides closest in height). So there is never a hole to the right of a short why.
 function thinkingLayout(maxPlan) {
   const th = st.thinking;
+  // at least 76 px when earlier whys can run on under a short plan; with none (the first play call), as tall as the why
+  // and the plan, and RAW gets the rest (a short why and plan at call 1 left 40 px empty)
+  const bandMin = (st.earlierThinking || []).length ? 76 : 0;
   const planOk = !!(th.plan && !PLACEHOLDER_PLAN.test(th.plan));
   const metaW = capsW(`${CALLER} · WHY`, 10) + 24 + W(`call ${th.whyCall} · sent ${th.whyAt} · ${agoWords(th.lastCallAgoS ?? 0)}`, MONO(400, 11));
   const planFor = (pw) => {
@@ -416,7 +442,7 @@ function thinkingLayout(maxPlan) {
     const P = planFor(planW);
     const wl = ws === 22 ? 28 : 26;
     const whyH = HEAD + 4 + ws + (why.length - 1) * wl + 12;
-    const h = Math.max(whyH, P.ph, 76);
+    const h = Math.max(whyH, P.ph, bandMin);
     const score = h + (P.cut ? 1000 : 0) + (ws === 20 ? 8 : 0) + Math.abs(whyH - P.ph) * 0.3;
     if (!best || score < best.score) best = { score, ws, wl, why, whyW, whyH, planX, planW, h, planOk, ...P };
   }
@@ -425,7 +451,7 @@ function thinkingLayout(maxPlan) {
     const f = UI(600, 20), whyW = 640, why = clamp(wrap(th.why, f, whyW - 12), 3, f, whyW - 12);
     const planX = M + whyW + WHY_GUT, P = planFor(X1 - planX);
     const whyH = HEAD + 4 + 20 + 2 * 26 + 12;
-    best = { ws: 20, wl: 26, why, whyW, whyH, planX, planW: X1 - planX, h: Math.max(whyH, P.ph, 76), planOk, ...P };
+    best = { ws: 20, wl: 26, why, whyW, whyH, planX, planW: X1 - planX, h: Math.max(whyH, P.ph, bandMin), planOk, ...P };
   }
   return best;
 }
@@ -1098,6 +1124,7 @@ function drawAll() {
   rect(0, VH, 1080, 1080 - VH, K.base);
   REG = [0, 1080, 'video'];
   drawHotbar();
+  drawSheltered();
   drawToast();
   let y = VH;
   y += statsBand(y);

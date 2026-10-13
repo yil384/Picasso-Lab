@@ -407,6 +407,19 @@ test('datapack: every function the camera\'s datapack calls is there, and every 
   assert.equal((oh.match(/function muse_cam:overhead_at/g) ?? []).length, 6);
   assert.match(files.get('overhead_at'), /unless block ~0\.4 ~ ~ #muse_cam:open run return 0[\s\S]*function muse_cam:sight_try/);
   const sh = files.get('shoulder');
+  // sealed in (gaf8c9e: a spot 3.6 blocks away beside a trench, a dirt wall across the frame): every spot outside 5.4
+  // blocks or more from the bot; the near rings all that far; with no spot that sees the shelter, the place from outside
+  // with 4 blocks of open line (muse_cam:far), before first person; room inside first (muse_cam:inside)
+  assert.match(files.get('good'), /distance=\.\.5\.4\] run return 0/);
+  assert.match(files.get('good_far'), /distance=\.\.5\.4\] run return 0[\s\S]*#ls muse_cam_y 72/);
+  for (const m of files.get('near_at').matchAll(/positioned \^ \^([\d.]+) \^-([\d.]+) run function muse_cam:(good|good_far)/g)) {
+    assert.ok(Math.hypot(Number(m[1]), Number(m[2])) >= 5.4, `near ring ${m[1]} up ${m[2]} out`);
+  }
+  const ch = files.get('choose');
+  assert.ok(ch.indexOf('function muse_cam:far') > ch.indexOf('function muse_cam:above') && ch.indexOf('function muse_cam:far') < ch.indexOf('add muse_cam_deep'));
+  assert.match(files.get('hold'), /#hv muse_cam_y matches 2[^\n]*good_far/);
+  assert.ok(files.get('outside').indexOf('function muse_cam:inside') < files.get('outside').indexOf('function muse_cam:choose'));
+  assert.match(files.get('inside'), /#v14 muse_cam_y matches 1/);
   assert.ok(sh.indexOf('function muse_cam:overhead') > sh.indexOf('set #sr muse_cam_y 13') && sh.indexOf('function muse_cam:overhead') < sh.lastIndexOf('set #sr muse_cam_y 15'), 'after straight down, before the spots behind');
   assert.match(files.get('note_new'), /run return 0\n/);
   assert.equal((files.get('note_col').match(/function muse_cam:nb/g) ?? []).length, 25);
