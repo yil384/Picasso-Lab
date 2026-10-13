@@ -211,8 +211,8 @@ function drawToast() {
   const x = 1080 - 16 - w, y = VH - 16 - h;
   rrect(x, y, w, h, 6, 'rgba(7,9,13,0.86)');
   rect(x, y + 8, 3, h - 16, K.t1);
-  icon('star', x + 14, y + 12, 24);
-  caps(label, x + 46, y + 19, 10, K.t3);
+  icon(label === 'RULES CHANGED' ? 'shield' : 'star', x + 14, y + 12, 24);
+  caps(label, x + 46, y + 19, 10, label === 'RULES CHANGED' ? K.muse : K.t3);
   T(title, x + 46, y + 38, UI(600, 18), K.t1);
 }
 
@@ -221,9 +221,18 @@ function statsBand(y) {
   REG = [0, 1080, 'stats'];
   const h = BAND_H, base = y + 25;
   const s = st.stats, pct = s.museShare.pct, known = pct != null;
+  // with Muse's rules (servers that count them): direct, by its rules, by the body on its own, in % of all actions
+  const R = shareParts(s.museShare);
   rect(0, y, 1080, h, K.band);
-  // possession rule: the full width split by the caller's share of actions (violet) and the body's reflexes (amber)
-  if (known) { rect(0, y, 1080, 3, K.body); rect(0, y, Math.round(1080 * pct / 100), 3, K.muse); }
+  // possession rule: the full width split by the caller's share of actions (violet), its rules' (violet, hatched) and
+  // the body's own (amber); nothing yet: neutral
+  if (R) {
+    const xd = Math.round(1080 * R.direct / 100), xr = Math.round(1080 * (R.direct + R.rules) / 100);
+    rect(0, y, 1080, 3, K.body);
+    rect(0, y, xr, 3, K.museDim);
+    for (let hx = xd; hx < xr; hx += 6) rect(hx, y, Math.min(3, xr - hx), 3, K.muse);
+    rect(0, y, xd, 3, K.muse);
+  } else if (known) { rect(0, y, 1080, 3, K.body); rect(0, y, Math.round(1080 * pct / 100), 3, K.muse); }
   else rect(0, y, 1080, 3, K.t4);
   hline(0, y + h - 1, 1080, K.line);
   const night = s.phase === 'night';
@@ -258,7 +267,16 @@ function statsBand(y) {
     rx -= (draw ? caps('GAME', rx, base - 1, 10, K.t3, 700, 0.1, 'right') : capsW('GAME', 10, 700, 0.1)) + 13;
     if (draw) vline(rx, y + 11, h - 20, K.line2); rx -= 13;
     const has = counts && s.museShare.muse != null;
-    if (known) {
+    if (R) {
+      // "MUSE decided 100%   direct 79% · rules 21%" (and the body's own, amber, only when it acted)
+      const f = UI(500, 12);
+      if (R.body > 0) { rx -= t(`body on its own ${R.body}%${counts ? ` (${R.n.body})` : ''}`, f, K.body) + 4; rx -= t('·', f, K.t3) + 4; }
+      rx -= t(`rules ${R.rules}%${counts ? ` (${R.n.rule})` : ''}`, f, K.museDim) + 4;
+      rx -= t('·', f, K.t3) + 4;
+      rx -= t(`direct ${R.direct}%${counts ? ` (${R.n.muse})` : ''}`, f, K.museHi) + 12;
+      rx -= t(R.decided + '%', MONO(500, 18), K.t1) + 6;
+      rx -= t('decided', f, K.t2) + 7;
+    } else if (known) {
       rx -= t(`reflexes ${100 - pct}%${has ? ` (${s.museShare.reflex})` : ''}`, UI(500, 12), K.body) + 10;
       if (has) rx -= t(`(${s.museShare.muse})`, MONO(400, 12), K.museHi) + 4;
       rx -= t(pct + '%', MONO(500, 18), K.t1) + 7;
@@ -272,6 +290,17 @@ function statsBand(y) {
   const rx = right(true, counts);
   left(true, natural + 12 <= rx ? null : rx - 12);
   return h;
+}
+
+// the share with Muse's rules: {direct, rules, body, decided} in % and the counts, or null (no rule counts, or no action)
+function shareParts(m) {
+  if (!m || m.rule == null) return null;
+  const n = { muse: m.muse ?? 0, rule: m.rule ?? 0, body: m.body ?? 0 };
+  const all = n.muse + n.rule + n.body;
+  if (!all) return null;
+  const decided = m.dpct ?? Math.round((100 * (n.muse + n.rule)) / all);
+  const direct = Math.min(decided, m.pct ?? Math.round((100 * n.muse) / all));
+  return { direct, rules: decided - direct, body: 100 - decided, decided, n };
 }
 
 /* ---------- 2. goal band ---------- */
@@ -715,7 +744,7 @@ function cardText(level) {
   const who = cap1(callerWord);
   const paras = [`${who} plays this game itself, through MCP: every call it sends shows in RAW below exactly as sent, the server's answer after the arrow.`];
   if (level >= 2) paras.push(`Its why and plan come with each play call, in its own words, in the band above.`);
-  if (level >= 3) paras.push(`The body acts on its own only to stay alive (it often digs in before the first call); that never counts as ${callerWord}'s.`);
+  if (level >= 3) paras.push(`The body fights, flees or eats by itself only by rules ${callerWord} set (counted as ${callerWord}'s, by its rules); anything it does on its own is amber.`);
   return paras;
 }
 function cardRows(w, level) { return cardText(level).reduce((a, t) => a + wrap(t, CARD_F, w - 24).length, 0) + 1; }
@@ -731,12 +760,13 @@ function howCard(x, y, w, draw, level) {
   for (const t of cardText(level)) for (const l of wrap(t, CARD_F, iw)) { T(l, ix, by, CARD_F, K.t2); by += ROW; }
   // the colours: the caller's, the body's, the server's
   const lf = UI(500, 12), who = cap1(callerWord);
-  const sets = [[`${who}: its calls, why and plan`, 'the body: its own reflexes and advice', 'the server'], [ellip(who, lf, 200), 'the body, on its own', 'the server']];
-  const labels = sets.find((ls) => ls.reduce((a, l) => a + 15 + W(l, lf) + 20, -20) <= iw) ?? sets[1];
+  const sets = [[`${who}: its calls, why and plan`, 'its rules', 'the body on its own', 'the server'], [ellip(who, lf, 160), 'its rules', 'the body, alone', 'the server']];
+  const labels = sets.find((ls) => ls.reduce((a, l) => a + 15 + W(l, lf) + 18, -18) <= iw) ?? sets[1];
   let lx = ix;
   labels.forEach((label, i) => {
-    rect(lx, by - 9, 9, 9, [K.muse, K.body, K.t3][i]);
-    lx += 15 + T(label, lx + 15, by, lf, K.t2) + 20;
+    if (i === 1) { rect(lx, by - 9, 9, 9, K.museDim); for (let k = 0; k < 9; k += 3) rect(lx + k, by - 9, 1, 9, K.muse); } // hatched: by its rules
+    else rect(lx, by - 9, 9, 9, [K.muse, null, K.body, K.t3][i]);
+    lx += 15 + T(label, lx + 15, by, lf, K.t2) + 18;
   });
   return h;
 }
@@ -788,7 +818,14 @@ function adviceLines(w, budget) {
   return full.map((l, i) => clamp(l, n[i], f2, w - 12));
 }
 const adviceMinLines = () => { const items = st.advice.items || []; return items.map((it, i) => Math.min(wrap(cap1(it.text), UI(500, 14), RW - 12).length, i === 0 ? 3 : 1)).reduce((a, b) => a + b, 0); };
-const adviceFullLines = () => (st.advice.items || []).map((it) => wrap(cap1(it.text), UI(500, 14), RW - 12).length).reduce((a, b) => a + b, 0);
+// what will show there, in as many lines as the budget allows (with the rules said above, the one row also does)
+const noAdviceLines = (w, budget = 99) => {
+  const long = wrap(`None given to ${callerWord} yet: the body's warnings (night, hunger, lava, mobs) show here, with whether ${callerWord} took them.`, UI(500, 13), w);
+  const short = wrap(`None given to ${callerWord} yet: the body's warnings (night, hunger, lava, mobs) show here.`, UI(500, 13), w);
+  return budget >= long.length ? long : budget >= short.length ? short : explainH() ? null : long;
+};
+// with no advice before the first play call: one row, or the lines that say what will show there (when there is room)
+const adviceFullLines = () => ((st.advice.items || []).length ? (st.advice.items || []).map((it) => wrap(cap1(it.text), UI(500, 14), RW - 12).length).reduce((a, b) => a + b, 0) : !st.currentCall ? noAdviceLines(RW).length : 0);
 function adviceVerdict() {
   // [glyph, words, colour]; a verdict about older advice is never shown against the current one
   const ad = st.advice, items = ad.items || [], at = items[0].givenAt;
@@ -799,12 +836,68 @@ function adviceVerdict() {
   if (!lastPlay || lastPlay.sentS <= items[0].givenAtS) return ['none', `No play call from ${callerWord} since ${at}`, K.t3];
   return ['none', 'No verdict logged', K.t3];
 }
+// Muse's rules in the left column under its calls: "RULES defend · eat at food 4 or less   set 0:12 · call 2", or none
+const rulesH = () => (st.rules ? 22 : 0);
+const rulesGap = () => (st.rules && st.currentCall ? 28 : 0); // the row and the room above it in the left column (in play)
+// before the first play call the right column says what the body will do by itself: only what Muse's rules say
+function rulesExplain(w) {
+  const R = st.rules, who = cap1(callerWord), f = UI(500, 13);
+  const on = R.on.map((r) => r.words);
+  const t = on.length
+    ? `${who}'s rules for the body: ${on.join(', ')}. The body does that by itself and nothing else; it counts as ${callerWord}'s, by its rules.`
+    : `${who}'s rules for the body: none set. With none, the body does nothing by itself: it does not fight back, flee, get out of danger or eat. ${who} sets them with start_game or the policy skill; what the body then does counts as ${callerWord}'s, by its rules.`;
+  return wrap(t, f, w);
+}
+const explainH = () => (st.rules && !st.currentCall && !RELAX ? HEAD + 9 + rulesExplain(RW).length * ROW : 0);
+let RELAX = false; // per draw: no layout fitted, so the extras (the card, the rules said) go
+function explainModule(x, y, w, draw) {
+  if (!explainH()) return 0;
+  if (draw) {
+    REG = [DIV, 1080, 'rules'];
+    head(x, y, w, `${CALLER} · RULES`, K.muse, 'reflexes are its own rules');
+    rulesExplain(w).forEach((l, i) => T(l, x, y + HEAD + 13 + i * ROW, UI(500, 13), K.t2));
+  }
+  return explainH() + GAP;
+}
+function rulesRow(x, y, w, draw) {
+  const R = st.rules;
+  if (!R) return 0;
+  if (!draw) return rulesH();
+  REG = [0, DIV, 'rules'];
+  const b = y + 13;
+  let cx = x + caps('RULES', x, b, 10, K.muse) + 10;
+  const f = UI(500, 12);
+  const meta = R.set ? `${R.on.length ? 'set' : 'changed'} ${R.set}${R.call ? ` · call ${R.call}` : ''}` : '';
+  const metaW = meta ? W(meta, MONO(400, 11)) + 12 : 0;
+  if (!R.on.length) T(ellip(`none: every action is a direct call of ${callerWord}`, f, x + w - metaW - cx), cx, b, f, K.t3);
+  else {
+    // the chips, shortened when they do not fit ("eat at food 4 or less" -> "eat<=4")
+    const words = R.on.map((r) => r.words);
+    const fits = (ws) => ws.reduce((a, t) => a + W(t, f) + 14, 0) <= x + w - metaW - cx;
+    const shown = fits(words) ? words : R.on.map((r) => (r.n === 'eat_below' ? `eat<=${r.v ?? '?'}` : r.words));
+    for (const t of shown) {
+      const tw = W(t, f);
+      if (cx + tw + 10 > x + w - metaW) break;
+      rrect(cx, b - 12, tw + 10, 15, 3, K.museDeep);
+      T(t, cx + 5, b, f, K.museInk);
+      cx += tw + 14;
+    }
+  }
+  if (meta) T(meta, x + w, b, MONO(400, 11), K.t3, 'right');
+  hline(x, y + 18, w, K.line);
+  return rulesH();
+}
 function adviceModule(x, y, w, draw, budget) {
   const items = st.advice.items || [];
   if (draw) REG = [DIV, 1080, 'advice'];
   if (!items.length) {
+    if (st.currentCall || (explainH() && !noAdviceLines(w, budget))) {
+      // in play with no advice (or with the rules said above it before the first call): one row, the label and "none given" beside it (the room goes to the events)
+      if (draw) { const lw = caps('BODY · ADVICE', x, y + 10, 10, K.body); T(`none given to ${callerWord} yet`, x + lw + 10, y + 10, UI(500, 12), K.t3); hline(x, y + 15, w, K.line); }
+      return 22;
+    }
     // before the first play call, also what will show here
-    const lines = st.currentCall ? [`None given to ${callerWord} yet`] : wrap(`None given to ${callerWord} yet: the body's warnings (night, hunger, lava, mobs) show here, with whether ${callerWord} took them.`, UI(500, 13), w);
+    const lines = noAdviceLines(w, budget);
     if (draw) { head(x, y, w, 'BODY · ADVICE', K.body); lines.forEach((l, i) => T(l, x, y + HEAD + 13 + i * ROW, UI(500, 13), K.t3)); }
     return HEAD + 22 + (lines.length - 1) * ROW;
   }
@@ -842,18 +935,21 @@ function adviceModule(x, y, w, draw, budget) {
   if (!inline) yy += 20;
   return yy - y;
 }
-const EV_TX = 84; // event text starts here (time right-aligned at +34, tag at +42)
-const EV_NOTE = 'Newest first: the body on its own, the world, the server.';
-const WHO = { body: ['BODY', K.body], world: ['WORLD', K.world], server: ['SERVER', K.t3] };
+const EV_TX0 = 84; // event text starts here (time right-aligned at +34, tag at +42); wider when a rule's event shows
+const evTx = () => ((st.events || []).some((e) => e.who === 'rule') ? 98 : EV_TX0);
+// a rule's event leads with the rule and when Muse set it: "defend (set 0:12, call 2): fought a zombie"
+const evText = (e) => (e.who === 'rule' ? `${e.rule ?? 'rule'}${e.ruleSet ? ` (set ${e.ruleSet}${e.ruleCall ? `, call ${e.ruleCall}` : ''})` : ''}: ${e.text}` : cap1(e.logged && (st.events || []).length <= 4 ? e.logged : e.text));
+const EV_NOTE = 'Newest first: the body by Muse\'s rules or on its own, the world, the server.';
+const WHO = { body: ['BODY', K.body], world: ['WORLD', K.world], server: ['SERVER', K.t3], rule: ['MUSE RULE', K.muse] };
 // events, newest first, one line each; spare rows let the newest wrap (up to 3 lines)
 function eventsPlan(w, h) {
   const ev = st.events || [];
   if (!ev.length || h < HEAD + ROW) return null;
-  const f = UI(500, 12), tw = w - EV_TX;
+  const f = UI(500, 12), tw = w - evTx();
   const rows = Math.floor((h - HEAD) / ROW);
   const n = Math.min(ev.length, rows);
   let spare = rows - n;
-  const full = ev.slice(0, n).map((e) => wrap(cap1(e.logged && ev.length <= 4 ? e.logged : e.text), f, tw));
+  const full = ev.slice(0, n).map((e) => wrap(evText(e), f, tw));
   const k = full.map(() => 1);
   for (let pass = 2; pass <= 3; pass++) for (let i = 0; i < n && spare > 0; i++) if (full[i].length >= pass && k[i] < pass) { k[i] = pass; spare--; }
   const L = full.map((l, i) => clamp(l, k[i], f, tw));
@@ -867,7 +963,7 @@ function eventsModule(x, y, w, h, draw) {
     REG = [DIV, 1080, 'events'];
     const ev = st.events;
     const who = new Set(ev.slice(0, P.n).map((e) => e.who));
-    const lab = ['body', 'world', 'server'].filter((k) => k !== 'server' || who.has('server')).map((k) => k.toUpperCase()).join(' · ');
+    const lab = [...(who.has('rule') ? ['MUSE RULES'] : []), ...['body', 'world', 'server'].filter((k) => k !== 'server' || who.has('server')).map((k) => k.toUpperCase())].join(' · ');
     head(x, y, w, lab, K.body, `${ev.length} logged · not ${callerWord}`);
     let yy = y + HEAD + 13;
     P.L.forEach((lines, i) => {
@@ -875,9 +971,9 @@ function eventsModule(x, y, w, h, draw) {
       T(e.at, x + 34, yy, MONO(400, 11), K.t3, 'right');
       const [tag, tc] = WHO[e.who] || ['', K.t3];
       caps(tag, x + 42, yy - 1, 8, tc, 700, 0.08);
-      lines.forEach((l) => { T(l, x + EV_TX, yy, UI(500, 12), e.kind === 'milestone' ? K.t1 : K.t2); yy += ROW; });
+      lines.forEach((l) => { T(l, x + evTx(), yy, UI(500, 12), e.who === 'rule' ? K.museInk : e.kind === 'milestone' ? K.t1 : K.t2); yy += ROW; });
     });
-    if (P.note) T(ellip(P.note, UI(500, 12), w - EV_TX), x + EV_TX, yy, UI(500, 12), K.t4);
+    if (P.note) T(ellip(P.note, UI(500, 12), w - evTx()), x + evTx(), yy, UI(500, 12), K.t4);
   }
   return P.h;
 }
@@ -917,7 +1013,9 @@ function rawEntryRuns(r) {
     if (r.latestAnswer) { tail.push({ t: ` · ${r.latestAnswerAt}: `, c: K.t3 }); tail.push({ t: r.latestAnswer, c: K.ans }); }
   } else {
     if (e0 && e0.answer.code) tail.push({ t: e0.answer.code + ' ', c: K.fail, w: 500 });
-    const txt = r.latestAnswer || '';
+    // the code once (the answer's text starts with it too: "NEED_LIVE_VIEW: call live_view first ...")
+    const code = e0 && e0.answer.code;
+    const txt = code ? String(r.latestAnswer || '').replace(new RegExp(`^${code}:\\s*`), '') : (r.latestAnswer || '');
     const m = txt.match(/^(.*?): ok(:|\b)(.*)$/);
     if (m) { tail.push({ t: m[1] + ': ', c: K.ans }); tail.push({ t: 'ok', c: K.ok, w: 500 }); tail.push({ t: m[2] + m[3], c: K.ans }); }
     else tail.push({ t: txt, c: K.ans });
@@ -1048,8 +1146,12 @@ const rawH = (n) => RAW_HEAD + n * RAW_LH + RAW_BOT;
 function packLeft(H, allowEarlier) {
   const opts = {};
   // before the first play call: the card, as full as fits
-  if (!st.currentCall) for (let lv = 3; lv >= 1; lv--) { opts.card = lv; if (nowModule(LX, 0, LW, false, opts) <= H) break; }
-  let used = nowModule(LX, 0, LW, false, opts);
+  if (!st.currentCall && !RELAX) {
+    for (let lv = 3; lv >= 1; lv--) { opts.card = lv; if (nowModule(LX, 0, LW, false, opts) + rulesGap() <= H) break; }
+    if (nowModule(LX, 0, LW, false, opts) + rulesGap() > H) delete opts.card; // no room even for the shortest card
+  }
+  // Muse's rules under its calls (its standing orders to the body)
+  let used = nowModule(LX, 0, LW, false, opts) + rulesGap();
   if (used > H) return null;
   const r0 = latestRun();
   if (r0 && r0.latestAnswer && used + 18 <= H) { opts.latestAns = true; used += 18; }
@@ -1060,7 +1162,8 @@ function packLeft(H, allowEarlier) {
   return { opts, used, earlier, gap: H - used, cardRows: opts.card ? cardRows(LW, opts.card) : 0 };
 }
 // right column: advice (its minimum always), then events, then earlier whys; the smallest gap wins, advice lines first
-function packRight(H, allowEarlier) {
+function packRight(H0, allowEarlier) {
+  const H = H0 - (explainH() ? explainH() + GAP : 0); // before the first play call: what the body does by itself first
   const nItems = (st.advice.items || []).length;
   const bMin = adviceMinLines(), bFull = adviceFullLines();
   let best = null;
@@ -1072,12 +1175,18 @@ function packRight(H, allowEarlier) {
     if (ep) { evH = ep.h; used += GAP + evH; }
     if (allowEarlier && earlierRest().length && H - used >= GAP + HEAD + ROW) { earlier = Math.min(earlierRest().length, Math.floor((H - used - GAP - HEAD) / ROW)); used += GAP + HEAD + earlier * ROW; }
     // each advice line is worth 4 px of gap (the body's advice comes before the event log)
-    const cand = { b, aH, evH, earlier, used, gap: H - used, score: H - used - 4 * b };
+    // in play, room left: what Muse's rules make the body do by itself (none: nothing), at the bottom
+    const xh = st.rules && st.currentCall ? HEAD + 9 + rulesExplain(RW).length * ROW : 0;
+    const explain = xh && H - used >= GAP + xh;
+    if (explain) used += GAP + xh;
+    const cand = { b, aH, evH, earlier, explain, used, gap: H - used, score: H - used - 4 * b };
     if (!best || cand.score < best.score) best = cand;
   }
   if (!best && nItems === 0) return null;
   return best;
 }
+// a visible BODY · WORLD module (the body's and the rules' actions) is worth this much RAW (in px: 18 a line)
+const EV_WORTH = 80;
 function chooseLayout(colTop) {
   const avail = 1080 - colTop - PAD;
   const needFull = rawNeedFull();
@@ -1092,7 +1201,7 @@ function chooseLayout(colTop) {
     const over = Math.max(0, L.gap - 24) + Math.max(0, R.gap - 24);
     // RAW lines count most; a visible BODY · WORLD module and earlier whys are worth a little RAW; holes cost
     // a line of the card is worth a little more than a line of RAW (it is gone with the first play call)
-    const score = n * RAW_LH + L.cardRows * 20 + (R.evH ? 40 : 0) + (L.earlier || R.earlier ? 20 : 0) - over * 4 - (L.gap + R.gap) * 0.25;
+    const score = n * RAW_LH + L.cardRows * 20 + (R.evH ? EV_WORTH : 0) + (L.earlier || R.earlier ? 20 : 0) - over * 4 - (L.gap + R.gap) * 0.25;
     if (!best || score > best.score) best = { n, H, L, R, score };
   }
   return best;
@@ -1141,23 +1250,27 @@ function drawAll() {
       if ((best && best.n >= Math.min(RAW_MIN, rawNeedFull())) || maxPlan <= 3) break;
       maxPlan--;
     }
-    LAST = sig === null ? null : { sig, maxPlan, tH, colTop, best, earlierFrom: EARLIER_FROM };
+    if (!best) { RELAX = true; best = chooseLayout(colTop); } // nothing fitted: without the extras
+    LAST = sig === null ? null : { sig, maxPlan, tH, colTop, best, earlierFrom: EARLIER_FROM, relax: RELAX };
     SEARCHES += 1;
   }
-  if (LAST && LAST.sig === sig) EARLIER_FROM = LAST.earlierFrom;
+  if (LAST && LAST.sig === sig) { EARLIER_FROM = LAST.earlierFrom; RELAX = LAST.relax; }
   goalBand(y, true); y += gH;
   thinkingBand(y, true, maxPlan); y += tH;
   const { n, H, L, R } = best;
   // left column
   nowModule(LX, colTop, LW, true, L.opts);
   let ly = colTop + nowModule(LX, 0, LW, false, L.opts);
+  if (rulesGap()) { rulesRow(LX + 14, ly + 6, LW - 26, true); ly += rulesGap(); }
   if (L.earlier) earlierModule(LX, ly + GAP, LW, HEAD + L.earlier * ROW, true);
   REG = [0, 1080, 'columns'];
   vline(DIV, colTop, H, K.line);
   // right column
-  let ry = colTop + adviceModule(RX, colTop, RW, true, R.b);
-  if (R.evH) { eventsModule(RX, ry + GAP, RW, H - (ry - colTop) - GAP, true); ry += GAP + R.evH; }
-  if (R.earlier) earlierModule(RX, ry + GAP, RW, HEAD + R.earlier * ROW, true);
+  let ry = colTop + explainModule(RX, colTop, RW, true);
+  ry += adviceModule(RX, ry, RW, true, R.b);
+  if (R.evH) { eventsModule(RX, ry + GAP, RW, R.explain ? R.evH : H - (ry - colTop) - GAP, true); ry += GAP + R.evH; }
+  if (R.earlier) { earlierModule(RX, ry + GAP, RW, HEAD + R.earlier * ROW, true); ry += GAP + HEAD + R.earlier * ROW; }
+  if (R.explain) { REG = [DIV, 1080, 'rules']; head(RX, ry + GAP, RW, `${CALLER} · RULES`, K.muse, 'reflexes are its own rules'); rulesExplain(RW).forEach((l, i) => T(l, RX, ry + GAP + HEAD + 13 + i * ROW, UI(500, 13), K.t2)); }
   const rawTop = colTop + H + PAD;
   const P = rawModule(rawTop, n);
   LAYOUT = {
@@ -1207,6 +1320,7 @@ export function drawHud(ctx, state, o = {}) {
   callerWord = CALLER === 'MUSE' ? 'Muse' : CALLER === 'TEST SCRIPT' ? 'the test script' : CALLER.toLowerCase() === 'agent' ? 'the agent' : CALLER;
   NOW_S = st.now?.gameS ?? 0;
   REUSE = o.reuse !== false;
+  RELAX = false;
   drawAll();
   return { layout: LAYOUT, qa: QA_RESULT, searches: SEARCHES };
 }

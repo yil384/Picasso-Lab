@@ -80,7 +80,7 @@ const reflexGist = (text) => String(text ?? '').replace(/^(?:reflex|body|Reflex|
  * there"; two actions with the same reason never read the same.
  */
 export function actionGist(text) {
-  const t = String(text ?? '').replace(/^(?:reflex|body|Reflex|Body):\s*/, '').trim();
+  const t = String(text ?? '').replace(/^(?:reflex|body|Reflex|Body|rule [a-z_]+):\s*/, '').trim();
   const m = /^([^:]{12,}?):\s+(.+)$/.exec(t);
   if (!m || m[1].split(/\s+/).length <= 3) return reflexGist(t);
   return m[2].split(/;| then /)[0].trim();
@@ -197,7 +197,7 @@ export function createUiPanel(o) {
   const top = VIDEO_H - T; // the panel's first row in the frame
 
   // ----- what is shown
-  const st = { hp: null, food: null, clock: '', muse: null, reflex: null, pct: null };
+  const st = { hp: null, food: null, clock: '', muse: null, reflex: null, pct: null, rule: null, body: null, dpct: null };
   let calls = []; // newest first: {tool, say, words, plan, raw, rid, reply, replyGs, replyCode, at, gs, no, steps, added, state, msSum, checked}
   let events = []; // the body's own: {kind: reflex|body|death, text, at, gs}
   let world = []; // from the body's state: {kind: 'world', who, text, at, gs}
@@ -208,6 +208,8 @@ export function createUiPanel(o) {
   let follow = null; // {text, ok, at, gs}
   const advice = new Map(); // kind -> {text, gist, sev, at, gs}
   let toast = null; // a milestone: {text, at}
+  let rules = null; // Muse's rules as the server has them: [{n, on, v, setS, call}] (null: a server without them)
+  let rulesToast = null; // the rules changed: {title, at}
   let anchor = null; // the game clock: {ticks, at, rate}
   let game = null; // {id, s, at}
   let goal = null; // the server's: {key, title, text, reached, list}
@@ -369,6 +371,16 @@ export function createUiPanel(o) {
       }),
     };
   }
+  // Muse's rules in words: "defend, eat at food 4 or less"; none on: ''
+  const RULE_WORDS = { defend: 'defend', flee: 'flee', escape: 'escape' };
+  const ruleWord = (r) => (r.n === 'eat_below' ? `eat at food ${r.v ?? '?'} or less` : RULE_WORDS[r.n] ?? r.n);
+  const rulesWords = (rs) => { const on = (rs ?? []).filter((r) => r.on); return on.length ? on.map(ruleWord).join(', ') : 'none: every action a direct call'; };
+  function rulesState() {
+    const on = rules.filter((r) => r.on);
+    // the newest change: when and with which call
+    const last = rules.filter((r) => Number.isFinite(r.setS)).sort((a, z) => z.setS - a.setS)[0] ?? null;
+    return { on: on.map((r) => ({ n: r.n, words: ruleWord(r), ...(Number.isFinite(r.v) ? { v: r.v } : {}) })), set: last ? clockOf(last.setS) : null, call: last?.call ?? null };
+  }
   function hudState(t) {
     const gs = gameS(t) ?? 0;
     // stats
@@ -384,7 +396,9 @@ export function createUiPanel(o) {
       hp: Number.isFinite(st.hp) ? st.hp : '–', hpMax: 20, food: Number.isFinite(st.food) ? st.food : '–', foodMax: 20,
       dimension: nether ? 'nether' : st.clock === 'END' ? 'end' : 'overworld', phase: night ? 'night' : nether ? 'nether' : 'day', phaseWords,
       timeOfDay: clk && !nether && st.clock !== 'END' ? clk.replace(/^(?:DAY|NIGHT) /, '') : '',
-      museShare: { pct, ...(Number.isFinite(st.muse) && Number.isFinite(st.reflex) && st.muse + st.reflex > 0 ? { muse: st.muse, reflex: st.reflex } : { muse: null, reflex: null }) },
+      museShare: { pct, ...(Number.isFinite(st.muse) && Number.isFinite(st.reflex) && st.muse + st.reflex > 0 ? { muse: st.muse, reflex: st.reflex } : { muse: null, reflex: null }),
+        // Muse's rules (servers that count them): actions by its rules, by the body on its own, decided by Muse %
+        ...(Number.isFinite(st.rule) ? { rule: st.rule, body: st.body ?? 0, dpct: Number.isFinite(st.dpct) ? st.dpct : null } : {}) },
       gameId: game?.id ?? '', gameClock: mmss(gs),
     };
     // the inventory hotbar: the items that matter, in this order
@@ -458,14 +472,18 @@ export function createUiPanel(o) {
     const adviceState = { items, follow: null, lastFollow: follow ? { atS: follow.gs ?? 0, at: clockOf(follow.gs), ok: follow.ok } : null };
     // BODY · WORLD: the body's own actions, what happened around it, the server's
     const evs = [
-      ...events.map((e) => ({ at: e.at, gs: e.gs, who: 'body', kind: e.kind, text: e.kind === 'death' ? e.text : e.text })),
+      ...events.map((e) => ({ at: e.at, gs: e.gs, who: e.src === 'rule' ? 'rule' : 'body', kind: e.kind, text: e.text, ...(e.src === 'rule' ? { rule: e.rule, ruleSet: Number.isFinite(e.rs) ? clockOf(e.rs) : null, ruleCall: e.rc ?? null } : {}) })),
       ...world.map((e) => ({ at: e.at, gs: e.gs, who: e.who ?? 'body', kind: e.who === 'server' ? 'policy' : 'world', text: e.text })),
       ...landmarks.map((e) => ({ at: e.at, gs: e.gs, who: 'world', kind: 'milestone', text: e.text })),
-    ].sort((a, z) => z.at - a.at).map((e) => ({ at: clockOf(e.gs), who: e.who, kind: e.kind, text: e.text }));
+    ].sort((a, z) => z.at - a.at).map((e) => ({ at: clockOf(e.gs), who: e.who, kind: e.kind, text: e.text, ...(e.who === 'rule' ? { rule: e.rule, ruleSet: e.ruleSet, ruleCall: e.ruleCall } : {}) }));
     return {
       caller, now: { gameS: gs, gameClock: mmss(gs) }, stats, position: { y: Number.isFinite(pos?.y) ? pos.y : '–', place: pos?.place ?? '' },
       goal: goalState(goalNow(), fresh), inventory, thinking, earlierThinking, currentCall, raw: { total: Math.max(callTotal, calls.length), entries, runs },
-      advice: adviceState, events: evs, toast: toast && t - toast.at < 6_000 ? { label: 'MILESTONE', title: capital(toast.text) } : null,
+      advice: adviceState, events: evs,
+      // the newest of a milestone and a change of Muse's rules, 6 s each
+      toast: [toast && t - toast.at < 6_000 ? { label: 'MILESTONE', title: capital(toast.text), at: toast.at } : null, rulesToast && t - rulesToast.at < 6_000 ? { label: 'RULES CHANGED', title: rulesToast.title, at: rulesToast.at } : null]
+        .filter(Boolean).sort((a, z) => z.at - a.at).map(({ label, title }) => ({ label, title }))[0] ?? null,
+      rules: rules ? rulesState() : null,
       sheltered: sheltered ? { since: clockOf(sheltered.gs) } : null,
     };
   }
@@ -494,7 +512,8 @@ export function createUiPanel(o) {
           const r = actionGist(l.t);
           const ago = Number.isFinite(l.ago) ? l.ago : 0;
           const gs0 = gameS();
-          if (events[0]?.text !== r) events.unshift({ kind: l.k, text: r, at: now() - ago * 1000, gs: gs0 === null ? null : Math.max(0, gs0 - ago) });
+          const byRule = l.src === 'rule' ? { src: 'rule', rule: l.rule ?? null, rs: Number.isFinite(l.rs) ? l.rs : null, rc: Number.isFinite(l.rc) ? l.rc : null } : {};
+          if (events[0]?.text !== r) events.unshift({ kind: l.k, text: r, at: now() - ago * 1000, gs: gs0 === null ? null : Math.max(0, gs0 - ago), ...byRule });
           events.sort((a, z) => z.at - a.at);
           events = events.slice(0, 12);
         } else if (l.k === 'reply') {
@@ -534,7 +553,7 @@ export function createUiPanel(o) {
         if (anchor && t - anchor.at > 1_500) rate = Math.min(0.03, Math.max(0, ((((data.ticks - anchor.ticks) % 24_000) + 24_000) % 24_000) / (t - anchor.at)));
         anchor = { ticks: data.ticks, at: t, rate };
       }
-      for (const k of ['hp', 'food', 'clock', 'muse', 'reflex', 'pct']) {
+      for (const k of ['hp', 'food', 'clock', 'muse', 'reflex', 'pct', 'rule', 'body', 'dpct']) {
         const v = data[k] ?? null;
         if (v !== null) st[k] = v;
       }
@@ -559,6 +578,12 @@ export function createUiPanel(o) {
     term(u) {
       if (!u) return;
       if (u.game && typeof u.game === 'object') game = { id: u.game.id ?? game?.id ?? '', s: Number.isFinite(u.game.s) ? u.game.s : game?.s, at: now() };
+      if (Array.isArray(u.rules)) {
+        // Muse's rules: a change after the first (start_game's) is a toast
+        const sig = (rs) => JSON.stringify((rs ?? []).filter((r) => r.on).map((r) => [r.n, r.v ?? null]).sort());
+        if (rules && sig(rules) !== sig(u.rules)) rulesToast = { title: rulesWords(u.rules), at: now() };
+        rules = u.rules;
+      }
       if (u.goal && Array.isArray(u.goal.list)) {
         // another goal than the one shown (set_goal): lit for a while, and a toast
         const sig = (x) => (x ? `${x.key}|${x.title}|${x.text ?? ''}` : '');
@@ -601,7 +626,7 @@ export function createUiPanel(o) {
     reset(note = '') {
       bump();
       calls = []; events = []; thoughts = []; world = []; landmarks = []; callTotal = 0; sheltered = null;
-      sub = null; live = null; follow = null; toast = null; anchor = null; game = null; goal = null; prevGoal = null; inv = null; pos = null; over = null; newGoalAt = null;
+      sub = null; live = null; follow = null; toast = null; rules = null; rulesToast = null; anchor = null; game = null; goal = null; prevGoal = null; inv = null; pos = null; over = null; newGoalAt = null;
       caller = 'MUSE';
       advice.clear();
       reachedLocal.clear();
@@ -616,7 +641,7 @@ export function createUiPanel(o) {
      * second went by (its clocks, the progress, the stats), else the last drawing as it is.
      */
     render(t = now()) {
-      const timed = `${Math.floor(t / 1000)}|${newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS}|${toast && t - toast.at < 6_000}`;
+      const timed = `${Math.floor(t / 1000)}|${newGoalAt !== null && t - newGoalAt < NEW_GOAL_MS}|${toast && t - toast.at < 6_000}|${rulesToast && t - rulesToast.at < 6_000}`;
       let state = null, sig = null, content = false;
       let draw = timed !== drawnKey;
       if (!draw && version !== seenVersion && t - lastDrawAt >= MIN_DRAW_GAP_MS) {
