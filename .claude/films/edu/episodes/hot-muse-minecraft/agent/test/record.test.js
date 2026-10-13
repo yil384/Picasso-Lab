@@ -183,3 +183,21 @@ test('MCP_TEST_RECORD: a test caller\'s live_view has the camera film its game f
   }
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('spawnEncoder tee: the live\'s bytes go to the publisher and, as they are, into the recording\'s file', async () => {
+  const { spawnEncoder } = await import('../src/stream.js');
+  const dir = tmp();
+  const ffmpeg = path.join(dir, 'ffmpeg');
+  fs.writeFileSync(ffmpeg, '#!/bin/sh\nprintf "%s" "FLV-HEADER" >&3\nsleep 0.1\nprintf "%s" "-PACKETS" >&3\nexit 0\n', { mode: 0o755 });
+  const got = [];
+  const createPublisher = () => {
+    const em = new EventEmitter();
+    return { on: (e, fn) => em.on(e, fn), input(s) { s.on('data', (d) => got.push(String(d))); }, close() {} };
+  };
+  const tee = path.join(dir, 'stream-1.flv');
+  const { child } = spawnEncoder({ ffmpeg, args: [], output: 'rtmps://live.example/rtmp/key', stdio: ['ignore', 'ignore', 'ignore'], createPublisher, tee });
+  await new Promise((r) => child.once('exit', r));
+  await until(() => fs.existsSync(tee) && fs.readFileSync(tee, 'utf8') === 'FLV-HEADER-PACKETS');
+  assert.equal(got.join(''), 'FLV-HEADER-PACKETS', 'the publisher got every byte');
+  assert.equal(fs.readFileSync(tee, 'utf8'), 'FLV-HEADER-PACKETS', 'and the file the same');
+});
