@@ -90,14 +90,14 @@ test('console: validated lines; a FIFO nobody reads fails at once instead of han
   assert.deepEqual(followCommands('MuseCam', 'Muse_g1'), [
     ['gamemode spectator MuseCam', 'execute as MuseCam run spectate', 'tag @a remove muse_cam_target', 'tag MuseCam add muse_cam', 'tag MuseCam add muse_cam_third',
       'tag MuseCam remove muse_cam_ineye', 'tag MuseCam remove muse_cam_inhead', 'effect give MuseCam minecraft:night_vision infinite 0 true', 'tp MuseCam Muse_g1'],
-    ['tag Muse_g1 add muse_cam_target'],
+    ['tag Muse_g1 add muse_cam_target', 'function muse_cam:fresh'],
   ]);
   assert.ok(followCommands('MuseCam', 'Muse_g1', 'first')[0].includes('tag MuseCam remove muse_cam_third'), 'CAMERA_VIEW=first: the bot\'s head');
   const keep = keepFollowingCommands('MuseCam', 'Muse_g1').flat();
   assert.deepEqual(keep, ['tag Muse_g1 add muse_cam_target', 'execute unless score cam_seq muse_cam_y = cam_logged muse_cam_y run data get storage muse_cam:spot',
     'execute unless score cam_seq muse_cam_y = cam_logged muse_cam_y run scoreboard players operation cam_logged muse_cam_y = cam_seq muse_cam_y'], 'and the evidence of a new camera spot, into the server log once');
-  assert.deepEqual(parkCommands('MuseCam'), ['tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', 'tag MuseCam remove muse_cam_ineye',
-    'tag MuseCam remove muse_cam_inhead', 'execute as MuseCam run spectate', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
+  assert.deepEqual(parkCommands('MuseCam'), ['tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', 'kill @e[type=minecraft:marker,tag=muse_cam_try]',
+    'tag MuseCam remove muse_cam_ineye', 'tag MuseCam remove muse_cam_inhead', 'execute as MuseCam run spectate', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
   for (const l of [...followCommands('MuseCam', 'Muse_g1').flat(), ...keep, ...parkCommands('MuseCam')]) await consoleCommand(file, l);
 });
 
@@ -181,7 +181,7 @@ test('rig on stand-in programs: joins, spectator and park on the console, F1 onc
     assert.equal(JSON.stringify(rows).includes(TOKEN), false, 'nor in the log rows');
 
     await rig.follow('Muse_g1');
-    assert.deepEqual(lines().slice(-10), followCommands('MuseCam', 'Muse_g1').flat());
+    assert.deepEqual(lines().slice(-11), followCommands('MuseCam', 'Muse_g1').flat());
     assert.equal(await rig.follow('bad name; op'), false, 'never a console line from a bad name');
 
     const pid = (await rig.stats()).clientPid;
@@ -387,7 +387,19 @@ test('datapack: every function the camera\'s datapack calls is there, and every 
   assert.match(files.get('view'), /muse_cam_deep[^\n]*to_head/, 'no spot outside: the bot\'s own eyes');
   // the evidence: a record when the rule or the eye's block changes (never every tick), with the blocks around
   assert.match(files.get('choose'), /function muse_cam:note_new$/m);
-  assert.match(files.get('shoulder'), /if score #nc muse_cam_y matches \.\.0 unless score #sr muse_cam_y = #rl muse_cam_y run function muse_cam:note_shoulder/);
+  // every change of the spot over the shoulder (14 and 15 too), a new bot's first one whatever the last game's was
+  assert.match(files.get('shoulder'), /if score #nc muse_cam_y matches \.\.0 unless score #sr muse_cam_y = #sl muse_cam_y run function muse_cam:note_shoulder/);
+  assert.match(files.get('fresh'), /scoreboard players set #sl muse_cam_y 0/);
+  assert.match(files.get('note'), /storage muse_cam:spot hidden int 1 run scoreboard players get #hd/);
+  // the camera draws leaves opaque (fast graphics): no line of sight passes through them (gc950fd: a picture of leaves)
+  for (const name of ['los', 'sight', 'above', 'hold', 'choose']) assert.doesNotMatch(files.get(name), /#minecraft:leaves|#lv/, `${name}: leaves block the view`);
+  // a spot behind the bot only while it is seen from there (both lines), with a second's hold either way
+  for (const n of [14, 15]) {
+    const seen = files.get('shoulder').split('\n').filter((l) => l.includes(`if score #v${n} muse_cam_y matches 1`) && /run tp @e\[type=minecraft:item_display,tag=muse_cam_eye/.test(l));
+    assert.equal(seen.length, 1, `${n}: one seen line`);
+  }
+  assert.match(files.get('shoulder'), /#vb muse_cam_y matches 20\.\. run scoreboard players set #hd muse_cam_y 1/);
+  assert.match(files.get('sight_try'), /positioned ~ ~-0\.5 ~ facing entity/);
   assert.match(files.get('note_new'), /run return 0\n/);
   assert.equal((files.get('note_col').match(/function muse_cam:nb/g) ?? []).length, 25);
   assert.match(files.get('note'), /scoreboard players add cam_seq muse_cam_y 1/);

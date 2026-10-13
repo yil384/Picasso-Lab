@@ -68,7 +68,10 @@ function caps(s, x, y, size, c, w = 700, tr = 0.09, align = 'left') {
   for (const ch of s) { g.fillText(ch, cx, y); cx += MW(ch, cf) + size * tr; }
   return tw;
 }
-function icon(n, x, y, s, a = 1) { const im = ICON(n, s); if (!im) return; g.globalAlpha = a; g.drawImage(im, x, y); g.globalAlpha = 1; }
+function icon(n, x, y, s, a = 1) {
+  QA.push({ x, y, w: s, h: s, s: `[${n}]`, reg: REG, icon: true }); // the QA sees icons too (a title running into one)
+  const im = ICON(n, s); if (!im) return; g.globalAlpha = a; g.drawImage(im, x, y); g.globalAlpha = 1;
+}
 // cut to fit with an ellipsis, at a word when that keeps 60 % of the room
 function ellip(s, f, maxW, force = false) {
   if (!force && MW(s, f) <= maxW) return s;
@@ -158,7 +161,7 @@ const NOWHY_H = 30;
 
 /* ---------- video overlays ---------- */
 function drawHotbar() {
-  REG = [0, 1080, 'video'];
+  REG = [0, 1080, 'hotbar']; // its counts sit on the icons' corners by design
   const n = st.inventory.length, s = 40, gap = 4, pad = 4;
   const w = n * s + (n - 1) * gap + pad * 2, h = s + pad * 2;
   const x = 16, y = VH - 16 - h;
@@ -236,10 +239,7 @@ function statsBand(y) {
       rx -= t(`reflexes ${100 - pct}%${has ? ` (${s.museShare.reflex})` : ''}`, UI(500, 12), K.body) + 10;
       if (has) rx -= t(`(${s.museShare.muse})`, MONO(400, 12), K.museHi) + 4;
       rx -= t(pct + '%', MONO(500, 18), K.t1) + 7;
-    } else {
-      rx -= t('share not counted yet', UI(500, 12), K.t3) + 8;
-      rx -= t('–', MONO(500, 18), K.t2) + 7;
-    }
+    } else rx -= t('no actions yet', UI(500, 12), K.t3) + 10; // nothing done by either side: no share, a neutral rule
     rx -= (draw ? caps(CALLER, rx, base - 1, 10, K.muse, 700, 0.1, 'right') : capsW(CALLER, 10, 700, 0.1)) + 13;
     if (draw) vline(rx, y + 11, h - 20, K.line2);
     return rx;
@@ -252,7 +252,7 @@ function statsBand(y) {
 }
 
 /* ---------- 2. goal band ---------- */
-const GOAL_TAB = 120;
+const GOAL_TAB = 120, GOAL_TAB_MAX = 210; // the title column: at least 120, as wide as the title needs up to 210
 function goalBand(y, draw) {
   const gl = st.goal;
   REG = [0, 1080, 'goal'];
@@ -261,12 +261,17 @@ function goalBand(y, draw) {
     if (!draw) return h;
     rect(0, y, 1080, h, K.base);
     hline(0, y + h - 1, 1080, K.line);
+    // the title column as wide as the title ("Nether and back" ran into the grid at a fixed 120), the count at its right
+    const tf = UI(600, 16), tab = Math.min(GOAL_TAB_MAX, Math.max(GOAL_TAB, Math.ceil(W(gl.title, tf)) + 16));
+    REG = [M, M + tab - 4, 'goal title'];
     caps('GOAL', M, y + 22, 10, K.t3);
-    T(`${gl.done}/${gl.total}`, M + GOAL_TAB - 16, y + 22, MONO(500, 13), K.t2, 'right');
-    T(gl.title, M, y + 44, UI(600, 16), K.t1);
-    vline(M + GOAL_TAB - 4, y + 10, h - 20, K.line2);
-    // 6 columns x 2 rows in reading order; each column as wide as its widest cell, spare room shared out evenly
-    const gx = M + GOAL_TAB + 10, cols = 6, gap = 14;
+    T(`${gl.done}/${gl.total}`, M + tab - 16, y + 22, MONO(500, 13), K.t2, 'right');
+    T(ellip(gl.title, tf, tab - 12), M, y + 44, tf, K.t1);
+    REG = [M + tab - 4, 1080, 'goal grid'];
+    vline(M + tab - 4, y + 10, h - 20, K.line2);
+    // 6 columns x 2 rows in reading order; each column as wide as its widest cell, spare room shared out evenly (short
+    // of room, each gives up the same share of what it needs: its label is cut)
+    const gx = M + tab + 10, cols = 6, gap = 14;
     const cell = (m) => {
       const done = m.state === 'done', next = m.state === 'next';
       const right = done ? m.done : next ? (m.progress || 'next') : '';
@@ -276,8 +281,8 @@ function goalBand(y, draw) {
     };
     const info = gl.list.map(cell);
     const need = []; for (let c = 0; c < cols; c++) need.push(Math.max(...[0, 1].map((r) => (info[r * cols + c] || { need: 0 }).need)));
-    const spare = (X1 - gx - gap * (cols - 1)) - need.reduce((a, b) => a + b, 0);
-    const cw = need.map((n) => n + Math.max(0, spare) / cols);
+    const room = X1 - gx - gap * (cols - 1), needAll = need.reduce((a, b) => a + b, 0), spare = room - needAll;
+    const cw = need.map((n) => (spare >= 0 ? n + spare / cols : (n * room) / needAll));
     let cx0 = gx; const colX = cw.map((w) => { const v = cx0; cx0 += w + gap; return v; });
     gl.list.forEach((m, i) => {
       const r = Math.floor(i / cols), c = i % cols, I = info[i];
@@ -304,17 +309,22 @@ function goalBand(y, draw) {
     let x = M;
     x += caps('GOAL', x, base - 1, 10, K.t3) + 10;
     if (gl.new) { const nw = capsW('NEW', 9) + 12; g.strokeStyle = K.t2; g.lineWidth = 1; g.beginPath(); g.rect(x + 0.5, base - 12.5, nw - 1, 15); g.stroke(); caps('NEW', x + 6, base - 1.5, 9, K.t1); x += nw + 10; }
-    x += T(cap1(gl.title), x, base, UI(600, 16), K.t1) + 18;
+    x += T(ellip(cap1(gl.title), UI(600, 16), 300), x, base, UI(600, 16), K.t1) + 18;
     vline(x, y + 10, h - 20, K.line2); x += 18;
     let rx = X1;
     const pg = gl.previous;
     if (pg) {
-      // the goal before this one, in words: its title, how far it got and what was next
+      // the goal before this one, in words: its title, how far it got and what was next (the next step's words are cut
+      // first, then the title, so the counted parts keep their room)
       const nx = (pg.list || []).find((m) => m.state === 'next') || (pg.list || []).find((m) => m.state !== 'done');
-      const tail = nx ? `next was ${nx.label}` : '';
-      if (tail) rx -= T(tail, rx, base, UI(500, 12), K.t3, 'right') + 8;
+      const parts0 = 140 * (gl.parts || []).length;
+      const fixed = W(`${pg.done}/${pg.total}`, MONO(500, 13)) + 7 + capsW('BEFORE', 9) + 36;
+      const roomB = Math.max(80, rx - x - parts0 - fixed);
+      const pt = ellip(pg.title, UI(500, 13), Math.min(W(pg.title, UI(500, 13)), Math.max(60, roomB * 0.55)));
+      const tail = nx ? ellip(`next was ${nx.label}`, UI(500, 12), Math.max(0, roomB - W(pt, UI(500, 13)) - 16)) : '';
+      if (tail && tail !== '…') rx -= T(tail, rx, base, UI(500, 12), K.t3, 'right') + 8;
       rx -= T(`${pg.done}/${pg.total}`, rx, base, MONO(500, 13), K.t2, 'right') + 7;
-      rx -= T(pg.title, rx, base, UI(500, 13), K.t2, 'right') + 8;
+      rx -= T(pt, rx, base, UI(500, 13), K.t2, 'right') + 8;
       rx -= caps('BEFORE', rx, base - 1, 9, K.t3, 700, 0.09, 'right') + 18;
       vline(rx, y + 10, h - 20, K.line2); rx -= 18;
     }
@@ -322,9 +332,13 @@ function goalBand(y, draw) {
     parts.forEach((p, i) => {
       const px = x + i * (pw + 16);
       icon(p.icon, px, y + 10, 20);
-      const lw = T(p.label, px + 28, base, UI(500, 14), K.t2);
-      const nw = T(`${p.done}/${p.of}`, px + pw, base + 1, MONO(500, 18), K.t1, 'right');
+      const cnt = `${p.done}/${p.of}`, cw = W(cnt, MONO(500, 18));
+      // the label gives way to the count and a bar of at least 24 px (cut at a word)
+      const roomL = pw - 28 - cw - 12 - 24 - 14, lab = roomL >= 30 ? ellip(p.label, UI(500, 14), roomL) : '';
+      const lw = lab ? T(lab, px + 28, base, UI(500, 14), K.t2) : 0;
+      const nw = T(cnt, px + pw, base + 1, MONO(500, 18), K.t1, 'right');
       const bx = px + 28 + lw + 14, bw = px + pw - nw - 12 - bx;
+      if (bw < 8) return;
       if (p.of <= 20) {
         // one segment per thing to count
         const sg = 3, segW = (bw - (p.of - 1) * sg) / p.of;
@@ -342,7 +356,7 @@ function goalBand(y, draw) {
     rect(0, y, 1080, h, K.base); hline(0, y + h - 1, 1080, K.line);
     const base = y + 26;
     let x = M + caps('GOAL', M, base - 1, 10, K.t3) + 10;
-    if (gl.title) { x += T(gl.title, x, base, UI(500, 14), K.t2) + 10; vline(x, y + 10, h - 20, K.line2); x += 12; }
+    if (gl.title) { x += T(ellip(gl.title, UI(500, 14), 240), x, base, UI(500, 14), K.t2) + 10; vline(x, y + 10, h - 20, K.line2); x += 12; }
     const note = 'plain words: the server does not count them';
     const nw = W(note, UI(500, 12));
     T(note, X1, base, UI(500, 12), K.t3, 'right');
@@ -1014,6 +1028,29 @@ function chooseLayout(colTop) {
   }
   return best;
 }
+// The layout (the plan's lines, RAW's lines, what fills each column) is searched again only when something it depends
+// on changed: the clocks, the ages, the elapsed times, the stats and the hotbar are drawn where they stand (one line
+// each), so a state that differs only there keeps the layout it had; those that sit in wrapped text (a call's running
+// time in RAW, the why's age in its header) count by their length.
+const MOVING = new Set(['now', 'stats', 'position', 'inventory', 'gameS', 'agoS', 'lastAgoS', 'elapsed', 'sub', 'lastCallAgoS', 'running', 'waitingS', 'hudText']);
+const DIG = (v) => String(v).replace(/\d/g, '0');
+/**
+ * The state's signature without what moves with the clock (forLayout: with the moving texts that can change the
+ * layout, by their length).
+ */
+export function hudSig(state, forLayout = false) {
+  return JSON.stringify(state, (k, v) => {
+    if (!MOVING.has(k)) return v;
+    if (!forLayout) return undefined;
+    if (k === 'lastCallAgoS') return DIG(agoWords(v ?? 0));
+    if (k === 'running' || k === 'hudText') return typeof v === 'string' ? DIG(v) : undefined;
+    if (k === 'waitingS') return Number.isFinite(v) ? DIG(mmss(v)) : undefined;
+    return undefined;
+  });
+}
+let LAST = null; // the last layout: {sig, maxPlan, tH, colTop, best, earlierFrom}
+let REUSE = true; // per draw: o.reuse false searches the layout again whatever the state
+let SEARCHES = 0; // layout searches so far (tests, measuring)
 function drawAll() {
   rect(0, VH, 1080, 1080 - VH, K.base);
   REG = [0, 1080, 'video'];
@@ -1024,13 +1061,20 @@ function drawAll() {
   const gH = goalBand(y, false);
   // the plan gives up lines (down to 3) before RAW drops below its minimum
   let maxPlan = 7, tH, colTop, best;
-  for (;;) {
-    tH = thinkingBand(0, false, maxPlan);
-    colTop = VH + BAND_H + gH + tH + PAD;
-    best = chooseLayout(colTop);
-    if ((best && best.n >= Math.min(RAW_MIN, rawNeedFull())) || maxPlan <= 3) break;
-    maxPlan--;
+  const sig = REUSE ? hudSig(st, true) : null;
+  if (sig !== null && LAST && LAST.sig === sig) ({ maxPlan, tH, colTop, best } = LAST);
+  else {
+    for (;;) {
+      tH = thinkingBand(0, false, maxPlan);
+      colTop = VH + BAND_H + gH + tH + PAD;
+      best = chooseLayout(colTop);
+      if ((best && best.n >= Math.min(RAW_MIN, rawNeedFull())) || maxPlan <= 3) break;
+      maxPlan--;
+    }
+    LAST = sig === null ? null : { sig, maxPlan, tH, colTop, best, earlierFrom: EARLIER_FROM };
+    SEARCHES += 1;
   }
+  if (LAST && LAST.sig === sig) EARLIER_FROM = LAST.earlierFrom;
   goalBand(y, true); y += gH;
   thinkingBand(y, true, maxPlan); y += tH;
   const { n, H, L, R } = best;
@@ -1063,6 +1107,7 @@ function qaCheck() {
   }
   for (let i = 0; i < QA.length; i++) for (let j = i + 1; j < QA.length; j++) {
     const a = QA[i], b = QA[j];
+    if ((a.icon || b.icon) && a.reg[2] === 'hotbar' && b.reg[2] === 'hotbar') continue;
     const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
     if (ox > 1 && oy > 1) bad.push(['overlap', a, b]);
   }
@@ -1075,8 +1120,9 @@ function qaCheck() {
  * Draw the HUD for a state into g (a 1080x1080 frame's coordinates; translate first to draw into a part of one).
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} state           src/ui-panel.js hudState()
- * @param {{icon?: (name: string, size: number) => any, qa?: boolean}} [o]
- * @returns {{layout: object, qa: {texts: number, problems: Array}}}
+ * @param {{icon?: (name: string, size: number) => any, qa?: boolean, reuse?: boolean}} [o]  reuse: keep the last layout for a
+ *   state that differs from the last one only in what moves with the clock (hudSig; the default)
+ * @returns {{layout: object, qa: {texts: number, problems: Array}, searches: number}}
  */
 export function drawHud(ctx, state, o = {}) {
   g = ctx;
@@ -1090,8 +1136,9 @@ export function drawHud(ctx, state, o = {}) {
   CALLER = st.caller || 'MUSE';
   callerWord = CALLER === 'MUSE' ? 'Muse' : CALLER === 'TEST SCRIPT' ? 'the test script' : CALLER.toLowerCase() === 'agent' ? 'the agent' : CALLER;
   NOW_S = st.now?.gameS ?? 0;
+  REUSE = o.reuse !== false;
   drawAll();
-  return { layout: LAYOUT, qa: QA_RESULT };
+  return { layout: LAYOUT, qa: QA_RESULT, searches: SEARCHES };
 }
 /** The sizes icons are drawn at (pre-scale each once). */
 export const ICON_SIZES = Object.freeze([16, 18, 20, 24, 28]);

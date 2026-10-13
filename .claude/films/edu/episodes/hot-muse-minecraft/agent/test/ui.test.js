@@ -45,6 +45,8 @@ test('plain words: a call as Muse would say it, counts and plurals, a sequence, 
   assert.deepEqual([severityOf({ kind: 'food', text: 'starving: food 2' }), severityOf({ kind: 'night', text: 'night (time 13250): no closed shelter' }), severityOf({ kind: 'shield', text: 'no shield' })], [3, 2, 1]);
   assert.deepEqual(statusData({ health: 17.6, food: 17, time: 2_250 }, { muse: 47, reflex: 4, musePct: 92 }), { hp: 18, food: 17, clock: 'DAY 08:15', ticks: 2250, muse: 47, reflex: 4, pct: 92 });
   assert.deepEqual(statusData({ health: 20, food: 20, dimension: 'the_nether' }, null), { hp: 20, food: 20, clock: 'NETHER' });
+  // the body's own plans (care) count on its side, as the share does: one hole dug before the first call is 0 % / 100 % (1)
+  assert.deepEqual(statusData({}, { muse: 0, reflex: 0, care: 1, musePct: 0 }), { muse: 0, reflex: 1, pct: 0 });
 });
 
 test('why: Muse\'s own words with a call go to the stream (cleaned, cut at a whole word within 140) and the log; the body never sees them', () => {
@@ -249,7 +251,8 @@ test('HUD: the state (the server\'s goal with its times and the next one, the it
   let st = at(4_000);
   assert.deepEqual([st.goal.title, st.goal.list.map((m) => m.atS)], ['The Nether', [272, null, null]], 'the server\'s goal');
   assert.deepEqual([st.inv.obsidian, st.pos.place, st.game], [3, 'deep caves', { id: 'g1', s: 304 }], 'the game\'s age counts on');
-  assert.deepEqual(st.advice, [{ k: 'night', text: 'night: no closed shelter around you', full: 'night (time 12000): no closed shelter around you; 7 blocks', sev: 2 }]);
+  // the advice's tick count is Muse's, not the viewers' ("Night (time 13608): ..." on the live HUD of gc950fd)
+  assert.deepEqual(st.advice, [{ k: 'night', text: 'night: no closed shelter around you', full: 'night: no closed shelter around you; 7 blocks', sev: 2 }]);
   p.term({ lines: [{ k: 'follow', t: 'Went on without the body\'s advice: night' }] });
   assert.equal(at(10).follow, 'Went on without the body\'s advice: night');
   assert.equal(st.status, 'Waiting for Muse’s first move · 0:04');
