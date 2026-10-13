@@ -275,7 +275,7 @@ export function createLiveChannel(o) {
     if (u?.live) t.live = u.live;
     if (u && 'sub' in u) t.sub = u.sub;
     // the HUD's state: the items, where the bot is, the goal, the advice, the game's age (when it was told)
-    for (const k of ['inv', 'pos', 'goal', 'adv']) if (u?.[k]) t[k] = u[k];
+    for (const k of ['inv', 'pos', 'goal', 'adv', 'rules']) if (u?.[k]) t[k] = u[k];
     if (u?.game) t.game = { ...u.game, at: Date.now() };
     t.updates += 1;
   };
@@ -284,7 +284,7 @@ export function createLiveChannel(o) {
     const t = terms.get(id);
     if (!t || typeof stream?.term !== 'function') return;
     const lines = [...t.head, ...(t.cut ? [{ k: 'info', t: '...' }] : []), ...t.tail];
-    const hud = Object.fromEntries(['inv', 'pos', 'goal', 'adv'].filter((k) => t[k]).map((k) => [k, t[k]]));
+    const hud = Object.fromEntries(['inv', 'pos', 'goal', 'adv', 'rules'].filter((k) => t[k]).map((k) => [k, t[k]]));
     if (t.game) {
       const { at, ...game } = t.game;
       hud.game = Number.isFinite(game.s) ? { ...game, s: game.s + Math.max(0, Math.round((Date.now() - at) / 1000)) } : game;

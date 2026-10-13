@@ -280,3 +280,123 @@ test('HUD: SHELTERED over the video while the body is closed in, until the next 
   p.term(cleanTerm({ lines: [{ k: 'call', t: '> play', tool: 'play', words: 'Dawn', of: 1, rid: 2, raw: '{}', steps: [{ say: 'Mine 4 oak logs', raw: 'collect oak_log 4' }] }] }));
   assert.equal(p.hud(t).state.sheltered, null, 'out with the next play call');
 });
+
+// Muse's rules (the owner, 2026-10-13): reflexes are Muse's own rules, all off at start; actions by them are Muse's
+function rulesGame(caller = 'MUSE') {
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  p.term(cleanTerm({ caller, game: { id: 'g71c9f5', s: 10 }, rules: [{ n: 'defend', on: false }, { n: 'flee', on: false }, { n: 'escape', on: false }, { n: 'eat_below', on: false }],
+    st: { hp: 20, food: 20, clock: 'DAY 08:00', ticks: 2000 },
+    lines: [{ k: 'call', t: '> start_game', tool: 'start_game', raw: '{"rules":{}}', rid: 1, src: 'muse' }, { k: 'reply', t: '< New game g71c9f5: a new bot.', rid: 1 }, { k: 'call', t: '> live_view', tool: 'live_view', raw: '{}', rid: 2, src: 'muse' }, { k: 'reply', t: '< Live view of game g71c9f5: test caller: no Facebook live.', rid: 2 }] }));
+  t += 2000;
+  p.term(cleanTerm({ lines: [{ k: 'call', t: '> play_sequence', tool: 'play_sequence', words: 'Wood first', plan: 'Then a table and a pickaxe.', of: 2, rid: 3, raw: '{}', src: 'muse', steps: [{ say: 'Mine 4 oak logs', raw: 'collect oak_log 4', skill: 'collect', args: '{"block":"oak_log","n":4}' }, { say: 'Craft 8 oak planks', raw: 'craft oak_planks 8', skill: 'craft', args: '{"item":"oak_planks","n":8}' }] }], live: { mode: 'run', c: 1, s: 1 }, st: { muse: 0, reflex: 0, rule: 0, body: 0 } }));
+  return { p, step: (ms) => { t += ms; }, now: () => t };
+}
+const drawnTexts = (p, t) => {
+  const g = createCanvas(1080, 1080).getContext('2d');
+  const out = []; const fill = g.fillText.bind(g); g.fillText = (s, x, y) => { out.push(s); fill(s, x, y); };
+  const r = drawHud(g, p.hud(t).state, { reuse: false });
+  return { texts: out, qa: r.qa.problems, g, layout: r.layout };
+};
+
+test('HUD rules: none on (every action a direct call), "MUSE decided 100%", the possession rule all violet', () => {
+  const { p, step, now } = rulesGame();
+  step(5000);
+  p.term(cleanTerm({ st: { muse: 5, reflex: 0, rule: 0, body: 0, pct: 100, dpct: 100 } }));
+  const h = p.hud(now()).state;
+  assert.deepEqual(h.rules, { on: [], set: null, call: null });
+  const d = drawnTexts(p, now());
+  assert.deepEqual(d.qa, []);
+  assert.ok(d.texts.includes('100%') && d.texts.includes('decided') && d.texts.some((x) => /^direct 100%/.test(x)) && d.texts.some((x) => /^rules 0%/.test(x)), d.texts.filter((x) => /%/.test(x)).join(' | '));
+  assert.ok(!d.texts.some((x) => /body on its own/.test(x)), 'the body\'s own share only when it acted');
+  assert.ok(d.texts.some((x) => /^none: every action is a direct call of Muse/.test(x)));
+  const px = (x) => [...d.g.getImageData(x, 608, 1, 1).data.slice(0, 3)].map((v) => v.toString(16).padStart(2, '0')).join('');
+  assert.equal(px(1000), '9d8cff', 'violet to the end');
+});
+
+test('HUD rules: some on, a change mid-game is a toast; rule actions are Muse\'s (MUSE RULE, violet) with when they were set; the body\'s own stays amber', () => {
+  const { p, step, now } = rulesGame();
+  step(10_000);
+  // call 2 sets defend and eat_below 4 at 0:22
+  p.term(cleanTerm({ rules: [{ n: 'defend', on: true, setS: 22, call: 2 }, { n: 'flee', on: false }, { n: 'escape', on: false }, { n: 'eat_below', on: true, v: 4, setS: 22, call: 2 }] }));
+  let h = p.hud(now()).state;
+  assert.deepEqual(h.rules, { on: [{ n: 'defend', words: 'defend' }, { n: 'eat_below', words: 'eat at food 4 or less', v: 4 }], set: '0:22', call: 2 });
+  assert.deepEqual(h.toast, { label: 'RULES CHANGED', title: 'defend, eat at food 4 or less' });
+  // the body acts by the rule; and once on its own
+  step(4000);
+  p.term(cleanTerm({ lines: [{ k: 'reflex', t: 'rule defend: fought a zombie (killed it)', src: 'rule', rule: 'defend', rs: 22, rc: 2, ago: 1 }], st: { muse: 31, reflex: 7, rule: 7, body: 0, pct: 82, dpct: 100 } }));
+  h = p.hud(now()).state;
+  assert.deepEqual([h.events[0].who, h.events[0].rule, h.events[0].ruleSet, h.events[0].ruleCall], ['rule', 'defend', '0:22', 2]);
+  let d = drawnTexts(p, now());
+  assert.deepEqual(d.qa, []);
+  assert.ok(d.texts.some((x) => /^defend \(set 0:22, call 2\): fought a zombie/.test(x)), d.texts.filter((x) => /defend/.test(x)).join(' | '));
+  assert.ok(d.texts.includes('defend') && d.texts.includes('eat at food 4 or less'), 'the chips');
+  assert.ok(d.texts.some((x) => /^set 0:22 · call 2$/.test(x)));
+  assert.ok(d.texts.some((x) => /^direct 82%/.test(x)) && d.texts.some((x) => /^rules 18%/.test(x)));
+  // the body on its own (a reflex whose rule is off): amber, counted apart
+  step(3000);
+  p.term(cleanTerm({ lines: [{ k: 'body', t: 'body: surfaced for air', src: 'body', ago: 0 }], st: { muse: 31, reflex: 9, rule: 7, body: 2, pct: 78, dpct: 95 } }));
+  h = p.hud(now()).state;
+  assert.equal(h.events[0].who, 'body');
+  d = drawnTexts(p, now());
+  assert.deepEqual(d.qa, []);
+  assert.ok(d.texts.some((x) => /^body on its own 5%/.test(x)), 'amber, only when > 0');
+  const px = (x) => [...d.g.getImageData(x, 608, 1, 1).data.slice(0, 3)].map((v) => v.toString(16).padStart(2, '0')).join('');
+  assert.equal(px(20), '9d8cff', 'direct: violet');
+  assert.equal(px(1075), 'efa443', 'the body on its own: amber');
+  // rules all turned off again: none, with when
+  step(5000);
+  p.term(cleanTerm({ rules: [{ n: 'defend', on: false, setS: 49, call: 4 }, { n: 'flee', on: false }, { n: 'escape', on: false }, { n: 'eat_below', on: false, setS: 49, call: 4 }] }));
+  h = p.hud(now()).state;
+  assert.deepEqual([h.rules.on, h.rules.set, h.toast.title], [[], '0:49', 'none: every action a direct call']);
+  d = drawnTexts(p, now());
+  assert.ok(d.texts.some((x) => /^changed 0:49 · call 4$/.test(x)));
+  assert.deepEqual(d.qa, []);
+});
+
+test('HUD rules: the how-to-read card\'s colour key (Muse, its rules, the body on its own, the server); a NEED_LIVE_VIEW refusal in RAW with its code once', () => {
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  const sent = [];
+  const feed = createTermFeed({ send: (id, u) => sent.push(u), now: () => t });
+  const game = { id: 'g1', body: { attribution: () => null } };
+  p.term(cleanTerm({ caller: 'MUSE', game: { id: 'g1', s: 3 }, rules: [{ n: 'defend', on: false }] }));
+  feed.reply(game, 'start_game', {}, { content: [{ type: 'text', text: 'New game g1: a new bot.' }], structuredContent: {} });
+  const args = { steps: [{ skill: 'collect', args: { block: 'oak_log', n: 4 } }], why: 'Wood first', plan: 'Then planks.' };
+  feed.call(game, 'play_sequence', args);
+  feed.reply(game, 'play_sequence', args, { isError: true, content: [{ type: 'text', text: 'Your user wants to watch: call live_view first and show the HTML it returns.' }], structuredContent: { code: 'NEED_LIVE_VIEW' } });
+  for (const u of sent) p.term(cleanTerm(u));
+  t += 1000;
+  const d = drawnTexts(p, t);
+  assert.deepEqual(d.qa, []);
+  const rawText = d.texts.join('');
+  assert.equal((rawText.match(/NEED_LIVE_VIEW/g) ?? []).length, 1, 'the code once');
+  // before the first play call that ran: the card with the four colours
+  let t2 = 1_000_000;
+  const q = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t2 });
+  q.term(cleanTerm({ caller: 'MUSE', game: { id: 'g2', s: 3 }, rules: [{ n: 'defend', on: false }], lines: [{ k: 'call', t: '> start_game', tool: 'start_game', raw: '{}', rid: 1 }, { k: 'reply', t: '< New game g2: a new bot at a fresh spot with an empty inventory. Goal: free play.', rid: 1 }] }));
+  t2 += 1000;
+  const d2 = drawnTexts(q, t2);
+  assert.deepEqual(d2.qa, []);
+  for (const label of ['Muse: its calls, why and plan', 'its rules', 'the body on its own', 'the server']) assert.ok(d2.texts.includes(label), label);
+});
+
+test('HUD rules before the first play call: the right column says what the body does by itself (nothing, with no rule), no hole over 30 px', () => {
+  for (const caller of ['MUSE', 'TEST SCRIPT']) {
+    for (const goalKey of ['nether_and_back', 'free']) {
+      let t = 1_000_000;
+      const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+      const plan = planText({ key: goalKey, title: goalKey, text: null, parts: null }, { leaseMin: 30 });
+      p.term(cleanTerm({ caller, game: { id: 'g1', s: 4 }, goal: { key: goalKey, title: 'Nether and back', text: null, list: MILESTONES }, rules: [{ n: 'defend', on: false }, { n: 'flee', on: false }, { n: 'escape', on: false }, { n: 'eat_below', on: false }],
+        st: { hp: 20, food: 20, clock: 'DAY 08:10', ticks: 2200 },
+        lines: [{ k: 'call', t: '> start_game', tool: 'start_game', raw: '{}', rid: 1, src: 'muse' }, { k: 'reply', t: `< ${replyHead({ content: [{ text: `New game g1: a new bot at a fresh spot with an empty inventory.\n${plan}` }] })}`, rid: 1 }, { k: 'call', t: '> live_view', tool: 'live_view', raw: '{}', rid: 2, src: 'muse' }, { k: 'reply', t: '< Live view of game g1: test caller: no Facebook live.', rid: 2 }] }));
+      t += 5000;
+      p.render(t);
+      const h = p.hud(t);
+      const what = `${caller}, ${goalKey}`;
+      assert.ok(h.layout.leftGap <= 30 && h.layout.rightGap <= 30, `${what}: gaps ${h.layout.leftGap} / ${h.layout.rightGap}`);
+      assert.deepEqual(h.qa.problems, [], what);
+      assert.ok(h.layout.fillers.card >= 1, `${what}: the card`);
+    }
+  }
+});

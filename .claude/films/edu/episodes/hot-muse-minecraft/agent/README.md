@@ -1203,7 +1203,17 @@ and Muse's panel under it:
   call. `test/hud.test.js` checks that state for three callers and three goals: no gap over 30 px, RAW at least 6 lines.
   The body's own actions reach BODY · WORLD between calls (the feed reads the body's journal every 5 s), stamped when
   they happened (g43884a's dig-in at 0:02 showed as 0:59, when the next reply carried it). The thinking band is as
-  tall as the why and plan when nothing earlier runs on under them (76 px only with earlier whys); RAW gets the rest. The three states played through the real
+  tall as the why and plan when nothing earlier runs on under them (76 px only with earlier whys); RAW gets the rest.
+  Muse's rules (2026-10-13, the owner: reflexes are Muse's own rules, all off at the start): the stats strip reads
+  "MUSE decided 95%" with "direct 76% · rules 19%" beside it and the body's own share only when it acted (amber); the
+  possession rule is violet for direct calls, violet hatched for actions by its rules, amber only for the body on its
+  own. RULES under Muse's call in the left column: a chip per rule on ("defend", "eat at food 4 or less") and when it
+  was set ("set 0:41 · call 4"), or "none: every action is a direct call"; a RULES CHANGED toast when Muse changes
+  them. BODY · WORLD labels an action by a rule MUSE RULE, violet, with the rule and when it was set ("eat_below (set
+  0:41, call 4): ate 1 bread at food 4"); the body's own stays BODY, amber. Before the first play call the right
+  column says what the body will do by itself (with no rule: nothing); in play, spare room says it again. The card's
+  colour key has four: the caller, its rules, the body on its own, the server. A refusal's code shows once in RAW
+  (NEED_LIVE_VIEW). Stills through the real panel: `~/Downloads/muse-hud-rules-{start,none,set,acting}.png`. The three states played through the real
   pipeline (`scripts/ui-sample.mjs --story design --design ../ui-art/hud-final/states.json --state nowhy|long|fresh`) in
   the camera image: `~/Downloads/muse-hud-port-*.png`; 30.2 frames a second, gaps p99 50 ms. `test/hud.test.js` checks
   the layout the design measured and its QA (no text over another or out of its column).
