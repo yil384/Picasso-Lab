@@ -99,7 +99,7 @@ const short = (s, n = 170) => (s.length > n ? `${s.slice(0, n - 3)}...` : s);
  * @param {{base?: string, game?: boolean, minutes?: number, production?: boolean, print?: (line: string) => void}} [opts]
  *   production: allow the production host (the smoke check after a production deploy; never from push.sh's staging step)
  */
-export async function runCheck({ base = STAGING_URL, game: playGame = true, minutes = 8, production = false, print = console.log } = {}) {
+export async function runCheck({ base = STAGING_URL, game: playGame = true, minutes = 8, production = false, print = console.log, pause = sleep } = {}) {
   base = String(base).replace(/\/+$/, '');
   let url;
   try { url = new URL(base); } catch { print(`refused: not a URL: ${base}`); return 2; }
@@ -109,14 +109,14 @@ export async function runCheck({ base = STAGING_URL, game: playGame = true, minu
   }
   if (!(minutes > 0 && minutes <= 30)) { print('refused: minutes must be more than 0 and at most 30'); return 2; }
   try {
-    return await checks(base, playGame, minutes, print);
+    return await checks(base, playGame, minutes, print, pause);
   } catch (e) {
     print(`staging-check: FAIL: ${e instanceof CheckFailed ? e.message : e.stack ?? e}`);
     return 1;
   }
 }
 
-async function checks(base, playGame, minutes, print) {
+async function checks(base, playGame, minutes, print, pause) {
   const deadline = Date.now() + minutes * 60_000;
   const t0 = Date.now();
   const at = () => `[${String(Math.round((Date.now() - t0) / 1000)).padStart(4)} s]`;
@@ -164,16 +164,18 @@ async function checks(base, playGame, minutes, print) {
     say(`/mcp -> initialized (${sv?.name ?? '?'} ${sv?.version ?? ''}), tools: ${tools.join(', ')}`);
     if (!playGame) { say('PASS (no game)'); return 0; }
 
-    // 4. a game: start (waiting while Paper boots), find wood, then the wooden pickaxe route
+    // 4. a game: start (waiting while Paper boots: a fresh Paper's first start makes the world, longer than start_game
+    // waits, so SERVER_STARTING is tried again after the time it names), find wood, then the wooden pickaxe route
     let r;
     let wood = null;
     for (let spot = 1; !wood; spot++) {
       for (;;) {
         r = await call('start_game', { adult: true, live: false }); // a check, not a watched game
         if (!r.error) break;
-        if (!/could not start/.test(r.text) || left() < 120_000) fail(`start_game: ${short(r.text.split('\n')[0])}`);
-        say(`start_game: ${short(r.text.split('\n')[0], 120)}; trying again in 5 s`);
-        await sleep(5_000);
+        const again = r.data?.code === 'SERVER_STARTING' ? Math.min(Math.max(Number(r.data.retryAfterS) || 15, 1), 60) : /could not start/.test(r.text) ? 5 : 0;
+        if (!again || left() < 120_000) fail(`start_game: ${short(r.text.split('\n')[0])}`);
+        say(`start_game: ${short(r.text.split('\n')[0], 120)}; trying again in ${again} s`);
+        await pause(again * 1000);
       }
       game = /(?:New|Resumed) game (\w+)/.exec(r.text)?.[1] ?? '?';
       if (/still joining/.test(r.text)) r = await call('get_state');
@@ -182,7 +184,8 @@ async function checks(base, playGame, minutes, print) {
       wood = woodNear(r.text);
       const inv = inventoryOf(r.text);
       if (Object.keys(inv).length) fail(`game ${game} did not start with an empty inventory: ${JSON.stringify(inv)}`);
-      say(`start_game -> game ${game} at ${pos}, empty inventory, ${wood ? `${wood} logs nearby` : 'no logs within reach'}`);
+      const near = lastMatch(r.text, /^nearby blocks \(within \d+\): (.*)$/gm)?.[1] ?? '(no nearby blocks line)';
+      say(`start_game -> game ${game} at ${pos}, empty inventory, ${wood ? `${wood} logs nearby` : `no logs within reach (nearby: ${short(near.replace(/ \(nearest [^)]*\)/g, ''), 140)})`}`);
       if (wood) break;
       if (spot >= 3) fail('three spots in a row had no logs within reach');
       await call('end_game');
