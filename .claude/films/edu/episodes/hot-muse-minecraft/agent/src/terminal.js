@@ -31,8 +31,10 @@ export function cleanTerm(u) {
       { const v = int(l.rid, 1, 1_000_000); if (v !== undefined) out.rid = v; }
       // ms; the step's number in the reply (n of of); its call's number in the game (c) and Muse's own step number (s),
       // pre: a craft the check added before Muse's step s, pt of pts: a part of a step split in parts
-      for (const [key, lo, hi] of [['ms', 0, 86_400_000], ['n', 1, 64], ['of', 1, 64], ['c', 1, 100_000], ['s', 1, 64], ['pt', 1, 64], ['pts', 1, 64]]) { const v = int(l[key], lo, hi); if (v !== undefined) out[key] = v; }
+      // ago: how many seconds before it was sent a line's event happened (the body's own actions, told with a reply)
+      for (const [key, lo, hi] of [['ms', 0, 86_400_000], ['n', 1, 64], ['of', 1, 64], ['c', 1, 100_000], ['s', 1, 64], ['pt', 1, 64], ['pts', 1, 64], ['ago', 0, 86_400]]) { const v = int(l[key], lo, hi); if (v !== undefined) out[key] = v; }
       if (l.pre) out.pre = 1;
+      if (l.shut) out.shut = 1; // the body closed itself in (a shelter)
       if (l.ok) out.ok = 1;
       if (typeof l.ak === 'string' && /^[a-z_]{1,24}$/.test(l.ak)) out.ak = l.ak;
       if (typeof l.tool === 'string' && /^[a-z_]{1,24}$/.test(l.tool)) out.tool = l.tool;
@@ -371,7 +373,8 @@ export function resultLine(st) {
   const what = word(stepSummary(st));
   const first = gist(st.result);
   const extra = { say: plainStep(st), ...(Number.isFinite(st.ms) ? { ms: st.ms } : {}) };
-  if (st.status === 'confirmed') return { k: 'ok', t: clean(`ok  ${first || what}${secs(st.ms)}`), ...extra };
+  // shut: the step closed the body in (a shelter): the video says it is sheltered until the next call
+  if (st.status === 'confirmed') return { k: 'ok', t: clean(`ok  ${first || what}${secs(st.ms)}`), ...extra, ...(/closed itself in/i.test(String(st.result ?? '')) ? { shut: 1 } : {}) };
   if (st.status === 'failed') return { k: 'fail', t: clean(`FAIL ${what}${st.code ? ` ${st.code}` : ''}${first ? `: ${word(first)}` : ''}${secs(st.ms)}`), ...extra, why: shortWhy(st.result) };
   if (st.status === 'cancelled') return { k: 'info', t: clean(`skip ${what}${st.why ? `: ${st.why}` : ''}`) };
   return null;
@@ -495,6 +498,21 @@ export function createTermFeed(o) {
     return g;
   };
   const drop = (id) => { const g = games.get(id); try { g?.offProgress?.(); } catch { /* gone */ } games.delete(id); };
+  /**
+   * A line for what the body did on its own (a reply's onItsOwn, or the body's own journal between calls), once, with
+   * how long ago it happened (ago, in seconds): the video stamps it then, not when a reply carried it (g43884a: a dig-in
+   * at 0:02 showed as 0:59).
+   */
+  function ownLine(g, e) {
+    if (!(e?.seq > g.own)) return null;
+    g.own = e.seq;
+    const agoS = Number.isFinite(e.agoS) ? e.agoS : Number.isFinite(Date.parse(e.at)) ? Math.max(0, (now() - Date.parse(e.at)) / 1000) : 0;
+    // the body sheltered by itself, unless Muse's own shelter came after it (this reply's steps, or later)
+    const bodyAt = now() - agoS * 1000;
+    if (/shelter/i.test(`${e.kind} ${e.text}`) && !(g.museShelterAt >= bodyAt)) Object.assign(g, { lastSkill: 'shelter', lastSkillBy: 'body' });
+    const death = /death|died/i.test(`${e.kind} ${e.text}`);
+    return { k: death ? 'fail' : e.source === 'reflex' ? 'reflex' : 'body', t: clean(`${death ? 'death' : e.source === 'reflex' ? 'reflex' : 'body'}: ${e.text}`), ago: Math.round(agoS), ...(/closed itself in/i.test(String(e.text)) ? { shut: 1 } : {}) };
+  }
   // each call and its reply carry the same number (rid), so the RAW console pairs them though calls may overlap
   const rids = new WeakMap();
   let ridSeq = 0;
@@ -685,15 +703,7 @@ export function createTermFeed(o) {
         const why = bad ? clean(`bad arguments: ${bad[1].trim()}`, 80) : shortWhy(first.replace(/^\d+\.\s*/, ''), 60);
         lines.push({ k: 'fail', t: clean(`FAIL ${st.code ?? ''} ${first}`), ...(why ? { why } : {}) });
       }
-      for (const e of st.onItsOwn ?? []) {
-        if (!(e.seq > g.own)) continue;
-        g.own = e.seq;
-        // the body sheltered by itself, unless Muse's own shelter came after it (this reply's steps, or later)
-        const bodyAt = now() - (Number.isFinite(e.agoS) ? e.agoS * 1000 : 0);
-        if (/shelter/i.test(`${e.kind} ${e.text}`) && !(g.museShelterAt >= bodyAt)) Object.assign(g, { lastSkill: 'shelter', lastSkillBy: 'body' });
-        const death = /death|died/i.test(`${e.kind} ${e.text}`);
-        lines.push({ k: death ? 'fail' : e.source === 'reflex' ? 'reflex' : 'body', t: clean(`${death ? 'death' : e.source === 'reflex' ? 'reflex' : 'body'}: ${e.text}`) });
-      }
+      for (const e of st.onItsOwn ?? []) { const l = ownLine(g, e); if (l) lines.push(l); }
       // the advice: a line only for a kind that is new or whose words changed (the numbers in it, the time of day,
       // change on every reply and are not news), at most 3
       const kinds = new Map();
@@ -732,7 +742,11 @@ export function createTermFeed(o) {
     /** Every few seconds between calls: the status and what is happening now, with no lines (the picture lives). */
     tick(s) {
       if (!s?.id || !games.has(s.id)) return;
-      emit(s, [], null);
+      // what the body did on its own since, from its journal: on the video within seconds, not with the next reply
+      const g = games.get(s.id);
+      let own = [];
+      try { own = typeof s.body?.onItsOwn === 'function' ? s.body.onItsOwn(Math.max(0, g.own)) ?? [] : []; } catch { own = []; }
+      emit(s, own.map((e) => ownLine(g, e)).filter(Boolean), null);
     },
     forget: (id) => drop(id),
   };

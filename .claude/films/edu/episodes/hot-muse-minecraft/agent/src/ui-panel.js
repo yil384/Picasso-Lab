@@ -217,6 +217,7 @@ export function createUiPanel(o) {
   let inv = null;
   let pos = null;
   let over = null;
+  let sheltered = null; // the body closed itself in: {gs} until the next play call
   let caller = 'MUSE';
   let lastEventAt = now();
   let frames = 0;
@@ -465,6 +466,7 @@ export function createUiPanel(o) {
       caller, now: { gameS: gs, gameClock: mmss(gs) }, stats, position: { y: Number.isFinite(pos?.y) ? pos.y : '–', place: pos?.place ?? '' },
       goal: goalState(goalNow(), fresh), inventory, thinking, earlierThinking, currentCall, raw: { total: Math.max(callTotal, calls.length), entries, runs },
       advice: adviceState, events: evs, toast: toast && t - toast.at < 6_000 ? { label: 'MILESTONE', title: capital(toast.text) } : null,
+      sheltered: sheltered ? { since: clockOf(sheltered.gs) } : null,
     };
   }
 
@@ -475,13 +477,25 @@ export function createUiPanel(o) {
       bump();
       for (const l of lines ?? []) {
         if (!l || typeof l.t !== 'string') continue;
+        // sheltered from the step or the body's own action that closed it in, until the next play call or a death
+        if (l.shut) { const gs0 = gameS(), ago = Number.isFinite(l.ago) ? l.ago : 0; sheltered = { gs: gs0 === null ? null : Math.max(0, gs0 - ago) }; }
+        if ((l.k === 'call' && PLAY.test(l.tool ?? (/^> ([a-z_]+)/.exec(l.t)?.[1] ?? ''))) || (l.k === 'fail' && /^death\b/i.test(l.t))) sheltered = null;
         if (l.k === 'call') addCall(l);
         else if (l.k === 'ok' || l.k === 'fail' || (l.k === 'info' && /^skip\b/.test(l.t))) {
-          if (l.k === 'fail' && /^death\b/i.test(l.t)) { events.unshift({ kind: 'death', text: `died (${reflexGist(l.t.replace(/^death:\s*(?:died:\s*)?/i, ''))})`, at: now(), gs: gameS() }); continue; }
+          if (l.k === 'fail' && /^death\b/i.test(l.t)) {
+            const ago = Number.isFinite(l.ago) ? l.ago : 0, gs0 = gameS();
+            events.unshift({ kind: 'death', text: `died (${reflexGist(l.t.replace(/^death:\s*(?:died:\s*)?/i, ''))})`, at: now() - ago * 1000, gs: gs0 === null ? null : Math.max(0, gs0 - ago) });
+            events.sort((a, z) => z.at - a.at);
+            continue;
+          }
           result(l);
         } else if (l.k === 'reflex' || l.k === 'body') {
+          // stamped when it happened (ago: the seconds before it was sent), kept newest first
           const r = actionGist(l.t);
-          if (events[0]?.text !== r) events.unshift({ kind: l.k, text: r, at: now(), gs: gameS() });
+          const ago = Number.isFinite(l.ago) ? l.ago : 0;
+          const gs0 = gameS();
+          if (events[0]?.text !== r) events.unshift({ kind: l.k, text: r, at: now() - ago * 1000, gs: gs0 === null ? null : Math.max(0, gs0 - ago) });
+          events.sort((a, z) => z.at - a.at);
           events = events.slice(0, 12);
         } else if (l.k === 'reply') {
           // the server's answer to a call (its first line), by the call's number
@@ -586,7 +600,7 @@ export function createUiPanel(o) {
     /** Another game on camera: an empty HUD, with a note. */
     reset(note = '') {
       bump();
-      calls = []; events = []; thoughts = []; world = []; landmarks = []; callTotal = 0;
+      calls = []; events = []; thoughts = []; world = []; landmarks = []; callTotal = 0; sheltered = null;
       sub = null; live = null; follow = null; toast = null; anchor = null; game = null; goal = null; prevGoal = null; inv = null; pos = null; over = null; newGoalAt = null;
       caller = 'MUSE';
       advice.clear();

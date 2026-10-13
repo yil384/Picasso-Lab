@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { drawHud, hudSig } from '../src/hud.js';
 import { GOAL_TITLES } from '../src/goals.js';
 import { createUiPanel } from '../src/ui-panel.js';
-import { callerOf, replyHead, cleanTerm } from '../src/terminal.js';
+import { callerOf, replyHead, cleanTerm, createTermFeed } from '../src/terminal.js';
 import { planText } from '../src/report.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -217,4 +217,66 @@ test('feed: a new game\'s answer carries the goal\'s plan to RAW, never the resu
   const h = replyHead({ content: [{ text }] });
   assert.equal(h, 'New game g1: a new bot at a fresh spot with an empty inventory. Goal: Nether and back. The plan: 1. wooden pickaxe: collect logs');
   assert.ok(!/SECRET|resume/i.test(h));
+});
+
+test('feed: the body\'s own actions reach the video between calls, stamped when they happened (g43884a: a dig-in at 0:02 read 0:59)', () => {
+  let clock = 1_000_000;
+  const sent = [];
+  const feed = createTermFeed({ send: (id, u) => sent.push(u), now: () => clock });
+  const journal = [{ seq: 1, at: new Date(clock - 57_000).toISOString(), source: 'care', kind: 'shelter', ok: true, text: 'waiting for your first call at night: dug two blocks down to wait there' }];
+  const game = { id: 'g1', body: { attribution: () => null, onItsOwn: (after) => journal.filter((e) => e.seq > after) } };
+  feed.reply(game, 'start_game', {}, { content: [{ type: 'text', text: 'New game g1: a new bot.' }], structuredContent: {} });
+  feed.tick(game);
+  const own = sent.flatMap((u) => u.lines ?? []).filter((l) => l.k === 'body');
+  assert.equal(own.length, 1, 'between calls, from the body\'s journal');
+  assert.equal(own[0].ago, 57);
+  feed.tick(game);
+  assert.equal(sent.flatMap((u) => u.lines ?? []).filter((l) => l.k === 'body').length, 1, 'once');
+  // the reply that carries it later adds nothing
+  feed.reply(game, 'get_state', {}, { content: [{ type: 'text', text: '' }], structuredContent: { steps: [], onItsOwn: [{ seq: 1, agoS: 70, source: 'care', kind: 'shelter', ok: true, text: journal[0].text }] } });
+  assert.equal(sent.flatMap((u) => u.lines ?? []).filter((l) => l.k === 'body').length, 1);
+  // the panel stamps it 57 s before it came: game time 0:59 - 57 s = 0:02
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  p.term(cleanTerm({ game: { id: 'g1', s: 59 }, lines: [{ k: 'world', who: 'server', t: 'Care policy set' }] }));
+  p.term(cleanTerm({ lines: [own[0]] }));
+  const ev = p.hud(t).state.events;
+  assert.deepEqual(ev.map((e) => [e.at, e.who]), [['0:59', 'server'], ['0:02', 'body']], 'newest first by when it happened');
+});
+
+test('HUD thinking band: as tall as the why and plan at the first play call (nothing earlier to run on); 76 px with earlier whys', () => {
+  createUiPanel({ width: 1080, height: 472, over: 72 });
+  const g = createCanvas(1080, 1080).getContext('2d');
+  const st = clone(STATES.fresh);
+  st.thinking = { ...st.thinking, hasWhy: true, why: 'Night: dig in until dawn', plan: 'Wait it out in the hole, then logs and a wooden pickaxe at first light.' };
+  st.earlierThinking = [];
+  const r = noProblems(g, st, 'call 1, short why and plan');
+  assert.ok(r.layout.thinking[1] < 76, `band ${r.layout.thinking[1]} px`);
+  const withEarlier = clone(st);
+  withEarlier.earlierThinking = [{ at: '0:10', why: 'Logs first' }];
+  const r2 = noProblems(g, withEarlier, 'with an earlier why');
+  assert.equal(r2.layout.thinking[1], 76);
+  assert.ok(r.layout.rawLines >= r2.layout.rawLines, 'the height went to RAW');
+});
+
+test('HUD: SHELTERED over the video while the body is closed in, until the next play call', () => {
+  let t = 1_000_000;
+  const p = createUiPanel({ width: 1080, height: 472, over: 72, now: () => t });
+  p.term(cleanTerm({ caller: 'MUSE', game: { id: 'g1', s: 40 }, lines: [{ k: 'call', t: '> play', tool: 'play', words: 'Night: dig in', of: 1, rid: 1, raw: '{}', steps: [{ say: 'Build a shelter for the night', raw: 'shelter', skill: 'shelter', args: '{}' }] }], live: { mode: 'run', c: 1, s: 1 } }));
+  t += 20_000;
+  p.term(cleanTerm({ lines: [{ k: 'ok', t: 'ok  climbed down to the ground (19 s)', s: 1, shut: 1 }, { k: 'reply', t: '< 1. shelter {}: ok: closed itself in', rid: 1 }], live: { mode: 'idle' } }));
+  t += 1000;
+  p.render(t);
+  let h = p.hud(t);
+  assert.deepEqual(h.state.sheltered, { since: '1:00' });
+  assert.deepEqual(h.qa.problems, []);
+  // with a new-goal toast at once: no overlap
+  p.term(cleanTerm({ goal: { key: 'custom', title: 'kill 3 pigs', text: 'kill 3 pigs', list: [{ k: 'kill_pig', t: 'pigs killed', done: 0, of: 3, atS: null }] } }));
+  p.term(cleanTerm({ goal: { key: 'custom', title: 'kill 10 pigs and collect 64 cobblestone', text: 'x', list: [{ k: 'kill_pig', t: 'pigs killed', done: 0, of: 10, atS: null }] } }));
+  t += 1000;
+  p.render(t);
+  assert.deepEqual(p.hud(t).qa.problems, []);
+  t += 5000;
+  p.term(cleanTerm({ lines: [{ k: 'call', t: '> play', tool: 'play', words: 'Dawn', of: 1, rid: 2, raw: '{}', steps: [{ say: 'Mine 4 oak logs', raw: 'collect oak_log 4' }] }] }));
+  assert.equal(p.hud(t).state.sheltered, null, 'out with the next play call');
 });
