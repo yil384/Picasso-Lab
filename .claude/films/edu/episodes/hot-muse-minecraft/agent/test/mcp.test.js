@@ -18,7 +18,7 @@ import { createWeb } from '../src/web.js';
 import { skillList } from '../src/mcp.js';
 
 async function connect(url) {
-  const c = new Client({ name: 'test', version: '1' });
+  const c = new Client({ name: 'player', version: '1' });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${url}/mcp`)));
   return c;
 }
@@ -150,7 +150,7 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
     for (const r of replies) assert.doesNotMatch(r, /https?:\/\/|\/play\/|\/eyes\/|\/watch\/|[A-Za-z0-9_-]{32}/, r.slice(0, 200));
     const rows = agent.log.tail(200);
     const client = rows.find((r) => r.kind === 'mcp_client');
-    assert.deepEqual(client.client, { name: 'test', version: '1' }, 'the client says what it is');
+    assert.deepEqual(client.client, { name: 'player', version: '1' }, 'the client says what it is');
     assert.match(client.protocolVersion, /^\d{4}-\d{2}-\d{2}$/);
     assert.equal(client.negotiated, client.protocolVersion);
   } finally {

@@ -961,6 +961,16 @@ export function createMcp(hooks) {
       s.liveViewed = true; // the nudge in the replies stops (LIVE_NUDGE)
       const l = hooks.links(s, entry.base);
       if (format === 'link') return text(JSON.stringify({ format: 'link', game: s.id, first_person_url: l.eyes, behind_url: l.watch }));
+      // a test caller (the smoke and check scripts) never spends a Facebook live (MCP_TEST_LIVE on lets it): the same
+      // shape of answer, the 3D view instead of the video, and the camera stays where it is
+      if (s.caller === 'TEST SCRIPT' && !hooks.testLives) {
+        safely(() => hooks.log.event('live_view_test', { session: sid8(), game: s.id, caller: s.caller, format }));
+        if (format === 'embed') return text(JSON.stringify({ format, game: s.id, live: false, state: 'test', camera_game: null, player: null, embed_url: null, video_url: null }));
+        const html = liveViewHtml({ state: 'test', game: s.id, fb: false });
+        const lines = [`Live view of game ${s.id}: test caller: no Facebook live (the live videos a day are few and kept for players). The game itself works.`,
+          `3D view in a web page (plain link): ${l.eyes}`, '', 'HTML page (a status line):', html];
+        return { content: [{ type: 'text', text: lines.join('\n') }], structuredContent: { format: 'html', game: s.id, state: 'test', live: false, camera_game: null, video_url: null, embed_url: null, html } };
+      }
       // the Facebook live channel: the camera is pointed at this game and the call waits for Facebook to show it
       const budget = Math.max(0, waitMs - 3_000);
       const asked = Date.now();
@@ -975,14 +985,19 @@ export function createMcp(hooks) {
       if (format === 'embed') {
         return text(JSON.stringify({ format, game: s.id, live, state: v.state, camera_game: camera, player: embedUrl ? 'facebook' : null, embed_url: embedUrl, video_url: videoUrl }));
       }
-      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb, ownerOnly: Boolean(v.warning), aspect: v.aspect });
+      // at the cap: until when, in UTC (the game is not affected)
+      const capUntil = v.state === 'capped' && Number.isFinite(v.retryInS) ? new Date(Date.now() + v.retryInS * 1000).toISOString().slice(11, 16) : null;
+      const daily = /24 hours|day/.test(String(v.error ?? ''));
+      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb, ownerOnly: Boolean(v.warning), aspect: v.aspect, until: capUntil, daily });
       const lines = [];
       const since = v.liveSince ? ` since ${String(v.liveSince).slice(11, 19)} UTC` : '';
       if (live) lines.push(`Live view of game ${s.id}: live on Facebook${since}.`);
       else if (v.state === 'live') lines.push(`Live view: the camera is on game ${camera} now, not on ${s.id}: that game asked for the live view after this one. A new live_view call points the camera back at ${s.id}.`);
       else if (v.state === 'capped') {
         const mins = Math.max(1, Math.ceil((v.retryInS ?? 60) / 60));
-        lines.push(`Live view of game ${s.id}: not live: ${v.error ?? 'the limit of live videos is reached'} (at most a few an hour and a day, so Facebook does not block the account). The next one can start in about ${mins} min; call live_view again then.`);
+        const inWords = mins < 90 ? `${mins} min` : `${Math.floor(mins / 60)} h ${mins % 60} min`;
+        const why = String(v.error ?? '').replace(/^the limit of /, '').replace(/ is reached$/, '');
+        lines.push(`Live view of game ${s.id}: the live view is at its ${daily ? 'daily' : 'hourly'} limit until ${capUntil ?? `about ${inWords} from now`} UTC${capUntil ? ` (in about ${inWords})` : ''}${why ? `: ${why}, so Facebook does not block the account` : ''}. The game itself works: keep playing, and call live_view again after that time.`);
       } else if (v.state === 'retrying') {
         const why = v.error ? ` (${String(v.error).slice(0, 200)})` : '';
         const when = v.retryInS ? ` in ${v.retryInS} s` : '';

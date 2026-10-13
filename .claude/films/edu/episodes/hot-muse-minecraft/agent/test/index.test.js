@@ -324,7 +324,7 @@ test('startAgent: live_view embed follows the game\'s stream and STREAM_VIDEO_UR
   const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams, loopStatsMs: 50 });
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
   const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
-  const c = new Client({ name: 'index-test', version: '1' });
+  const c = new Client({ name: 'index-player', version: '1' }); // a player: a test-named client gets no live (MCP_TEST_LIVE)
   try {
     await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
     const start = (await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text;
