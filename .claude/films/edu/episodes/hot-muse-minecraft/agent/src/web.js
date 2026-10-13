@@ -736,14 +736,14 @@ export function createWeb(opts = {}) {
   const snapshot = (s) => (s.status === 'ready' && s.body ? safe(() => s.body.snapshot(), null) : null);
 
   /** Start one action; resolves {ok, promise} or {ok:false, status, error}. */
-  function startAction(s, tool, args) {
+  function startAction(s, tool, args, meta = null) {
     if (s.ended) return { ok: false, status: 410, error: `the session has ended: ${s.ended}` };
     if (s.status !== 'ready' || !s.body) return { ok: false, status: 503, error: 'the bot is still joining the world; try again in a few seconds' };
     if (s.running || s.body.busy) return { ok: false, status: 409, error: `busy: ${s.running?.tool ?? 'an action'} is still running (stop it or wait)` };
     s.running = { tool, args, started: now() };
     s.notice = null;
     const promise = Promise.resolve()
-      .then(() => s.body.run(tool, args))
+      .then(() => s.body.run(tool, args, meta))
       .then((r) => ({
         ok: Boolean(r?.ok), result: String(r?.result ?? ''), delta: isPlainObject(r?.delta) ? r.delta : {}, ms: r?.ms,
         ...(isPlainObject(r?.phases) ? { phases: r.phases } : {}), ...(typeof r?.code === 'string' ? { code: r.code } : {}),

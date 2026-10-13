@@ -347,7 +347,7 @@ export function createMcp(hooks) {
   const queueOf = (s) => {
     let q = queues.get(s);
     if (!q) {
-      q = createQueue({ start: (skill, args) => hooks.startAction(s, skill, args), now });
+      q = createQueue({ start: (skill, args, meta) => hooks.startAction(s, skill, args, meta), now });
       queues.set(s, q);
     }
     return q;
@@ -904,7 +904,8 @@ export function createMcp(hooks) {
       } else if (goalRaw) s.tracker.setGoal(readGoal(goalRaw, s), 'start_game');
       // Muse's rules, given with start_game (the body acts by itself by these only; none at the start)
       s.callNo = s.callNo ?? 1;
-      if (rulesArg && typeof s.body?.setRules === 'function') safely(() => s.body.setRules(rulesArg, { call: s.callNo }));
+      // set by start_game itself (not a play call: the HUD numbers play calls), at the time it was sent
+      if (rulesArg && typeof s.body?.setRules === 'function') safely(() => s.body.setRules(rulesArg, { call: null, via: 'start_game', at: Date.now() }));
       // live: false only when the user does not want to watch (the default: they do, and play waits for live_view)
       if (live === false) s.liveOff = true;
       else if (live === true) s.liveOff = false;

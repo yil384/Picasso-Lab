@@ -91,7 +91,8 @@ export function createQueue({ start, now = Date.now }) {
         continue;
       }
       let started;
-      try { started = start(step.skill, step.args); } catch (e) { started = { ok: false, error: String(e?.message ?? e) }; }
+      // the call it belongs to (its number and when it was sent): a rule the step sets says so
+      try { started = start(step.skill, step.args, { call: step.call.no, at: step.call.at }); } catch (e) { started = { ok: false, error: String(e?.message ?? e) }; }
       step.startedAt = now();
       if (!started.ok) {
         finish(step, { ok: false, result: `could not start: ${started.error}`, delta: {} });

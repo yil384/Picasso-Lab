@@ -43,6 +43,7 @@ export function cleanTerm(u) {
         out.rule = l.rule;
         { const v = int(l.rs, 0, 86_400); if (v !== undefined) out.rs = v; }
         { const v = int(l.rc, 1, 100_000); if (v !== undefined) out.rc = v; }
+        if (l.rv === 'start_game') out.rv = 'start_game';
       }
       if (typeof l.tool === 'string' && /^[a-z_]{1,24}$/.test(l.tool)) out.tool = l.tool;
       if (typeof l.code === 'string' && /^[A-Z_]{2,24}$/.test(l.code)) out.code = l.code; // a reply's typed code
@@ -87,6 +88,7 @@ export function cleanTerm(u) {
     out.rules = u.rules.slice(0, 8).filter((r) => ['defend', 'flee', 'escape', 'eat_below'].includes(r?.n)).map((r) => {
       const x = { n: r.n, on: r.on === true };
       for (const [key, lo, hi] of [['v', 0, 20], ['setS', 0, 86_400], ['call', 1, 100_000]]) { const v = int(r[key], lo, hi); if (v !== undefined) x[key] = v; }
+      if (r.via === 'start_game') x.via = 'start_game';
       return x;
     });
   }
@@ -522,6 +524,12 @@ export function createTermFeed(o) {
    * how long ago it happened (ago, in seconds): the video stamps it then, not when a reply carried it (g43884a: a dig-in
    * at 0:02 showed as 0:59).
    */
+  // when and with which call a rule was set, as the stream shows calls: the play call's number (or start_game) and its
+  // send time on the stream's own game clock
+  function setOf(g, r) {
+    const setS = Number.isFinite(r?.atMs) ? Math.max(0, Math.round((r.atMs - g.startedAt) / 1000)) : r?.atS;
+    return { ...(Number.isFinite(setS) ? { setS } : {}), ...(Number.isInteger(r?.call) ? { call: r.call } : {}), ...(r?.via === 'start_game' ? { via: 'start_game' } : {}) };
+  }
   function ownLine(g, e) {
     if (!(e?.seq > g.own)) return null;
     g.own = e.seq;
@@ -532,7 +540,8 @@ export function createTermFeed(o) {
     const death = /death|died/i.test(`${e.kind} ${e.text}`);
     // who decided it: a rule Muse set (with when: rs game seconds, rc its call), else the body on its own
     const byRule = e.source === 'rule';
-    return { k: death ? 'fail' : e.source === 'reflex' || byRule ? 'reflex' : 'body', t: clean(`${death ? 'death' : byRule ? `rule ${e.rule}` : e.source === 'reflex' ? 'reflex' : 'body'}: ${e.text}`), ...(death ? {} : { src: byRule ? 'rule' : 'body' }), ...(byRule && e.rule ? { rule: e.rule, ...(Number.isFinite(e.ruleSet?.atS) ? { rs: e.ruleSet.atS } : {}), ...(Number.isFinite(e.ruleSet?.call) ? { rc: e.ruleSet.call } : {}) } : {}), ago: Math.round(agoS), ...(/closed itself in/i.test(String(e.text)) ? { shut: 1 } : {}) };
+    const set = byRule && e.ruleSet ? setOf(g, e.ruleSet) : {};
+    return { k: death ? 'fail' : e.source === 'reflex' || byRule ? 'reflex' : 'body', t: clean(`${death ? 'death' : byRule ? `rule ${e.rule}` : e.source === 'reflex' ? 'reflex' : 'body'}: ${e.text}`), ...(death ? {} : { src: byRule ? 'rule' : 'body' }), ...(byRule && e.rule ? { rule: e.rule, ...(Number.isFinite(set.setS) ? { rs: set.setS } : {}), ...(Number.isFinite(set.call) ? { rc: set.call } : {}), ...(set.via ? { rv: set.via } : {}) } : {}), ago: Math.round(agoS), ...(/closed itself in/i.test(String(e.text)) ? { shut: 1 } : {}) };
   }
   // each call and its reply carry the same number (rid), so the RAW console pairs them though calls may overlap
   const rids = new WeakMap();
@@ -654,7 +663,7 @@ export function createTermFeed(o) {
       const hud = hudOf(s, g, structured);
       // Muse's rules now, with when each was set (the body acts by itself only by these)
       let rules = null;
-      try { const r = s.body?.rules?.(); if (r?.rules) rules = Object.entries(r.rules).map(([n, v]) => ({ n, on: v === true || v > 0, ...(typeof v === 'number' ? { v } : {}), ...(r.set?.[n] ? { setS: r.set[n].atS, call: r.set[n].call } : {}) })); } catch { rules = null; }
+      try { const r = s.body?.rules?.(); if (r?.rules) rules = Object.entries(r.rules).map(([n, v]) => ({ n, on: v === true || v > 0, ...(typeof v === 'number' ? { v } : {}), ...(r.set?.[n] ? setOf(g, r.set[n]) : {}) })); } catch { rules = null; }
       o.send(s.id, { lines: [...lines.filter(Boolean).filter((l) => l.t), ...(g.world ?? [])], status: text, st, live: liveInfo(s, g), sub: g.sub ?? null, ...(adv ? { adv } : {}), ...(goal ? { goal } : {}), ...(rules ? { rules } : {}), ...hud, ...(extra ?? {}) });
     } catch { /* the video goes on without it */ }
   };

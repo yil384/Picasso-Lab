@@ -63,7 +63,7 @@ test('rules: eat_below has the body eat when idle at that food level, counted as
   assert.deepEqual(on.counts(), { reflex: 0, care: 0, rule: 1, body: 0, byRule: { eat_below: 1 } });
 });
 
-test('rules over /mcp: none at the start (their reflexes off, no action before the first call); start_game rules set them with call 1; the feed carries them', async () => {
+test('rules over /mcp: none at the start (their reflexes off, no action before the first call); start_game rules set them (via start_game), the policy skill with its play call\'s number and send time; the feed carries them', async () => {
   const config = loadConfig({ MODEL_API_KEY: '', LOG_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'rules-')), MC_PORT: '25931' });
   const log = createLogger({ dir: null, config, keep: 500 });
   const hosts = fakeHosts(() => ({ inventory: { cobblestone: 20, bread: 2 } }));
@@ -97,9 +97,21 @@ test('rules over /mcp: none at the start (their reflexes off, no action before t
     await d.callTool({ name: 'get_state', arguments: {} });
     const rules = updates.filter((u) => u.rules).at(-1)?.rules;
     assert.ok(rules, 'the rules reach the feed');
-    assert.deepEqual(rules.find((r) => r.n === 'defend'), { n: 'defend', on: true, setS: 0, call: 1 });
-    assert.deepEqual(rules.find((r) => r.n === 'eat_below'), { n: 'eat_below', on: true, v: 6, setS: 0, call: 1 });
+    // set by start_game itself (the stream numbers play calls only), at the time it was sent
+    assert.deepEqual(rules.find((r) => r.n === 'defend'), { n: 'defend', on: true, setS: 0, via: 'start_game' });
+    assert.deepEqual(rules.find((r) => r.n === 'eat_below'), { n: 'eat_below', on: true, v: 6, setS: 0, via: 'start_game' });
     assert.deepEqual(rules.find((r) => r.n === 'flee'), { n: 'flee', on: false });
+    // the policy skill in a play call: the rule says that play call's number (CALL 1 on the HUD, though it is the
+    // game's 3rd MCP call) and its send time on the stream's clock
+    const sentAt = Date.now();
+    await d.callTool({ name: 'play', arguments: { skill: 'policy', args: { flee: 'on' }, why: 'Flee when hurt', plan: 'Then wood.' } });
+    assert.ok(await until(() => updates.filter((u) => u.rules).at(-1)?.rules.find((r) => r.n === 'flee')?.on === true));
+    const flee = updates.filter((u) => u.rules).at(-1).rules.find((r) => r.n === 'flee');
+    const call = updates.flatMap((u) => u.lines ?? []).filter((l) => l.k === 'call' && l.tool === 'play').at(-1);
+    assert.equal(flee.call, 1, 'the play call\'s number, as the HUD numbers calls');
+    const game = updates.filter((u) => u.game).at(-1).game;
+    assert.ok(Math.abs(flee.setS - (game.s - Math.round((Date.now() - sentAt) / 1000))) <= 2, `set at the call's send time: ${flee.setS} vs game ${game.s}`);
+    assert.ok(call, 'the call went to the stream');
   } finally {
     await c.close();
     await d.close();
