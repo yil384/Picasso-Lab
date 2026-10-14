@@ -190,8 +190,8 @@ export function createUiPanel(o) {
   let logo = null;
   if (o.logo && ['card', 'plain'].includes(o.logo.style)) {
     // a name in assets/muse-ui, a path under assets/ (brand/...), or an absolute path; by default the official logo on its
-    // card, the pixel logo (brand/picasso-lab-pixel-230.png) drawn as it is
-    const name = o.logo.file || (o.logo.style === 'plain' ? 'brand/picasso-lab-pixel-230.png' : 'lab-logo-152.png');
+    // card, the pixel logo (brand/picasso-lab-pixel-180.png) drawn as it is
+    const name = o.logo.file || (o.logo.style === 'plain' ? 'brand/picasso-lab-pixel-180.png' : 'lab-logo-152.png');
     const f = path.isAbsolute(name) ? name : name.includes('/') ? path.join(assets, '..', path.normalize(name).replace(/^(\.\.[/\\])+/, '')) : path.join(assets, name);
     try { const im = new Image(); im.src = fs.readFileSync(f); logo = { img: im, style: o.logo.style }; } catch { logo = null; }
   }

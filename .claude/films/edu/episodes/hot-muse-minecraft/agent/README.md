@@ -1211,7 +1211,7 @@ and Muse's panel under it:
   (`home/static/PicassoLab-Logo.png`: put on white at its full size and scaled to 152 px with lanczos,
   `assets/muse-ui/lab-logo-152.png`); `plain` draws a transparent light logo as it is, at most 240 x 100, with a hard
   dark shadow 2 px down, by default the owner's pixel logo (`assets/brand/picasso-lab-pixel.png`, trimmed to its art,
-  scaled to 230 px with an area filter: `assets/brand/picasso-lab-pixel-230.png`); `STREAM_LOGO_FILE` names its PNG
+  scaled to 180 px with an area filter: `assets/brand/picasso-lab-pixel-180.png`; the poster's at 230); `STREAM_LOGO_FILE` names its PNG
   (in `assets/muse-ui`, a path under `assets/`, or an absolute path). With `STREAM_LOGO` on for the agent too (deploy/.env),
   the live page's poster carries the pixel logo as a data: image. Clear of the
   toasts and of Facebook's LIVE badge; in the stream and `stream-<n>.mp4`, never in the clean recording.
