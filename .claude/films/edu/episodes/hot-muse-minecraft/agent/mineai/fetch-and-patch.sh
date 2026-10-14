@@ -76,7 +76,7 @@ fi
 if [ "$INSTALL" = 1 ]; then "$NODE" "$HERE/../scripts/mineai-fetch.mjs" "$TARGET" --check; fi
 
 if [ "$CHECK" = 1 ]; then
-  echo "== typecheck, crafting tests, the config test (0005), placement (0007, 0009), collect and landings (0008), builds (0010, 0011), reflex toggles (0012), the shield waits (0013), lit frames spared (0014, their corners 0015)"
+  echo "== typecheck, crafting tests, the config test (0005), placement (0007, 0009), collect and landings (0008), builds (0010, 0011), reflex toggles (0012), the shield waits (0013), lit frames spared (0014, their corners 0015), casts from a pool's shore (0016)"
   (cd "$TARGET" && "$BUN" x --bun tsc -p tsconfig.check.json --noEmit)
   (cd "$TARGET" && "$BUN" test src/world/crafting.test.ts src/world/confirmed-craft.test.ts src/actions/craft-item \
     src/utils/craft-plan.test.ts src/actions/temporary-workstation.test.ts src/actions/smelt-item src/actions/use-container \
@@ -84,7 +84,7 @@ if [ "$CHECK" = 1 ]; then
     src/world/placement-candidates.test.ts src/actions/collect-block src/world/landing.test.ts \
     src/runtime/minecraft-runtime.test.ts src/server/runtime-host.test.ts \
     src/navigation/processes/building/build-process.test.ts src/actions/build-structure \
-    src/navigation/mineflayer/movement-policy.test.ts \
+    src/navigation/mineflayer/movement-policy.test.ts src/navigation/processes/mining \
     src/survival/reflexes/hunger.test.ts src/survival/reflexes/breath.test.ts \
     src/survival/reflexes/hostile.test.ts)
 fi

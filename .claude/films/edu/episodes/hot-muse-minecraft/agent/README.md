@@ -2566,6 +2566,15 @@ node scripts/soak.mjs [url] [--games 3] [--minutes 29] [--out DIR]   # default: 
 The first soak found that a LAVA refusal could name a pool by the world spawn, where the next collect was refused.
 The guard and the stall advice no longer name such pools.
 
+**Obsidian at lakes (the first soak's top failure).** "No obsidian came in" happened 3 times at pools of 23 to 64
+sources. Their pour's route aimed at the pool's nearest sources, which in a lake are often under more lava or out in
+the middle, with no stance within reach. Fixes:
+
+- **Runtime patch 0016:** the cast takes a pool's sources open and beside the shore first, then open, then under
+  lava; a pour that formed nothing gives up its stance, and the pool only after 3 such pours.
+- **The body:** collect obsidian first stands on the pool's shore, one above an open source and within 2 blocks of it
+  (read in small boxes around the pool's nearest sources). The stall advice names that stance as a `go_to`.
+
 ### A frame that waits for the server, the frame it stood beside, pools and hunts (2026-10-14, g2409ce)
 
 - **A placement the server did not confirm in time** ("Event blockUpdate ... did not fire within timeout of 5000ms")

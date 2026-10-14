@@ -146,3 +146,25 @@ test('drops it could not pick up (a dark oak canopy, staging 2026-10-14): the co
     assert.equal(fake.world.inventory.get('dark_oak_log'), 3);
   } finally { await body.close(); await hosts.closeAll(); }
 });
+
+test('a lake: collect obsidian stands on its shore first, above an open source (the soak, 2026-10-14)', async () => {
+  const { body, fake, hosts } = await bodyOf('g2409g', { water_bucket: 1, diamond_pickaxe: 1, cobblestone: 20 });
+  try {
+    fake.world.position = { x: 303.5, y: 46, z: 290.5 };
+    await body.refresh();
+    // a lake at y 40: x 300..306, z 300..304, a second layer under it; stone shore and ground, air above
+    const inLake = (x, z) => x >= 300 && x <= 306 && z >= 300 && z <= 304;
+    fake.world.boxAt = (x, y, z) => (y === 40 && inLake(x, z) ? 'lava' : y === 39 && inLake(x, z) ? 'lava' : y <= 40 ? 'stone' : 'air');
+    const listed = [];
+    for (let x = 300; x <= 306; x++) for (let z = 300; z <= 304; z++) listed.push({ x, y: 40, z, level: 0 }, { x, y: 39, z, level: 0 });
+    listed.sort((a, b) => Math.hypot(a.x - 303, a.z - 290) - Math.hypot(b.x - 303, b.z - 290));
+    fake.world.blocks = [{ name: 'lava', found: listed.length, listed }];
+    const r = await body.run('collect', { block: 'obsidian', n: 2 });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /stood on the pool's shore at \d+ 41 \d+ first/);
+    const walk = fake.tools('navigate')[0].args;
+    assert.equal(walk.y, 41, 'one above the lake, on the shore');
+    assert.ok(!inLake(walk.x, walk.z), 'not in the lava');
+    assert.ok(listed.some((l) => l.y === 40 && Math.max(Math.abs(l.x - walk.x), Math.abs(l.z - walk.z)) <= 2), 'within 2 of an open source');
+  } finally { await body.close(); await hosts.closeAll(); }
+});

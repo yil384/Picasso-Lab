@@ -1,0 +1,150 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0016: a cast onto a lava lake starts from its shore.
+- A pool's sources are ordered for the cast: open (air above) and beside the shore first, then open, then those under
+  more lava, nearest first within each. The route's goal takes the first few, which for a lake used to be the nearest:
+  often under other lava or out in the middle, with no stance within reach.
+- A pour that formed no obsidian gives up that stance, and the pool only after 3 such pours (a lake has other shores).
+The soak on staging (2026-10-14) found "no obsidian came in" three times at pools of 23 to 64 sources, 7 minutes lost.
+With tests (cast-targets, mine-process).
+
+diff --git a/src/navigation/processes/mining/cast-targets.test.ts b/src/navigation/processes/mining/cast-targets.test.ts
+new file mode 100644
+--- /dev/null
++++ b/src/navigation/processes/mining/cast-targets.test.ts
+@@ -0,0 +1,18 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { poolSourceOrder } from "./cast-targets.js";
++
++test("Patched for Muse plays Minecraft (picasso-lab), 0016: a lake's open shore sources first, then open ones, then those under lava", () => {
++  // a lake 4 wide at y 10: x 0..3, z 0; stone shore at x -1 and x 4; open air above except x 1, under more lava
++  const names = new Map<string, string>();
++  for (let x = 0; x <= 3; x += 1) names.set(`${x},10,0`, "lava");
++  names.set("1,11,0", "lava");
++  names.set("-1,10,0", "stone");
++  names.set("4,10,0", "stone");
++  for (const x of [0, 1, 2, 3]) for (const z of [-1, 1]) names.set(`${x},10,${z}`, "lava");
++  const nameAt = (x: number, y: number, z: number) => names.get(`${x},${y},${z}`) ?? (y >= 11 ? "air" : "stone");
++  const sources = [0, 1, 2, 3].map((x) => ({ x, y: 10, z: 0 }));
++  // the bot stands over x 2: the nearest source was x 2, in the middle with lava on both sides
++  const order = poolSourceOrder(sources, nameAt, { x: 2, y: 12, z: 0 });
++  assert.deepEqual(order.map((s) => s.x), [3, 0, 2, 1], "open and beside the shore (x 3, x 0), open (x 2), under lava (x 1)");
++});
+diff --git a/src/navigation/processes/mining/cast-targets.ts b/src/navigation/processes/mining/cast-targets.ts
+--- a/src/navigation/processes/mining/cast-targets.ts
++++ b/src/navigation/processes/mining/cast-targets.ts
+@@ -1,4 +1,5 @@
+ import type { Bot } from "mineflayer";
++import { Vec3 } from "vec3";
+ import { asVec3, cellKey } from "../../../utils/index.js";
+ import { findLoadedBlockPositions } from "../../../world/loaded-block-scan.js";
+ import type { BlockPosition } from "../../index.js";
+@@ -7,6 +8,36 @@ import { carriesWaterBucket } from "./cast-obsidian.js";
+ 
+ /** Nearby sources share one pour target; failed stances remain attached to source cells. */
+ const LAVA_POOL_RADIUS = 8;
++
++/**
++ * Patched for Muse plays Minecraft (picasso-lab), 0016: a pool's sources in the order a cast can use them. A source
++ * with open air above it can be poured onto, one under more lava cannot; a source beside the shore has a stance near
++ * it, one in the middle of a lake has none within reach. So open sources beside the shore come first, then open ones,
++ * then the rest, nearest first within each. The route's goal takes the first few (POOL_GOAL_LIPS), which for a lake
++ * used to be the nearest ones, often under other lava or out in the middle with no stance near (the soak on staging,
++ * 2026-10-14: "no obsidian came in" three times at pools of 23 to 64 sources).
++ */
++export function poolSourceOrder(
++  sources: readonly BlockPosition[],
++  nameAt: (x: number, y: number, z: number) => string | null,
++  feet: { x: number; y: number; z: number },
++): BlockPosition[] {
++  const rank = (s: BlockPosition): number => {
++    const above = nameAt(s.x, s.y + 1, s.z);
++    const open = above !== null && above !== "lava" && above !== "water" && !isSolidName(above);
++    const shore = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => {
++      const beside = nameAt(s.x + dx, s.y, s.z + dz);
++      return beside !== null && beside !== "lava";
++    });
++    return open ? (shore ? 0 : 1) : 2;
++  };
++  const away = (s: BlockPosition) => (s.x - feet.x) ** 2 + (s.y - feet.y) ** 2 + (s.z - feet.z) ** 2;
++  return [...sources].map((s) => ({ s, r: rank(s), d: away(s) })).sort((a, b) => a.r - b.r || a.d - b.d).map(({ s }) => s);
++}
++/** A block a pour cannot pass through (anything but air, a liquid or the like); unknown names count as solid. */
++function isSolidName(name: string): boolean {
++  return !/^(air|cave_air|void_air|lava|water|short_grass|tall_grass|fern|large_fern|vine|glow_lichen|snow)$/.test(name);
++}
+ export class CastTargets {
+   readonly #blacklist = new Set<string>();
+   readonly #castStances = new Map<string, Set<string>>();
+@@ -51,10 +82,11 @@ export class CastTargets {
+       if (pool) pool.sources.push(cell);
+       else pools.push({ position: cell, sources: [cell] });
+     }
++    const nameAt = (x: number, y: number, z: number) => this.bot.blockAt(new Vec3(x, y, z))?.name ?? null;
+     return pools.slice(0, this.maximumTargets).map((pool) => ({
+       position: pool.position,
+       kind: "pool" as const,
+-      sources: pool.sources,
++      sources: poolSourceOrder(pool.sources, nameAt, feet),
+       excludedStances: new Set(pool.sources.flatMap((source) => [...(this.#castStances.get(cellKey(source)) ?? [])])),
+     }));
+   }
+diff --git a/src/navigation/processes/mining/mine-process.test.ts b/src/navigation/processes/mining/mine-process.test.ts
+--- a/src/navigation/processes/mining/mine-process.test.ts
++++ b/src/navigation/processes/mining/mine-process.test.ts
+@@ -1182,9 +1182,10 @@ test("a pour that formed no obsidian gives up on the pool", async () => {
+     }),
+   );
+ 
+-  assert.equal(pours, 1);
++  // Patched for Muse plays Minecraft (picasso-lab), 0016: that stance is given up first, the pool after FRUITLESS_POURS
++  assert.ok(pours >= 1 && pours <= 3, `pours: ${pours}`);
+   assert.equal(result.status, "unreachable");
+-  assert.match(result.reason ?? "", /the pour into 0,65,0 formed no obsidian/);
++  assert.match(result.reason ?? "", /formed no obsidian|nothing there could be broken/, "with no other shore: the stance given up, nothing left to try");
+ });
+ 
+ test("lava is not a target without the water to pour on it", async () => {
+diff --git a/src/navigation/processes/mining/mine-process.ts b/src/navigation/processes/mining/mine-process.ts
+--- a/src/navigation/processes/mining/mine-process.ts
++++ b/src/navigation/processes/mining/mine-process.ts
+@@ -78,6 +78,8 @@ const MAX_FRUITLESS_STOPS = 5;
+  * whole surface on the hot path to describe the same near edge.
+  */
+ const POOL_GOAL_LIPS = 8;
++/** Patched for Muse plays Minecraft (picasso-lab), 0016: fruitless pours into one pool before it is given up. */
++export const FRUITLESS_POURS = 3;
+ 
+ function targetInSight(bot: Bot, eye: Vec3, position: BlockPosition): boolean {
+   const block = bot.blockAt(asVec3(position));
+@@ -623,8 +625,11 @@ async function castInReach(
+     targeting.blacklist(target, `the lava at ${cellKey(target.position)} could not be cast: ${outcome.reason}`);
+     return true;
+   }
++  // Patched for Muse plays Minecraft (picasso-lab), 0016: a pour that formed nothing gives up on this stance, and on
++  // the pool only after FRUITLESS_POURS of them (a lake has other shores; one pour that fell short used to end it).
+   if (outcome.obsidianFormed === 0) {
+-    targeting.blacklist(target, `the pour into ${cellKey(outcome.landing)} formed no obsidian`);
++    if (targeting.fruitlessPour(target) >= FRUITLESS_POURS) targeting.blacklist(target, `the pours into ${cellKey(target.position)} formed no obsidian`);
++    else targeting.excludeCastStance(target, feet, `the pour into ${cellKey(outcome.landing)} formed no obsidian`);
+   }
+   if (!outcome.waterRecovered) targeting.recoverWater(outcome.landing);
+   targeting.refresh();
+@@ -778,6 +783,15 @@ class MineTargeting {
+     this.#refreshedAtMs = Number.NEGATIVE_INFINITY;
+   }
+ 
++  readonly #fruitless = new Map<string, number>();
++  /** Patched for Muse plays Minecraft (picasso-lab), 0016: one more pour into this pool that formed nothing; how many. */
++  fruitlessPour(target: MinePoolTarget): number {
++    const key = cellKey(target.position);
++    const n = (this.#fruitless.get(key) ?? 0) + 1;
++    this.#fruitless.set(key, n);
++    return n;
++  }
++
+   /** A failed aiming position says nothing about the other shores of a pool. */
+   excludeCastStance(target: MinePoolTarget, feet: BlockPosition, reason: string): void {
+     this.#casts.excludeStance(target, feet);

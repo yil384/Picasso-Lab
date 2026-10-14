@@ -922,6 +922,38 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
    * stuck advice): the nearest formed obsidian and what is around it (water over it, lava beside it), the nearest
    * still lava pool, and a frame from 10.
    */
+  /**
+   * A place to stand on a lava pool's shore for the pour: a cell with room for the bot over solid ground, one above an
+   * open source (air over it) and within 2 blocks of it, from small boxes read around the pool's nearest sources; the
+   * one nearest the bot, or null. (The soak, 2026-10-14: at lakes of 23 to 64 sources their pour found no stance.)
+   */
+  async function poolStance(sources) {
+    const p = latest.position ? floorPos(latest.position) : null;
+    if (!p || !sources?.length) return null;
+    const near = [...sources].sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y, a.z - p.z) - Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z)).slice(0, 4);
+    const at = new Map();
+    for (const s of near) {
+      const data = await rpc('view_blocks', { box: { x: s.x, y: s.y + 1, z: s.z, half_width: 2, half_height: 2 } }, 10_000).catch(() => null);
+      const box = data?.result?.blocks?.box;
+      if (!box?.layers) continue;
+      for (const layer of box.layers) for (const row of layer.rows) row.blocks.forEach((name, i) => { at.set(`${box.center.x - box.halfWidth + i},${layer.y},${row.z}`, name); });
+    }
+    const free = (n) => n !== undefined && REPLACEABLE.test(n);
+    const solid = (n) => n !== undefined && n !== 'unloaded' && !REPLACEABLE.test(n) && !/^(water|lava|bubble_column)$|_leaves$/.test(n);
+    let best = null;
+    for (const s of near) {
+      if (!free(at.get(`${s.x},${s.y + 1},${s.z}`))) continue; // under more lava or rock: no pour lands on it
+      for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+        if (!dx && !dz) continue;
+        const c = { x: s.x + dx, y: s.y + 1, z: s.z + dz };
+        if (!free(at.get(`${c.x},${c.y},${c.z}`)) || !free(at.get(`${c.x},${c.y + 1},${c.z}`)) || !solid(at.get(`${c.x},${c.y - 1},${c.z}`))) continue;
+        const d = Math.hypot(c.x - p.x, c.y - p.y, c.z - p.z);
+        if (!best || d < best.d) best = { ...c, d };
+      }
+    }
+    return best ? { x: best.x, y: best.y, z: best.z, d: Math.round(best.d) } : null;
+  }
+
   async function obsidianStuck(mined = 0) {
     const p = latest.position ? floorPos(latest.position) : null;
     const near = await formedObsidian(12).catch(() => []);
@@ -947,7 +979,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const pools = p ? lavaPools(data?.result?.blocks?.find?.[0]?.listed ?? [], p).filter((q) => !spawnAt || Math.hypot(q.x - spawnAt.x, q.z - spawnAt.z) > SPAWN_GUARD) : [];
     // the pool here first: their cast gives up on a pool it cannot reach from where it stands; then the next one
     const here = pools.find((q) => q.d <= 16);
-    if (here) parts.push(`${poolWords(here)} is here, but no obsidian came from it (their pour could not reach it from where it stood)`);
+    if (here) {
+      parts.push(`${poolWords(here)} is here, but no obsidian came from it`);
+      const listedHere = (data?.result?.blocks?.find?.[0]?.listed ?? []).filter((l) => (!Number.isFinite(l.level) || l.level === 0) && Math.hypot(l.x - here.x, l.y - here.y, l.z - here.z) <= 8).map(floorPos);
+      const stance = await poolStance(listedHere).catch(() => null);
+      if (stance) options.push({ text: `stand on its shore, above an open source: go_to ${stance.x} ${stance.y} ${stance.z}, then collect obsidian`, hint: { skill: 'go_to', args: { x: stance.x, y: stance.y, z: stance.z } } });
+    }
     if (!((latest.inventory?.water_bucket ?? 0) > 0)) parts.push((latest.inventory?.bucket ?? 0) > 0 ? 'your bucket is empty (the last pour was not scooped back): collect obsidian fills it from the nearest water first' : 'no water bucket is carried');
     const pool = pools.find((q) => q.d > 16 && q.sources >= 2) ?? pools.find((q) => q.d > 16);
     if (pool) options.push({ text: `make more at ${poolWords(pool)}: go_to a spot a few blocks from it, then collect obsidian`, hint: { skill: 'go_to', args: { x: pool.x + 3, y: pool.y + 1, z: pool.z } } });
@@ -1185,6 +1222,18 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             const n = v.args.n;
             const exact = near.slice(0, n).map((c) => ({ tool: 'collect_block', args: { block_name: 'obsidian', x: c.x, y: c.y, z: c.z }, optional: true }));
             plan.calls = [...exact, ...plan.calls.map((c, k) => (k === 0 ? { ...c, topUp: n } : { ...c, topUp: n, rest: true }))];
+          } else {
+            // the pool's shore first, above an open source, so the pour starts within reach (the soak, 2026-10-14: at
+            // lakes their pour found no stance and nothing came in); a walk there that fails changes nothing
+            const pnow = latest.position ? floorPos(latest.position) : null;
+            const lavaNow = await rpc('view_blocks', { find: { block_names: ['lava'], limit: 64 } }, 10_000).catch(() => null);
+            const sources = (lavaNow?.result?.blocks?.find?.[0]?.listed ?? []).filter((l) => !Number.isFinite(l.level) || l.level === 0).map(floorPos)
+              .filter((l) => pnow && Math.hypot(l.x - pnow.x, l.y - pnow.y, l.z - pnow.z) <= LAVA_NEAR);
+            const stance = sources.length ? await poolStance(sources).catch(() => null) : null;
+            if (stance && stance.d > 3) {
+              plan.calls = [{ tool: 'navigate', args: { x: stance.x, y: stance.y, z: stance.z }, optional: true, quiet: true }, ...plan.calls];
+              plan.note = `${plan.note ? `${plan.note}; ` : ''}stood on the pool's shore at ${stance.x} ${stance.y} ${stance.z} first`;
+            }
           }
         }
       }
