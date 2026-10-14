@@ -258,6 +258,32 @@ def('bars', ['xy', 'w', 'h', 'logits', 'words', 'temps'], (g, t, it, R) => {
   }
   return { at: (u, v) => [x0 + u * it.w, y0 - v * it.h] };
 });
+// a needle (a clock hand or a vector) from centre `xy`, length `r`, at angle `a` (radians, clockwise from twelve), eased
+// between `turns` keys ({at, a, dur} or {at, a, until}) so it rotates smoothly; `head` puts an arrowhead on it; `arc`
+// {r, d, lw, color} draws a pen arc from the needle to the needle + d (it turns with it); `text` letters the tip.
+// Added for L02-04. Ref: (u, v) = u along the needle from the centre (v unused).
+const dialA = (t, it) => {
+  let a = it.a ?? 0;
+  for (const k of it.turns || []) { if (!(t > k.at)) break; a = mix(a, k.a, eio(seg(t, k.at, k.at + (k.dur ?? 1.2)))); }
+  return a;
+};
+def('dial', ['xy', 'r'], (g, t, it, R) => {
+  const c = pt(it.xy, R); if (!c || (it.at != null && !(t > it.at))) return null;
+  const a = dialA(t, it), r = it.r, k = it.at == null ? 1 : seg(t, it.at, it.at + (it.dur ?? .4)), col = color(it.color, RED);
+  const tip = (ang, rr) => [c[0] + Math.sin(ang) * rr, c[1] - Math.cos(ang) * rr];
+  const P = [c, tip(a, r * .5), tip(a, r)];
+  if (it.head) arrow(g, P, k, col, it.lw ?? 8, { head: it.head === true ? undefined : it.head });
+  else pen(g, P, k, col, it.lw ?? 8);
+  if (it.arc && k >= 1) {
+    const n = 24, rr = it.arc.r ?? r * .45, ka = it.arc.at == null ? 1 : seg(t, it.arc.at, it.arc.at + .5);
+    if (ka > 0) pen(g, Array.from({ length: n + 1 }, (_, i) => tip(a + it.arc.d * i / n, rr)), ka, color(it.arc.color, RED), it.arc.lw ?? 5);
+  }
+  if (it.text != null) {
+    const [fam, wt] = font(it.font ?? 'latin'), q = tip(a, r + (it.px ?? 44) * (it.gap ?? .9));
+    hand(g, R.text(it.text), q[0], q[1], it.px ?? 44, color(it.tcolor, col), { fam, w: wt, k: it.at == null ? 1 : seg(t, it.at + .2, it.at + .6) });
+  }
+  return { at: (u) => tip(a, r * u) };
+});
 // items shown from `at`, optionally moved (xy, rot) and faded in/out as ONE layer (fadeIn / fadeOut = [t0, t1])
 def('group', ['items'], (g, t, it, R) => {
   if (it.at != null && !(t > it.at)) return null;
@@ -357,6 +383,12 @@ export function compilePanels(panels, R, time) {
       if (k.until != null) { o.dur = tm(k.until, `${w}.temps[${j}].until`) - o.at; delete o.until; }
       return o;
     });
+    if (it.turns) it.turns = it.turns.map((k, j) => {
+      const o = { ...k, at: tm(k.at, `${w}.turns[${j}].at`) };
+      if (k.until != null) { o.dur = tm(k.until, `${w}.turns[${j}].until`) - o.at; delete o.until; }
+      return o;
+    });
+    if (it.arc && it.arc.at != null) it.arc = { ...it.arc, at: tm(it.arc.at, w + '.arc.at') };
     if (it.cuts) it.cuts = it.cuts.map((k, j) => ({ ...k, at: tm(k.at, `${w}.cuts[${j}].at`) }));
     if (it.words) for (const k of it.words) { try { R.text(k); } catch (x) { errs.push(`${w}: ${x.message}`); } }
     if (it.text != null) { try { R.text(it.text); } catch (x) { errs.push(`${w}: ${x.message}`); } }

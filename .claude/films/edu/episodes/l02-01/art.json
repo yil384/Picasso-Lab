@@ -1,0 +1,95 @@
+{
+ "episode": "L02-01",
+ "drawings": [
+  {
+   "name": "line_reader_writer",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chat_first",
+    "line_two_teams",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two invented characters working side by side at one long plain wooden desk, seen from the front. On the left, the reader (simple round face, dot eyes, round glasses, short tidy hair, a sweater) holds up one long blank strip of paper with both hands at chest height and reads along it with wide, attentive eyes. On the right, the writer (simple round face, dot eyes, a ponytail, rolled-up sleeves) leans over a second long blank strip of paper lying flat on the desk and writes on its left end with a pen, concentrating. In the middle of the desk, the reader's elbow pushes one small folded note card across the desk towards the writer. Landscape image 1536x1024; the two characters and the desk fill about 90% of the width; both paper strips are large, plain and empty (each about 35% of the width). No text, no letters, no numbers on the strips, the card or anywhere."
+  },
+  {
+   "name": "line_whisper_line",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chat_first",
+    "line_two_teams",
+    "line_tiny_lab"
+   ],
+   "prompt": "Five invented characters (simple round faces, dot eyes, five different hairstyles and heights) stand in one single row from left to right, each one leaning to whisper into the ear of the next, a hand cupped around the mouth, like the party game of passing a whisper down a line. The first on the left holds a small blank note card; the last on the right listens with a puzzled frown, scratching their head. Seen from the side and slightly in front, full figures. Landscape image 1536x1024; the row fills about 92% of the width. No text, no letters, no numbers, no speech bubbles."
+  },
+  {
+   "name": "line_round_table",
+   "kind": "line",
+   "group": "B",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_chat_first",
+    "line_two_teams",
+    "line_tiny_lab"
+   ],
+   "prompt": "Seen from slightly above and in front: five invented characters (simple round faces, dot eyes, five different hairstyles) sit around one round table and all talk and listen at the same moment, each turned towards the others with open, lively hand gestures, as in a lively meeting where everyone hears everyone at once. On the table a few blank note cards and three cups. Square image 1024x1024; the table and the people fill about 85% of the width, centred. No text, no letters, no numbers, no speech bubbles."
+  },
+  {
+   "name": "line_writer_cover",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chat_first",
+    "line_two_teams",
+    "line_tiny_lab"
+   ],
+   "prompt": "One invented character (simple round face, dot eyes, a ponytail, rolled-up sleeves) sits at a plain desk, seen from the front and a little above, writing with a pen on a very long blank strip of paper that lies flat across the whole desk from the left edge to the right edge of the picture. With the other hand the character presses a plain blank index card flat onto the strip just to the right of the pen, covering the rest of the strip ahead, and glances at the card with a determined look, not peeking. Landscape image 1536x1024; the paper strip runs across about 92% of the width at the lower third and is wide and plain; the character sits behind the desk in the middle. No text, no letters, no numbers on the strip, the card or anywhere."
+  },
+  {
+   "name": "line_two_banks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chat_first",
+    "line_balance",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with a little space between them. Left half: a grand old bank building with stone columns, wide steps and a big front door, and a small invented character walking up the steps carrying a money bag. Right half: a grassy river bank with reeds and a few stones, a river flowing past, a happy fish leaping out of the water in an arc, and a small invented character sitting on the bank holding a fishing rod. Landscape image 1536x1024; the two halves together fill about 92% of the width, each half about the same size. No text, no letters, no numbers, no signs, the pediment of the building is plain, no currency symbols on the bag."
+  },
+  {
+   "name": "line_paired_cards",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "Seen from a little above on a table: one pair of large plain index cards lies flat in front, side by side, joined at the top by one paper clip; behind it a short, neat stack of more such clipped pairs. At the right, a hand is carefully clipping one more pair of cards together. Square image 1024x1024; the front pair is large (the two cards together about 70% of the width) and completely empty; the whole group fills about 85% of the width. No text, no letters, no numbers, no lines on the cards."
+  },
+  {
+   "name": "line_block_towers",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_two_teams",
+    "line_chat_first",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two invented children (simple round faces, dot eyes) playing with plain wooden toy blocks on a playroom floor, seen from the front. On the left, a relaxed child stands beside ONE tall, tidy tower of blocks, six blocks high, one hand resting on it, smiling. On the right, a second child, flustered and a little sweaty, is building TWO towers of the same blocks side by side, each six blocks high, with a few small planks laid across between them as bridges, while carrying an extra armful of blocks and with more blocks scattered at their feet. Landscape image 1536x1024; the children and the three towers fill about 90% of the width; the towers are about 65% of the image height. Plain blocks with no letters, numbers or pictures; no text anywhere.",
+   "people": true
+  }
+ ]
+}

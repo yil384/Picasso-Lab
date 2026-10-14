@@ -1,0 +1,51 @@
+[
+ {
+  "id": "C1",
+  "lecture": "L02",
+  "rec_start": 752.89,
+  "rec_end": 760.07,
+  "dur": 7.18,
+  "text": "you can always ask yourself, can you predict what is the trend afterwards? And can you improve that paper?"
+ },
+ {
+  "id": "C2",
+  "lecture": "L02",
+  "rec_start": 1172.2,
+  "rec_end": 1180.6,
+  "dur": 8.4,
+  "text": "So even the first token can look at the third token. And the second token can also look at the third token. So it's bidirectional for the encoding part.",
+  "text_was": "So even the first token can look at the third token. And the second token can also look at the third token. So it's bi-directional for the encoding part."
+ },
+ {
+  "id": "C3",
+  "lecture": "L02",
+  "rec_start": 1502.53,
+  "rec_end": 1508.59,
+  "dur": 6.06,
+  "text": "Because if you look at the translation example, at least we believe for the translation, we should look at the whole sentence."
+ },
+ {
+  "id": "C4",
+  "lecture": "L02",
+  "rec_start": 1550.06,
+  "rec_end": 1552.86,
+  "dur": 2.8,
+  "text": "So we are losing something. But we are gaining something."
+ },
+ {
+  "id": "C5",
+  "lecture": "L02",
+  "rec_start": 1643.87,
+  "rec_end": 1647.48,
+  "dur": 3.61,
+  "text": "when you should do accurate modeling and when you should do simple modeling?"
+ },
+ {
+  "id": "C6",
+  "lecture": "L02",
+  "rec_start": 1671.01,
+  "rec_end": 1675.35,
+  "dur": 4.34,
+  "text": "Because it's always alternating between each other. No clean winner."
+ }
+]

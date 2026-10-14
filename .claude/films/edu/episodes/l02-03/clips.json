@@ -1,0 +1,58 @@
+[
+ {
+  "id": "C2",
+  "lecture": "L02",
+  "rec_start": 3128.59,
+  "rec_end": 3132.89,
+  "dur": 4.3,
+  "text": "In that scenario, if you look at these two sentences, they will be the same"
+ },
+ {
+  "id": "C3",
+  "lecture": "L02",
+  "rec_start": 3311.75,
+  "rec_end": 3315.19,
+  "dur": 3.44,
+  "text": "It's not a weight matrix. You do not need to train it."
+ },
+ {
+  "id": "C4",
+  "lecture": "L02",
+  "rec_start": 3341.19,
+  "rec_end": 3345.55,
+  "dur": 4.36,
+  "text": "But they always have the same angles for each two pieces."
+ },
+ {
+  "id": "C5",
+  "lecture": "L02",
+  "rec_start": 3464.19,
+  "rec_end": 3468.78,
+  "dur": 4.59,
+  "text": "If you can ensure your values are healthy, it will make your model much more stable."
+ },
+ {
+  "id": "C8",
+  "lecture": "L02",
+  "rec_start": 3796.56,
+  "rec_end": 3799.7,
+  "dur": 3.14,
+  "text": "after you have a PDF, you ask a question."
+ },
+ {
+  "id": "C9",
+  "lecture": "L02",
+  "rec_start": 3859.03,
+  "rec_end": 3860.78,
+  "dur": 1.75,
+  "text": "I feel it's pretty difficult."
+ },
+ {
+  "id": "C10",
+  "lecture": "L02",
+  "rec_start": 4055.84,
+  "rec_end": 4059.77,
+  "dur": 3.93,
+  "text": "But how about the entire part? No, it's not."
+ }
+]

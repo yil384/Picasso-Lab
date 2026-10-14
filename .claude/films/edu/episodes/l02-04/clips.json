@@ -1,0 +1,58 @@
+[
+ {
+  "id": "C12",
+  "lecture": "L04",
+  "rec_start": 256.51,
+  "rec_end": 262.37,
+  "dur": 5.86,
+  "text": "And so indeed, this kind of positional encoding is applied per layer per head."
+ },
+ {
+  "id": "C22",
+  "lecture": "L04",
+  "rec_start": 290.95,
+  "rec_end": 293.6,
+  "dur": 2.65,
+  "text": "this kind of positional information will get lost."
+ },
+ {
+  "id": "C24",
+  "lecture": "L02",
+  "rec_start": 4414.73,
+  "rec_end": 4418.94,
+  "dur": 4.21,
+  "text": "We want the whole embedding to be rotational invariant."
+ },
+ {
+  "id": "C27",
+  "lecture": "L02",
+  "rec_start": 4471.35,
+  "rec_end": 4474.31,
+  "dur": 2.96,
+  "text": "So each of these two were rotated by an angle."
+ },
+ {
+  "id": "C28",
+  "lecture": "L02",
+  "rec_start": 4645.51,
+  "rec_end": 4648.29,
+  "dur": 2.78,
+  "text": "So it's kind of a lot of tricks to do it."
+ },
+ {
+  "id": "C29",
+  "lecture": "L02",
+  "rec_start": 4540.52,
+  "rec_end": 4541.7,
+  "dur": 1.18,
+  "text": "You identify the problem."
+ },
+ {
+  "id": "C31",
+  "lecture": "L04",
+  "rec_start": 320.7,
+  "rec_end": 324.26,
+  "dur": 3.56,
+  "text": "But when you add another thing, then it doesn't really work."
+ }
+]

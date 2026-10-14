@@ -1,0 +1,3393 @@
+{
+ "id": "l02-01",
+ "lecture": "L02",
+ "facts": "FACTS.md",
+ "title": "L02-01 Why Chatbots Kept Only Half the Transformer",
+ "langs": [
+  "en"
+ ],
+ "voice": {
+  "lines": "vo_lines.json",
+  "clips": "clips.json",
+  "clipDir": "~/picasso-work/clips/l02-01",
+  "rate": "+4%",
+  "slotPad": 0.4
+ },
+ "sound": {
+  "dir": "~/picasso-assets/snd"
+ },
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "slides",
+  "drawings": {
+   "rw": {
+    "src": "line_reader_writer",
+    "w": 1040
+   },
+   "wc": {
+    "src": "line_writer_cover",
+    "w": 1040
+   },
+   "whisper": {
+    "src": "line_whisper_line",
+    "w": 1040
+   },
+   "table": {
+    "src": "line_round_table",
+    "w": 900
+   },
+   "banks": {
+    "src": "line_two_banks",
+    "w": 1040
+   },
+   "pairs": {
+    "src": "line_paired_cards",
+    "w": 800
+   },
+   "towers": {
+    "src": "line_block_towers",
+    "w": 1040
+   },
+   "paper": {
+    "src": "line_paper",
+    "w": 600
+   },
+   "heap": {
+    "src": "line_heap",
+    "w": 800
+   },
+   "balance": {
+    "src": "line_balance",
+    "w": 900
+   },
+   "chat": {
+    "src": "line_chat_first",
+    "w": 700
+   },
+   "lab": {
+    "src": "line_lab_2017",
+    "w": 1040
+   },
+   "grow": {
+    "src": "line_grow",
+    "w": 1000
+   },
+   "mic": {
+    "src": "line_mic",
+    "w": 240,
+    "boost": 0.3
+   }
+  },
+  "slides": {
+   "s11": {
+    "src": "s-11.png"
+   },
+   "s12": {
+    "src": "s-12.png"
+   }
+  }
+ },
+ "mic": {
+  "drawing": "mic"
+ },
+ "end": {
+  "at": "endCard"
+ },
+ "panels": [
+  {
+   "id": "p0",
+   "note": "the cover: reader (encoder) and writer (decoder) at one desk; a red cut line; the title (hook; F2, F15)",
+   "items": [
+    {
+     "id": "rw",
+     "t": "draw",
+     "d": "rw",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 1040
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "rw",
+      0.2574,
+      0.3949
+     ],
+     "w": 560,
+     "h": 520,
+     "a": 0.28,
+     "rot": -0.05
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "rw",
+      0.7386,
+      0.3949
+     ],
+     "w": 560,
+     "h": 520,
+     "a": 0.3,
+     "rot": 0.05
+    },
+    {
+     "t": "label",
+     "text": "in1",
+     "xy": [
+      "rw",
+      0.1704,
+      0.301
+     ],
+     "px": 40,
+     "font": "latin",
+     "rot": 0.03
+    },
+    {
+     "t": "label",
+     "text": "in2",
+     "xy": [
+      "rw",
+      0.2838,
+      0.3223
+     ],
+     "px": 40,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "in3",
+     "xy": [
+      "rw",
+      0.3972,
+      0.3074
+     ],
+     "px": 40,
+     "font": "latin",
+     "rot": -0.04
+    },
+    {
+     "t": "label",
+     "text": "o1",
+     "xy": [
+      "rw",
+      0.674,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "o2",
+     "xy": [
+      "rw",
+      0.7136,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "o3",
+     "xy": [
+      "rw",
+      0.7518,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "o4",
+     "xy": [
+      "rw",
+      0.8441,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "title.0",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 116,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.1",
+     "xy": [
+      80,
+      462
+     ],
+     "px": 84,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "fit": 960,
+     "id": "title2"
+    },
+    {
+     "t": "underline",
+     "of": "title2",
+     "dx": 4,
+     "dy": 46,
+     "rise": -8,
+     "bend": 0.03,
+     "at": "title",
+     "dur": 0.6
+    },
+    {
+     "t": "sans",
+     "text": "strip",
+     "xy": [
+      86,
+      560
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "rw",
+       0.5264,
+       0.0213
+      ],
+      [
+       "rw",
+       0.5211,
+       1.0032
+      ]
+     ],
+     "lw": 6,
+     "dash": [
+      22,
+      16
+     ]
+    },
+    {
+     "t": "label",
+     "text": "which",
+     "xy": [
+      "rw",
+      0.5264,
+      0.0213,
+      0,
+      -40
+     ],
+     "px": 44,
+     "color": "red",
+     "patch": 0.3,
+     "rot": -0.04
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "note": "the 2017 paper; built to translate; encoder reads, decoder writes (F1-F3)",
+   "items": [
+    {
+     "t": "label",
+     "text": "ptitle",
+     "xy": [
+      540,
+      372
+     ],
+     "px": 70,
+     "at": "p1+0.4",
+     "fit": 960
+    },
+    {
+     "t": "sans",
+     "text": "pcite",
+     "xy": [
+      540,
+      440
+     ],
+     "px": 30,
+     "a": 0.8,
+     "at": "p1+0.9"
+    },
+    {
+     "id": "paper",
+     "t": "draw",
+     "d": "paper",
+     "xy": [
+      540,
+      900
+     ],
+     "w": 600,
+     "at": "p1+0.3",
+     "dur": 1.8
+    },
+    {
+     "t": "label",
+     "text": "ribbon",
+     "xy": [
+      "paper",
+      0.8281,
+      0.1154
+     ],
+     "px": 44,
+     "color": "red",
+     "font": "latin",
+     "at": "n2@2017"
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "paper",
+      0.8281,
+      0.1154
+     ],
+     "w": 130,
+     "a": 0.7,
+     "at": "n2@2017"
+    },
+    {
+     "t": "label",
+     "text": "built",
+     "xy": [
+      "paper",
+      0.3672,
+      0.1971
+     ],
+     "px": 50,
+     "color": "red",
+     "patch": 0.35,
+     "rot": -0.05,
+     "at": "n2@translate"
+    },
+    {
+     "t": "label",
+     "text": "inout",
+     "xy": [
+      "paper",
+      0.4812,
+      0.8008
+     ],
+     "px": 36,
+     "patch": 0.4,
+     "at": "n2@sentence",
+     "fit": 560
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "paper",
+      0.2655,
+      0.5025
+     ],
+     "w": 300,
+     "h": 90,
+     "a": 0.6,
+     "at": "n3@encoder"
+    },
+    {
+     "t": "label",
+     "text": "enc",
+     "xy": [
+      "paper",
+      0.2655,
+      0.511
+     ],
+     "px": 42,
+     "patch": 0.3,
+     "at": "n3@encoder"
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "paper",
+      0.6928,
+      0.6445
+     ],
+     "w": 300,
+     "h": 90,
+     "a": 0.6,
+     "at": "n3@decoder"
+    },
+    {
+     "t": "label",
+     "text": "dec",
+     "xy": [
+      "paper",
+      0.6928,
+      0.6531
+     ],
+     "px": 42,
+     "patch": 0.3,
+     "at": "n3@decoder"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "paper",
+      0.3876,
+      0.5309
+     ],
+     "to": [
+      "paper",
+      0.5707,
+      0.6232
+     ],
+     "bend": 0.2,
+     "lw": 5,
+     "at": "n3@decoder",
+     "dur": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "note": "picture a team: the reader = encoder, the writer = decoder; the made-up sentence (F3, RUN)",
+   "items": [
+    {
+     "t": "label",
+     "text": "team",
+     "xy": [
+      70,
+      360
+     ],
+     "px": 80,
+     "align": "left",
+     "at": "n4@picture"
+    },
+    {
+     "id": "rw",
+     "t": "draw",
+     "d": "rw",
+     "xy": [
+      540,
+      960
+     ],
+     "w": 1040,
+     "at": "p2+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "rw",
+      0.2574,
+      0.3949
+     ],
+     "w": 560,
+     "h": 520,
+     "a": 0.28,
+     "rot": -0.05,
+     "at": "n4@reader"
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "rw",
+      0.7386,
+      0.3949
+     ],
+     "w": 560,
+     "h": 520,
+     "a": 0.3,
+     "rot": 0.05,
+     "at": "n4@writer"
+    },
+    {
+     "t": "label",
+     "text": "rdr",
+     "xy": [
+      "rw",
+      0.2113,
+      0.0128,
+      0,
+      -62
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n4@reader",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "wtr",
+     "xy": [
+      "rw",
+      0.7452,
+      0.0747,
+      0,
+      -62
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n4@writer",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "in1",
+     "xy": [
+      "rw",
+      0.1704,
+      0.301
+     ],
+     "px": 40,
+     "font": "latin",
+     "rot": 0.03,
+     "at": "n5@sentence"
+    },
+    {
+     "t": "label",
+     "text": "in2",
+     "xy": [
+      "rw",
+      0.2838,
+      0.3223
+     ],
+     "px": 40,
+     "font": "latin",
+     "at": "n5@sentence"
+    },
+    {
+     "t": "label",
+     "text": "in3",
+     "xy": [
+      "rw",
+      0.3972,
+      0.3074
+     ],
+     "px": 40,
+     "font": "latin",
+     "rot": -0.04,
+     "at": "n5@sentence"
+    },
+    {
+     "t": "label",
+     "text": "madeup",
+     "xy": [
+      "rw",
+      0.1058,
+      0.1494
+     ],
+     "px": 30,
+     "color": "pencil",
+     "at": "n5@madeup",
+     "rot": -0.05
+    },
+    {
+     "t": "label",
+     "text": "o1",
+     "xy": [
+      "rw",
+      0.674,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin",
+     "at": "n5@i"
+    },
+    {
+     "t": "label",
+     "text": "o2",
+     "xy": [
+      "rw",
+      0.7136,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin",
+     "at": "n5@am"
+    },
+    {
+     "t": "label",
+     "text": "o3",
+     "xy": [
+      "rw",
+      0.7518,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin",
+     "at": "n5@a#2"
+    },
+    {
+     "t": "label",
+     "text": "o4",
+     "xy": [
+      "rw",
+      0.8441,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin",
+     "at": "n5@student"
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "note": "recurrent networks: one word after another, one step per word (F9, F13)",
+   "items": [
+    {
+     "t": "label",
+     "text": "rnn0",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 60,
+     "align": "left",
+     "at": "n6@before"
+    },
+    {
+     "t": "label",
+     "text": "rnn1",
+     "xy": [
+      70,
+      430
+     ],
+     "px": 80,
+     "align": "left",
+     "color": "red",
+     "at": "n6@recurrent"
+    },
+    {
+     "id": "whisper",
+     "t": "draw",
+     "d": "whisper",
+     "xy": [
+      540,
+      900
+     ],
+     "w": 1040,
+     "at": "p3+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "whisper",
+      0.2392,
+      0.0313
+     ],
+     "to": [
+      "whisper",
+      0.3852,
+      0.0313
+     ],
+     "bend": 0.35,
+     "lw": 6,
+     "at": "n7@one+0.0",
+     "dur": 0.45
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "whisper",
+      0.3932,
+      0.0313
+     ],
+     "to": [
+      "whisper",
+      0.5431,
+      0.0313
+     ],
+     "bend": 0.35,
+     "lw": 6,
+     "at": "n7@one+0.7",
+     "dur": 0.45
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "whisper",
+      0.5511,
+      0.0313
+     ],
+     "to": [
+      "whisper",
+      0.7037,
+      0.0313
+     ],
+     "bend": 0.35,
+     "lw": 6,
+     "at": "n7@one+1.4",
+     "dur": 0.45
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "whisper",
+      0.7104,
+      0.0313
+     ],
+     "to": [
+      "whisper",
+      0.8497,
+      0.0313
+     ],
+     "bend": 0.35,
+     "lw": 6,
+     "at": "n7@one+2.1",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "st0",
+     "xy": [
+      "whisper",
+      0.3122,
+      -0.028
+     ],
+     "px": 40,
+     "color": "red",
+     "font": "latin",
+     "at": "n7@one+0.3"
+    },
+    {
+     "t": "label",
+     "text": "st1",
+     "xy": [
+      "whisper",
+      0.4681,
+      -0.028
+     ],
+     "px": 40,
+     "color": "red",
+     "font": "latin",
+     "at": "n7@one+1.0"
+    },
+    {
+     "t": "label",
+     "text": "st2",
+     "xy": [
+      "whisper",
+      0.6274,
+      -0.028
+     ],
+     "px": 40,
+     "color": "red",
+     "font": "latin",
+     "at": "n7@one+1.7"
+    },
+    {
+     "t": "label",
+     "text": "st3",
+     "xy": [
+      "whisper",
+      0.78,
+      -0.028
+     ],
+     "px": 40,
+     "color": "red",
+     "font": "latin",
+     "at": "n7@one+2.4"
+    },
+    {
+     "t": "label",
+     "text": "perword",
+     "xy": [
+      540,
+      1240
+     ],
+     "px": 56,
+     "color": "red",
+     "at": "n7@step"
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "note": "attention: each word asks which others are like me, gathers, updates; all in one step (F9-F12)",
+   "items": [
+    {
+     "t": "label",
+     "text": "att",
+     "xy": [
+      70,
+      360
+     ],
+     "px": 92,
+     "align": "left",
+     "at": "n8@attention"
+    },
+    {
+     "t": "sans",
+     "text": "title_is",
+     "xy": [
+      430,
+      372
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n8@title"
+    },
+    {
+     "id": "table",
+     "t": "draw",
+     "d": "table",
+     "xy": [
+      550,
+      900
+     ],
+     "w": 840,
+     "at": "p4+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "table",
+      0.5464,
+      0.4969
+     ],
+     "w": 560,
+     "h": 300,
+     "a": 0.3,
+     "at": "n9@round"
+    },
+    {
+     "t": "label",
+     "text": "cw_mib",
+     "xy": [
+      "table",
+      0.4637,
+      0.408
+     ],
+     "px": 26,
+     "font": "latin",
+     "at": "n9@word"
+    },
+    {
+     "t": "label",
+     "text": "cw_tavoo",
+     "xy": [
+      "table",
+      0.4405,
+      0.5641
+     ],
+     "px": 26,
+     "font": "latin",
+     "at": "n9@word"
+    },
+    {
+     "t": "label",
+     "text": "cw_krenn",
+     "xy": [
+      "table",
+      0.7026,
+      0.4638
+     ],
+     "px": 26,
+     "font": "latin",
+     "at": "n9@word"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.6774,
+       0.4555
+      ],
+      [
+       "table",
+       0.501,
+       0.4193
+      ]
+     ],
+     "lw": 8,
+     "at": "n9@like",
+     "dur": 0.4
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.6774,
+       0.4762
+      ],
+      [
+       "table",
+       0.4808,
+       0.5538
+      ]
+     ],
+     "lw": 3,
+     "at": "n9@like+0.3",
+     "dur": 0.4
+    },
+    {
+     "t": "group",
+     "fadeOut": [
+      "n10-0.3",
+      "n10"
+     ],
+     "items": [
+      {
+       "t": "label",
+       "text": "like",
+       "xy": [
+        70,
+        450
+       ],
+       "px": 48,
+       "color": "red",
+       "align": "left",
+       "at": "n9@like"
+      }
+     ]
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "table",
+       0.501,
+       0.4297
+      ],
+      [
+       "table",
+       0.4657,
+       0.5383
+      ]
+     ],
+     "lw": 5,
+     "at": "n10@same",
+     "dur": 0.35
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "table",
+      0.5766,
+      0.4762
+     ],
+     "r": [
+      190,
+      120
+     ],
+     "seed": 3,
+     "lw": 6,
+     "at": "n10@same",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "onestep",
+     "xy": [
+      70,
+      450
+     ],
+     "px": 52,
+     "color": "red",
+     "align": "left",
+     "at": "n10@same+0.2"
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "note": "the reader reads both ways (C2); the writer writes word by word behind a card, reading his notes (cross-attention); the team (C1)",
+   "camera": [
+    {
+     "at": "n11+1.0",
+     "xy": [
+      330,
+      800
+     ],
+     "z": 1.6
+    },
+    {
+     "at": "c2.end",
+     "xy": [
+      330,
+      800
+     ],
+     "z": 1.6
+    },
+    {
+     "at": "n13+0.6",
+     "xy": [
+      760,
+      860
+     ],
+     "z": 1.6
+    },
+    {
+     "at": "n14.end",
+     "xy": [
+      700,
+      880
+     ],
+     "z": 1.45
+    },
+    {
+     "at": "n15+0.8",
+     "xy": [
+      540,
+      920
+     ],
+     "z": 1.0
+    }
+   ],
+   "items": [
+    {
+     "id": "rw",
+     "t": "draw",
+     "d": "rw",
+     "xy": [
+      540,
+      960
+     ],
+     "w": 1040
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "rw",
+      0.2838,
+      0.3202
+     ],
+     "w": 420,
+     "h": 130,
+     "a": 0.4,
+     "at": "n11"
+    },
+    {
+     "t": "label",
+     "text": "in1",
+     "xy": [
+      "rw",
+      0.1704,
+      0.301
+     ],
+     "px": 40,
+     "font": "latin",
+     "rot": 0.03
+    },
+    {
+     "t": "label",
+     "text": "in2",
+     "xy": [
+      "rw",
+      0.2838,
+      0.3223
+     ],
+     "px": 40,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "in3",
+     "xy": [
+      "rw",
+      0.3972,
+      0.3074
+     ],
+     "px": 40,
+     "font": "latin",
+     "rot": -0.04
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "rw",
+      0.1704,
+      0.3575
+     ],
+     "to": [
+      "rw",
+      0.2838,
+      0.3735
+     ],
+     "bend": 0.55,
+     "lw": 4,
+     "at": "n11@every+0.00",
+     "dur": 0.35
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "rw",
+      0.2838,
+      0.3735
+     ],
+     "to": [
+      "rw",
+      0.3972,
+      0.3607
+     ],
+     "bend": 0.55,
+     "lw": 4,
+     "at": "n11@every+0.08",
+     "dur": 0.35
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "rw",
+      0.1704,
+      0.365
+     ],
+     "to": [
+      "rw",
+      0.3972,
+      0.365
+     ],
+     "bend": 0.5,
+     "lw": 4,
+     "at": "n11@every+0.16",
+     "dur": 0.35
+    },
+    {
+     "t": "label",
+     "text": "rdr5",
+     "xy": [
+      40,
+      470
+     ],
+     "px": 40,
+     "color": "red",
+     "align": "left",
+     "at": "n11@reader"
+    },
+    {
+     "t": "label",
+     "text": "tok",
+     "xy": [
+      40,
+      600
+     ],
+     "px": 30,
+     "align": "left",
+     "at": "n12@tokens"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "rw",
+      0.1704,
+      0.365
+     ],
+     "to": [
+      "rw",
+      0.3972,
+      0.365
+     ],
+     "bend": 0.5,
+     "lw": 8,
+     "at": "c2@22%",
+     "dur": 0.5
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "rw",
+      0.2838,
+      0.3735
+     ],
+     "to": [
+      "rw",
+      0.3972,
+      0.3607
+     ],
+     "bend": 0.55,
+     "lw": 8,
+     "at": "c2@55%",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "both",
+     "xy": [
+      40,
+      680
+     ],
+     "px": 44,
+     "color": "red",
+     "align": "left",
+     "at": "c2@82%"
+    },
+    {
+     "t": "label",
+     "text": "o1",
+     "xy": [
+      "rw",
+      0.674,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin",
+     "at": "n13@writing"
+    },
+    {
+     "t": "label",
+     "text": "o2",
+     "xy": [
+      "rw",
+      0.7136,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin",
+     "at": "n13@time"
+    },
+    {
+     "t": "label",
+     "text": "o3",
+     "xy": [
+      "rw",
+      0.7518,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin",
+     "at": "n13@new"
+    },
+    {
+     "t": "label",
+     "text": "o4",
+     "xy": [
+      "rw",
+      0.8441,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin",
+     "at": "n13@next"
+    },
+    {
+     "t": "group",
+     "fadeIn": [
+      "n13@writing+0.25",
+      "n13@writing+0.25+0.15"
+     ],
+     "fadeOut": [
+      "n13@time+0.05",
+      "n13@time+0.05+0.15"
+     ],
+     "items": [
+      {
+       "t": "card",
+       "rect": [
+        740,
+        967,
+        1001,
+        1005
+       ],
+       "seed": 20,
+       "r": 4,
+       "lw": 2.5
+      }
+     ]
+    },
+    {
+     "t": "group",
+     "fadeIn": [
+      "n13@time+0.25",
+      "n13@time+0.25+0.15"
+     ],
+     "fadeOut": [
+      "n13@new+0.05",
+      "n13@new+0.05+0.15"
+     ],
+     "items": [
+      {
+       "t": "card",
+       "rect": [
+        783,
+        967,
+        1001,
+        1005
+       ],
+       "seed": 21,
+       "r": 4,
+       "lw": 2.5
+      }
+     ]
+    },
+    {
+     "t": "group",
+     "fadeIn": [
+      "n13@new+0.25",
+      "n13@new+0.25+0.15"
+     ],
+     "fadeOut": [
+      "n13@next+0.05",
+      "n13@next+0.05+0.15"
+     ],
+     "items": [
+      {
+       "t": "card",
+       "rect": [
+        817,
+        967,
+        1001,
+        1005
+       ],
+       "seed": 22,
+       "r": 4,
+       "lw": 2.5
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "wtr5",
+     "xy": [
+      560,
+      640
+     ],
+     "px": 40,
+     "color": "red",
+     "align": "left",
+     "at": "n13"
+    },
+    {
+     "t": "label",
+     "text": "ds0",
+     "xy": [
+      "rw",
+      0.674,
+      0.5945
+     ],
+     "px": 20,
+     "color": "red",
+     "font": "latin",
+     "at": "n13@writing"
+    },
+    {
+     "t": "label",
+     "text": "ds1",
+     "xy": [
+      "rw",
+      0.7136,
+      0.5945
+     ],
+     "px": 20,
+     "color": "red",
+     "font": "latin",
+     "at": "n13@time"
+    },
+    {
+     "t": "label",
+     "text": "ds2",
+     "xy": [
+      "rw",
+      0.7518,
+      0.5945
+     ],
+     "px": 20,
+     "color": "red",
+     "font": "latin",
+     "at": "n13@new"
+    },
+    {
+     "t": "label",
+     "text": "ds3",
+     "xy": [
+      "rw",
+      0.8441,
+      0.5945
+     ],
+     "px": 20,
+     "color": "red",
+     "font": "latin",
+     "at": "n13@next"
+    },
+    {
+     "t": "sans",
+     "text": "steps",
+     "xy": [
+      "rw",
+      0.587,
+      0.5945
+     ],
+     "px": 18,
+     "a": 0.8,
+     "at": "n13@writing"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "rw",
+      0.7057,
+      0.2668
+     ],
+     "to": [
+      "rw",
+      0.4947,
+      0.4856
+     ],
+     "bend": -0.25,
+     "lw": 5,
+     "dash": [
+      14,
+      10
+     ],
+     "at": "n14@reads",
+     "dur": 0.5
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "rw",
+      0.4829,
+      0.5037
+     ],
+     "r": [
+      56,
+      40
+     ],
+     "seed": 5,
+     "lw": 5,
+     "at": "n14@notes",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "notes",
+     "xy": [
+      "rw",
+      0.4829,
+      0.6297
+     ],
+     "px": 34,
+     "color": "red",
+     "patch": 0.3,
+     "at": "n14@notes"
+    },
+    {
+     "t": "label",
+     "text": "xatt",
+     "xy": [
+      700,
+      1085
+     ],
+     "px": 44,
+     "color": "red",
+     "patch": 0.3,
+     "at": "n14@crossattention"
+    },
+    {
+     "t": "label",
+     "text": "team17",
+     "xy": [
+      70,
+      360
+     ],
+     "px": 76,
+     "align": "left",
+     "at": "n15@team"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "rw",
+      0.943,
+      0.5443
+     ],
+     "to": [
+      "rw",
+      0.9759,
+      0.4162
+     ],
+     "bend": -0.3,
+     "lw": 5,
+     "at": "c1@40%",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "q",
+     "xy": [
+      "rw",
+      0.9693,
+      0.3522
+     ],
+     "px": 80,
+     "color": "red",
+     "font": "latin",
+     "at": "c1@45%"
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "note": "her slide 11 (right half, the 2017 figure with her red shading); the reader fired; cross-attention goes too (F15, F16)",
+   "items": [
+    {
+     "t": "label",
+     "text": "slide11",
+     "xy": [
+      150,
+      330
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape6+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s11",
+     "xy": [
+      540,
+      820
+     ],
+     "w": 720,
+     "rot": -0.012,
+     "crop": [
+      0.565,
+      0.12,
+      0.4225,
+      0.88
+     ],
+     "at": "p6+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      210,
+      420
+     ],
+     "w": 220,
+     "rot": -0.5,
+     "at": "tape6"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      880,
+      415
+     ],
+     "w": 200,
+     "rot": 0.5,
+     "at": "tape6+0.15"
+    },
+    {
+     "t": "sans",
+     "text": "fig11",
+     "xy": [
+      540,
+      1262
+     ],
+     "px": 26,
+     "a": 0.8,
+     "at": "p6+1.2"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1357,
+      228
+     ],
+     "r": [
+      170,
+      82
+     ],
+     "seed": 4,
+     "lw": 6,
+     "at": "n16b@decoder",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "fired",
+     "xy": [
+      "sl:px",
+      1340,
+      860
+     ],
+     "px": 56,
+     "color": "red",
+     "patch": 0.3,
+     "rot": -0.06,
+     "at": "n16b@fired"
+    },
+    {
+     "id": "cv1",
+     "t": "cover",
+     "xy": [
+      "sl:px",
+      1340,
+      720
+     ],
+     "size": [
+      336,
+      690
+     ],
+     "rot": 0.02,
+     "at": "n17@delete",
+     "dur": 0.4,
+     "tape": {
+      "i": 2,
+      "dx": 0,
+      "dy": -0.5,
+      "w": 170,
+      "rot": -0.1,
+      "at": "n17@delete+0.25"
+     }
+    },
+    {
+     "t": "label",
+     "text": "cut1",
+     "xy": [
+      "cv1",
+      0.5,
+      0.5
+     ],
+     "px": 46,
+     "color": "red",
+     "rot": -0.08,
+     "at": "n17@delete+0.4"
+    },
+    {
+     "id": "cv2",
+     "t": "cover",
+     "xy": [
+      "sl:px",
+      1690,
+      495
+     ],
+     "size": [
+      280,
+      170
+     ],
+     "rot": -0.02,
+     "at": "n17@goes",
+     "dur": 0.35,
+     "tape": {
+      "i": 6,
+      "dx": 0.5,
+      "dy": 0,
+      "w": 120,
+      "rot": 1.4,
+      "at": "n17@goes+0.2"
+     }
+    },
+    {
+     "t": "label",
+     "text": "cut2",
+     "xy": [
+      "cv2",
+      0.5,
+      0.5
+     ],
+     "px": 30,
+     "color": "red",
+     "rot": -0.04,
+     "at": "n17@goes+0.3",
+     "fit": 250
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "sl:px",
+      1930,
+      880
+     ],
+     "s": 34,
+     "lw": 6,
+     "at": "n18@stays"
+    },
+    {
+     "t": "label",
+     "text": "donly",
+     "xy": [
+      1010,
+      330
+     ],
+     "px": 58,
+     "color": "red",
+     "align": "right",
+     "at": "n18@decoderonly",
+     "rot": -0.04
+    }
+   ]
+  },
+  {
+   "id": "p7",
+   "note": "decoder-only: the card is the mask (itself + the words before it, never ahead); the request continues (F6, F28)",
+   "items": [
+    {
+     "t": "label",
+     "text": "alone",
+     "xy": [
+      70,
+      360
+     ],
+     "px": 76,
+     "align": "left",
+     "at": "n19@alone"
+    },
+    {
+     "id": "wc",
+     "t": "draw",
+     "d": "wc",
+     "xy": [
+      540,
+      1000
+     ],
+     "w": 1040,
+     "at": "p7+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "wc",
+      0.5326,
+      0.6691
+     ],
+     "w": 170,
+     "a": 0.75,
+     "at": "n19@card"
+    },
+    {
+     "t": "label",
+     "text": "mask",
+     "xy": [
+      "wc",
+      0.5326,
+      0.7876
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n19@card+0.2"
+    },
+    {
+     "t": "group",
+     "fadeOut": [
+      "n21-0.4",
+      "n21"
+     ],
+     "items": [
+      {
+       "t": "label",
+       "text": "rule1",
+       "xy": [
+        70,
+        470
+       ],
+       "px": 40,
+       "align": "left",
+       "at": "n20@itself",
+       "fit": 940
+      },
+      {
+       "t": "label",
+       "text": "rule2",
+       "xy": [
+        70,
+        540
+       ],
+       "px": 48,
+       "color": "red",
+       "align": "left",
+       "at": "n20@never"
+      },
+      {
+       "t": "label",
+       "text": "rule3",
+       "xy": [
+        600,
+        545
+       ],
+       "px": 40,
+       "align": "left",
+       "at": "n20@masked"
+      }
+     ]
+    },
+    {
+     "t": "group",
+     "at": "n21-0.2",
+     "items": [
+      {
+       "t": "card",
+       "rect": [
+        60,
+        455,
+        1020,
+        640
+       ],
+       "seed": 7,
+       "r": 12,
+       "lw": 3,
+       "at": "n21@write",
+       "dur": 0.5
+      },
+      {
+       "t": "label",
+       "text": "req1",
+       "xy": [
+        95,
+        515
+       ],
+       "px": 40,
+       "color": "pencil",
+       "align": "left",
+       "at": "n21@request",
+       "font": "latin"
+      },
+      {
+       "t": "label",
+       "text": "req2",
+       "xy": [
+        95,
+        590
+       ],
+       "px": 40,
+       "color": "pencil",
+       "align": "left",
+       "at": "n21@request+0.6",
+       "font": "latin"
+      },
+      {
+       "t": "label",
+       "text": "ans1",
+       "xy": [
+        470,
+        590
+       ],
+       "px": 44,
+       "align": "left",
+       "at": "n21@continues",
+       "font": "latin"
+      },
+      {
+       "t": "label",
+       "text": "ans2",
+       "xy": [
+        505,
+        590
+       ],
+       "px": 44,
+       "align": "left",
+       "at": "n21@continues+0.25",
+       "font": "latin"
+      },
+      {
+       "t": "label",
+       "text": "ans3",
+       "xy": [
+        580,
+        590
+       ],
+       "px": 44,
+       "align": "left",
+       "at": "n21@continues+0.5",
+       "font": "latin"
+      },
+      {
+       "t": "label",
+       "text": "ans4",
+       "xy": [
+        620,
+        590
+       ],
+       "px": 44,
+       "align": "left",
+       "at": "n21@text",
+       "font": "latin"
+      },
+      {
+       "t": "arrow",
+       "from": [
+        600,
+        720
+       ],
+       "to": [
+        330,
+        628
+       ],
+       "bend": -0.25,
+       "lw": 4,
+       "at": "n21@came",
+       "dur": 0.4
+      },
+      {
+       "t": "label",
+       "text": "seen",
+       "xy": [
+        560,
+        515
+       ],
+       "px": 30,
+       "color": "red",
+       "align": "left",
+       "at": "n21@came+0.2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "p8",
+   "note": "The bank was full of fish.: at \"bank\" the card hides \"fish\"; the reader saw it all (F5, F6, F22; C3)",
+   "items": [
+    {
+     "t": "label",
+     "text": "lose",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 60,
+     "align": "left",
+     "at": "n22@lose"
+    },
+    {
+     "t": "label",
+     "text": "s1",
+     "xy": [
+      90,
+      470
+     ],
+     "px": 72,
+     "align": "left",
+     "font": "latin",
+     "at": "n22@try"
+    },
+    {
+     "t": "label",
+     "text": "s2",
+     "xy": [
+      370,
+      470
+     ],
+     "px": 72,
+     "align": "left",
+     "font": "latin",
+     "at": "n22@full",
+     "id": "s2"
+    },
+    {
+     "id": "banks",
+     "t": "draw",
+     "d": "banks",
+     "xy": [
+      540,
+      935
+     ],
+     "w": 1040,
+     "at": "p8+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "group",
+     "at": "n23@card",
+     "fadeOut": [
+      "n23@reader-0.2",
+      "n23@reader+0.2"
+     ],
+     "items": [
+      {
+       "t": "card",
+       "rect": [
+        355,
+        405,
+        990,
+        515
+       ],
+       "seed": 9,
+       "r": 10,
+       "lw": 3,
+       "at": "n23@card",
+       "dur": 0.4
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "money",
+     "xy": [
+      "banks",
+      0.2533,
+      -0.0236,
+      0,
+      -20
+     ],
+     "px": 50,
+     "color": "red",
+     "at": "n23@money",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "river",
+     "xy": [
+      "banks",
+      0.7513,
+      0.0643,
+      0,
+      -20
+     ],
+     "px": 50,
+     "color": "red",
+     "at": "n23@river",
+     "patch": 0.3
+    },
+    {
+     "t": "underline",
+     "of": "s2",
+     "dx": 300,
+     "dy": 40,
+     "rise": -4,
+     "lw": 6,
+     "at": "n23@reader",
+     "dur": 0.4
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "banks",
+      0.9086,
+      0.394
+     ],
+     "w": 180,
+     "a": 0.8,
+     "at": "n23@whole"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      860,
+      520
+     ],
+     "to": [
+      "banks",
+      0.8955,
+      0.2951
+     ],
+     "bend": -0.3,
+     "lw": 5,
+     "at": "n23@whole",
+     "dur": 0.4
+    },
+    {
+     "t": "underline",
+     "of": "s2",
+     "dx": -330,
+     "dy": 52,
+     "rise": 0,
+     "lw": 5,
+     "at": "c3@75%",
+     "dur": 0.8,
+     "extend": 340
+    },
+    {
+     "t": "label",
+     "text": "hurt",
+     "xy": [
+      480,
+      1245
+     ],
+     "px": 40,
+     "color": "red",
+     "at": "n25@looking",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p9",
+   "note": "her slide 12, the trade table; \"losing\" on the context row, \"gaining\" on parameters + data (C4; F22-F25)",
+   "camera": [
+    {
+     "at": "c4-0.4",
+     "xy": [
+      540,
+      960
+     ],
+     "z": 1.0
+    },
+    {
+     "at": "c4+0.6",
+     "xy": [
+      505,
+      960
+     ],
+     "z": 1.12
+    },
+    {
+     "at": "c4.end+2.4",
+     "xy": [
+      505,
+      960
+     ],
+     "z": 1.12
+    }
+   ],
+   "items": [
+    {
+     "t": "label",
+     "text": "slide12",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape9+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s12",
+     "xy": [
+      540,
+      945
+     ],
+     "w": 980,
+     "rot": 0.01,
+     "at": "p9+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 1,
+     "xy": [
+      140,
+      695
+     ],
+     "w": 210,
+     "rot": -0.5,
+     "at": "tape9"
+    },
+    {
+     "t": "tape",
+     "i": 4,
+     "xy": [
+      940,
+      695
+     ],
+     "w": 180,
+     "rot": 0.55,
+     "at": "tape9+0.15"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1231,
+       140
+      ],
+      [
+       "sl:px",
+       1943,
+       140
+      ]
+     ],
+     "at": "n26@less",
+     "dur": 0.4,
+     "lw": 5
+    },
+    {
+     "t": "label",
+     "text": "lessx",
+     "xy": [
+      540,
+      1240
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n26@less+0.3"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       700,
+       670
+      ],
+      [
+       "sl:px",
+       752,
+       662
+      ]
+     ],
+     "lw": 5,
+     "at": "c4.end+0.3",
+     "dur": 0.3
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "sl:px",
+      700,
+      930
+     ],
+     "to": [
+      "sl:px",
+      690,
+      735
+     ],
+     "bend": 0.1,
+     "lw": 4,
+     "at": "c4.end+0.5",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "fix15t",
+     "xy": [
+      "sl:px",
+      640,
+      980
+     ],
+     "px": 40,
+     "color": "red",
+     "patch": 0.3,
+     "at": "c4.end+0.5",
+     "font": "latin"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1335,
+      670
+     ],
+     "r": [
+      60,
+      22
+     ],
+     "seed": 8,
+     "lw": 5,
+     "at": "c4.end+1.0",
+     "dur": 0.4
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "sl:px",
+      1450,
+      930
+     ],
+     "to": [
+      "sl:px",
+      1380,
+      740
+     ],
+     "bend": -0.1,
+     "lw": 4,
+     "at": "c4.end+1.2",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "fixguess",
+     "xy": [
+      "sl:px",
+      1500,
+      980
+     ],
+     "px": 40,
+     "color": "red",
+     "patch": 0.3,
+     "at": "c4.end+1.2"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       150,
+       492
+      ],
+      [
+       "sl:px",
+       1810,
+       492
+      ]
+     ],
+     "at": "c4@15%",
+     "dur": 0.4,
+     "lw": 6
+    },
+    {
+     "t": "label",
+     "text": "lost",
+     "xy": [
+      "sl:px",
+      95,
+      440
+     ],
+     "px": 90,
+     "color": "red",
+     "font": "latin",
+     "at": "c4@25%"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       105,
+       520
+      ],
+      [
+       "sl:px",
+       85,
+       525
+      ],
+      [
+       "sl:px",
+       85,
+       760
+      ],
+      [
+       "sl:px",
+       105,
+       765
+      ]
+     ],
+     "lw": 6,
+     "at": "c4@65%",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "gain",
+     "xy": [
+      "sl:px",
+      50,
+      640
+     ],
+     "px": 90,
+     "color": "red",
+     "font": "latin",
+     "at": "c4@75%"
+    }
+   ]
+  },
+  {
+   "id": "p10",
+   "note": "parameters: two stacks carry more (~1.5-2x, the slide estimates); our count 63M -> 38M, 40% (F23, RUN)",
+   "items": [
+    {
+     "t": "label",
+     "text": "g1",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "n27@first",
+     "fit": 960
+    },
+    {
+     "t": "sans",
+     "text": "params",
+     "xy": [
+      80,
+      420
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n28@parameters"
+    },
+    {
+     "id": "towers",
+     "t": "draw",
+     "d": "towers",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 1000,
+     "at": "p10+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "towers",
+      0.293,
+      0.5915
+     ],
+     "w": 180,
+     "h": 520,
+     "a": 0.35,
+     "at": "n28@stack"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "towers",
+      0.5404,
+      0.5915
+     ],
+     "w": 420,
+     "h": 520,
+     "a": 0.3,
+     "at": "n28@two"
+    },
+    {
+     "t": "label",
+     "text": "one1",
+     "xy": [
+      "towers",
+      0.293,
+      0.2506,
+      0,
+      -60
+     ],
+     "px": 50,
+     "color": "red",
+     "font": "latin",
+     "at": "n28@stack",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "two2",
+     "xy": [
+      "towers",
+      0.5404,
+      0.6369
+     ],
+     "px": 50,
+     "color": "red",
+     "font": "latin",
+     "at": "n28@15",
+     "patch": 0.3
+    },
+    {
+     "t": "sans",
+     "text": "est",
+     "xy": [
+      "towers",
+      0.5404,
+      0.7051
+     ],
+     "px": 26,
+     "a": 0.8,
+     "at": "n28@estimates"
+    },
+    {
+     "t": "label",
+     "text": "planks",
+     "xy": [
+      "towers",
+      0.5404,
+      0.2847,
+      0,
+      -36
+     ],
+     "px": 30,
+     "color": "red",
+     "patch": 0.3,
+     "at": "n29@cut"
+    },
+    {
+     "t": "card",
+     "rect": [
+      60,
+      470,
+      1020,
+      700
+     ],
+     "seed": 11,
+     "r": 12,
+     "lw": 3,
+     "at": "n29@count",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "cnt1",
+     "xy": [
+      540,
+      520
+     ],
+     "px": 38,
+     "at": "n29@count+0.3"
+    },
+    {
+     "t": "label",
+     "text": "cnt2",
+     "xy": [
+      540,
+      595
+     ],
+     "px": 50,
+     "color": "red",
+     "font": "latin",
+     "at": "n29@63"
+    },
+    {
+     "t": "label",
+     "text": "cnt3",
+     "xy": [
+      380,
+      665
+     ],
+     "px": 40,
+     "color": "red",
+     "at": "n29@40"
+    },
+    {
+     "t": "sans",
+     "text": "p65",
+     "xy": [
+      760,
+      662
+     ],
+     "px": 24,
+     "a": 0.8,
+     "at": "n29@fewer"
+    }
+   ]
+  },
+  {
+   "id": "p11",
+   "note": "paired data (4.5 million pairs) vs any text (GPT-3 300 billion, Llama 3 about 15 trillion); the slide fixed (F18, F19, F24-F27)",
+   "items": [
+    {
+     "t": "label",
+     "text": "g2",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "n30@second"
+    },
+    {
+     "t": "label",
+     "text": "paired",
+     "xy": [
+      290,
+      470
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n31@pairs"
+    },
+    {
+     "id": "pairs",
+     "t": "draw",
+     "d": "pairs",
+     "xy": [
+      290,
+      730
+     ],
+     "w": 500,
+     "at": "p11+0.3",
+     "dur": 2.0
+    },
+    {
+     "t": "label",
+     "text": "pa1",
+     "xy": [
+      "pairs",
+      0.2824,
+      0.7831
+     ],
+     "px": 22,
+     "font": "latin",
+     "at": "n31@sentence"
+    },
+    {
+     "t": "label",
+     "text": "pa2",
+     "xy": [
+      "pairs",
+      0.6664,
+      0.7831
+     ],
+     "px": 22,
+     "font": "latin",
+     "at": "n31@translation"
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "pairs",
+      0.4806,
+      0.7831
+     ],
+     "w": 420,
+     "h": 170,
+     "a": 0.35,
+     "at": "n31@translation"
+    },
+    {
+     "t": "label",
+     "text": "p45",
+     "xy": [
+      290,
+      985
+     ],
+     "px": 38,
+     "at": "n31@45"
+    },
+    {
+     "t": "sans",
+     "text": "p45b",
+     "xy": [
+      290,
+      1030
+     ],
+     "px": 24,
+     "a": 0.8,
+     "at": "n31@pairs#2"
+    },
+    {
+     "t": "label",
+     "text": "anytext",
+     "xy": [
+      790,
+      470
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n32@any"
+    },
+    {
+     "id": "heap",
+     "t": "draw",
+     "d": "heap",
+     "xy": [
+      790,
+      730
+     ],
+     "w": 480,
+     "at": "n32@nextword",
+     "dur": 2.0
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "heap",
+      0.4944,
+      0.5242
+     ],
+     "w": 460,
+     "h": 300,
+     "a": 0.3,
+     "at": "n32@any"
+    },
+    {
+     "t": "label",
+     "text": "guess1",
+     "xy": [
+      720,
+      985
+     ],
+     "px": 34,
+     "at": "n32@hide",
+     "fit": 300
+    },
+    {
+     "t": "label",
+     "text": "guess2",
+     "xy": [
+      720,
+      1030
+     ],
+     "px": 34,
+     "color": "red",
+     "at": "n32@guess",
+     "fit": 300
+    },
+    {
+     "id": "row",
+     "t": "printout",
+     "slide": "s12",
+     "xy": [
+      540,
+      1125
+     ],
+     "w": 960,
+     "rot": -0.008,
+     "crop": [
+      0.065,
+      0.5582,
+      0.875,
+      0.1067
+     ],
+     "at": "n33-0.3"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "row:px",
+      668,
+      670
+     ],
+     "r": [
+      56,
+      22
+     ],
+     "seed": 6,
+     "lw": 5,
+     "at": "n33@gpt3",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "gpt3",
+     "xy": [
+      90,
+      1215
+     ],
+     "px": 32,
+     "color": "red",
+     "align": "left",
+     "at": "n33@gpt3"
+    },
+    {
+     "t": "label",
+     "text": "l3",
+     "xy": [
+      90,
+      1262
+     ],
+     "px": 32,
+     "color": "red",
+     "align": "left",
+     "at": "n33@llama"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "row:px",
+      1335,
+      670
+     ],
+     "r": [
+      60,
+      22
+     ],
+     "seed": 8,
+     "lw": 5,
+     "at": "n33.end",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "guessx",
+     "xy": [
+      740,
+      1245
+     ],
+     "px": 32,
+     "color": "red",
+     "at": "n33.end+0.2",
+     "fit": 260
+    }
+   ]
+  },
+  {
+   "id": "p12",
+   "note": "one honest limit: the 2022 study; two-stack models still show up in translation (F30, F21)",
+   "items": [
+    {
+     "id": "rw",
+     "t": "draw",
+     "d": "rw",
+     "xy": [
+      540,
+      1060
+     ],
+     "w": 1040,
+     "at": "p12+0.3",
+     "dur": 2.0
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "rw",
+      0.2574,
+      0.3949
+     ],
+     "w": 560,
+     "h": 520,
+     "a": 0.28,
+     "rot": -0.05,
+     "at": "n34@twostack"
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "rw",
+      0.7386,
+      0.3949
+     ],
+     "w": 560,
+     "h": 520,
+     "a": 0.3,
+     "rot": 0.05,
+     "at": "n34@nextword"
+    },
+    {
+     "t": "card",
+     "rect": [
+      60,
+      300,
+      1020,
+      700
+     ],
+     "seed": 13,
+     "r": 14,
+     "lw": 3,
+     "at": "n34",
+     "dur": 0.6
+    },
+    {
+     "t": "label",
+     "text": "hl",
+     "xy": [
+      100,
+      360
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "n34@honest"
+    },
+    {
+     "t": "sans",
+     "text": "wang",
+     "xy": [
+      100,
+      420
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "n34@study"
+    },
+    {
+     "t": "label",
+     "text": "hl1",
+     "xy": [
+      100,
+      495
+     ],
+     "px": 36,
+     "align": "left",
+     "at": "n34@nextword",
+     "fit": 880
+    },
+    {
+     "t": "label",
+     "text": "hl2",
+     "xy": [
+      100,
+      570
+     ],
+     "px": 36,
+     "align": "left",
+     "at": "n34@twostack",
+     "fit": 880
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "rw",
+      0.7189,
+      0.0747,
+      0,
+      -30
+     ],
+     "s": 34,
+     "lw": 6,
+     "at": "n34@nextword+0.3"
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "rw",
+      0.2772,
+      0.0107,
+      0,
+      -30
+     ],
+     "s": 34,
+     "lw": 6,
+     "at": "n34@twostack+0.3"
+    },
+    {
+     "t": "label",
+     "text": "nllb",
+     "xy": [
+      100,
+      650
+     ],
+     "px": 36,
+     "align": "left",
+     "color": "red",
+     "at": "n35@translation",
+     "fit": 880
+    }
+   ]
+  },
+  {
+   "id": "p13",
+   "note": "her question (C5): accurate vs simple modeling; scale won, for now; nobody has proven; no clean winner (C6; F29, F31, F35)",
+   "items": [
+    {
+     "t": "label",
+     "text": "acc1",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "color": "red",
+     "align": "left",
+     "at": "n36@question"
+    },
+    {
+     "t": "label",
+     "text": "acc2",
+     "xy": [
+      110,
+      430
+     ],
+     "px": 66,
+     "color": "red",
+     "align": "left",
+     "at": "n36@question+0.4"
+    },
+    {
+     "t": "sans",
+     "text": "her12",
+     "xy": [
+      116,
+      490
+     ],
+     "px": 26,
+     "a": 0.8,
+     "align": "left",
+     "at": "n36@question+0.8"
+    },
+    {
+     "id": "balance",
+     "t": "draw",
+     "d": "balance",
+     "xy": [
+      540,
+      870
+     ],
+     "w": 760,
+     "at": "p13+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "balance",
+      0.1722,
+      0.7043
+     ],
+     "w": 300,
+     "h": 160,
+     "a": 0.45,
+     "at": "n37@accurate"
+    },
+    {
+     "t": "label",
+     "text": "exact",
+     "xy": [
+      "balance",
+      0.1722,
+      0.7817,
+      0,
+      40
+     ],
+     "px": 36,
+     "at": "n37@accurate",
+     "patch": 0.3
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "balance",
+      0.8245,
+      0.7043
+     ],
+     "w": 300,
+     "h": 160,
+     "a": 0.45,
+     "at": "n37@simple"
+    },
+    {
+     "t": "label",
+     "text": "simple",
+     "xy": [
+      "balance",
+      0.8245,
+      0.7817,
+      0,
+      40
+     ],
+     "px": 36,
+     "at": "n37@simple",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "scales",
+     "xy": [
+      "balance",
+      0.8245,
+      0.7817,
+      0,
+      88
+     ],
+     "px": 36,
+     "color": "red",
+     "at": "n37@text"
+    },
+    {
+     "t": "label",
+     "text": "both2",
+     "xy": [
+      "balance",
+      0.1722,
+      0.7817,
+      0,
+      88
+     ],
+     "px": 36,
+     "color": "ink",
+     "at": "n37@both"
+    },
+    {
+     "t": "label",
+     "text": "ep1",
+     "xy": [
+      500,
+      1215
+     ],
+     "px": 32,
+     "at": "n38@episode",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "won",
+     "xy": [
+      "balance",
+      0.8245,
+      0.4913
+     ],
+     "px": 44,
+     "color": "red",
+     "patch": 0.3,
+     "at": "n38@won"
+    },
+    {
+     "t": "sans",
+     "text": "proven",
+     "xy": [
+      540,
+      1262
+     ],
+     "px": 26,
+     "a": 0.8,
+     "at": "n38@nobody"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "balance",
+      0.2547,
+      0.3945
+     ],
+     "to": [
+      "balance",
+      0.7254,
+      0.3945
+     ],
+     "bend": -0.3,
+     "lw": 6,
+     "at": "c6@15%",
+     "dur": 0.5
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "balance",
+      0.7254,
+      0.4526
+     ],
+     "to": [
+      "balance",
+      0.2547,
+      0.4526
+     ],
+     "bend": -0.3,
+     "lw": 6,
+     "at": "c6@40%",
+     "dur": 0.5
+    }
+   ]
+  },
+  {
+   "id": "p14",
+   "note": "bookend: the cover again; the reader and the notes cut, the writer kept (F3, F6, F15, F27)",
+   "items": [
+    {
+     "id": "rw",
+     "t": "draw",
+     "d": "rw",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 1040
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "rw",
+      0.7386,
+      0.3949
+     ],
+     "w": 560,
+     "h": 520,
+     "a": 0.3,
+     "rot": 0.05
+    },
+    {
+     "t": "label",
+     "text": "in1",
+     "xy": [
+      "rw",
+      0.1704,
+      0.301
+     ],
+     "px": 40,
+     "font": "latin",
+     "rot": 0.03
+    },
+    {
+     "t": "label",
+     "text": "in2",
+     "xy": [
+      "rw",
+      0.2838,
+      0.3223
+     ],
+     "px": 40,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "in3",
+     "xy": [
+      "rw",
+      0.3972,
+      0.3074
+     ],
+     "px": 40,
+     "font": "latin",
+     "rot": -0.04
+    },
+    {
+     "t": "label",
+     "text": "o1",
+     "xy": [
+      "rw",
+      0.674,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "o2",
+     "xy": [
+      "rw",
+      0.7136,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "o3",
+     "xy": [
+      "rw",
+      0.7518,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "o4",
+     "xy": [
+      "rw",
+      0.8441,
+      0.5443
+     ],
+     "px": 27,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "b0",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 116,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "b1",
+     "xy": [
+      80,
+      462
+     ],
+     "px": 84,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "fit": 960
+    },
+    {
+     "t": "card",
+     "rect": [
+      30,
+      700,
+      560,
+      1300
+     ],
+     "seed": 17,
+     "r": 6,
+     "lw": 0,
+     "fill": "paper",
+     "alpha": 0.72,
+     "at": "n40@most",
+     "dur": 0.6
+    },
+    {
+     "t": "label",
+     "text": "cut",
+     "xy": [
+      "rw",
+      0.2574,
+      0.4482
+     ],
+     "px": 70,
+     "color": "red",
+     "at": "n40@only",
+     "rot": -0.08
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "rw",
+      0.7386,
+      0.2988
+     ],
+     "r": [
+      270,
+      290
+     ],
+     "seed": 4,
+     "lw": 6,
+     "at": "n40@kept",
+     "dur": 0.6
+    },
+    {
+     "t": "label",
+     "text": "kept",
+     "xy": [
+      "rw",
+      0.7386,
+      0.0128,
+      0,
+      -40
+     ],
+     "px": 56,
+     "color": "red",
+     "at": "n40@kept+0.3",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "next",
+     "xy": [
+      80,
+      570
+     ],
+     "px": 40,
+     "color": "red",
+     "align": "left",
+     "at": "n41@guess"
+    },
+    {
+     "t": "sans",
+     "text": "most",
+     "xy": [
+      "rw",
+      0.7386,
+      0.0128,
+      0,
+      -96
+     ],
+     "px": 24,
+     "a": 0.8,
+     "at": "n40@most"
+    }
+   ]
+  }
+ ]
+}

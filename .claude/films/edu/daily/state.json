@@ -98,7 +98,7 @@
    "episode_dir": "episodes/l03-02",
    "morning": "2026-10-15",
    "run": "2026-10-14_120004",
-   "note": "run.sh: no checked mp4 after 4 round(s), exit 1; exit 1; session 114a6838-78df-47f6-ba53-79c87e8c2d0a | success: You've hit your weekly limit · resets Oct 18 at 4pm (America/Los_Angeles)",
+   "note": "run.sh: no checked mp4 after 4 round(s), exit 1; exit 1; session 114a6838-78df-47f6-ba53-79c87e8c2d0a | success: You've hit your weekly limit · resets Oct 18 at 4pm (America/Los_Angeles) | kept delivered over a same-run failed mark: run.sh: no checked mp4 after 4 round(s), exit 0; exit 0; session 426dfad6-6ff4-45b9-9c60-1acdcc7f90f0 | success: L03-02 \"The KV Cache and Its Diet\" is delivered: `/Users/linyichen/Downloads/picasso-daily/2026-10-15_L0",
    "attempts": 1,
    "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-15_L03-02/L03-02_kv_cache_diet_en.mp4",
    "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-15_L03-02"

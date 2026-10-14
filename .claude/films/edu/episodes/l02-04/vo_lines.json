@@ -1,0 +1,137 @@
+[
+ {
+  "id": "n0",
+  "en": "Trained on 4,000 tokens. Reads 128,000. How?",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "Slow down its clocks. Llama 2 learned to read on texts of up to about 4,000 tokens, the word pieces a model reads. Fine-tuned with a trick called YaRN, it reads 128,000.",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "Attention compares every word with every other word, but on its own it can't see order. The cat chased the dog; the dog chased the cat: same words, same bag. So every model has to tell attention where each word sits.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "Her slide shows how the answers changed. The 2017 Transformer added a pattern of sines and cosines to each word. GPT-2 and GPT-3 learned one position vector per slot, and added that. T5 added a learned nudge inside attention, by distance.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "Then, from a 2021 paper by Su and colleagues: rotary position embedding, RoPE. LLaMA and Llama 2 use it.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "Notice what the first three have in common. They add.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "Pour the position into the word, and the two are mixed for good. When attention multiplies two mixed vectors, word-times-position cross terms appear, and the clean sense of distance gets blurred.",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "RoPE doesn't add. It turns.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "Cut the query and the key into pairs of numbers. Each pair is an arrow on a dial. A word at position one turns its arrow one step, position two, two steps, and so on.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "Here is her example. In \"we know that\", \"we\" is at position zero and \"know\" at one. So \"we\" turns zero steps, and \"know\" turns one.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "Now \"of course we know\". \"We\" is at two, \"know\" at three. Both arrows turn further, but by the same extra amount. The angle between them stays the same.",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "That is the property she wants.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "Attention scores two arrows by how well they line up, and that depends only on the angle between them. Same two words, one step apart: the same score at 0 and 1, at 2 and 3, or at 100 and 101. Only the words and their distance count.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "On her next slide, this is one big matrix: a sine-and-cosine turn for each pair, zeros everywhere else. It multiplies the query and the key. Nothing is added, so there are no cross terms.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "One more change. The 2017 model added its position once, at the bottom of a deep stack. Pass it up through many layers, and, as she puts it,",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "So LLaMA applies RoPE inside every attention layer, to the queries and the keys. The values are not turned.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "Not every pair turns at the same speed. In Llama 2's smallest model, each head holds 128 numbers: 64 pairs, 64 clocks.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "The fastest turns about 57 degrees per token: it tells neighbours apart. The slowest needs about 54,000 tokens for a single turn: it tells near from far.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "Now the problem. Trained on 4,096 tokens, the slowest clock never turned more than about 27 degrees. Feed it 128,000 tokens, and it spins more than twice around: angles the model has never seen.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "Then the fix is plain: slow the clocks down.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "Position Interpolation, from Chen and colleagues in 2023, squeezes the positions. Every clock runs slower by the same factor, so a long text fits inside the angles the model knows. From 4,096 to about 128,000, that is a squeeze of 32.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "They stretched LLaMA from 2,048 to 32,768 tokens within 1,000 fine-tuning steps. The catch: the fast clocks get squeezed too, and neighbours start to look alike.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "A 2023 community post, NTK-aware scaling, split the job. Leave the fast clocks almost alone, so neighbours still look like neighbours, and slow the slow clocks the most. It works even without fine-tuning.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "YaRN, by Peng and colleagues, refines that split and adds a temperature to the attention scores. It needs about 10 times fewer training tokens than earlier methods, and it took Llama 2 to 128,000.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "Her table's last column runs up to a million and more: a rough community range, not a measured limit.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "One honest limit. Reading a long text is not the same as using it. A 2024 test of 17 long-context models found only about half still did well at 32,000 tokens, though all of them claimed 32,000 or more.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "So: position as a rotation. Turn the query and the key by their place, and the angle between them carries the distance. To read further, slow the clocks.",
+  "zh": ""
+ }
+]
