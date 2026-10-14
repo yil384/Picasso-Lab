@@ -68,6 +68,41 @@ test('live page: the poster with the lab\'s pixel logo (STREAM_LOGO on) as a dat
   assert.doesNotMatch(liveViewHtml({ state: 'live', game: 'gabc123', embedUrl: embed }), /<image /);
 });
 
+test('live page in line for the camera: a card and no player; at its turn (our server\'s image 3 px wide) the player is built from the live video\'s id in three more images', () => {
+  const page = liveViewHtml({ state: 'queued', game: 'gabc123', queue: { position: 2, waitMin: 41 }, statusBase: 'https://play.picasso-lab.com', fbOwner: '104729385761234' });
+  assert.doesNotMatch(page, /data-src=|<iframe/);
+  assert.match(page, /<p>In line for the camera: #2 \(about 41 min\)\. Your game runs normally; its video starts here when the camera reaches it\.<\/p>/);
+  const script = page.match(/<script>([\s\S]*)<\/script>/)[1];
+  let now = 0; const timers = []; let seq = 0;
+  const later = (fn, ms, every = 0) => { const id = ++seq; timers.push({ id, at: now + ms, fn, every }); return id; };
+  const tick = (ms) => { const end = now + ms; for (;;) { timers.sort((x, y) => x.at - y.at); const x = timers[0]; if (!x || x.at > end) break; now = x.at; if (x.every) x.at += x.every; else timers.shift(); x.fn(); } now = end; };
+  const drop = (id) => { const i = timers.findIndex((x) => x.id === id); if (i >= 0) timers.splice(i, 1); };
+  const vid = '7100000000001';
+  const pad = vid.padStart(24, '0');
+  let turn = false;
+  const asked = [];
+  class Img { constructor() { this.naturalWidth = 0; this.naturalHeight = 0; } set src(u) { this._src = u; asked.push(u);
+    const m = /\/(state|v([0-2]))\.svg\?/.exec(u); if (!m) return;
+    if (m[1] === 'state') { this.naturalWidth = turn ? 3 : 1; this.naturalHeight = 1; } else { const k = Number(m[2]); this.naturalWidth = 1 + Number(pad.slice(k * 8, k * 8 + 4)); this.naturalHeight = 1 + Number(pad.slice(k * 8 + 4, k * 8 + 8)); }
+    queueMicrotask(() => this.onload?.()); } get src() { return this._src; } }
+  const made = [];
+  const el = (tag) => ({ tagName: tag, style: {}, remove() { this.gone = true; } });
+  const status = { textContent: '' };
+  const nodes = { v: { dataset: { st: 'https://play.picasso-lab.com/live/gabc123/', tpl: page.match(/data-tpl="([^"]+)"/)[1].replace(/&amp;/g, '&') }, appendChild: (f) => made.push(f), querySelectorAll: () => made.filter((f) => f.tagName === 'IFRAME' && !f.gone) } };
+  const document = { activeElement: null, getElementById: (id) => nodes[id] ?? null, createElement: (tag) => el(tag.toUpperCase()), querySelector: () => status };
+  vm.runInNewContext(script, { document, Image: Img, Date: { now: () => now }, setTimeout: (fn, ms) => later(fn, ms), clearTimeout: drop, setInterval: (fn, ms) => later(fn, ms, ms), clearInterval: drop, addEventListener() {}, queueMicrotask });
+  return (async () => {
+    tick(20_000); await null;
+    assert.equal(made.length, 0, 'no player while in line');
+    turn = true;
+    tick(15_000);
+    for (let i = 0; i < 6; i++) await null;
+    assert.equal(made.length, 1, 'the player at its turn');
+    assert.equal(made[0].src, `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(`https://www.facebook.com/104729385761234/videos/${vid}/`)}&show_text=false&width=1280&autoplay=true&mute=true`);
+    assert.match(status.textContent, /^On camera/);
+  })();
+});
+
 test('live page: asks every 15 s whether its game has ended (an image from our server), then the end card in the player\'s place, the watchdog stopped', () => {
   const embed = 'https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2F1%2Fvideos%2F2%2F&show_text=false';
   const page = liveViewHtml({ state: 'live', game: 'gabc123', camera: 'gabc123', embedUrl: embed, fb: true, statusBase: 'https://play.picasso-lab.com' });

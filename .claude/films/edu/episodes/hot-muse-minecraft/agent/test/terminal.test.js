@@ -219,7 +219,7 @@ test('live_view\'s page: the player at the video\'s shape, as wide as the panel 
   const embed = 'https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2F1%2Fvideos%2F2%2F&show_text=false&width=1280';
   const tall = liveViewHtml({ state: 'live', game: 'g1', embedUrl: embed, aspect: '1080/1920' });
   assert.match(tall, /#v\{position:relative;aspect-ratio:1080\/1920;width:min\(100%,calc\(\(100vh - 28px\)\*0\.5625\)\);margin:0 auto;background:#000;overflow:hidden\}/);
-  assert.ok(Buffer.byteLength(tall) < 4096);
+  assert.ok(Buffer.byteLength(tall) < 6144);
   assert.match(liveViewHtml({ state: 'live', game: 'g1', embedUrl: embed, aspect: '1080/1350' }), /aspect-ratio:1080\/1350;width:min\(100%,calc\(\(100vh - 28px\)\*0\.8\)\)/);
   // square (the UI layout): a 1000x1050 desktop panel gets the whole width, no bars at the sides
   assert.match(liveViewHtml({ state: 'live', game: 'g1', embedUrl: embed, aspect: '1080/1080' }), /aspect-ratio:1080\/1080;width:min\(100%,calc\(\(100vh - 28px\)\*1\)\)/);

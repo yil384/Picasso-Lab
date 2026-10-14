@@ -385,22 +385,24 @@ export async function startAgent(opts = {}) {
     return videoUrl ? { videoUrl, embedUrl: facebookEmbedUrl(videoUrl) } : null;
   };
   // live_view: the live video of a game. With the Facebook live channel (FB_LIVE=on in the camera service, or in this
-  // process) the camera is pointed at the game and the call waits, up to waitMs, until Facebook shows it live; it stops
-  // waiting early when another game has taken the camera since. Otherwise STREAM_VIDEO_URL while the game's stream runs.
-  // Returns {fb, state, game, camera, videoUrl, embedUrl, liveSince, error, retryInS}.
+  // process) the game is put in line for the camera (first come, first served; owner: the owner's game, first) and the
+  // call waits, up to waitMs, until Facebook shows it live; it answers at once when the game is in line behind another
+  // (state queued, with its place and the wait). Otherwise STREAM_VIDEO_URL while the game's stream runs.
+  // Returns {fb, state, game, camera, videoUrl, embedUrl, liveSince, error, retryInS, queue}.
   const pause = (ms) => new Promise((r) => { setTimeout(r, ms).unref?.(); });
-  const liveView = async (gameId, { waitMs = 0, signal = null, local = false } = {}) => {
+  const liveView = async (gameId, { waitMs = 0, signal = null, local = false, owner = false } = {}) => {
     if (typeof streams?.focus === 'function') {
       const t0 = Date.now();
-      let st = await Promise.resolve(streams.focus(gameId, local ? { local: true } : {})).catch(() => null);
+      let st = await Promise.resolve(streams.focus(gameId, { ...(local ? { local: true } : {}), ...(owner ? { owner: true } : {}) })).catch(() => null);
       if (st?.fb) {
         let elsewhere = 0; // since when the camera has been live on another game
         while (Date.now() + 1_000 < t0 + waitMs && !signal?.aborted) {
           if (st.state === 'live' && st.game === gameId) break;
+          if (st.state === 'queued') break; // in line behind another game: said at once
           if (st.state === 'live' && st.game !== gameId) { elsewhere ||= Date.now(); if (Date.now() - elsewhere > 5_000) break; } else elsewhere = 0;
           if ((st.state === 'retrying' || st.state === 'capped') && (st.retryInS ?? 0) * 1_000 > t0 + waitMs - Date.now()) break;
           await pause(1_000);
-          st = (await Promise.resolve(streams.live?.()).catch(() => null)) ?? st;
+          st = (await Promise.resolve(streams.live?.(gameId)).catch(() => null)) ?? st;
         }
         return { ...st, camera: st.game ?? null, game: gameId };
       }
@@ -520,6 +522,8 @@ export async function startAgent(opts = {}) {
     : opts.fakeBot ? null : createServerReady({ host: config.mc.host, port: config.mc.port, version: config.mc.version });
   const web = createWeb({
     config, log, meter, makeBrain, askNotice, liveVideo, liveView, mcpCallMs: opts.mcpCallMs, serverReady,
+    // the camera's state for a game, read only (the live page's question: on camera and live?)
+    liveState: typeof streams?.live === 'function' ? (id) => Promise.resolve(streams.live(id)).catch(() => null) : null,
     // a server with a live video (the stream service or the Facebook channel): play waits for live_view (src/mcp.js)
     liveEnabled: Boolean(streams),
     // the terminal under the live video (the vertical layout): the lines go to the stream of the game, if it has one
