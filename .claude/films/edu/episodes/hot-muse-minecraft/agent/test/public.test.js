@@ -232,3 +232,44 @@ test('PUBLIC_PLAY=off closes the server from the start; the config reads the lim
   assert.throws(() => loadConfig({ MCP_OWNER_KEY: 'short' }), /MCP_OWNER_KEY must be at least 16/);
   assert.deepEqual(loadConfig({ WEB_BANNED_IPS: 'ABCDEF012345, 0123456789ab' }).web.bannedIps, ['abcdef012345', '0123456789ab']);
 });
+
+test('a browser at /mcp gets a page for people (what it is, the one sentence, how to add it, the source, the logo); MCP clients are unaffected', async (t) => {
+  const { url, client } = await serve(t, { env: { WEB_PUBLIC_URL: 'https://play.picasso-lab.com' } });
+  const browser = { accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' };
+  const r = await fetch(`${url}/mcp`, { headers: browser });
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type'), /^text\/html/);
+  const page = await r.text();
+  assert.match(page, /This is the address for your AI agent/);
+  assert.match(page, /MCP server \(streamable HTTP, no sign-in\)/);
+  assert.ok(page.includes('<pre class="oneline">Play Minecraft on https://play.picasso-lab.com/mcp and get to the Nether and back.</pre>'));
+  assert.match(page, /<strong>muse\.ai:<\/strong>/);
+  assert.match(page, /<strong>Claude:<\/strong>.*claude mcp add --transport http minecraft https:\/\/play\.picasso-lab\.com\/mcp/s);
+  assert.match(page, /<strong>Other MCP clients:<\/strong>/);
+  assert.match(page, /<a href="https:\/\/github\.com\/yil384\/minecraft-agent-mcp">github\.com\/yil384\/minecraft-agent-mcp<\/a>/);
+  assert.match(page, /NOT AN OFFICIAL MINECRAFT SERVICE\. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT\.<\/strong> Not affiliated with or endorsed by Meta, Mojang or Microsoft\./);
+  assert.match(page, /<img class="brand" src="\/brand\/picasso-lab-pixel\.png" alt="Picasso Lab, UC San Diego" width="280" height="69">/);
+  assert.doesNotMatch(page, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'no emoji');
+  const logo = await fetch(`${url}/brand/picasso-lab-pixel.png`);
+  assert.equal(logo.status, 200);
+  assert.equal(logo.headers.get('content-type'), 'image/png');
+  assert.deepEqual([...new Uint8Array(await logo.arrayBuffer()).slice(0, 4)], [0x89, 0x50, 0x4e, 0x47]);
+  // MCP clients: the SDK's client plays as before
+  const c = await client();
+  const { tools } = await c.listTools();
+  assert.ok(tools.some((x) => x.name === 'start_game'));
+  assert.match(text(await c.callTool({ name: 'start_game', arguments: { live: false } })), /^New game/);
+  // an MCP GET (the event stream), and a GET with a session: never the page
+  const sse = await fetch(`${url}/mcp`, { headers: { accept: 'text/event-stream' } });
+  assert.doesNotMatch(String(sse.headers.get('content-type')), /text\/html/);
+  await sse.body?.cancel();
+  const withSession = await fetch(`${url}/mcp`, { headers: { ...browser, 'mcp-session-id': 'not-a-session' } });
+  assert.doesNotMatch(String(withSession.headers.get('content-type')), /text\/html/);
+  await withSession.body?.cancel();
+  // a POST from a browser form is not a page either
+  const post = await fetch(`${url}/mcp`, { method: 'POST', headers: { ...browser, 'content-type': 'application/json' }, body: '{}' });
+  assert.doesNotMatch(String(post.headers.get('content-type')), /text\/html/);
+  await post.body?.cancel();
+  // no link when OPEN_SOURCE_URL is empty; a bad one is refused
+  assert.throws(() => loadConfig({ OPEN_SOURCE_URL: 'javascript:alert(1)' }), /OPEN_SOURCE_URL must be an https URL/);
+});

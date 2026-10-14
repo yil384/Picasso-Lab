@@ -216,6 +216,8 @@ export function loadConfig(env = process.env) {
     // operator's /admin/public does the same at once, without a restart. PUBLIC_CHAT=on lets every caller use say
     publicPlay: r.bool('PUBLIC_PLAY', true),
     publicChat: r.bool('PUBLIC_CHAT', false),
+    // the open-source agent server, linked from the page a browser gets at /mcp (empty: no link)
+    openSourceUrl: r.str('OPEN_SOURCE_URL', 'https://github.com/yil384/minecraft-agent-mcp'),
     // address hashes that may not play (the operator's /admin/games shows them): comma separated
     bannedIps: r.str('WEB_BANNED_IPS', '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean),
     askPerHour: r.int('WEB_ASK_PER_HOUR', 3, 1, 10_000),
@@ -223,6 +225,7 @@ export function loadConfig(env = process.env) {
     askAllowContributor: r.bool('WEB_ASK_ALLOW_CONTRIBUTOR', false),
     maxBodyBytes: r.int('WEB_MAX_BODY', 8_192, 1_024, 1_048_576),
   };
+  if (web.openSourceUrl && !/^https:\/\/[^\s"<>]+$/.test(web.openSourceUrl)) problems.push(`OPEN_SOURCE_URL must be an https URL (got "${web.openSourceUrl}")`);
   if (web.publicUrl) {
     try {
       if (!/^https?:$/.test(new URL(web.publicUrl).protocol)) problems.push('WEB_PUBLIC_URL must be http(s)');
