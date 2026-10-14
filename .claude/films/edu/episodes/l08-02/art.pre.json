@@ -117,11 +117,12 @@
    "sweep": "y",
    "people": true,
    "refs": [
+    "line_medusa_train_together",
     "line_dog_chases_cat",
-    "line_tiny_lab",
-    "line_balance"
+    "line_tiny_lab"
    ],
-   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), sits perfectly still in his armchair inside a big clear block of ice, drawn with clean outlines and a few short glint lines, eyes open and calm; on top of the ice block four small round cartoon parrots, all alike (dot eyes, short curved beaks, tidy feathers) practise busily, holding up small blank cards to each other. Square image 1024x1024; the ice block, the editor and the parrots fill about 80% of the width and about 85% of the height. The cards are blank: no text, no letters, no numbers."
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a full head of thick, fluffy, wavy hair, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), sits perfectly still in his armchair, hands resting on the armrests, empty-handed, eyes open and calm, inside a big clear block of ice drawn with clean outlines and a few short glint lines; on top of the ice block four small round cartoon parrots, all alike (dot eyes, short curved beaks, tidy feathers) practise busily, holding up small blank cards to each other. Square image 1024x1024; the ice block, the editor and the parrots fill about 80% of the width and about 85% of the height. The cards are blank: no text, no letters, no numbers.",
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. The first one shows the same editor and parrots: keep the editor's face, hair, beard, glasses and cardigan and the parrots the same."
   },
   {
    "name": "line_medusa_train_together",
