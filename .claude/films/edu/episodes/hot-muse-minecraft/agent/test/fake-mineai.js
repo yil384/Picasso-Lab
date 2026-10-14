@@ -88,6 +88,11 @@ export async function startFakeMineAi(opts = {}) {
     takeovers: [], // [{tool, made, error}]: a reflex takes the next such action over
     viewReads: 0,
     boxAt: null,
+    // a world whose cells change (production game gd7540a: a portal site dug out in rock): "x,y,z" -> name, read by
+    // view_blocks before boxAt, dug by an exact collect_block (a mismatch refused as theirs is), set by build_structure;
+    // digAlso(cell) -> the cells a dig clears with it (their drop recovery stepping through the next cell)
+    grid: null,
+    digAlso: null,
     netherAt: { x: 3.5, y: 70, z: 4.5 },
   };
   const calls = [];
@@ -148,6 +153,15 @@ export async function startFakeMineAi(opts = {}) {
         world.position = { x: a.x + 0.5, y: a.y ?? 64, z: a.z + 0.5 }; return { status: 'succeeded', navigation: { end: world.position, target: { x: a.x, y: a.y ?? null, z: a.z }, remainingDistance: 0 } };
       case 'collect_block': {
         const drop = DROPS[a.block_name] ?? a.block_name;
+        if (world.grid && Number.isInteger(a.x)) {
+          const key = `${a.x},${a.y},${a.z}`;
+          const there = world.grid.get(key) ?? world.boxAt?.(a.x, a.y, a.z) ?? 'air';
+          if (there !== a.block_name) return { collected: { requested: 1, gained: 0, gainedByItem: {}, blocksBroken: 0 }, status: 'failed', error: `[COLLECT_TARGET_MISMATCH] The requested cell at ${a.x},${a.y},${a.z} is ${there}, not ${a.block_name}. Broke 0 matching blocks; inventory gained 0/1 requested items.` };
+          world.grid.set(key, 'air');
+          for (const c of world.digAlso?.({ x: a.x, y: a.y, z: a.z }) ?? []) world.grid.set(`${c.x},${c.y},${c.z}`, 'air');
+          add(drop, 1);
+          return { collected: { requested: 1, gained: 1, gainedByItem: { [drop]: 1 }, blocksBroken: 1 }, status: 'succeeded' };
+        }
         if (a.block_name === 'iron_ore' && !have('stone_pickaxe')) return { status: 'failed', error: '[TARGET_UNMINEABLE] iron_ore needs a stone pickaxe' };
         if (world.breakAfter !== null) {
           const got = world.breakAfter;
@@ -207,6 +221,7 @@ export async function startFakeMineAi(opts = {}) {
         // world.buildLeft cells could not be reached (the first ones listed), as their audit names them
         const left = Math.min(world.buildLeft, solid.length);
         if (material) add(material, -(solid.length - left));
+        if (world.grid) for (const c of cells.slice(left)) world.grid.set(`${c.x},${c.y},${c.z}`, c.block_name);
         const kept = world.buildKept ? [{ block: 'deepslate', count: world.buildKept }] : [];
         const audit = { dimension: world.dimension, cells: cells.length, correct: cells.length - left, placed: solid.length - left - world.buildKept, dug: world.buildDug, wrong: left, kept, water: 0, supports: [], missing: [], passes: left ? 3 : 1, complete: !left };
         if (left) {
@@ -353,12 +368,12 @@ export async function startFakeMineAi(opts = {}) {
         const layers = [];
         for (let y = a.box.y + hh; y >= a.box.y - hh; y--) {
           const rows = [];
-          for (let z = a.box.z - hw; z <= a.box.z + hw; z++) rows.push({ z, blocks: Array.from({ length: 2 * hw + 1 }, (_, i) => world.boxAt?.(a.box.x - hw + i, y, z) ?? 'air') });
+          for (let z = a.box.z - hw; z <= a.box.z + hw; z++) rows.push({ z, blocks: Array.from({ length: 2 * hw + 1 }, (_, i) => world.grid?.get(`${a.box.x - hw + i},${y},${z}`) ?? world.boxAt?.(a.box.x - hw + i, y, z) ?? 'air') });
           layers.push({ y, rows });
         }
         box = { center: { x: a.box.x, y: a.box.y, z: a.box.z }, halfWidth: hw, halfHeight: hh, layers };
       }
-      const cells = (a.cells ?? []).map((c) => ({ ...c, name: world.unloadedUntil && Date.now() < world.unloadedUntil ? 'unloaded' : world.boxAt?.(c.x, c.y, c.z) ?? 'obsidian', shape: 'full' }));
+      const cells = (a.cells ?? []).map((c) => ({ ...c, name: world.unloadedUntil && Date.now() < world.unloadedUntil ? 'unloaded' : world.grid?.get(`${c.x},${c.y},${c.z}`) ?? world.boxAt?.(c.x, c.y, c.z) ?? 'obsidian', shape: 'full' }));
       return { action: 'view_blocks', durationMs: 1, result: { status: 'succeeded', blocks: { find: find ?? world.blocks, box, cells } } };
     });
     reg('set_survival_policy', (a) => {

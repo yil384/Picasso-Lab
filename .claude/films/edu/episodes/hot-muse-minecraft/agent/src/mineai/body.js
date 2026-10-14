@@ -1117,6 +1117,20 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
               continue;
             }
           }
+          // a cell of the portal's site that is no longer what the read before the build saw (production game gd7540a,
+          // 2026-10-14: three frames in a row stopped at "The requested cell at 477,75,-7 is air, not stone", a cell
+          // that was already clear, 3 s into the build, and the game ran out): a clear cell is what the dig was for, so
+          // it counts as cleared; another solid block there (gravel or sand fallen in) is dug as that block, once
+          if (!res.ok && call.clearing) {
+            const seenNow = /The requested cell at (-?\d+),\s*(-?\d+),\s*(-?\d+) is ([a-z_]+), not/i.exec(`${res.result} ${res.theirs ?? ''}`);
+            if (seenNow && REPLACEABLE.test(seenNow[4])) { own = null; continue; }
+            if (seenNow && !/^(water|lava|obsidian|bedrock)$/.test(seenNow[4]) && !retried.has(`clear:${i}`)) {
+              retried.add(`clear:${i}`);
+              calls[i] = { ...call, args: { ...call.args, block_name: seenNow[4] } };
+              i -= 1;
+              continue;
+            }
+          }
           // a cell of the portal's site that would not clear: nothing placed yet, said so
           if (!res.ok && call.clearing) res = { ...res, result: `could not clear the cell at ${call.args.x} ${call.args.y} ${call.args.z} (${call.args.block_name}) where the portal frame goes: ${res.result.replace(/^failed: /, '')}; no obsidian was placed. Build it a few blocks away, on open ground` };
           // their reflexes that acted during the call count as the body's own (F10 of the log hunt: in-step fights were in
