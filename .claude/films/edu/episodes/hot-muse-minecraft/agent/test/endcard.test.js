@@ -72,18 +72,19 @@ test('live page: asks every 15 s whether its game has ended (an image from our s
   const later = (fn, ms, every = 0) => { const id = ++seq; timers.push({ id, at: now + ms, fn, every }); return id; };
   const tick = (ms) => { const end = now + ms; for (;;) { timers.sort((x, y) => x.at - y.at); const x = timers[0]; if (!x || x.at > end) break; now = x.at; if (x.every) x.at += x.every; else timers.shift(); x.fn(); } now = end; };
   const el = (tag) => ({ tagName: tag, style: {}, remove() { this.gone = true; } });
-  const cur = el('IFRAME');
   const kids = [];
   const asked = [];
   let ended = false;
   class Img { constructor() { this.naturalWidth = 0; } set src(u) { this._src = u; if (/state\.svg/.test(u)) { asked.push(u); this.naturalWidth = ended ? 2 : 1; queueMicrotask(() => this.onload?.()); } } get src() { return this._src; } }
   const status = { textContent: 'Live: game gabc123.' };
   const reload = { remove() { this.gone = true; } };
-  const nodes = { v: { dataset: { src: 'x', st: 'https://play.picasso-lab.com/live/gabc123/' }, querySelector: () => cur, querySelectorAll: () => [cur, ...kids.filter((k) => k.tagName === 'IFRAME' && !k.gone)], appendChild: (f) => kids.push(f) }, r: reload };
+  const nodes = { v: { dataset: { src: 'x', st: 'https://play.picasso-lab.com/live/gabc123/' }, querySelectorAll: () => kids.filter((k) => k.tagName === 'IFRAME' && !k.gone), appendChild: (f) => kids.push(f) }, r: reload };
   const document = { activeElement: null, getElementById: (id) => nodes[id], createElement: (tag) => el(tag.toUpperCase()), querySelector: () => status };
-  vm.runInNewContext(script, { document, Image: Img, Date: { now: () => now }, setTimeout: (fn, ms) => later(fn, ms), setInterval: (fn, ms) => later(fn, ms, ms), clearInterval: (id) => { const i = timers.findIndex((x) => x.id === id); if (i >= 0) timers.splice(i, 1); }, addEventListener() {}, queueMicrotask });
+  const drop = (id) => { const i = timers.findIndex((x) => x.id === id); if (i >= 0) timers.splice(i, 1); };
+  vm.runInNewContext(script, { document, Image: Img, Date: { now: () => now }, setTimeout: (fn, ms) => later(fn, ms), clearTimeout: drop, setInterval: (fn, ms) => later(fn, ms, ms), clearInterval: drop, addEventListener() {}, queueMicrotask });
   return (async () => {
     tick(15_000); await null;
+    const cur = kids.find((k) => k.tagName === 'IFRAME');
     assert.equal(asked.length, 1);
     assert.match(asked[0], /^https:\/\/play\.picasso-lab\.com\/live\/gabc123\/state\.svg\?\d+$/);
     assert.equal(cur.gone, undefined, 'still running: the player stays');

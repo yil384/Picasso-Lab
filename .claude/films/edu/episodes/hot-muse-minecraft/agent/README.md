@@ -1355,6 +1355,10 @@ live_view's page, for the square video and Facebook's player:
   "frozen" player was Facebook's poster waiting for a click). Nothing of ours over it: the "Tap the video for sound" hint is gone (the owner,
   2026-10-14: it stayed up even after a tap).
   "Reload video" sits beside the status line under the player, over nothing.
+- A poster under the player from the first paint (2026-10-14: muse.ai's card thumbnail showed Chrome's broken-frame
+  icon on grey, its renderer cannot load Facebook's frame): inline SVG, no request (MUSE PLAYS MINECRAFT, LIVE, the
+  game, a stair of blocks in the HUD's colours). The player comes 2.5 s later (at once on a tap or a key), see-through
+  until it has loaded, so the thumbnail shows the poster and a frame that cannot load never shows.
 - The game's end (2026-10-14: after gd7540a ended, a fresh player started Facebook's replay from 0:00 and the game
   looked alive again): every 15 s the page asks our server whether its game has ended, with an image, since the panel
   allows no fetch (`/live/<game>/state.svg`, 1 px wide while it runs or is unknown, 2 px once ended; `no-store`).

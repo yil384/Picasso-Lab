@@ -76,7 +76,7 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
     const page = await a.callTool({ name: 'live_view', arguments: {} });
     assert.match(text(page), new RegExp(`^Live view of game ${link.game}: live video is off on this server\\.\n3D view in a web page \\(plain link\\): ${link.first_person_url}\n`), 'html is the default');
     assert.equal(page.structuredContent.format, 'html');
-    assert.equal(page.structuredContent.html.includes('<iframe'), false, 'no player without a live video');
+    assert.equal(page.structuredContent.html.includes('data-src='), false, 'no player without a live video');
     const embed = JSON.parse(text(await a.callTool({ name: 'live_view', arguments: { format: 'embed' } })));
     assert.deepEqual(embed, { format: 'embed', game: link.game, live: false, state: 'off', camera_game: null, player: null, embed_url: null, video_url: null }, 'no live video without a stream');
     assert.match(s, /State \(game g\w+, about 10 min left; it also ends after 5 min without calls\):\n[\s\S]*inventory/);
@@ -397,7 +397,7 @@ test('mcp live_view: the embed data while a live video of the game runs; link da
   assert.match(link.first_person_url, new RegExp(`^${url}/eyes/[A-Za-z0-9_-]{22}/$`));
   const page = await c.callTool({ name: 'live_view', arguments: { format: 'html' } });
   assert.match(text(page), /live on Facebook\.\nVideo \(plain link\): https:\/\/www\.facebook\.com\/picassolab\/videos\/123\/\n/);
-  assert.ok(page.structuredContent.html.includes('<iframe src="https://www.facebook.com/plugins/video.php?href=x&amp;show_text=false&amp;autoplay=true&amp;mute=true"'));
+  assert.ok(page.structuredContent.html.includes('data-src="https://www.facebook.com/plugins/video.php?href=x&amp;show_text=false&amp;autoplay=true&amp;mute=true"'));
   const bad = await c.callTool({ name: 'live_view', arguments: { format: 'gif' } });
   assert.equal(bad.isError, true, 'html, link or embed');
 });
