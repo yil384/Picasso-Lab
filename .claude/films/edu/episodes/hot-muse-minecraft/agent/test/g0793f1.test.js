@@ -31,7 +31,9 @@ test('g0793f1: rotten flesh is eaten when it is all there is and food is low, wi
   assert.deepEqual(r.calls[0].args, { food_name: 'rotten_flesh' });
   assert.match(r.note, /^rotten_flesh was all you had: it may give Hunger/);
   const no = toTheirs('eat', {}, { ...ctx, food: 10 });
-  assert.match(no.refused.result, /rotten_flesh may give Hunger, so eat takes it only at food 6 or less \(now 10\)/);
+  assert.match(no.refused.result, /rotten_flesh may give Hunger, so eat takes it only at food 6 or less, or when hurt below food 18 \(now food 10\)/);
+  // hurt (gd7540a, 2026-10-14): eaten below food 18, where health comes back
+  assert.deepEqual(toTheirs('eat', {}, { ...ctx, food: 10, health: 6 }).calls[0].args, { food_name: 'rotten_flesh' });
   assert.equal(toTheirs('eat', {}, { inventory: { spider_eye: 2 }, food: 3 }).refused.code, 'NEED_ITEMS', 'never food that takes health');
 });
 

@@ -158,6 +158,12 @@ export function needsTable(item) {
 /** Food that may give Hunger but never takes health, eaten when nothing safe is carried and food is low. */
 export const EMERGENCY_FOOD = Object.freeze(['rotten_flesh', 'chicken']);
 export const EMERGENCY_AT = 6;
+/**
+ * Whether food that may give Hunger is eaten now: at food EMERGENCY_AT or less, or hurt (health 14 or less) below food
+ * 18, the level it heals at (production game gd7540a, 2026-10-14: health 6 for 14 minutes at food 15 to 5 with rotten
+ * flesh carried; eat refused it above food 6, so it never healed). Rotten flesh adds 4 food; its Hunger costs about 1.
+ */
+export const emergencyEats = (food, health) => Number.isFinite(food) && food < 20 && (food <= EMERGENCY_AT || ((health ?? 20) <= 14 && food < 18));
 const UNSAFE_FOOD = new Set(['rotten_flesh', 'spider_eye', 'poisonous_potato', 'pufferfish', 'chicken', 'suspicious_stew', 'chorus_fruit']);
 /** The safe food carried with the best food value + saturation (as our eat skill picks), or null. */
 export function bestFood(inventory) {
@@ -388,8 +394,8 @@ export function toTheirs(skill, args, ctx) {
         // nothing safe: food that may only cost hunger (never health) is eaten when food is low, with a warning (a
         // production game, 2026-10-12, g0793f1: rotten flesh refused at food 6 and 3.4 health, nothing else carried)
         const last = EMERGENCY_FOOD.find((f) => (inv[f] ?? 0) > 0);
-        if (last && (ctx.food ?? 20) <= EMERGENCY_AT) return { calls: [{ tool: 'eat_food', args: { food_name: last } }], note: `${last} was all you had: it may give Hunger for a while (food drains faster), but it adds food; cooked meat is better` };
-        if (last) return refuse(`no safe food in your inventory: ${last} may give Hunger, so eat takes it only at food ${EMERGENCY_AT} or less (now ${ctx.food}); kill a cow, pig or sheep and cook the meat`, 'NEED_ITEMS');
+        if (last && emergencyEats(ctx.food ?? 20, ctx.health)) return { calls: [{ tool: 'eat_food', args: { food_name: last } }], note: `${last} was all you had: it may give Hunger for a while (food drains faster), but it adds food${(ctx.health ?? 20) <= 14 ? ' toward 18, where health comes back' : ''}; cooked meat is better` };
+        if (last) return refuse(`no safe food in your inventory: ${last} may give Hunger, so eat takes it only at food ${EMERGENCY_AT} or less, or when hurt below food 18 (now food ${ctx.food}); kill a cow, pig or sheep and cook the meat`, 'NEED_ITEMS');
         return refuse('no safe food in your inventory; kill a cow, pig or sheep and cook the meat', 'NEED_ITEMS');
       }
       return { calls: [{ tool: 'eat_food', args: { food_name: food } }] };

@@ -1,0 +1,44 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0015: collect_block's search spares a lit nether portal frame's corners too (0014 spared the obsidian with a portal
+block on a face; a corner touches the portal only at an edge): an obsidian block with a portal block on any of the
+26 cells around it. A production game (2026-10-14, gd7540a) took the 4 corner blocks of another player's lit frame,
+and the next calls went back there for "the obsidian deposit". With a test (collect-block).
+
+diff --git a/src/actions/collect-block/collect-block.test.ts b/src/actions/collect-block/collect-block.test.ts
+--- a/src/actions/collect-block/collect-block.test.ts
++++ b/src/actions/collect-block/collect-block.test.ts
+@@ -207,6 +207,8 @@ test("Patched for Muse plays Minecraft (picasso-lab), 0014: obsidian touching a
+   const bot = { blockAt: (v: Vec3) => ({ name: portal.has(`${v.x},${v.y},${v.z}`) ? "nether_portal" : "air" }) } as unknown as Pick<Bot, "blockAt">;
+   assert.equal(inLitPortalFrame(bot, { x: 0, y: 66, z: 0 }), true, "a side of the frame");
+   assert.equal(inLitPortalFrame(bot, { x: 1, y: 64, z: 0 }), true, "the bottom");
+-  assert.equal(inLitPortalFrame(bot, { x: 0, y: 64, z: 0 }), false, "a corner touches no portal block");
++  assert.equal(inLitPortalFrame(bot, { x: 0, y: 64, z: 0 }), true, "0015: a corner, at an edge of the portal");
++  assert.equal(inLitPortalFrame(bot, { x: 3, y: 68, z: 0 }), true, "0015: the other corner");
++  assert.equal(inLitPortalFrame(bot, { x: -1, y: 66, z: 0 }), false, "a block beside the frame");
+   assert.equal(inLitPortalFrame(bot, { x: 10, y: 64, z: 10 }), false, "obsidian elsewhere");
+ });
+diff --git a/src/actions/collect-block/collect-block.ts b/src/actions/collect-block/collect-block.ts
+--- a/src/actions/collect-block/collect-block.ts
++++ b/src/actions/collect-block/collect-block.ts
+@@ -100,10 +100,17 @@ function collectionMovements(bot: Bot, request: CollectBlockRequest, target: Col
+  * Patched for Muse plays Minecraft (picasso-lab), 0014: an obsidian block that touches a lit nether portal (a portal
+  * block on one of its six faces) is part of a working portal's frame: taking it breaks the portal, and with it every
+  * way back that links there (a shared world's return portal).
++ * 0015: its corners too (a portal block on any of the 26 cells around it): a frame's corner touches the portal only
++ * at an edge, and a production game (2026-10-14, gd7540a) took the 4 corners of another player's lit frame.
+  */
+ export function inLitPortalFrame(bot: Pick<Bot, "blockAt">, position: { x: number; y: number; z: number }): boolean {
+-  const faces = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+-  return faces.some(([dx, dy, dz]) => bot.blockAt(asVec3({ x: position.x + dx, y: position.y + dy, z: position.z + dz }))?.name === "nether_portal");
++  for (let dx = -1; dx <= 1; dx += 1)
++    for (let dy = -1; dy <= 1; dy += 1)
++      for (let dz = -1; dz <= 1; dz += 1) {
++        if (dx === 0 && dy === 0 && dz === 0) continue;
++        if (bot.blockAt(asVec3({ x: position.x + dx, y: position.y + dy, z: position.z + dz }))?.name === "nether_portal") return true;
++      }
++  return false;
+ }
+ 
+ export function inventoryStop(

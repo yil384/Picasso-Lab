@@ -617,7 +617,20 @@ test('advise on the way to the Nether: what the frame still needs, a death in la
   assert.equal(portal({ obsidian: 4 }).text, 'you carry 4 obsidian; a portal frame (build nether_portal) takes 12, and up to 2 more on uneven ground; collecting more needs a diamond pickaxe, a water bucket (bucket fill water), cobblestone to close off lava');
   assert.equal(portal({ obsidian: 4 }).hint, undefined);
   assert.deepEqual(portal({ obsidian: 4, water_bucket: 1, cobblestone: 20 }, [shield, stack('diamond_pickaxe', 1, 'hand')]).hint, { skill: 'collect', args: { block: 'obsidian', n: 10 } });
-  assert.deepEqual(portal({ obsidian: 14 }).hint, { skill: 'collect', args: { block: 'gravel', n: 10 } });
+  // the flint's odds and the iron, said (production game gd7540a: 9 gravel gave no flint, and the bucket had taken the
+  // last iron)
+  assert.deepEqual(portal({ obsidian: 14 }).hint, { skill: 'collect', args: { block: 'gravel', n: 22 } });
+  assert.equal(portal({ obsidian: 14, gravel: 9 }).text, '14 obsidian for the frame; flint_and_steel lights it: 1 iron_ingot (none left: mine 1 iron ore and smelt it) and 1 flint (a gravel mined drops flint 1 time in 10: about 10 gravel a flint, 22 for 9 chances in 10; the 9 gravel you carry can be placed and mined again)');
+  assert.deepEqual(portal({ obsidian: 14, flint: 1 }).hint, { skill: 'collect', args: { block: 'iron_ore', n: 1 } });
+  assert.deepEqual(portal({ obsidian: 14, flint: 1, raw_iron: 2 }).hint, { skill: 'smelt', args: { item: 'raw_iron', n: 1 } });
+  // early: with diamonds, the iron a bucket and flint_and_steel still take
+  const iron = (inventory, stacks = [shield]) => advise(situation(), { ...base, inventory, stacks }).find((a) => a.kind === 'iron');
+  assert.equal(iron({ diamond: 3, iron_ingot: 3 }).text, 'you carry 3 iron (ingots and raw iron); a bucket (water, to make obsidian) takes 3 and flint_and_steel (to light the portal) takes 1: mine 1 more iron ore and smelt it, and keep one ingot for flint_and_steel');
+  assert.deepEqual(iron({ diamond: 3, iron_ingot: 3 }).hint, { skill: 'collect', args: { block: 'iron_ore', n: 1 } });
+  assert.equal(iron({ diamond: 3, iron_ingot: 4 }), undefined, 'enough');
+  assert.match(iron({ water_bucket: 1, obsidian: 2 }, [shield, stack('diamond_pickaxe', 1, 'hand')]).text, /^you carry 0 iron .*; flint_and_steel \(to light the portal\) takes 1: mine 1 more iron ore/);
+  assert.equal(iron({ iron_ingot: 0 }), undefined, 'no diamonds yet: not on the way to the Nether');
+  assert.equal(iron({ diamond: 1, flint_and_steel: 1, bucket: 1 }), undefined);
   assert.deepEqual(portal({ obsidian: 14, flint: 1, iron_ingot: 2 }).hint, { skill: 'craft', args: { item: 'flint_and_steel', n: 1 } });
   assert.deepEqual(portal({ obsidian: 14, flint_and_steel: 1 }).hint, { skill: 'build', args: { blueprint: 'nether_portal', material: 'obsidian' } });
   assert.equal(advise(situation(), { ...base, memory: { portalBuilt: true }, inventory: { obsidian: 2 }, stacks: [shield] }).find((a) => a.kind === 'portal'), undefined, 'the frame stands');

@@ -183,6 +183,47 @@ INCIDENTS.g0a414c = {
   26: (w) => { LAVA_NEAR(w); w.fail.collect_block = 'Collection stopped: 5 routes in a row stopped without breaking or gaining anything; the last: the walk there got stuck. Broke 0 matching blocks; inventory gained 0/3 requested items.'; },
 };
 
+// the frame of another player's lit portal at 396 92 -65 (its 4 corners included), the pool Muse went to next
+const LIT_FRAME_GD = (w) => {
+  const portal = [];
+  for (const x of [396, 397]) for (const y of [92, 93, 94]) portal.push({ x, y, z: -65 });
+  const frame = [[395, 91], [398, 91], [395, 95], [398, 95], [395, 92], [395, 93], [395, 94], [398, 92], [398, 93], [398, 94], [396, 91], [397, 91], [396, 95], [397, 95]].map(([x, y]) => ({ x, y, z: -65 }));
+  w.blocks = [{ name: 'obsidian', found: 14, listed: frame }, { name: 'nether_portal', found: 6, listed: portal }, { name: 'lava', found: 9, listed: [{ x: 449, y: 71, z: -34, level: 0 }] }];
+};
+/** A site in rock (the bot in a tunnel its walk dug), with obsidian 14 again; the first dig clears the cells beside it. */
+const ROCK_SITE_GD = (w) => {
+  const feet = { x: Math.floor(w.position.x), y: Math.floor(w.position.y), z: Math.floor(w.position.z) };
+  w.inventory.set('obsidian', 14);
+  w.grid = new Map();
+  w.boxAt = (x, y, z) => (x === feet.x && z === feet.z && (y === feet.y || y === feet.y + 1) ? 'air' : 'stone');
+  let first = true;
+  w.digAlso = (c) => { if (!first) return []; first = false; return [{ x: c.x + 1, y: c.y, z: c.z }, { x: c.x - 1, y: c.y, z: c.z }, { x: c.x, y: c.y, z: c.z + 1 }, { x: c.x, y: c.y, z: c.z - 1 }]; };
+};
+INCIDENTS.gd7540a = {
+  0: (w) => { w.position = { x: 368.5, y: 82, z: -63.5 }; },
+  // a zombie fight in the middle of the smelt, its temporary furnace left standing (tried again there now)
+  7: (w) => w.takeovers.push({ tool: 'smelt_item', made: false, furnaceLeft: true, error: 'Action interrupted: fight response for zombie took control.' }),
+  // underground there: 12 of the shelter's wall cells were rock already (the fake builds every cell)
+  8: (w) => { w.inventory.set('dirt', 13); },
+  // the planks and stone production's shield was made from (the fake shelter took them for its walls)
+  12: (w) => { w.inventory.set('birch_planks', 8); w.inventory.set('cobblestone', 12); },
+  21: LAVA_NEAR,
+  // at the pool, the lit frame 37 blocks off: the search spares it, corners too (runtime patches 0014, 0015)
+  23: (w) => { LIT_FRAME_GD(w); w.blocks.push({ name: 'lava', found: 9, listed: [{ x: Math.floor(w.position.x) + 4, y: Math.floor(w.position.y) - 1, z: Math.floor(w.position.z), level: 0 }] }); },
+  // by the lit frame: its obsidian (corners too) is never taken, and no pool is near
+  26: LIT_FRAME_GD,
+  28: LAVA_NEAR,
+  // lava next to the first site
+  29: (w) => { const f = { x: Math.floor(w.position.x), y: Math.floor(w.position.y) }; w.boxAt = (x, y) => (x === f.x + 2 && y === f.y - 1 ? 'lava' : 'air'); },
+  30: (w) => { w.boxAt = null; },
+  // the three sites in rock: each frame goes up now
+  31: ROCK_SITE_GD,
+  32: (w) => { w.grid = null; w.boxAt = null; },
+  33: ROCK_SITE_GD,
+  34: (w) => { w.grid = null; w.boxAt = null; },
+  35: ROCK_SITE_GD,
+};
+
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
   // 1: raw_chicken (refused before a hunt until 2026-10-12) is read as chicken now and hunted (src/tolerant.js); 18: production smelted the mutton again after its hitch, but here the
@@ -212,6 +253,11 @@ const EXPECTED = {
   // 19: no pool near; 22: only flowing lava near; 26 to 29: the pit (routes that break nothing), 27 a walk stuck
   g0a414c: { 19: 'LAVA', 22: 'LAVA', 26: 'FAILED', 27: null, 28: 'FAILED', 29: 'FAILED' },
   ga13a88: { 27: null, 28: null, 31: null, 40: null, 41: null, 42: null, 46: null, 47: null, 52: null, 53: null, 58: null },
+  // 9: the hunt from inside its shelter; 10: the smelt of step 7 went through there, so nothing is left to smelt here;
+  // 13 to 16: the reflexes that hid from zombies; 19: the walk into the air over the pool; 21: the obsidian that did
+  // not come there (here the pool beside gives it); 23: Muse's stop; 24: the height told right; 26: the lit frame,
+  // nothing else near; 29: lava beside the site; 31, 33, 35: the frames in rock that placed nothing go up now
+  gd7540a: { 9: null, 10: null, 13: null, 14: null, 15: null, 16: null, 19: null, 21: null, 23: null, 24: null, 26: 'LAVA', 29: 'LAVA' },
 };
 /** An advice kind a step's reply must carry (by index): g0a414c's third obsidian call that did not move is stuck. */
 const EXPECTED_ADVICE = { g0a414c: { 29: 'stuck' } };
@@ -222,10 +268,15 @@ const EXPECTED_TEXT = {
   g4ac86b: { 20: /a lit portal at 49 93 161 \(\d+ blocks away\) is loaded: its frame was left alone, the obsidian comes from lava or other obsidian/, 28: /cleared \d+ cells of/, 33: /your own portal is at -?\d+ -?\d+ -?\d+, \d+ blocks away \(the Nether side led to an older portal/ },
   // 55, 57: the stone hillside and the birch leaves are cleared first now, and the frames go up (g809e1b's fix)
   ga13a88: { 1: /^go_to \{"x":-20,"y":78,"z":236\}: ok/, 55: /cleared \d+ cells of stone for it first/, 57: /cleared \d+ cells of birch_leaves for it first/ },
+  gd7540a: {
+    7: /tried again once it let go/,
+    26: /the obsidian at the lit portal at 396 92 -65 is its frame and is never taken; no lava pool within 16 blocks to make obsidian from\. The nearest lava pool loaded is at 449 71 -34/,
+    31: /cleared 18 cells of stone for it first\)/, 33: /cleared 18 cells of stone for it first\)/, 35: /cleared 18 cells of stone for it first\)/,
+  },
 };
 
 /** The goal each game played for. */
-const GOALS = { g0a414c: 'nether_and_back', g71c9f5: 'nether_and_back', g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
+const GOALS = { gd7540a: 'nether_and_back', g0a414c: 'nether_and_back', g71c9f5: 'nether_and_back', g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
 /** A why for a step, as Muse writes them (the fixtures predate why in the log). */
 const whyOf = (i, st) => `Step ${i}: ${[st.tool, ...Object.values(st.args ?? {}).filter((v) => typeof v !== 'object')].join(' ')} for the goal`;
 
@@ -282,6 +333,7 @@ async function replay(id, steps) {
       // the reply without the nudges at the top (test/liveview.test.js checks them)
       const text = r.content.map((x) => x.text).join('\n').replace(/^(?:(?:Your user cannot see the game yet: |Viewers see your why and plan under the video: |Next: call live_view now)[^\n]*\n\n)+/, '');
       const step = r.structuredContent?.steps?.at(-1) ?? null;
+      if (process.env.REPLAY_LOG === id) console.log(`#${i} ${st.tool} ${JSON.stringify(st.args)} -> ${r.structuredContent?.code ?? 'ok'}: ${(step?.result ?? text.split('\n')[0]).slice(0, 300)}`);
       out.push({ i, st, text, code: r.structuredContent?.code ?? null, status: step?.status ?? (r.isError ? 'refused' : null), result: step?.result ?? text.split('\n')[0], advice: r.structuredContent?.advice ?? [] });
     }
     // the game's report, mid-game and at the end

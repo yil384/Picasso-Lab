@@ -138,6 +138,17 @@ export const PORTAL_SETTLE_MS = 10_000;
 export const OBSIDIAN_STALL_MS = 75_000;
 /** What a block placed into a cell simply replaces (nothing to dig first). */
 const REPLACEABLE = /^(air|cave_air|void_air|short_grass|tall_grass|grass|fern|large_fern|snow|dead_bush|vine|glow_lichen|seagrass|[a-z_]*_sapling|dandelion|poppy|blue_orchid|allium|azure_bluet|[a-z_]*_tulip|oxeye_daisy|cornflower|lily_of_the_valley|sunflower|lilac|rose_bush|peony)$/;
+/**
+ * Whether an obsidian cell belongs to a lit portal's frame: a portal block on one of the 26 cells around it, its
+ * corners included (production game gd7540a, 2026-10-14: the search took the 4 corner blocks of another player's lit
+ * frame, which touch no portal block on a face, and Muse walked back twice for "the obsidian deposit" there).
+ */
+export function litFrameCell(q, portalAt) {
+  for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+    if ((dx || dy || dz) && portalAt.has(`${q.x + dx},${q.y + dy},${q.z + dz}`)) return true;
+  }
+  return false;
+}
 
 /** Their temporary station's verification hitches (a placed furnace or table not yet seen), worth one more try. */
 export const STATION_HITCH = /consumption of [a-z_]+ was not observed|NO_LOADED_MATCHING_TARGETS\] Observed 0 loaded (crafting_table|furnace) blocks/;
@@ -400,6 +411,20 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           { text: 'or change the plan: a different spot or a different way to what you need' },
         ] };
       }
+      // a frame that does not go up (production game gd7540a: three builds and only "change the plan" to go on)
+      if (kind === 'build:nether_portal') {
+        const p = latest.position ? floorPos(latest.position) : null;
+        const liquid = /\b(lava|water) at (-?\d+) (-?\d+) (-?\d+)/.exec(String(last?.result ?? ''));
+        const options = [];
+        if (liquid && p) {
+          const to = { x: p.x + 8 * (Math.sign(p.x - Number(liquid[2])) || 1), y: p.y, z: p.z + 8 * (Math.sign(p.z - Number(liquid[4])) || 1) };
+          options.push({ text: `build 8 blocks farther from the ${liquid[1]}: go_to ${to.x} ${to.y} ${to.z}, then build`, hint: { skill: 'go_to', args: to } });
+        }
+        options.push({ text: 'build on open, flat ground with sky above: the frame goes 1 block in front of you, 4 wide and 5 tall, its bottom row in the ground (in rock the body digs the site out first)' });
+        if (lastPortal && !lastPortal.complete) options.push({ text: 'take back the obsidian of the frame that failed: portal dismantle', hint: { skill: 'portal', args: { action: 'dismantle' } } });
+        options.push({ text: 'or place the frame yourself, block by block (place obsidian: 4 wide, 5 tall, corners optional)' });
+        return { text: `the frame does not go up${words ? ` (the last one said: ${words})` : ''}`, options };
+      }
       return { text: words ? `the last one said: ${words}` : 'nothing changed', options: [{ text: 'change the plan: a different spot, a different skill or a different order' }] };
     },
     /** The number of Muse's call now (the MCP layer counts them): when a rule is set. */
@@ -519,6 +544,22 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         from: latest.position,
         blocks: found.filter((f) => f.listed?.[0]).map((f) => ({ name: f.name, count: Math.min(64, f.found ?? 1), capped: (f.found ?? 0) > 64 || undefined, nearest: floorPos(f.listed[0]) })),
       };
+      // obsidian next to a lit portal is its frame: the state says so, and counts and points at the other obsidian
+      // only (gd7540a: "obsidian (nearest at 395 91 -65)" read as a deposit, two walks back to another player's portal)
+      const obs = scan.blocks.find((b) => b.name === 'obsidian');
+      if (obs && scan.blocks.some((b) => b.name === 'nether_portal')) {
+        const data = await rpc('view_blocks', { find: { block_names: ['obsidian', 'nether_portal'], limit: 64 } }, 10_000).catch(() => null);
+        const finds = data?.result?.blocks?.find;
+        if (Array.isArray(finds)) {
+          const listOf = (name) => finds.find((f) => f?.name === name)?.listed ?? [];
+          const portalAt = new Set(listOf('nether_portal').map(floorPos).map((q) => `${q.x},${q.y},${q.z}`));
+          const all = listOf('obsidian').map(floorPos);
+          const free = all.filter((q) => !litFrameCell(q, portalAt));
+          const inFrames = all.length - free.length;
+          if (inFrames && !free.length) Object.assign(obs, { note: 'a lit portal\'s frame: never taken' });
+          else if (inFrames) Object.assign(obs, { count: Math.max(1, obs.count - inFrames), nearest: free[0], note: `and ${inFrames} in a lit portal's frame, never taken` });
+        }
+      }
       // the portal it came out of, as a real portal block: where it stood when the change of dimension was seen may be a
       // step off it (a staging bench, 2026-10-12: the way back aimed at air)
       const here = dimension ?? 'overworld';
@@ -580,6 +621,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     position: latest.position,
     heading: status?.position?.headingDegrees ?? 0,
     food: latest.food,
+    health: latest.health,
     hostiles: [...(status?.nearby?.hostiles ?? []), ...(status?.nearby?.mobs ?? [])].filter((m) => m.kind === 'hostile').map((m) => ({ name: m.name, distance: m.nearest?.distance ?? 999 })),
     furnace: (() => { const f = scan.blocks.find((b) => b.name === 'furnace'); return f && latest.position && dist(f.nearest, latest.position) <= STATION_RADIUS ? f.nearest : null; })(),
     policyRevision,
@@ -699,6 +741,21 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     return { calls, note: pieces.length ? `crafts ${pieces.map((p) => p.item).join(', ')}` : null };
   }
 
+  /** The smelt calls from i on, at the furnace a cut-short smelt left standing within 6 blocks (none carried any more). */
+  async function smeltAtLeftFurnace(calls, i) {
+    await refresh().catch(() => {});
+    if ((latest.inventory?.furnace ?? 0) > 0 || !latest.position) return;
+    const data = await rpc('view_blocks', { find: { block_names: ['furnace'], limit: 1 } }, 10_000).catch(() => null);
+    const at = data?.result?.blocks?.find?.[0]?.listed?.[0];
+    if (!at || dist(at, latest.position) > 6) return;
+    const pos = floorPos(at);
+    for (let k = i; k < calls.length; k++) {
+      if (calls[k].tool !== 'smelt_item' || !calls[k].args?.temporary_workstation) continue;
+      const { temporary_workstation: _t, ...rest } = calls[k].args;
+      calls[k] = { ...calls[k], args: { ...rest, x: pos.x, y: pos.y, z: pos.z } };
+    }
+  }
+
   /** A spare pickaxe before a collect its pickaxe would not last through: {calls, text} or null. */
   function spareFirst(a) {
     if (!care || !a?.block_name || toolClassFor(a.block_name) !== 'pickaxe') return null;
@@ -786,7 +843,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const finds = data?.result?.blocks?.find ?? [];
     const listOf = (name) => (finds.find((f) => f?.name === name || f?.block === name)?.listed ?? (name === 'obsidian' ? finds[0]?.listed : finds[1]?.listed) ?? []);
     const portalAt = new Set(listOf('nether_portal').map((q) => `${q.x},${q.y},${q.z}`));
-    const touchesPortal = (q) => [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => portalAt.has(`${q.x + dx},${q.y + dy},${q.z + dz}`));
+    const touchesPortal = (q) => litFrameCell(q, portalAt);
     const mine = new Set((lastPortal?.cells ?? []).map((c) => `${c.x},${c.y},${c.z}`));
     const dim = dimension ?? 'overworld';
     return listOf('obsidian').map(floorPos)
@@ -864,8 +921,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // lava listed in sight, but no pool within 16 blocks, and nothing said where one was)
     const pool = listed.filter((l) => !Number.isFinite(l.level) || l.level === 0).sort((a, b) => away(a) - away(b))[0];
     const there = pool ? ` The nearest lava pool loaded is at ${floorPos(pool).x} ${floorPos(pool).y} ${floorPos(pool).z}, ${Math.round(away(pool))} blocks away: go_to a spot a few blocks from it first.` : '';
-    if (!lava.length && near.length) return refuse(`the lava within ${LAVA_NEAR} blocks is flowing, not a pool: obsidian forms on still lava.${there || ' Go next to a lava pool first (get_state lists lava among the nearby blocks).'}`, 'LAVA');
-    if (!lava.length) return refuse(`no lava pool within ${LAVA_NEAR} blocks to make obsidian from.${there || ' Go next to one first (get_state lists lava among the nearby blocks; deep caves below y -54 have the most).'}`, 'LAVA');
+    // the obsidian in sight is a lit frame's (gd7540a: Muse came back to it as "the obsidian deposit"): said first
+    const litFirst = lit ? `the obsidian at the lit portal at ${lit.nearest.x} ${lit.nearest.y} ${lit.nearest.z} is its frame and is never taken; ` : '';
+    if (!lava.length && near.length) return refuse(`${litFirst}the lava within ${LAVA_NEAR} blocks is flowing, not a pool: obsidian forms on still lava.${there || ' Go next to a lava pool first (get_state lists lava among the nearby blocks).'}`, 'LAVA');
+    if (!lava.length) return refuse(`${litFirst}no lava pool within ${LAVA_NEAR} blocks to make obsidian from.${there || ' Go next to one first (get_state lists lava among the nearby blocks; deep caves below y -54 have the most).'}`, 'LAVA');
     if (spawnAt && lava.some((l) => Math.hypot(l.x - spawnAt.x, l.z - spawnAt.z) <= SPAWN_GUARD)) return refuse(`the lava near by is within ${SPAWN_GUARD} blocks of the world spawn, where new players arrive: make obsidian somewhere else`, 'LAVA');
     const players = (status?.nearby?.players ?? []).map((x) => x?.position).filter(Boolean);
     if (players.some((q) => lava.some((l) => Math.hypot(q.x - l.x, q.y - l.y, q.z - l.z) <= 8))) return refuse('another player is next to the lava near by: make obsidian somewhere else', 'LAVA');
@@ -1190,6 +1249,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             if (RETRY_AFTER_REFLEX.has(call.tool) && !retried.has(i) && deadline - Date.now() > 10_000) {
               retried.add(i);
               await reflexSettled(Math.min(20_000, deadline - Date.now() - 5_000));
+              // a smelt whose temporary furnace the reflex left standing (production game gd7540a, 2026-10-14: the try
+              // again failed with "No furnace is carried for temporary use", the furnace on the ground beside it): the
+              // try again, and the smelt calls after it, use that furnace
+              if (!ctl.stopped && call.tool === 'smelt_item' && call.args?.temporary_workstation) await smeltAtLeftFurnace(calls, i);
               if (!ctl.stopped) { parts.push({ ok: true, result: `a reflex took the body over (${takeover}); tried again once it let go`, code: null }); i -= 1; continue; }
             }
             own = null;
