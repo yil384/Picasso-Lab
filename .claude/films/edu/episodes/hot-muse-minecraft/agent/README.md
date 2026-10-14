@@ -800,11 +800,24 @@ bench never creates a live video.
   (`POST /{page}/live_videos`, `status=LIVE_NOW`, title "Picasso Lab demo: an AI plays Minecraft (game g...)",
   a description naming the demo and the marker sentence), then starts the camera stream to its `secure_stream_url`
   (Facebook shows a stream only if it connects after the live video exists), reads the video's permalink for the
-  embed, and reads the status until Facebook says `LIVE` while our publisher has had `NetStream.Publish.Start`. The
-  camera films one game: the one whose `live_view` call came last. When the filmed game ends, the camera moves to the
-  game whose request came before (a game that never asked is never filmed) and the title follows; when no game that
-  asked is left (game end, lease end, idle end, all reach the channel as the game's end), ffmpeg stops and the live
-  video is ended (`end_live_video=true`). The `live_view` reply says this plainly.
+  embed, and reads the status until Facebook says `LIVE` while our publisher has had `NetStream.Publish.Start`.
+  **First come, first served** (2026-10-14, the public launch): the camera stays on the game that has it until that
+  game ends (game end, lease end, the MCP idle end) or has made no call for 5 minutes while others wait (it then goes
+  to the back of the line); then it goes to the next game in line: the games that called `live_view`, in the order of
+  their first call (calling again keeps the place; a game that ended is skipped; a game that never asked is never
+  filmed). Each game gets a live video of its own: the last game's live video is ended (`end_live_video=true`) and the
+  next one's created. A `live_view` for a game in line answers at once with state `queued`: "The camera is filming
+  another game right now; yours runs normally. You are number N in line (about M min). Call live_view again later, or
+  keep playing: when the camera reaches you, your stream starts." (M adds up the leases left of the games ahead; it
+  counts as called for NEED_LIVE_VIEW.) Its page is a card ("IN LINE FOR THE CAMERA #N", the logo when STREAM_LOGO is
+  on) with no player; it asks our server every 15 s (`/live/<game>/state.svg`, 3 px wide once the game is on camera
+  and live) and builds Facebook's player from the live video's id, read from `/live/<game>/v0.svg` to `v2.svg` (4
+  digits in each side, plus one). **The owner's priority**: `MCP_OWNER_KEY` in deploy/.env (never in code; at least
+  16 letters, digits, `_` or `-`); an MCP connection that brings it, as `https://play.picasso-lab.com/mcp?owner=<key>`
+  or the header `X-Muse-Owner: <key>`, puts its games first in line, and they take the camera from a player's game at
+  once (that game first in line again). A test caller's game (recording only) waits behind every player's, and a
+  player's game takes the camera from it at once. When no game that asked is left, ffmpeg stops and the live video is
+  ended. The `live_view` reply says this plainly.
 - **Failures**: a failed create is tried again after 5 s, 15 s, 30 s, 1 min, 2 min (never retried blindly: a create is
   not idempotent, so a sweep of our open live videos runs first); a refusal only a person can fix (the Page not
   eligible, a dead token, a missing permission) is said in plain words and tried again every 10 min. A stream that
@@ -1513,6 +1526,7 @@ X display) and feeds the terminal a scripted session through the real formatter
 | `FB_LIVE` | `off` | `on`: a guest game goes live on Facebook when `live_view` asks for it, one camera, one live channel (section "Live on a Facebook Page"); read by the process that runs the camera |
 | `FB_PAGE_ID`, `FB_TOKEN_FILE` | (none) | the Page's numeric id; the file (600) holding the Page token alone (or, with `FB_TARGET=me`, the long-lived user token; `scripts/fb-token.mjs` writes either); the token is never an environment variable and never logged |
 | `FB_DELETE_DELAY_S` | `600` | with `FB_DELETE_AFTER`, an ended live video is deleted this long after its game (a viewer whose panel opens late still sees the end); the due time is kept in `FB_STATE_FILE` |
+| `MCP_OWNER_KEY` | (none) | the owner's key (secret, deploy/.env only): an MCP connection with `?owner=<key>` on its URL or the header `X-Muse-Owner` has its games first in line for the camera and taking it from a player's game (section "Live on a Facebook Page") |
 | `MCP_TEST_RECORD` | `off` (`on` in deploy/compose.yaml) | a test caller's `live_view` has the camera film its game for the recording only (focus with `local`): no live video, and a player's game always keeps the camera |
 | `RECORD`, `RECORD_DIR`, `RECORD_MAX_GB`, `RECORD_KEEP_DAYS`, `RECORD_CRF`, `RECORD_PRESET`, `RECORD_NICE` | `off` (`on` in production), `recordings/`, `150`, `30`, `18`, `veryfast`, `10` | the camera service records every game it films (src/recorder.js): per game under `RECORD_DIR/<game>/` the clean game (`clean-<n>.mp4`: the client's own picture and the game's sound, no HUD, a second ffmpeg on the display, niced, fragmented MP4), the stream as it went out (`stream-<n>.mp4`: the live's own bytes written alongside, remuxed at the end; with no live video the stream's own output), the HUD's timeline (`hud.jsonl`: every update with wall time and game seconds, the whole HUD state every 30 s, and each of concept B's toasts, banners, floaters and action-bar lines with its times, `{t, gs, ev}`) and `meta.json`; filmed when Facebook is capped or failing too (the live channel's recording-only stream); old recordings out by age, then the oldest over the size. Production: `RECORD_HOST_DIR` in deploy/.env is the folder on the host |
 | `MCP_TEST_LIVE` | `off` | a test caller (TEST SCRIPT: an MCP client named like a smoke, check, e2e or test script) gets no Facebook live from `live_view`: the same answer shape with state `test`, the 3D view's link, the camera left where it is, a `live_view_test` log row; `on` lets a deliberate check spend one (2026-10-13: the smoke games of one day used up `FB_MAX_PER_DAY` and the owner's game got none). At the cap, `live_view` tells Muse until when (UTC) and that the game itself works: keep playing |

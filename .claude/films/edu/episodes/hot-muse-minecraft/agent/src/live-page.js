@@ -19,6 +19,7 @@
 // splits with their times, who decided). If the panel blocks images from our server, the page stays as it was.
 
 import fs from 'node:fs';
+import { facebookEmbedUrl } from './config.js';
 
 const PLAYER = 'https://www.facebook.com/plugins/video.php?';
 
@@ -43,9 +44,10 @@ export const isPlayerUrl = (u) => {
 export function statusLine(v) {
   const g = gameId(v.game);
   const cam = gameId(v.camera);
-  if (v.state === 'live' && cam && g && cam !== g) return `Live: the camera is on game ${cam} now (it films the game that asked for the live view last).`;
+  if (v.state === 'queued') return `In line for the camera: #${v.queue?.position ?? '?'} (about ${v.queue?.waitMin ?? '?'} min). Your game runs normally; its video starts here when the camera reaches it.`;
+  if (v.state === 'live' && cam && g && cam !== g) return `Live: the camera is on game ${cam} now; game ${g} is in line for it.`;
   if (v.state === 'live' && v.ownerOnly) return `Live${g ? `: game ${g}` : ''}, but Facebook shows this video to its owner only.`;
-  if (v.state === 'live') return `Live${g ? `: game ${g}` : ''}. One camera films the game that asked for the live view last.`;
+  if (v.state === 'live') return `Live${g ? `: game ${g}` : ''}. One camera, first come, first served.`;
   if (v.state === 'retrying') return 'Not live yet: the live video could not start; it is tried again by itself.';
   if (v.state === 'capped') return v.until ? `Not live: the live view is at its ${v.daily ? 'daily' : 'hourly'} limit until ${v.until} UTC. The game goes on.` : 'Not live: the limit of live videos for now is reached.';
   if (v.state === 'test') return `Test caller: no Facebook live${g ? ` for game ${g}` : ''} (tests never use the live videos a day). The game goes on.`;
@@ -59,16 +61,18 @@ export function statusLine(v) {
  * shows the poster, never a frame that could not load), see-through until it has loaded; the watchdog; the game's end
  * from our server's images (no fetch: the panel allows none).
  */
-const SCRIPT = `(()=>{const v=document.getElementById('v');if(!v)return;const src=v.dataset.src,st=v.dataset.st;let cur=null,next=null,touched=0,ended=0;
-function swap(){if(ended)return;if(next)next.remove();const f=document.createElement('iframe');next=f;f.src=src;f.title='Live video';f.allow='autoplay; encrypted-media; picture-in-picture; web-share';f.allowFullscreen=true;f.style.opacity='0';v.appendChild(f);
+const SCRIPT = `(()=>{const v=document.getElementById('v');if(!v)return;const st=v.dataset.st,tpl=v.dataset.tpl;let src=v.dataset.src||'',cur=null,next=null,touched=0,ended=0;
+function swap(){if(ended||!src)return;if(next)next.remove();const f=document.createElement('iframe');next=f;f.src=src;f.title='Live video';f.allow='autoplay; encrypted-media; picture-in-picture; web-share';f.allowFullscreen=true;f.style.opacity='0';v.appendChild(f);
 f.onload=()=>setTimeout(()=>{if(next!==f)return;f.style.opacity='1';const old=cur;cur=f;next=null;if(old)setTimeout(()=>old.remove(),900);},cur?2500:800);}
 function first(){if(!cur&&!next)swap();}
 const ft=setTimeout(first,2500);addEventListener('pointerdown',first);addEventListener('keydown',first);
-document.getElementById('r').onclick=()=>swap();
+const rb=document.getElementById('r');if(rb)rb.onclick=()=>swap();
 const wd=setInterval(()=>{if(!touched)swap();},300000);
+function turn(){if(src||!tpl)return;Promise.all([0,1,2].map((k)=>new Promise((res)=>{const i=new Image();i.onload=()=>res(String(i.naturalWidth-1).padStart(4,'0')+String(i.naturalHeight-1).padStart(4,'0'));i.onerror=()=>res(null);i.src=st+'v'+k+'.svg?'+Date.now();}))).then((p)=>{if(src||p.includes(null))return;const id=p.join('').replace(/^0+/,'');if(!/^[0-9]{5,24}$/.test(id))return;src=tpl.replace('VIDEOID',id);
+const t=document.querySelector('#s p');if(t)t.textContent='On camera: the live video of this game.';swap();});}
 function end(){ended=1;clearTimeout(ft);clearInterval(wd);clearInterval(pl);next=null;for(const f of v.querySelectorAll('iframe'))f.remove();const c=new Image();c.className='end';c.alt='The game has ended';c.src=st+'end.svg?'+Date.now();v.appendChild(c);
 const p=document.querySelector('#s p');if(p)p.textContent='The game has ended. A new game gets a new live video.';const r=document.getElementById('r');if(r)r.remove();}
-const pl=st?setInterval(()=>{const i=new Image();i.onload=()=>{if(i.naturalWidth===2)end();};i.src=st+'state.svg?'+Date.now();},15000):0;
+const pl=st?setInterval(()=>{const i=new Image();i.onload=()=>{if(i.naturalWidth===2)end();else if(i.naturalWidth===3)turn();};i.src=st+'state.svg?'+Date.now();},15000):0;
 addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement&&document.activeElement.tagName==='IFRAME')touched=1;},0));})();`;
 
 /**
@@ -83,8 +87,17 @@ const logoData = () => {
   }
   return LOGO_DATA;
 };
-function posterSvg(game, aw, ah, logo = null) {
+function posterSvg(game, aw, ah, logo = null, queue = null) {
   const W = 1080, H = Math.round((1080 * ah) / aw), cy = H / 2;
+  if (queue) {
+    // in line for the camera: the logo (when there is one), the place in line, the wait
+    return `<svg class="poster" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-label="In line for the camera"><rect width="${W}" height="${H}" fill="#0b0e14"/>`
+      + (logo ? `<image href="${logo}" x="310" y="${cy - 230}" width="460" height="114" style="image-rendering:pixelated"/>` : '')
+      + `<g font-family="system-ui,sans-serif" fill="#f3f5f9" text-anchor="middle"><text x="540" y="${cy - 40}" font-size="30" font-weight="600" fill="#b9adff" letter-spacing="4">IN LINE FOR THE CAMERA</text>`
+      + `<text x="540" y="${cy + 60}" font-size="120" font-weight="700">#${Number(queue.position) || '?'}</text>`
+      + `<text x="540" y="${cy + 120}" font-size="30" fill="#aeb6c6">about ${Number(queue.waitMin) || '?'} min${game ? ` · game ${game}` : ''}</text>`
+      + `<text x="540" y="${cy + 170}" font-size="26" fill="#8d97ab">your game runs normally; its video starts here when the camera reaches it</text></g></svg>`;
+  }
   if (logo) {
     // the logo (230 x 57, drawn at twice its size with its blocks kept), then the title under it
     return `<svg class="poster" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-label="Muse plays Minecraft, live"><rect width="${W}" height="${H}" fill="#0b0e14"/>`
@@ -110,22 +123,27 @@ export function liveViewHtml(v) {
   // the player at the video's own shape (square in the UI layout), as wide as the panel and no taller than it
   const [aw, ah] = /^\d{1,4}\/\d{1,4}$/.test(String(v.aspect ?? '')) ? String(v.aspect).split('/').map(Number) : [16, 9];
   const ratio = Math.round((aw / ah) * 10_000) / 10_000;
-  const live = v.embedUrl && isPlayerUrl(v.embedUrl) && v.state !== 'off' && v.state !== 'waiting' && v.state !== 'test';
+  const queued = v.state === 'queued';
+  const live = !queued && v.embedUrl && isPlayerUrl(v.embedUrl) && v.state !== 'off' && v.state !== 'waiting' && v.state !== 'test';
   const src = live ? `${v.embedUrl}&autoplay=true&mute=true` : '';
   // where the page asks whether its game has ended: our own server, https (http on this machine for tests)
   const g = gameId(v.game);
-  const st = live && g && isStatusBase(v.statusBase) ? `${String(v.statusBase).replace(/\/+$/, '')}/live/${g}/` : '';
+  const st = (live || queued) && g && isStatusBase(v.statusBase) ? `${String(v.statusBase).replace(/\/+$/, '')}/live/${g}/` : '';
+  // in line: no player until the camera reaches the game; then the page builds it from the live video's id (our
+  // server's images) and this template (Facebook's player for the owner's videos)
+  const tpl = queued && st && /^\d{1,30}$/.test(String(v.fbOwner ?? '')) ? `${facebookEmbedUrl(`https://www.facebook.com/${v.fbOwner}/videos/VIDEOID/`)}&autoplay=true&mute=true` : '';
   const player = live
     ? `<div id="v" data-src="${esc(src)}"${st ? ` data-st="${esc(st)}"` : ''}>${posterSvg(g, aw, ah, v.logo ? logoData() : null)}</div>`
-    : '';
+    : queued ? `<div id="v"${st ? ` data-st="${esc(st)}"` : ''}${tpl ? ` data-tpl="${esc(tpl)}"` : ''}>${posterSvg(g, aw, ah, v.logo ? logoData() : null, v.queue ?? {})}</div>`
+      : '';
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
     + '<title>Minecraft live</title><style>html,body{margin:0;background:#0c0e10;color:#e8e4dc;font:13px/1.4 system-ui,sans-serif}'
     + `#v{position:relative;aspect-ratio:${aw}/${ah};width:min(100%,calc((100vh - 28px)*${ratio}));margin:0 auto;background:#000;overflow:hidden}`
     + 'iframe,img.end,svg.poster{position:absolute;inset:0;width:100%;height:100%;border:0;transition:opacity .8s}'
     // "Reload video" in the status line under the player: it covers nothing
     + '#s{display:flex;align-items:center;justify-content:space-between;gap:10px}#r{flex:none;margin-right:10px;padding:1px 9px;border:1px solid #3a3f47;border-radius:99px;background:none;color:#c9c5bd;font:12px system-ui,sans-serif;cursor:pointer}#r:hover{color:#fff}'
-    + `p{margin:0;padding:5px 12px}</style></head><body>${player}${live ? `<div id="s"><p>${esc(statusLine(v))}</p><button id="r" type="button">Reload video</button></div>` : `<p>${esc(statusLine(v))}</p>`}`
-    + `${live ? `<script>${SCRIPT}</script>` : ''}</body></html>`;
+    + `p{margin:0;padding:5px 12px}</style></head><body>${player}${live ? `<div id="s"><p>${esc(statusLine(v))}</p><button id="r" type="button">Reload video</button></div>` : queued ? `<div id="s"><p>${esc(statusLine(v))}</p></div>` : `<p>${esc(statusLine(v))}</p>`}`
+    + `${live || (queued && st) ? `<script>${SCRIPT}</script>` : ''}</body></html>`;
 }
 
 const mmss = (sec) => { const n = Math.max(0, Math.round(Number(sec) || 0)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`; };

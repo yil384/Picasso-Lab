@@ -1052,7 +1052,9 @@ export function createStreamService({ manager, log } = {}) {
     try {
       if (/^\/live\/?(?:\?.*)?$/.test(String(req.url))) {
         if (req.method !== 'GET') return json(res, 405, { error: 'use GET' });
-        return json(res, 200, typeof manager.live === 'function' ? manager.live() : { fb: false });
+        // ?game=<id>: that game's place in line when another has the camera
+        const g = new URL(String(req.url), 'http://local').searchParams.get('game');
+        return json(res, 200, typeof manager.live === 'function' ? manager.live(g && ID_RE.test(g) ? g : null) : { fb: false });
       }
       const m = String(req.url).match(/^\/streams(?:\/([^/?]+))?(\/caption|\/focus)?\/?(?:\?.*)?$/);
       if (!m) return json(res, 404, { error: 'not found' });
@@ -1067,8 +1069,9 @@ export function createStreamService({ manager, log } = {}) {
           if (!validSource(body.source, body.view ?? id) || !/^[A-Za-z0-9_]{3,16}$/.test(String(body.player))) return json(res, 400, { error: 'source must be http://127.0.0.1:<port>/eyes/<view>/ and player a Minecraft name' });
           manager.start(id, { source: body.source, player: body.player });
         }
-        // local: a test's game filmed for the recording only, never on Facebook (MCP_TEST_RECORD)
-        return json(res, 200, await manager.focus(id, body.local === true ? { local: true } : {}));
+        // local: a test's game filmed for the recording only, never on Facebook (MCP_TEST_RECORD); owner: the owner's
+        // game (MCP_OWNER_KEY, checked by the agent), first in line
+        return json(res, 200, await manager.focus(id, { ...(body.local === true ? { local: true } : {}), ...(body.owner === true ? { owner: true } : {}) }));
       }
       if (id !== undefined && !ID_RE.test(id)) return json(res, 400, { error: 'bad id' });
       if (!id) return req.method === 'GET' ? json(res, 200, { enabled: manager.enabled, streams: manager.list() }) : json(res, 405, { error: 'use GET' });
@@ -1160,13 +1163,13 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000, refresh
       termChain.delete(id);
     },
     /** live_view asked for this game: the channel's camera films it from now on. The channel's state, or null. */
-    async focus(id, { local = false } = {}) {
-      const r = await call('POST', `/streams/${encodeURIComponent(id)}/focus`, { ...(asks.get(id) ?? {}), ...(local ? { local: true } : {}) }).catch(() => null);
+    async focus(id, { local = false, owner = false } = {}) {
+      const r = await call('POST', `/streams/${encodeURIComponent(id)}/focus`, { ...(asks.get(id) ?? {}), ...(local ? { local: true } : {}), ...(owner ? { owner: true } : {}) }).catch(() => null);
       return r?.status === 200 && r.body?.fb ? r.body : null;
     },
-    /** The channel's state (GET /live), or null. */
-    async live() {
-      const r = await call('GET', '/live').catch(() => null);
+    /** The channel's state (GET /live; with a game: its place in line), or null. */
+    async live(id = null) {
+      const r = await call('GET', id ? `/live?game=${encodeURIComponent(id)}` : '/live').catch(() => null);
       return r?.status === 200 && r.body?.fb ? r.body : null;
     },
     async stop(id) {
