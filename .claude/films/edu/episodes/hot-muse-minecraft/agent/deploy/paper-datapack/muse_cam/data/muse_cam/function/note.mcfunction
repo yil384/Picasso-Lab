@@ -9,6 +9,7 @@ execute store result storage muse_cam:spot rule int 1 run scoreboard players get
 execute store result storage muse_cam:spot time long 1 run time query gametime
 execute store result storage muse_cam:spot hidden int 1 run scoreboard players get #hd muse_cam_y
 execute store result storage muse_cam:spot seen int 1 run scoreboard players get #vis muse_cam_y
+execute store result storage muse_cam:spot fp int 1 if entity @a[tag=muse_cam,tag=muse_cam_fp]
 data modify storage muse_cam:spot eye set from entity @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] Pos
 data modify storage muse_cam:spot bot set from entity @a[tag=muse_cam_target,limit=1] Pos
 data modify storage muse_cam:spot facing set from entity @a[tag=muse_cam_target,limit=1] Rotation
