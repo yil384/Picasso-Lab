@@ -24,6 +24,12 @@ const SKILL_ICONS = {
   // the HUD's items (inventory, goals, the depth), 3x3 sheets too
   items1: ['wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'diamond_pickaxe', 'diamond', 'iron_ingot', 'raw_iron', 'coal', 'obsidian'],
   items2: ['flint_and_steel', 'water_bucket', 'lava_bucket', 'steak', 'bread', 'cobblestone', 'log', 'depth', 'ender_pearl'],
+  // the second batch (gen-items-more.sh): items the HUD showed as a stand-in (a craft step -> hammer, a pick-up -> star)
+  items3: ['crafting_table', 'stick', 'oak_planks', 'furnace', 'wooden_sword', 'wooden_axe', 'stone_sword', 'torch', 'chest'],
+  items4: ['flint', 'gravel', 'dirt', 'porkchop', 'iron_sword', 'gold_ingot', 'netherrack', 'blaze_rod', 'ender_eye'],
+  // (items5's two axes read as adzes at 24 px: null = not keyed; items6 has them again)
+  items5: ['cobbled_deepslate', 'sand', 'apple', null, null, 'white_wool', 'string', 'bone', 'beef'],
+  items6: ['stone_axe', 'iron_axe', 'chicken', 'mutton', 'feather', 'leather', 'arrow', 'gunpowder', 'iron_chestplate'],
 };
 const OUT = path.join(agent, 'assets', 'muse-ui');
 
@@ -128,6 +134,7 @@ for (const [sheet, names] of [...Object.entries(ICONS), ...Object.entries(SKILL_
   if (!fs.existsSync(path.join(here, 'art', `${sheet}.png`))) continue;
   const cs = await cells(path.join(here, 'art', `${sheet}.png`), sheet in SKILL_ICONS ? 3 : 2);
   cs.forEach((c, i) => {
+    if (!names[i]) return; // a cell left out (redrawn on a later sheet)
     const b = box(c);
     const side = Math.max(b.x1 - b.x0, b.y1 - b.y0) + 8;
     const out = createCanvas(256, 256);
@@ -138,5 +145,5 @@ for (const [sheet, names] of [...Object.entries(ICONS), ...Object.entries(SKILL_
     g.drawImage(c, cx - side / 2, cy - side / 2, side, side, 0, 0, 256, 256);
     fs.writeFileSync(path.join(OUT, 'icons', `${names[i]}.png`), out.toBuffer('image/png'));
   });
-  console.log(`${sheet}: ${names.join(', ')}`);
+  console.log(`${sheet}: ${names.filter(Boolean).join(', ')}`);
 }
