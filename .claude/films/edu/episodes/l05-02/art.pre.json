@@ -49,7 +49,7 @@
     "line_glue_tiles",
     "line_word_bag"
    ],
-   "prompt": "Seen from straight above on a plain floor: on the left, one open, empty suitcase, its lid lying flat. On the right, laid out in a neat row as if about to be packed: first two thin, small, neatly folded T-shirts side by side; then three big, thick, puffy quilted winter coats, each folded into a fat bundle about twice the size of a folded T-shirt. The three coats clearly take up most of the floor space. Nothing else. Landscape image 1536x1024; the suitcase and the five items fill about 92% of the width and about 70% of the height, with clear space between the items so each can be labelled. No text, no letters, no numbers, no logos, no prints or labels on the clothes."
+   "prompt": "Seen from straight above on a plain floor: on the left, one open, empty hard-shell suitcase, its lid lying flat beside it, drawn in outline only (its wheels, handle and hinges are small empty outlines, nothing filled in). On the right, laid out in a neat row as if about to be packed: first two thin, small, neatly folded T-shirts side by side; then three big, thick, puffy quilted winter coats, each folded into a fat bundle about TWICE as wide and twice as tall as a folded T-shirt, so the three coats clearly take up most of the floor space. Nothing else. Landscape image 1536x1024; the suitcase and the five items are drawn large: together they fill about 90% of the width and about 60% of the height, with a clear margin on the left and right edges and clear space between the items so each can be labelled. No text, no letters, no numbers, no logos, no prints or labels on the clothes, no grey, no filled or solid black parts anywhere."
   },
   {
    "name": "line_zero_four_full",
