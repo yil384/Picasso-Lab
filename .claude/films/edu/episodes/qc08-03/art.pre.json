@@ -1,0 +1,112 @@
+{
+ "episode": "QC08-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: classical bits can only flip; qubits can also flip a sign no classical code had ever heard of (line_qc_shor_unseen_trick: the keeper in round glasses sees two dark bulbs while the imp, in square glasses, tiptoes off). Peter Shor's 1995 fix: nine qubits, two layers (line_qc_shor_three_floors). Cast as in QC08-01: the keeper (the code) and the imp (the noise). The glasses are QC05-02's two lenses (reuse line_qc_hbridge_two_glasses): round = the 0/1 (Z) lens, square = the +/- (X) lens; the imp in square glasses is a phase flip, an ordinary flip seen through the other lens.",
+  "Roadmap (50:32-51:24): X, then Z, then both, then everything (pen work; reuse line_qc_vote_switch_fix for the X step already done).",
+  "Z is a bit flip in the +/- basis (51:50-52:44; clip 52:15-52:44; tape Q24-09 p15): reuse line_qc_phase_coin_turn (edge-on the two look alike; turned, the difference shows); line_qc_shor_glasses_catch: the keeper puts on the square glasses and the imp's trick is an ordinary flip.",
+  "The |+++>, |---> code (52:44-56:55): the bit-flip encoder followed by Hadamards, change the lens, act, change back (reuse line_qc_hbridge_cake_turntable); its checks are X-type, X1X2 and X2X3, read through the square lens (line_qc_shor_glasses_catch); syndromes and fixes (56:55-59:49).",
+  "Shor's code by concatenation (59:51-62:03; clip 59:51-60:16; tape Q24-09 p19): the phase code outside, the bit-flip code inside; 8 checks (62:03-64:00): each floor's two small bulbs are the six Z-type checks inside one block of three, and the two big lanterns between floors are the two X-type checks comparing neighbouring blocks (line_qc_shor_three_floors: 9 covered plates, 6 small bulbs, 2 lanterns).",
+  "Counting (64:36-67:15): 27 single-qubit errors (9 qubits x X, Y, Z) against 2^8 = 256 syndromes; some two-qubit errors are fixable too, but not all of them (C(9,2) x 9 = 324 > 256) (reuse line_card_catalog: a wall of drawers, few in use).",
+  "Quiz (67:28-69:41; tape Q24-09 p21): an XZ error on qubit 4 (line_qc_shor_quiz_floors: the middle floor's left bulb and both lanterns lit; pause, then the answer: flip the sign of block 2 and flip qubit 4 back).",
+  "Degenerate, but not a problem (Q25-11 06:23-10:02, clip 07:43-08:10; Q24-09 65:00-68:32): a phase flip on any one of a block's three qubits gives the very same state, so different errors share a syndrome and the same fix works whichever it was (line_qc_shor_tablecloth_tug: a tug at any seat slides the whole cloth; the keeper straightens it from her own seat). Cite Shor, PRA 52, R2493 (1995) by name only; no portrait.",
+  "Cover (line_qc_cover_08_03; for the X post and thumbnails, not a film beat): the keeper, in square glasses, catches the imp in square glasses red-handed beside a covered plate."
+ ],
+ "reuse": [
+  "line_qc_hbridge_two_glasses",
+  "line_qc_phase_coin_turn",
+  "line_qc_hbridge_cake_turntable",
+  "line_card_catalog",
+  "line_qc_vote_switch_fix",
+  "line_qc_synd_read_bulbs"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_shor_unseen_trick",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_parity_three_switches",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a hallway drawn earlier for this series: draw the same hallway wall, the same wall plates with closed hinged flaps and the same hanging bulbs, the same way. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long plain hallway wall seen straight from the front. Along it, at hand height, three identical wall plates sit in a row, evenly spaced, and each is covered by a small closed hinged flap so its switch cannot be seen. From the ceiling hang two bare light bulbs on short cords: one exactly halfway between the first and second plate, the other exactly halfway between the second and third plate (a lit bulb is an empty bulb outline with short straight rays around it; an unlit bulb is a plain empty bulb outline). All flaps are closed and both bulbs are unlit. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots), wearing a pair of glasses with perfectly round frames, sits on a small stool at the left end of the hallway holding a plain mug, glancing up at the two dark bulbs, relaxed and satisfied. Behind her back, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth), wearing a small pair of glasses with square frames, tiptoes away from the middle plate on the tips of his toes, one finger to his lips, grinning. Landscape image 1536x1024; the wall, the bulbs and the two characters fill about 92% of the width and about 80% of the height; the two pairs of glasses are clearly round and clearly square. No text, no letters, no numbers, no logos, no pictures on the wall."
+  },
+  {
+   "name": "line_qc_shor_glasses_catch",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_parity_three_switches",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a hallway drawn earlier for this series: draw the same hallway wall, the same wall plates with closed hinged flaps and the same hanging bulbs, the same way. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long plain hallway wall seen straight from the front. Along it, at hand height, three identical wall plates sit in a row, evenly spaced, and each is covered by a small closed hinged flap so its switch cannot be seen. From the ceiling hang two bare light bulbs on short cords: one exactly halfway between the first and second plate, the other exactly halfway between the second and third plate (a lit bulb is an empty bulb outline with short straight rays around it; an unlit bulb is a plain empty bulb outline). All flaps are closed and both bulbs are unlit. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots), standing, has just swapped her glasses: she now wears a pair with square frames and holds a pair with perfectly round frames down in one hand, and with the other hand she points straight at the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth), who freezes mid-tiptoe beside the middle plate, also wearing small square-framed glasses, with a guilty, caught look (a few short surprise lines around his head). Landscape image 1536x1024; the wall, the bulbs and the two characters fill about 92% of the width and about 80% of the height; the glasses are drawn large enough to see their shapes. No text, no letters, no numbers, no logos, no pictures on the wall."
+  },
+  {
+   "name": "line_qc_shor_three_floors",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_parity_three_switches",
+    "line_qc_vote_switch_fix",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image shows one hallway drawn earlier for this series (wall plates with closed hinged flaps and two hanging bulbs): draw every floor of the house with that same hallway. The second attached image shows this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, ears and tail); do not copy its pose or layout. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A tall, narrow three-storey house drawn as a cut-away with its front wall removed, seen straight from the front, standing on a short ground line. The three floors are identical: on each, along the back wall at hand height, three identical small wall plates sit in a row, evenly spaced, each covered by a small closed hinged flap; from each floor's ceiling hang two small bare bulbs on short cords, one halfway between the first and second plate and one halfway between the second and third plate. So the house holds exactly nine covered plates and six small bulbs. On the outside of the house's right wall hang two large old-fashioned lanterns on iron brackets: the upper one level with the floor between the top and middle storeys, the lower one level with the floor between the middle and bottom storeys. All bulbs and both lanterns are unlit (plain empty outlines). On the ground at the right of the house, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) looks up at the lanterns, one hand shading her eyes. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) sits on the roof ridge, legs dangling, grinning. Portrait image 1024x1536; the house fills about 70% of the width and about 85% of the height, the keeper beside it. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_shor_quiz_floors",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_shor_three_floors",
+    "line_qc_vote_switch_fix",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is the matching picture of the same house: copy that house exactly (the three identical floors, the nine covered plates, the six small bulbs, the two big lanterns on the right wall, the framing, the line weight) and change only what the description says. The second attached image shows this lecture's two characters, the keeper and the imp: draw the same two characters (same faces, hair, clothes, ears and tail). The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "The very same three-storey cut-away house as in the first attached image, drawn again exactly the same way: the three identical floors, each with three small wall plates covered by closed hinged flaps and two small bulbs, and the two large lanterns on the outside of the right wall, the same framing. Only this changes: on the middle floor, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth), wearing a small pair of square-framed glasses, crouches at the first (left) plate with one hand reaching up under its closed flap and the other hand tapping the flap, grinning; on the middle floor the left small bulb is lit (short straight rays around it) and the right small bulb is unlit; every small bulb on the top and bottom floors is unlit; both big lanterns on the outside wall are lit (short straight rays around each). On the ground at the right of the house, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) looks up at the lit lanterns with a finger on her chin, thinking. Portrait image 1024x1536, framed like the first attached image. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_shor_tablecloth_tug",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long plain dinner table seen from the front, covered by one long plain tablecloth that hangs over its front edge, with three identical place settings evenly spaced in a row on it (a round plate with a cup beside each). The whole tablecloth, with all three place settings on it, has slid a little to the right as one piece: at the table's left end the bare tabletop shows, at the right end the cloth hangs lower, and a few short motion lines run along its top edge; all three settings moved together and still stand neatly. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth), in front of the middle setting, is just letting go of the cloth's front edge after a tug, grinning. At the left end of the table, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) calmly takes hold of the cloth's front edge in front of the first setting to pull it back, unbothered. Landscape image 1536x1024; the table and the two characters fill about 92% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no patterns on the cloth or plates."
+  },
+  {
+   "name": "line_qc_cover_08_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_shor_glasses_catch",
+    "line_qc_shor_unseen_trick",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth), wearing a small pair of square-framed glasses, freezes mid-tiptoe beside one big wall plate covered by a small closed hinged flap, with a guilty, caught look. On the right, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots), shown from the waist up, wears a pair of square-framed glasses and holds a pair with perfectly round frames down in one hand, pointing straight at him with the other, triumphant. The two pairs of glasses she has are drawn large: one clearly round, one clearly square. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

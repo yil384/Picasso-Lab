@@ -1,0 +1,133 @@
+{
+ "episode": "QC03-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (p4): write a five-qubit program once and run it on a dozen chips with different wiring and different native gates; what has to happen in between, and in what order? (line_qc_pass_one_sheet_many_chips, then tape p4). Cast for all of QC03 (lecture Q25-03), the same in every part: the planner = the compiler (two short braids, round glasses, utility vest); the fabricator = the chip maker (bald, walrus moustache, goggles, work apron); the programmer = the person who writes the program (tall, wavy hair, long scarf, backpack); the four guests told apart by their hats (beret, beanie, top hat, flat cap) = the program's qubits; a chip tile = a square tile of studs (qubits) joined by bars (couplings).",
+  "Her frame (p2-p3, clip 02:07-02:32): research problems come from hardware limits: the whole system is noisy, it speaks only a few native gates, its qubits have few connections; every pass of the compiler answers one limit (line_qc_pass_sofa_door: the doorway is the limit, the sofa is the program).",
+  "Two goals (p5, 04:39-05:46; tape p5): write once, run on many chips; and optimise for fidelity (reuse line_qc_pass_one_sheet_many_chips with red-pen rings). Compilers are modular, a set of passes (clip 06:23-06:48).",
+  "Pass 1, unroll (p6, 06:23-08:00): break every bigger gate into one- and two-qubit gates, a matrix decomposition that computes exactly the same thing (line_qc_pass_sofa_pieces: the same sofa, in pieces that fit through the door, put back together inside).",
+  "Pass 2, initial layout (p6): place the program's qubits on good physical qubits, or on densely linked ones, using calibration data when there is some (line_qc_pass_good_chairs: skip the broken chairs, seat the pair that talks side by side).",
+  "Pass 3, extend with ancillas (p7): the unused physical qubits join the layout as spare places (the empty laid places at the end of line_qc_pass_good_chairs).",
+  "Pass 4, insert SWAPs (p7): a two-qubit gate needs neighbours; when two qubits sit apart, SWAPs move them together (line_qc_pass_seat_swap; QC02-04 and QC02-05 told the routing story in full).",
+  "Pass 5, translate to the native basis (p8, 10:54-11:46): rewrite everything in the few gates the chip calibrates; several optimisation passes follow (line_qc_pass_two_tools: a whole chair built with the only two tools on the wall).",
+  "Every pass is driven by a limitation of the hardware (clip 11:46-12:12; reuse line_mic for the clip tag). The slides p6-p8 are source-code screenshots: redraw the pass list as lettering. Check first: today's Qiskit preset pass manager names its stages init, layout, routing, translation, optimization, scheduling; the slide links an older level3.py.",
+  "Open questions (Q24-02 p8): a better pass, the order of the passes, and co-design across passes (line_qc_pass_carpet_paint: rug first, ceiling second, and the order hurts). Bridge: QC03-02 is a case where two passes have to decide together.",
+  "Cover (line_qc_cover_03_01; for the X post and thumbnails, not a film beat): the programmer hands one blank sheet to the planner, who looks at a row of differently wired chip tiles."
+ ],
+ "reuse": [
+  "line_mic",
+  "line_course_map",
+  "line_tiny_lab",
+  "line_paper"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_pass_one_sheet_many_chips",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_glue_tiles"
+   ],
+   "prompt": "At the left, the programmer, a tall, lanky invented young man with a simple round face and dot eyes, a mop of wavy hair, a long plain scarf, a small backpack and sneakers stands at the end of a long, plain workbench, holding up one single blank sheet of paper in both hands and looking along the bench with raised eyebrows. Along the bench, in one row from left to right, sit ten small chip tiles, each a flat square chip tile on four stubby legs, its top dotted with small round studs joined by short straight bars, and the pattern of studs and bars is different on every tile: a straight row, a ring, a square grid, a honeycomb of hexagons, a star, a ladder, a zigzag, a cross, a triangle and a double row. The tiles are drawn in outline only, nothing filled in. Landscape image 1536x1024; the programmer and the bench fill about 94% of the width and about 72% of the height; the tiles are large enough that each pattern can be seen. The sheet is blank. No text, no letters, no numbers, no logos, no brand marks on the tiles."
+  },
+  {
+   "name": "line_qc_pass_sofa_door",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_kv_trolley_reload",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "prompt": "In a plain hallway seen from the side, a big, plump three-seat sofa with rolled arms, three square seat cushions and short round legs stands in front of a narrow open doorway, clearly far too wide to go through. The programmer, a tall, lanky invented young man with a simple round face and dot eyes, a mop of wavy hair, a long plain scarf, a small backpack and sneakers, pushes the sofa from behind, stuck against the door frame, sweating. The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, kneels at the door frame and measures the narrow opening with a tape measure, frowning thoughtfully. Landscape image 1536x1024; the sofa, the doorway and the two characters fill about 92% of the width and about 80% of the height. No numbers or marks on the tape measure. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_pass_sofa_pieces",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_kv_trolley_reload",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "prompt": "A plain hallway seen from the side with a narrow open doorway in the middle. A big three-seat sofa (rolled arms, three square seat cushions, short round legs) has been taken apart into its pieces: in front of the doorway lies a neat stack of parts, each small enough to pass: the back panel, two armrests, the seat frame in two halves, three square seat cushions, four short round legs and a small bag of screws. The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, carries one seat cushion through the doorway. Beyond the doorway, in the next room, the programmer (a tall, lanky invented young man with a simple round face and dot eyes, a mop of wavy hair, a long plain scarf, a small backpack and sneakers) kneels and screws the first pieces back together: the same sofa, half rebuilt. Landscape image 1536x1024; the hallway, the doorway, the pieces and the two characters fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_pass_good_chairs",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_tiny_lab",
+    "line_whisper_line"
+   ],
+   "prompt": "A long banquet table seen from the front with a row of eight chairs behind it. Two of the chairs are clearly bad: one has a cracked leg bound with string, and one leans over with a leg missing. The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, holding a clipboard, guides the four guests, invented characters with simple round faces and dot eyes, told apart by their hats: the first wears a beret, the second a beanie with a pom-pom, the third a tall top hat, the fourth a flat cap. She leads them to four sturdy chairs side by side in the middle of the row, away from the bad chairs; the guest in the beret and the guest in the beanie, who are chatting, sit next to each other. The two remaining sturdy chairs at the end stay empty, but each has a plate and a folded napkin set in front of it, ready as spare places. Landscape image 1536x1024; the table, the chairs and the characters fill about 94% of the width and about 75% of the height. The clipboard sheet is blank. No text, no letters, no numbers, no logos, no place cards."
+  },
+  {
+   "name": "line_qc_pass_seat_swap",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_tiny_lab"
+   ],
+   "prompt": "A long banquet table seen from the front with a row of four chairs behind it, and the four guests, invented characters with simple round faces and dot eyes, told apart by their hats: the first wears a beret, the second a beanie with a pom-pom, the third a tall top hat, the fourth a flat cap. In the row, from left to right, are the chairs of the beret guest, the beanie guest, the top hat guest and the flat cap guest. The beret guest sits in the leftmost chair and leans out, waving to the flat cap guest at the far other end of the row: they cannot talk from there. So the flat cap guest and the top hat guest have stood up and are trading chairs, each carrying their own plate and glass, passing each other behind the chairs, the flat cap guest moving one chair closer to the beret guest. The beanie guest stays seated and watches. At the right edge, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, points the way with her pencil. Landscape image 1536x1024; the table, the chairs and the characters fill about 94% of the width and about 78% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_pass_two_tools",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_postal_scale",
+    "line_knob_board"
+   ],
+   "prompt": "A workshop wall with a large pegboard on which the outlines of many different tools are drawn (a hammer, a saw, pliers, a drill, a spirit level, clamps, files), but every outline is empty except two: only one screwdriver and one small wrench actually hang on the board. Below it, at a sturdy workbench, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, cheerfully assembles a small wooden chair using only that screwdriver and that wrench, one in each hand; the chair is almost finished. Square image 1024x1024; the pegboard, the workbench and the planner fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_pass_carpet_paint",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_kv_trolley_reload",
+    "line_reader_writer"
+   ],
+   "prompt": "In an empty room, a brand-new soft rug with a simple border has already been laid over the whole floor. The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, stands on a stepladder in the middle of the rug and paints the ceiling with a paint roller; small drops of paint fall from the roller onto the new rug, where a few drips have already landed. In the doorway at the right, the programmer, a tall, lanky invented young man with a simple round face and dot eyes, a mop of wavy hair, a long plain scarf, a small backpack and sneakers, holds his head in both hands in dismay. A paint tray sits on the ladder's shelf. Landscape image 1536x1024; the room, the ladder and the two characters fill about 92% of the width and about 85% of the height. The drops and drips are small empty outlines, nothing filled. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_03_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_pass_one_sheet_many_chips",
+    "line_qc_pass_good_chairs",
+    "line_qc_pass_sofa_door"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's programmer (tall, wavy hair, long scarf, backpack), the planner (two short braids, round glasses, utility vest) and the chip tiles (square tiles of round studs joined by bars): draw the same characters and props in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the programmer (the same invented character as in the references: tall and lanky, a simple round face, dot eyes, a mop of wavy hair, a long plain scarf, a small backpack, sneakers) hands one single blank sheet of paper to the planner (the same invented character as in the references: a young woman with a simple round face, dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, a pencil tucked behind one ear), who takes it and looks to the right with a determined smile. On the right, on a plain low bench, stand five large chip tiles in a row, each a flat square tile on four stubby legs with round studs joined by short bars in a different pattern: a straight row, a ring, a square grid, a honeycomb of hexagons and a star. Full figures on one short ground line. The sheet is blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

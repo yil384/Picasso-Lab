@@ -1,0 +1,131 @@
+{
+ "episode": "QC05-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (the addition example, Q24-04 07:34-08:30): a jar holding six marbles could have come from bowls of 2 and 4, 3 and 3 or 1 and 5; looking at the jar you cannot tell, so a machine that adds cannot run backwards. Every quantum gate must. So how does a quantum computer add? (line_qc_undo_marble_jar; code letters the three splits.) Cast for lecture Q25-05 (QC05-01 to QC05-04): the tinkerer (bob with a fringe, work apron) works the machines; the skeptic (tall, beanie, long scarf) checks them.",
+  "Gates are unitary matrices: a postulate of the theory that experiments keep confirming (Q25-05 01:22-03:18; reuse line_tiny_lab).",
+  "Norm preserving: a unitary turns the state's arrow without stretching it, so valid state in, valid state out and the probabilities still add to 1 (03:43-05:06; line_qc_undo_pivot_arrow: the arrow swings, the tape measure says the same length; or reuse line_clock_face with a code-drawn hand).",
+  "Reversible: U^-1 = U-dagger, so every gate can be undone and no information is destroyed (05:26-06:54, clip 05:34-06:01; line_qc_undo_twist_cube: every twist has an untwist).",
+  "Lost information is only unknown information (Q24-04 05:08-06:09): the key is still somewhere in the leaves, we just do not know where (line_qc_undo_leaf_pile).",
+  "AND is not reversible: a dark bulb could come from three switch settings, so AND is not a quantum gate (06:01-06:54, clip; line_qc_undo_and_bulb; code letters the four-row truth table and rings the three rows that give 0).",
+  "The fix: keep one addend, (a, b) -> (a, a + b): the jar plus a tag saying what the first bowl held runs backwards (Q24-04 07:34-08:30, clip; line_qc_undo_jar_tag). Pays off in QC05-06: the Toffoli gate is a reversible AND.",
+  "Tool for later, brief: a normal matrix splits into eigen-parts (spectral decomposition); to apply f(A), apply f to each eigenvalue and put the parts back (07:27-12:27; line_qc_undo_two_prisms: split the beam, treat each ray, recombine). QC05-03 uses it to build rotations. Caption the prisms as a picture of the recipe, not of physics.",
+  "Cover (line_cover_qc05_01; for the X post and thumbnails, not a film beat): the skeptic squints through a magnifying glass at a jar of marbles beside two empty bowls; the tinkerer shrugs."
+ ],
+ "reuse": [
+  "line_tiny_lab",
+  "line_clock_face",
+  "line_switch_dimmer",
+  "line_balance"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_undo_marble_jar",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "On a plain table seen from the front: one tall glass jar holding six marbles (each a small plain circle) at its bottom, and beside it two small empty bowls tipped on their sides as if they had just been poured out. The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) leans in from the right, peering at the jar through a big round magnifying glass, puzzled; the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) stands at the left, hands spread in a shrug. Waist up for both characters. Square image 1024x1024; the two characters, the jar and the bowls fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos. No labels on the jar or the bowls."
+  },
+  {
+   "name": "line_qc_undo_jar_tag",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "On a plain table seen from the front: one tall glass jar holding six marbles (each a small plain circle), with two small empty bowls beside it. The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket), at the left, ties a small blank paper tag on a string round the neck of the jar; the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan), at the right, holds a big round magnifying glass lowered at the side and nods with a pleased smile. Waist up for both characters, faces clearly visible. Square image 1024x1024; the two characters and the jar fill about 90% of the width and about 80% of the height. The tag is blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_undo_twist_cube",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_block_towers",
+    "line_reader_writer"
+   ],
+   "prompt": "The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) sits on a stool holding a toy puzzle cube in both hands (a plain cube made of three by three small cubes on each face, outlines only: no colours, no stickers, no logos) and twists its top layer a quarter turn; one short curved motion line above the top layer shows the twist, and a second curved motion line pointing the opposite way shows it can be twisted back. The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) looks over the tinkerer's shoulder, interested. Square image 1024x1024; the cube is drawn large in the middle; the characters and the cube fill about 85% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_undo_pivot_arrow",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_balance",
+    "line_tiny_lab",
+    "line_ruler_curve"
+   ],
+   "prompt": "Outdoors on flat ground (one short ground line): a big flat wooden arrow, as long as a person is tall, mounted at its middle on a pivot on top of a waist-high post, so it can swing round flat like a giant compass needle. The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) turns it by its tail end; a curved motion line shows the swing. The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) holds a long tape measure stretched along the arrow from tip to tail, checking its length; the tape measure is plain, with no marks and no numbers. Full figures. Landscape image 1536x1024; the arrow, the post and the two characters fill about 90% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_undo_and_bulb",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_switch_dimmer",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "A house wall drawn in cross-section, as one thick vertical band, divides the picture into two rooms. Left room: on its wall, one plate with two toggle switches side by side, the left switch up and the right switch down. A cord runs from the plate up and through the wall into the right room, to one light bulb hanging from the ceiling there; the bulb is dark (no rays). In the right room, the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) looks up at the dark bulb, finger on chin, puzzled, unable to see the switches. Landscape image 1536x1024; the two rooms fill about 92% of the width and about 80% of the height; the switches and the bulb are drawn large. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_undo_leaf_pile",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_wilted_plant",
+    "line_balance"
+   ],
+   "prompt": "In a garden in autumn, the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) kneels at a big heap of fallen leaves (each leaf a simple outline), both arms deep in the heap, searching; a small plain key lies half hidden among the leaves at the lower right edge of the heap, visible to the viewer but out of the tinkerer's sight; a rake leans against a low fence behind. Square image 1024x1024; the tinkerer and the heap fill about 85% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_undo_two_prisms",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_balance",
+    "line_tiny_lab",
+    "line_knob_board"
+   ],
+   "prompt": "On a long plain table seen from the front: at the left, a small desk lamp sends one narrow beam of light (two parallel thin lines) into a glass prism (a triangular block, outlines only); out of the prism fans a spread of five thin straight rays; each ray passes through its own small empty upright frame standing on the table; then a second prism, set upside down, gathers the five rays back into one narrow beam that falls on a small blank upright card at the right. The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) leans over the middle of the table, gently adjusting one of the small frames with a finger. Landscape image 1536x1024; the table setup fills about 92% of the width; everything fills about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_cover_qc05_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_marble_jar",
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters (the tinkerer: short bob with a fringe, work apron; the skeptic: tall, beanie with a pompom, long scarf): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On a plain table: one tall glass jar holding six marbles (each a small plain circle), with two small empty bowls tipped on their sides beside it. On the right, the skeptic (the same invented character as in the references: tall and lanky, simple round face, dot eyes, a knitted beanie hat with a small pompom, a long plain scarf, a cardigan) leans in, peering at the jar through a big round magnifying glass, puzzled. On the left, the tinkerer (the same invented character as in the references: simple round face, dot eyes, a short bob haircut with a straight fringe, a work apron with one big front pocket) spreads both hands in a shrug. No labels on the jar. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,147 @@
+{
+ "episode": "QC01-06",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (line_qc_hier_endless_desk): your laptop never keeps all its data in registers; every quantum computer today does. Is that why they are so hard to scale? Cast for all of QC01 (the six parts cut from her first lecture, Q25-01): the physicist (older, bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (lanky, a tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag); both invented. No lecturer figure anywhere and never her likeness: her voice and her slides carry her part.",
+  "A huge design space and no clear winner among technologies (back to line_qc_thousand_tech_fair, planned in QC01-01; clip Q24-05 43:57-44:56).",
+  "The classical answer, a memory hierarchy: registers, cache, RAM, disk; fast, small and costly down to slow, big and cheap, working together (tape p15; reuse line_cluster_pantry_cellar or line_gpu_memory_reach; clip 66:45-67:35).",
+  "Horizontal scaling: more of the same qubits, all registers (line_qc_hier_endless_desk again; tape p16).",
+  "Vertical scaling: superconducting qubits as registers (gates 10-100 ns), ions and atoms as disk (slow, scalable), photons as the interconnect (line_qc_hier_tube_building for the idea, line_qc_hier_hybrid_lab for a real lab; clip 69:18-70:09; check the gate times on p16).",
+  "Moving a qubit between technologies (a transducer) moves it, it does not copy it; the hard part is the different frequency regimes (line_qc_hier_baton_handoff; her answer 72:16-73:59, cut before 73:59, which is a funding call).",
+  "Three axes a compiler faces (tape Q25-03 p14): the encoding: qubits, qudits, continuous variables (line_qc_hier_three_switches; reuse line_switch_dimmer); the model of computation: gates, measurement-based, analog (line_qc_hier_three_workshops: build brick by brick, carve a ready-made block, let the water find its way).",
+  "Each technology a different trade-off (Q24-05 42:21-44:56): photons fly but hardly interact, manufactured qubits are tunable but unequal, atoms are identical (line_qc_hier_tradeoff_trio).",
+  "Her philosophy: classical system ideas give the direction; the abstractions and solutions are rebuilt (line_qc_hier_compass_trail; clip 74:54-75:20; tape p17). Skip her remark about a named startup (Q24-05 45:24-45:50).",
+  "Cover (line_qc_cover_01_06; for the X post and thumbnails, not a film beat): the student whizzes on a wheeled chair along an endless desk covered in open books, no shelves anywhere."
+ ],
+ "reuse": [
+  "line_qc_thousand_tech_fair",
+  "line_cluster_pantry_cellar",
+  "line_gpu_memory_reach",
+  "line_card_catalog",
+  "line_cabinet_tower",
+  "line_switch_dimmer",
+  "line_balance"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_hier_endless_desk",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_scroll_ends",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) works at one absurdly long desk that runs from the left edge of the picture and away into the far distance in perspective, every bit of it covered with open books, papers and notebooks lying side by side; there are no shelves, no drawers and no cupboards anywhere. The student rides along the desk on a wheeled office chair at full speed, a pencil in the mouth, stretching for a book far down the desk, a few speed lines behind. Landscape image 1536x1024; the desk and the student fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no writing in the books."
+  },
+  {
+   "name": "line_qc_hier_tube_building",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_cluster_pantry_cellar",
+    "line_kv_cloakroom_tower",
+    "line_tiny_lab"
+   ],
+   "prompt": "A building cut open at the front like a doll's house. Top floor: a small, bright workshop with one workbench, where the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) assembles small parts at top speed, hands a blur of motion lines, only a few parts within arm's reach. Below it, the ground floor and a deep basement form one vast storeroom with long rows of tall shelves of identical boxes stretching far back, where an invented old porter (simple round face, dot eyes, a flat cap, a long apron) pushes a loaded trolley slowly and calmly. Up the outside wall of the building runs a clear pneumatic tube from the basement to the top floor, with small round capsules zipping through it in both directions, with speed lines. Portrait image 1024x1536; the building fills about 88% of the width and about 90% of the height. No text, no letters, no numbers, no logos, no labels on the boxes."
+  },
+  {
+   "name": "line_qc_hier_hybrid_lab",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_lab_2017",
+    "line_tiny_lab",
+    "line_tap_two_people"
+   ],
+   "prompt": "A wide, tidy lab. On the left stands a dilution refrigerator drawn generically: a tall open frame from which hangs a stack of five round metal plates, each a little smaller than the one above, joined by thin rods and many thin coiled cables, with a tiny square chip at the very bottom. On the right, on a table, a round metal vacuum chamber with several small windows, a short straight row of tiny dots floating between two parallel rods inside and a thin straight laser beam entering from the side; beside it a small square glass cell holding a neat little grid of tiny dots, each at the tip of a thin beam of light coming down from a lens above. A long thin optical fibre runs from a small box at the bottom of the refrigerator to a small box on the chamber, looping once over a reel on a cart in the middle. The physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) holds the fibre where it leaves the refrigerator; the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) plugs the other end into the chamber's box; both smile. Landscape image 1536x1024; the machines and the characters fill about 94% of the width and about 82% of the height. No text, no letters, no numbers, no logos, no brand marks."
+  },
+  {
+   "name": "line_qc_hier_baton_handoff",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_cat_chases_dog",
+    "line_tap_two_people",
+    "line_tiny_lab"
+   ],
+   "prompt": "A relay hand-over at the boundary between two different surfaces, seen from the side. On the left, a smooth ice rink, where the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) glides in on ice skates with his arm stretched out forward. On the right, a running track, where the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) in running shoes is already running, one hand reaching back. There is exactly one baton, caught at the very moment it passes from the skater's fingers into the runner's palm; the skater's other hand is empty and there is no second baton anywhere. One clear line on the ground marks where the ice meets the track. Landscape image 1536x1024; the two characters fill about 90% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_hier_three_switches",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_switch_dimmer",
+    "line_temp_knob",
+    "line_knob_board"
+   ],
+   "prompt": "Three controls mounted side by side on one long plain wooden panel, seen straight from the front, with clear space between them. Left: a simple two-position toggle switch, up or down. Middle: a chunky rotary selector knob with five click-stop notches evenly spaced around it, its pointer clicked into one of them. Right: a smooth round dial with no notches at all and a single long pointer that can stop anywhere, set at an in-between angle. Landscape image 1536x1024; the panel fills about 88% of the width and about 55% of the height. No text, no letters, no numbers, no logos, no tick labels."
+  },
+  {
+   "name": "line_qc_hier_three_workshops",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_block_towers",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "Three small open workshops side by side in one row, each under its own simple roof, with clear space between them. Left: an invented bricklayer (simple round face, dot eyes, a cap) builds a small wall one brick at a time, trowel in hand, a neat stack of bricks beside. Middle: an invented sculptor (simple round face, dot eyes, a beret, a smock) carves a statue out of one big ready-made block of stone with a chisel and mallet, chips flying; the half-revealed statue is a simple bird. Right: an invented gardener (simple round face, dot eyes, a sun hat) pours water from a watering can into the top of a tray of sand shaped with curving grooves, and the water finds its own way down into a low pool at the bottom. Landscape image 1536x1024; the three workshops fill about 94% of the width and about 72% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_hier_tradeoff_trio",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_cat_chases_dog",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture in three panels side by side, with clear space between them. Left: two invented runners (simple round faces, dot eyes, different hairstyles) dash across each other's path at full speed, one going left to right and one right to left, crossing without even glancing at each other, speed lines behind both. Middle: an invented potter (simple round face, dot eyes, an apron) gently reshapes a cup on a potter's wheel, and on a shelf behind stand five hand-thrown cups, each slightly different in height, width and lip. Right: a shallow tray holding a neat grid of perfectly identical round marbles, four by four, all exactly the same size, with a magnifying glass lying beside the tray. Landscape image 1536x1024; the three panels fill about 94% of the width and about 70% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_hier_compass_trail",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "At the edge of a wild, untouched meadow of tall grass and bushes, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) holds up an old round brass compass (a plain needle, no letters or marks on it) and points confidently ahead; next to them the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) clears a brand-new path through the tall grass with a long-handled scythe, the fresh path just beginning. Behind them, a well-worn paved road comes to an end at the edge of the meadow. Landscape image 1536x1024; the characters, the road and the meadow fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no signs, no maps."
+  },
+  {
+   "name": "line_qc_cover_01_06",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_hier_endless_desk",
+    "line_qc_hier_tube_building",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's student (the one in the striped T-shirt): draw the same characters (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) whizzes on a wheeled office chair along one absurdly long desk that runs away into the distance in perspective, every bit of it covered with open books lying side by side; there are no shelves, no drawers and no cupboards anywhere; a few speed lines behind the chair. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

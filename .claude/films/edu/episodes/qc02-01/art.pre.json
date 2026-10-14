@@ -1,0 +1,163 @@
+{
+ "episode": "QC02-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (Q25-02 10:31-12:52, slide p9): the textbook oscillator, a mass on a spring (in circuit form a capacitor and a coil), climbs in equal energy steps, so a pulse that lifts it from 0 to 1 lifts it on from 1 to 2 and beyond (line_qc_spring_bounce). What one strange part fixes it? Cast for the hardware half of QC02: the technician (short wavy hair, small square glasses, a lab coat).",
+  "Where the chip lives: a manufactured circuit at the bottom of a very cold refrigerator (line_qc_fridge_chandelier, drawn generically, no maker). The lecture gives no temperature: any figure goes through FACTS.md first.",
+  "Reading a quantum program (p4, 05:29-07:15): wires are qubits, boxes gates, meters measurements, double lines classical bits; read left to right (code draws the circuit; reuse line_scroll_reader).",
+  "The transmon (p9): a Josephson junction plus a capacitor; the junction makes the steps uneven (the 0-1 gap larger than the 1-2 gap), so a pulse tuned to 0-1 no longer fits 1-2 and the qubit stays in 0 and 1. A swing pushed in its small-swing rhythm stays low, because its rhythm changes as it swings higher (line_qc_swing_two_beats). On-screen caveat: the swing pictures the uneven spacing; the levels themselves are quantum. Clip Q25-02 11:54-12:25.",
+  "Why only two levels (14:44-15:43): qutrits and qudits exist, but the cost outweighs the benefit (code: levels 0, 1, 2, 3 on the taped p9; no drawing).",
+  "Built, not found (17:51-18:38, clip 17:51-18:21): a superconducting qubit is a manufactured, artificial atom; ion-trap and neutral-atom machines use natural atoms (line_qc_built_vs_found; the ion chamber is generic).",
+  "Single-qubit gate (p10, 18:38-21:29): a shaped microwave pulse at the qubit's own frequency, through a nearby line; only what is tuned to that pitch answers (line_qc_tuning_fork_glasses). Ions and atoms: \"often lasers\".",
+  "Two-qubit gate (p11, 22:02-25:24): a resonator must sit between the pair; no resonator, no gate (line_qc_tin_can_houses).",
+  "So the wiring fixes which pairs can ever interact: the 5-qubit chip's coupling graph (p14, redrawn, credit Murali et al. 2019) as a village of string phones, the middle cottage linked to all four corners plus the left pair and the right pair (line_qc_string_village; again in QC02-02 and QC02-04). Chip micrographs on p8-p12 are covered.",
+  "Measurement (p12, 25:27-27:36): read through a neighbouring resonator, never by looking at the qubit itself (line_qc_bell_beside_box); 0 with probability |alpha|^2, 1 with |beta|^2 (code draws two bars; reuse line_dice_hand only for \"a random outcome\"). Her cat-in-a-cage aside is not drawn.",
+  "Her wave picture (26:31-27:05): waves from many sources add up strongly at some points and cancel at others (line_qc_ripple_tank); quantum amplitudes interfere in the same way, which is how algorithms push the odds toward the right answer (the math comes in QC04).",
+  "Takeaway (27:36-28:12, clip): this much physics is enough for system design; from QC02-02 on, the chip is a dinner table (chairs = physical qubits, guests = program qubits, the head waiter = the compiler).",
+  "Cover (line_qc_cover_qc02_01; for the X post and thumbnails, not a film beat): the spring weight bouncing wildly beside the technician's calm push on a swing."
+ ],
+ "reuse": [
+  "line_tiny_lab",
+  "line_scroll_reader",
+  "line_knob_board",
+  "line_dice_hand",
+  "line_wave",
+  "line_burst"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_spring_bounce",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_balance",
+    "line_tiny_lab",
+    "line_clockwork"
+   ],
+   "prompt": "A sturdy wooden stand with a crossbar; from the crossbar hangs a long coil spring with a heavy round weight at its end. Beside it stands the technician, an invented character with a simple round face and dot eyes, short wavy hair, small square glasses and a knee-length lab coat with two pens in the breast pocket, tapping the weight upwards with one finger in a steady rhythm, eyebrows rising in alarm. The weight bounces more and more: it is drawn once in full outline, plus three dashed ghost outlines of it above and below, each one further from the middle than the last, with short curved motion lines, so the bounce is clearly growing bigger and bigger. Portrait image 1024x1536; the stand, spring, weight and technician fill about 80% of the width and about 85% of the height, centred. No text, no letters, no numbers, no logos. No scale marks."
+  },
+  {
+   "name": "line_qc_swing_two_beats",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with clear space between them; the same playground swing on a simple A-frame in both halves. Left half: an invented child (simple round face, dot eyes, two short pigtails) swings gently, only a little way back; The technician, an invented character with a simple round face and dot eyes, short wavy hair, small square glasses and a knee-length lab coat with two pens in the breast pocket, stands behind and gives a light, well-timed push with both hands flat on the back of the seat; both look pleased. Right half: the child swings much higher, far out at the front end of the swing; the technician pushes at the same spot as before, but the hands meet empty air: a surprised face and a few short lines around the empty hands. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_fridge_chandelier",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_cabinet_tower",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "prompt": "A generic laboratory refrigerator for very cold experiments, drawn with its outer metal cans removed: a tall hanging assembly of five flat round metal plates stacked one below another, each a little smaller than the one above, joined by thin vertical rods, with many thin cables coiling and looping down between the plates; at the very bottom hangs a small closed box the size of a matchbox. The assembly hangs from a heavy frame of square metal beams. The technician, an invented character with a simple round face and dot eyes, short wavy hair, small square glasses and a knee-length lab coat with two pens in the breast pocket, stands on a small two-step stool beside it, shining a small torch on the bottom box and looking up at it with interest. No brand names, no labels, no screens. Portrait image 1024x1536; the hanging assembly fills about 45% of the width and about 80% of the height, the technician at the lower right; everything in frame with a margin. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_built_vs_found",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_tap_glass",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with clear space between them. Left half: at a workbench under a magnifier lamp on a jointed arm, the technician, an invented character with a simple round face and dot eyes, short wavy hair, small square glasses and a knee-length lab coat with two pens in the breast pocket, holds a tiny square chip in a pair of tweezers under the magnifier, pleased; the chip has two small cross-shaped metal pads and a few thin wiggly lines on it. Right half: a round glass vacuum chamber on a stand, with a few round ports; inside it, between four straight parallel metal rods, a straight row of five tiny identical round spheres floats in a line in mid-air; a thin straight beam of light from a small box at the side passes along the row. No brand names, no labels. Landscape image 1536x1024; the two halves fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_tuning_fork_glasses",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_tap_glass",
+    "line_dice_hand",
+    "line_balance"
+   ],
+   "prompt": "A row of five plain wine glasses standing on a table, seen from the front, each filled with water to a different height. An invented hand (only the hand and wrist, coming in from the upper left) holds a struck tuning fork near them, with a few short curved sound lines coming from the fork. Only the middle glass answers: it has short vibration lines around its rim and a few tiny ripples on its water; the other four glasses stand perfectly still. Landscape image 1536x1024; the glasses and the hand fill about 90% of the width and about 70% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_tin_can_houses",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_banks",
+    "line_whisper_line",
+    "line_two_lanterns"
+   ],
+   "prompt": "Three small cottages in a row on a grassy strip, seen from the front, with clear space between them. The two cottages on the left are joined by a taut string stretched between two tin cans: from each window an invented character leans out holding a can to the ear or mouth, chatting happily. The cottage on the right has no string: its occupant leans out of the window with both hands cupped round the mouth, calling towards the others, but the curved sound lines stop short in the air halfway. Simple round faces and dot eyes, three different hairstyles. Landscape image 1536x1024; the cottages fill about 92% of the width and about 70% of the height. No text, no letters, no numbers, no logos. No signs, no house numbers."
+  },
+  {
+   "name": "line_qc_string_village",
+   "kind": "line",
+   "group": "B",
+   "sweep": "c",
+   "people": false,
+   "refs": [
+    "line_two_lanterns",
+    "line_two_banks",
+    "line_clockwork"
+   ],
+   "prompt": "A tiny village seen from straight above, like a neat hand-drawn map: five small cottages with simple roofs, arranged like the five dots on a die face, one at each corner of a square and one in the middle. Taut strings with a small tin can at each end, drawn as straight lines, join the cottages: the middle cottage is joined to each of the four corner cottages (four strings); the top-left cottage is also joined to the bottom-left one, and the top-right cottage to the bottom-right one. Exactly six strings and no others: none along the top edge, none along the bottom edge. A few small round trees and short footpaths between them. No people. Square image 1024x1024; the village fills about 85% of the width and of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_bell_beside_box",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "On a small lab table: a closed, plain wooden box with its lid shut, and touching its side a small hand bell on a short stand. The technician, an invented character with a simple round face and dot eyes, short wavy hair, small square glasses and a knee-length lab coat with two pens in the breast pocket, taps the bell with a tiny hammer and leans in with one hand cupped behind the ear, listening closely, eyes half shut in concentration; a few short curved sound lines come from the bell. Square image 1024x1024; the table, box, bell and technician fill about 85% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_ripple_tank",
+   "kind": "line",
+   "group": "B",
+   "sweep": "c",
+   "people": false,
+   "refs": [
+    "line_tap_glass",
+    "line_wave",
+    "line_balance"
+   ],
+   "prompt": "A shallow rectangular glass water tank on a plain table, seen from the front and a little above. Above the water a horizontal bar holds two small dippers that touch the surface at two points near the front; from each point circular ripples spread out as rings of thin lines, and the two sets of rings overlap across the whole tank. Along the far side of the tank floats a row of nine small corks: every other cork bobs high with short motion lines, and the corks between them sit perfectly still. No people. Landscape image 1536x1024; the tank fills about 90% of the width and about 65% of the height, centred. No text, no letters, no numbers, no logos. No shading on the water."
+  },
+  {
+   "name": "line_qc_cover_qc02_01",
+   "kind": "line",
+   "group": "COVER",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_spring_bounce",
+    "line_qc_swing_two_beats",
+    "line_tiny_lab"
+   ],
+   "prompt": "On the left, a heavy round weight hangs from a long coil spring on a wooden stand and bounces wildly, with two dashed ghost outlines of the weight far above and far below it and big curved motion lines. On the right, the technician (the same invented character as in the references: simple round face, dot eyes, short wavy hair, small square glasses, a knee-length lab coat with two pens in the breast pocket) gives a calm, gentle push to an invented child (two short pigtails) on a playground swing on a simple A-frame that sways just a little. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere.",
+   "role": "cover",
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's technician, spring and swing: draw the same technician, spring and swing in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout."
+  }
+ ]
+}

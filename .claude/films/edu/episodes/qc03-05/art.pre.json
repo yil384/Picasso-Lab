@@ -1,0 +1,133 @@
+{
+ "episode": "QC03-05",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (p25, 71:08-71:36): the favourite quantum code wants each check qubit wired to four data qubits; a heavy-hex chip offers at most three. Throw the code away, or compile around the gap? (line_qc_stitch_plug_socket). Cast as in QC03-01: the planner = the compiler, the fabricator = the chip maker; the quilt from QC03-04 = the surface code (patches = data qubits, knots = check qubits); a frame of hexagon bars = the heavy-hex chip.",
+  "The mismatch (p25): a square-grid code on a hexagon-lattice chip (line_qc_stitch_square_on_hex). p25's company logos are covered; never use 71:36-72:06 (a private conversation with a named researcher).",
+  "Two answers (72:06-72:31): hand-design a new code for every layout (line_qc_stitch_hand_made; e.g. IBM's heavy-hex code, Chamberland et al., PRX 2020), or let a compiler bridge the gap: Surf-Stitch (Wu, ..., Ding, ISCA 2022; tape p26), the first automated framework for compiling the surface code onto sparse chips.",
+  "Why it can be done (p26, 73:07-74:24; clip 73:07-73:33): error correction is like an approximate algorithm plus redundancy, so a check can be split: two helper qubits each gather the parity of two data qubits and then combine; one degree-4 node becomes two degree-3 nodes (line_qc_stitch_knot_split; reuse line_qc_surf_quilt_knots for the whole quilt).",
+  "The catch (74:24-74:51): every helper qubit is another place an error can start and spread into the data, so use as few as possible while keeping the code fault-tolerant (line_qc_stitch_snag); and there are many ways to split, a huge space to search.",
+  "Results (tape p27, 75:03-76:20): error thresholds on heavy-square and heavy-hex layouts, matching the expert design on one and beating it on the hardest; numbers only from the paper via FACTS.md (reuse line_balance).",
+  "Humans abstract, computers explore (clip 76:20-76:50): the person sets the rule, the compiler searches the many stitchings (line_qc_stitch_sewing_machine).",
+  "A logical grid on top of a physical graph (76:50-77:16), and the classical mindset helps derive the structure (clip 77:16-77:45) (line_qc_stitch_quilt_on_frame). Next (p28): code design and mapping as compiler problems; the theory under the codes is QC08.",
+  "Cover (line_qc_cover_03_05; for the X post and thumbnails, not a film beat): the planner sews a square quilt onto a frame of hexagon bars."
+ ],
+ "reuse": [
+  "line_qc_surf_quilt_knots",
+  "line_qc_chip_wires_refused",
+  "line_qc_chip_reject_bin",
+  "line_mic",
+  "line_paper",
+  "line_balance"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_stitch_plug_socket",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_switch_dimmer",
+    "line_glue_tiles"
+   ],
+   "prompt": "Close view, waist up: the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, holds up a big round plug with four round pins arranged in a square, trying to push it into a round wall socket beside her that has only three round holes arranged in a triangle; the pins clearly do not match the holes. She frowns at it, tongue poking out. The wall is plain. Square image 1024x1024; the planner, the plug and the socket fill about 85% of the width and about 80% of the height; the plug and the socket are large. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_stitch_square_on_hex",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_glue_tiles",
+    "line_tiny_lab",
+    "line_tap_two_people"
+   ],
+   "prompt": "The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, and the fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, together hold a square patchwork quilt of four by four plain square patches up above a big table; on the table lies a wooden frame whose bars form a honeycomb of hexagons. The square seams of the quilt clearly do not line up with the hexagon bars of the frame below. Both of them tilt their heads, puzzled. Landscape image 1536x1024; the two characters, the quilt and the frame fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_stitch_hand_made",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_glue_tiles",
+    "line_scissors_strips",
+    "line_paired_cards"
+   ],
+   "prompt": "On a long plain workbench seen from the front: a pair of hands (only hands and forearms in plain rolled-up sleeves, no person visible) sews a small new patch by hand with a needle and thread. Behind them stands a tall, wobbly stack of many finished hand-sewn patches, each with a different pattern of seams (squares, hexagons, triangles, stripes, diamonds), and against the wall lean several empty wooden frames of different shapes, one for each patch. Landscape image 1536x1024; the hands, the stack and the frames fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_stitch_knot_split",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_glue_tiles",
+    "line_paired_cards",
+    "line_balance"
+   ],
+   "prompt": "A close-up picture in two halves side by side with clear space between them, both seen from straight above. Left half: four square fabric patches meet at one corner, two above and two below, and one single round knot sits on that corner with four short threads running from it, one into the middle of each patch. Right half: the same four square patches, but now there are two smaller round knots side by side on the seam: the left knot has short threads into the two left patches, the right knot has short threads into the two right patches, and one short thread joins the two knots to each other, so each knot holds only three threads. A needle with a loose thread lies below the right half. The patches are plain outlines, nothing filled. Landscape image 1536x1024; each half fills most of its side; together they fill about 92% of the width and about 75% of the height; the knots and threads are large and clear. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_stitch_snag",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_glue_tiles",
+    "line_reader_writer"
+   ],
+   "prompt": "The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, pulls a square patchwork quilt off a table, but the short helper thread between two knots in its middle has caught on a nail sticking out of the table edge; the snagged thread pulls tight and drags the neighbouring patches out of shape, a long wrinkle running across them. She winces, one eye shut. Landscape image 1536x1024; the planner, the quilt and the table fill about 90% of the width and about 82% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_stitch_sewing_machine",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_press",
+    "line_token_mill"
+   ],
+   "prompt": "On the left, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, stands at an easel and sketches one simple rule on a big sheet as a plain diagram: four squares around one dot, and beside it the same four squares around two dots joined by a short line (no writing). On the right, a big old-fashioned sewing machine with many spools of thread on top runs by itself, quickly sewing trial patches; a long trail of finished trial patches, each joined a little differently, pours out of it into a heap on the floor. The fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, feeds fabric into the machine. Landscape image 1536x1024; the easel, the machine, the heap and the two characters fill about 94% of the width and about 82% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_stitch_quilt_on_frame",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_glue_tiles",
+    "line_tap_two_people",
+    "line_tiny_lab"
+   ],
+   "prompt": "On a big table lies a wooden frame whose bars form a honeycomb of hexagons, and a square patchwork quilt of four by four plain square patches is now stretched neatly over it and stitched to the frame bars with many small, even stitches; at every inner corner where four patches meet there are two small knots joined by a short thread instead of one big knot. The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, and the fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, shake hands across the table, pleased. Landscape image 1536x1024; the table, the quilt, the frame and the two characters fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_03_05",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_stitch_square_on_hex",
+    "line_qc_stitch_quilt_on_frame",
+    "line_qc_stitch_plug_socket"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's planner (two short braids, round glasses, utility vest), the square patchwork quilt and the frame of hexagon bars: draw the same characters and props in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The planner (the same invented character as in the references: a young woman with a simple round face, dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, a pencil tucked behind one ear) sits at a big table and sews, with a large needle and a long thread, a square patchwork quilt of three by three big plain square patches onto a wooden frame whose bars form a honeycomb of large hexagons; half of the quilt is already stitched down, the other half is lifted in her free hand. Seen from the front and a little above. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,159 @@
+{
+ "episode": "QC04-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: two players can't talk; each gets a random bit from the referee and answers with a bit; the best plan made in advance wins 3 rounds in 4; share one entangled pair beforehand and they win about 85%, yet they still can't send each other a single bit (line_qc_spooky_booths). The shared pair is drawn as two identical devices (two buttons, one small window): a result appears only when a button is pressed (a measurement), never as a coin already waiting in a box. Cast as in QC04-01 plus the referee.",
+  "Alice in California, Bob in New York, sharing a Bell pair (her framing, 64:53-65:44): line_qc_spooky_far_apart (a sunny beach vs. a snowy street: no maps, no flags, no landmarks). Alice presses and sees 0; Bob's result is then 0 too, however far apart.",
+  "Einstein's objection (her clip 74:07-74:33, \"Einstein's pitfall\"): faster than light? \"Spooky action at a distance\" is his phrase: quote it as his, never as a caption that claims physics; never draw him. Her lines only from the student dialogue 71:25-75:28.",
+  "Why it is not a telephone (her clip 65:44-66:37): Bob alone sees a fair 50/50 whether or not Alice pressed first (line_qc_spooky_bob_alone: two equal heaps); the match shows only when they compare notes, which needs an ordinary channel no faster than light (line_qc_spooky_compare_strips; reuse line_dials_daily_letter for the slow letter). Title beat: line_qc_spooky_tin_cans (the string is cut).",
+  "What it is not: a pair of gloves packed into two boxes also matches every time (line_qc_spooky_glove_boxes), and answers fixed in advance like that are exactly the 75% plan; Bell's point is that a game can tell the two apart.",
+  "The CHSH game (Q24-02 p37, tape it): the referee flips two coins x, y; Alice answers a, Bob answers b; they win if a XOR b = x AND y; any plan made in advance (line_qc_spooky_huddle; gloves included) wins at most 3/4; with a shared pair, each picks a button by their own coin and they win cos^2(pi/8), about 85.4% (Tsirelson).",
+  "Real experiments, a Nobel prize (her clip 75:54-76:50; she calls the game \"gambling\": keep or trim): Bell tests with entangled photons (2022 Nobel Prize in Physics: Aspect, Clauser, Zeilinger); line_qc_spooky_bell_table, a generic optics table: no named lab, no country, no race framing.",
+  "What a shared pair does buy (Q24-02 p35: the slide figure is from Wikipedia, redraw it): superdense coding, one qubit sent carries two classical bits (Bennett & Wiesner 1992): line_qc_spooky_dense_post (Alice turns her device to one of four settings and posts it; Bob reads one of four lamps). Teleportation is its mirror image (QC06-03).",
+  "Takeaway: correlation, not communication; the pair is a resource, not a wire. Reuse line_qc_tensor_carved_rings for the Bell pair when QC04-03 has been seen.",
+  "Cover (line_qc_cover_04_04; for the X post and thumbnails, not a film beat): the tinkerer on a beach and the friend in the snow hold tin cans to their ears; the string between them is cut."
+ ],
+ "reuse": [
+  "line_qc_tensor_carved_rings",
+  "line_dice_hand",
+  "line_dials_daily_letter",
+  "line_paper",
+  "line_mic"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_spooky_booths",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_tap_two_people",
+    "line_tiny_lab"
+   ],
+   "prompt": "A simple game set seen from the front: two closed booths with solid walls side by side, a clear gap between them, each booth open at the front so we can see the player sitting inside: in the left booth, the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers; in the right booth, the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers. Each holds a small handheld device: a rounded box about the size of a bar of soap, with two big push buttons on its face (one round, one square) and one small round window on its top end, and looks out, concentrating. In front, in the middle between the booths, the referee, an invented tall, thin older man with a simple round face, dot eyes and a big round moustache, wearing a peaked cap and a plain zip jacket, a whistle hanging on a cord round his neck, flips two coins up into the air with his thumbs, one towards each booth, small curved motion lines behind them. Landscape image 1536x1024; the booths, the players and the referee fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no screens, no audience, nothing on the coins or the devices."
+  },
+  {
+   "name": "line_qc_spooky_huddle",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "Before a game: the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, and the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, crouch shoulder to shoulder, whispering a plan, one hand cupped round a mouth. Between them on the floor lies an open small padded case that held a matching pair of identical devices (each a small handheld device: a rounded box about the size of a bar of soap, with two big push buttons on its face (one round, one square) and one small round window on its top end), and each of them lifts one device out. To one side, the referee, an invented tall, thin older man with a simple round face, dot eyes and a big round moustache, wearing a peaked cap and a plain zip jacket, a whistle hanging on a cord round his neck, stands with his back politely turned, arms folded, waiting. Square image 1024x1024; the two players, the case and the referee fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_spooky_far_apart",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_banks",
+    "line_two_lanterns",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with a clear white gap between them. Left half: the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, stands on a sunny beach with one palm tree, small waves and a round sun, holding a small handheld device: a rounded box about the size of a bar of soap, with two big push buttons on its face (one round, one square) and one small round window on its top end, and pressing one of its buttons with her thumb. Right half: the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, stands on a snowy street in front of plain tall generic buildings, snowflakes falling, his scarf wrapped twice, holding an identical device and looking at it. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no signs, no flags, no landmarks, no maps."
+  },
+  {
+   "name": "line_qc_spooky_tin_cans",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_banks",
+    "line_tap_two_people",
+    "line_tiny_lab"
+   ],
+   "prompt": "Far apart across a wide picture: at the far left, the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, stands on a sunny beach by a palm tree and holds a tin can to her ear, listening hard; at the far right, the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, stands on a snowy street and talks into a tin can held to his mouth. From each can a string droops down to the ground and ends in a cut, frayed end; in the middle of the picture there is a wide empty gap where the string is missing, and a pair of scissors lies on the ground there. Landscape image 1536x1024; everything fills about 94% of the width and about 78% of the height. No text, no letters, no numbers, no logos, no signs, no landmarks."
+  },
+  {
+   "name": "line_qc_spooky_bob_alone",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "The friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, sits alone at a table by a window with snow falling outside, and presses the button of one device after another (each a small handheld device: a rounded box about the size of a bar of soap, with two big push buttons on its face (one round, one square) and one small round window on its top end). To his right, an open box of unused devices. In front of him, two heaps of used devices of about the same size: every device in the left heap shows a small sun (a circle with short rays) in its window, every device in the right heap a small crescent moon. He shrugs, unimpressed: it just looks random. Square image 1024x1024; the friend, the table and the heaps fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos, only the sun and moon pictures in the windows."
+  },
+  {
+   "name": "line_qc_spooky_compare_strips",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "At a small cafe table seen from the front, the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, and the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, sit opposite each other, travel bags beside their chairs as if they had just met after a long journey. Each lays one long blank paper strip across the table, and the two strips lie side by side, edges lined up end to end; both lean in, wide-eyed, mouths open, pointing at the strips, amazed that they match. Two cups of tea on the table. Landscape image 1536x1024; the two characters, the table and the strips fill about 92% of the width and about 82% of the height; the strips are long and clearly blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_spooky_glove_boxes",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_paired_cards",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "At a table seen from the front: the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, packs a pair of knitted gloves into two identical small cardboard boxes, the left-hand glove into the left box and the right-hand glove into the right box, both lids open; the left glove is already in its box, the right glove is in her hand above the second box. The friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, watches from the side, one eyebrow raised, unconvinced. Square image 1024x1024; the tinkerer, the friend, the boxes and the gloves fill about 88% of the width and about 85% of the height; the gloves and the boxes are drawn large. No text, no letters, no numbers, no logos, no labels or stamps on the boxes."
+  },
+  {
+   "name": "line_qc_spooky_bell_table",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_lab_2017",
+    "line_tap_two_people",
+    "line_tiny_lab"
+   ],
+   "prompt": "A large optics table in a generic lab, seen from the front and a little above: at the centre, a small laser box sends a thin straight beam into a small crystal on a post; from the crystal two thin beams go out in opposite directions, one to the left and one to the right, each past a small round mirror on a post, through a round filter disc in a ring holder, into a small box-shaped detector at the far end of the table. At each end of the table stands an invented scientist in a lab coat (simple round faces, dot eyes; one tall with a short ponytail, one short and round with a bald head and glasses), each turning the filter at their own end. Landscape image 1536x1024; the table and the two scientists fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no brands, no screens with writing, no flags."
+  },
+  {
+   "name": "line_qc_spooky_dense_post",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_dials_daily_letter",
+    "line_switch_dimmer",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with a little space between them. Left half: the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, stands at a round-topped post box, turning a small dial with four click positions on the back of her device (a small handheld device: a rounded box about the size of a bar of soap, with two big push buttons on its face (one round, one square) and one small round window on its top end) with one hand, about to drop it into the slot. Right half: the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, sits at a small table and slots two identical devices side by side into a small reader machine with a row of four small round lamps on top; exactly one of the four lamps is lit, shown by short rays around it; he smiles. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no writing on the post box, no marks on the dial."
+  },
+  {
+   "name": "line_qc_cover_04_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_spooky_tin_cans",
+    "line_qc_spooky_far_apart",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows this episode's tin-can scene with both characters, the second the same two characters again: draw the same tinkerer (tuft of hair, lab coat) and friend (curly hair, bucket hat, scarf), same faces, hair and clothes, in the new cover composition described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Far apart across the picture: on the left, the tinkerer (the same invented character as in the references: a short messy tuft of hair standing up, an open lab coat with rolled-up sleeves over a T-shirt, sneakers) stands under one small palm tree and holds a tin can to her ear; on the right, the friend (the same invented character as in the references: short curly hair under a bucket hat, a long knitted scarf) stands with a few snowflakes around him and talks into a tin can. From each can a string droops to the ground and ends in a cut, frayed end; the wide middle of the picture is empty where the string is missing, with a small pair of scissors lying on the ground. Each also holds a small rounded device with two buttons in the other hand. Full figures on one short ground line. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

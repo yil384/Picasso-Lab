@@ -1,0 +1,159 @@
+{
+ "episode": "QC06-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: you can't copy a qubit (reuse line_cp_photocopier, the jammed copier; no-cloning is QC05-04), can't look at it without wrecking it (reuse line_qc_meas_flick_or_slap), and can't send it down a phone line. Yet with one shared entangled pair and two ordinary bits it arrives intact in another city. How?",
+  "Her story (Q25-07 53:00-56:42): make a Bell pair in the San Diego lab; the half called B travels to the San Francisco lab, the half called A stays (line_qc_tele_two_labs, line_qc_tele_case_handover; the pair comes from the pairing machine, reuse line_qc_pair_machine). The two cities are drawn generically: no landmarks, no signs.",
+  "In San Francisco a third qubit C holds the unknown state; a Bell measurement on B and C (the pairing machine run backwards, QC06-02) lights two lamps: two ordinary bits (line_qc_tele_bell_read; reuse line_qc_pair_machine_reverse; tape Q25-07 s49).",
+  "Only those two bits travel, by an ordinary call or letter, no faster than any call (clip Q25-07 55:47-56:13 'you are only sending classical information'; line_qc_tele_phone_call; reuse line_dials_daily_letter).",
+  "Four outcomes, four fixes: do nothing, X, Z, or both, and A is now exactly C's old state (58:19-62:55; tape Q24-08.notes p8; line_qc_tele_four_tools: an empty hook and three tools, the labels lettered on screen).",
+  "Her picture (clip Q25-07 57:36-58:02): B is a friend of A, goes to another place and finds a new friend C; A and C never meet, yet both are changed through B (line_qc_tele_friends). Quote her, never paraphrase into her mouth.",
+  "No cloning broken: C's state is gone in San Francisco the moment it is measured; one copy before, one after. Before the two bits arrive, A on its own gives 50/50 in every measurement, so nothing outruns light.",
+  "The first concrete use of entanglement (63:15-64:09). FACTS: Bennett et al. 1993; first experiments 1997. Keep to the textbook protocol and her two-lab story: no distance-record examples.",
+  "Measurement-based computing (64:15-65:10): entangle a big lattice of qubits first, then compute only by measuring them one by one; measured qubits drop out, so it runs one way (line_qc_mbqc_bead_lattice; Raussendorf & Briegel 2001). The Z-swap and X-swap circuits are teleportation shrunk to one qubit and a CNOT (65:28-70:29, tape Q25-07 s54).",
+  "Why photonics (67:19-68:37; clip 67:45-68:10): photons are cheap to make and easy to measure but barely interact, so gates between them are hard: make the entanglement up front, then measure (line_qc_mbqc_crossing_beams, line_qc_mbqc_optics_table); compiling for such machines (tape Q24-02 p11; OneQ, ISCA 2023: check authors and claims). Company names (68:10-68:37) stay off screen unless FACTS clears them; Q24-02 p12 has a third-party device image: do not tape it.",
+  "Cover (line_qc_cover_06_03; for the X post and thumbnails, not a film beat): two benches far apart, the experimenter and the traveller on one long phone line, a matched cup at one end, two lamps at the other."
+ ],
+ "reuse": [
+  "line_cp_photocopier",
+  "line_qc_meas_flick_or_slap",
+  "line_dials_daily_letter",
+  "line_qc_pair_machine",
+  "line_qc_pair_machine_reverse"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_tele_two_labs",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_two_lanterns",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "prompt": "A wide, simple coastal landscape seen from high above at a gentle slant, like a picture-book map, drawn with few lines and lots of white space. At the far left, beside a sandy beach with a few gentle wave lines and two palm trees, stands a small single-storey lab building with a flat roof and one round window. At the far right, on steep rounded hills with a couple of wisps of fog, stands an identical small lab building. A long winding coastal road connects the two across the whole picture, past low hills, with one tiny van on it; beside the road runs a line of small telephone poles carrying one thin wire from one building to the other. No people. Landscape image 1536x1024; the scene fills about 94% of the width and about 70% of the height. No text, no letters, no numbers, no logos, no signs, no flags, no landmarks, no bridges."
+  },
+  {
+   "name": "line_qc_tele_case_handover",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "Inside a small plain lab, seen from the front. On a workbench in the middle stands the pairing machine: a small boxy wooden machine on four short legs, about as big as a microwave oven; on its flat top two funnels stand side by side, and just in front of each funnel sits one round lamp; a big hand crank sticks out of its right side; at the bottom of its front face is one wide, low opening; in front of it lies a little tray holding one small cup with a closed domed lid, and the tray's second place is empty. On the left, the experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) hands an identical small lidded cup to the traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers), who stands on the right, ready to travel, holding open a small padded carrying case with a soft foam lining and one cup-shaped hollow. Landscape image 1536x1024; the characters, the bench and the machine fill about 92% of the width and about 82% of the height. No text, no letters, no numbers, no logos, no stickers on the case."
+  },
+  {
+   "name": "line_qc_tele_bell_read",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_knob_board",
+    "line_tiny_lab"
+   ],
+   "prompt": "A second small lab, seen from the front; through a window in the back wall we see rounded hills with a wisp of fog. On a workbench stands the pairing machine: a small boxy wooden machine on four short legs, about as big as a microwave oven; on its flat top two funnels stand side by side, and just in front of each funnel sits one round lamp; a big hand crank sticks out of its right side; at the bottom of its front face is one wide, low opening. The traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers) pushes a little tray into the bottom opening of the machine; on the tray sit, side by side, one small cup with a closed domed lid and one small plain box with a closed lid. Beside the machine lies an open, empty padded carrying case. On top of the machine both funnels are empty; the left lamp is lit (short straight rays around it) and the right lamp is unlit. The traveller looks up at the lamps. Landscape image 1536x1024; the character, the bench and the machine fill about 90% of the width and about 82% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_tele_phone_call",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "The traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers), seen waist up, sits at a desk and holds the handset of a plain old-fashioned desk telephone (no dial, no buttons) to one ear, speaking, while pointing with the other hand at the two round lamps on top of a small boxy wooden machine on the desk beside the phone: the left lamp is lit (short straight rays around it), the right lamp is unlit. A coiled cord joins the handset to the phone, and from the phone one plain wire runs off the right edge of the picture. Square image 1024x1024; the character, the phone and the machine fill about 88% of the width, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_tele_four_tools",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_postal_scale",
+    "line_reader_writer"
+   ],
+   "prompt": "Back in the first small lab, seen from the front. The experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) stands at a workbench with a telephone handset tucked between ear and shoulder, listening, and reaches up towards a pegboard on the wall. On the pegboard hang exactly four things in one row, evenly spaced: first an empty hook with nothing on it, then a pair of kitchen tongs, then a small hand crank, then a pair of tongs and a small hand crank tied together with string. The experimenter's hand reaches for the tongs. On the bench in front of the experimenter sits a little tray with one small cup with a closed domed lid. Landscape image 1536x1024; the character, the bench and the pegboard fill about 90% of the width and about 82% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_tele_friends",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture in two halves side by side, with clear space between them. Left half: by a small seaside bus stop with a simple shelter and one palm tree, the experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) waves goodbye to the traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers), who walks away to the right pulling a small wheeled suitcase and waving back. Right half: in a different small town on rolling hills with a wisp of fog, the same traveller shakes hands with a new friend, an invented older man with a simple round face, dot eyes, a big white moustache and a flat cap; both smile. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no signs at the bus stop."
+  },
+  {
+   "name": "line_qc_mbqc_bead_lattice",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_glue_tiles",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "On a big plain table, seen from a little above and in front: a large flat square lattice of small round beads, eight beads across and six deep, each bead joined to its neighbours by short straight rods, like a big ball-and-stick model lying flat. The leftmost column of beads is already gone, leaving empty places at the ends of the rods. The experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) leans over the lattice from behind and lifts one bead of the next column out with a pair of tweezers; a small bowl beside the lattice holds the beads already removed. Landscape image 1536x1024; the lattice, the bowl and the character fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos; the beads are drawn as empty circles."
+  },
+  {
+   "name": "line_qc_mbqc_optics_table",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_knob_board",
+    "line_balance"
+   ],
+   "prompt": "A generic optics lab: a long, flat, rectangular optical table seen from a little above and in front, with a few neat rows of small mounting holes along its near edge. On it: at the left, a small box-shaped laser; then, spread across the table, a few small glass cubes and small round mirrors on short posts, with thin straight light beams drawn as single thin lines bouncing between them in a simple zigzag; a couple of neat coils of optical fibre; and at the right end, a row of four small cylindrical detectors with cables trailing off the table. The experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers), with the safety goggles now pulled down over the eyes, stands behind the table and turns the tiny knob of one mirror mount with the fingertips. Plain room, plain wall. Landscape image 1536x1024; the table and the character fill about 92% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no warning signs."
+  },
+  {
+   "name": "line_qc_mbqc_crossing_beams",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_two_lanterns",
+    "line_tiny_lab"
+   ],
+   "prompt": "A plain room seen from the front, with a plain back wall. At the front left stands the experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers), and at the front right stands the traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers), a few steps apart. Each holds a flashlight and aims it diagonally across the room at the back wall, so the two beams, each drawn as a long, widening cone outline (outline only, not filled), cross each other in the middle of the picture in a big X shape and pass straight through each other unchanged; the experimenter's beam ends in a round spot outline on the right part of the back wall, the traveller's beam ends in a round spot outline on the left part. Both look a little surprised that nothing happens where the beams cross. Landscape image 1536x1024; the characters and the beams fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos; no grey, no fills inside the beams."
+  },
+  {
+   "name": "line_qc_cover_06_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_tele_case_handover",
+    "line_qc_meas_fixed_camera",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this lecture's experimenter (short spiky hair, safety goggles pushed up on the forehead, a white lab coat) and traveller (tall, curly hair under a knitted beanie, a padded jacket, a messenger bag): draw the same characters (same face, hair and clothes) in the new cover composition described, and no one else. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Two small lab benches, one at the far left and one at the far right of the picture, far apart. At the left bench, the experimenter (the same invented character as in the reference images: simple round face, dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with rolled-up sleeves) holds a telephone handset to the ear; on the bench sits one small cup with a closed domed lid. At the right bench, the traveller (the same invented character as in the reference images: tall, simple round face, dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body) holds a telephone handset to the ear, beside a small boxy wooden machine with two round lamps on top, the left one lit (short straight rays around it). One telephone wire runs between the two phones in a long, gentle loop over a few low rounded hills drawn small in the middle distance. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

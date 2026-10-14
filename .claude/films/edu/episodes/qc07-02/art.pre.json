@@ -1,0 +1,128 @@
+{
+ "episode": "QC07-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: in Java you drop a temporary and the garbage collector frees it (her comparison, Q25-08 38:30-39:14; Q24-13 19:55-20:31): line_qc_scratch_robot_sweep. Do the same with a scratch qubit, measure it and reuse it, and you can destroy the answer you meant to keep. Why? Same cast as QC07-01: the keeper and the rookie (cast drawing line_qc_revers_fresh_card); the little robot comes back as the helper that cleans up for you.",
+  "AND of three bits with two Toffolis and a scratch qubit (35:36-38:30): the scratch holds a AND b, the output holds abc; code letters the circuit; the kept cards of line_qc_revers_card_haul (QC07-01) are the garbage.",
+  "Why not just measure it? (39:14-46:30; Q24-13 20:45-23:28) The scratch is entangled with the answer, as in |000> + |110>, so reading it picks one branch and the superposition you were computing on is gone: line_qc_scratch_tied_cards (caption: the thread pictures the correlation; it is not a force); reuse line_dice_hand for the random branch. Clip 45:19-46:06.",
+  "Uncompute instead: run the same Toffoli again (it is its own inverse) and the scratch returns to 0, unentangled and free (46:30-51:42; clip 47:58-48:25, \"measurement is not the right thing\"); reuse line_qc_build_two_keys (turn the same two keys back) and line_qc_undo_twist_cube.",
+  "The general pattern (51:44-54:22; Q24-13 30:04-31:07; Bennett 1973: check in FACTS.md): compute, copy the result out, run the computation backwards: put up the scaffold, hang the lantern, take the scaffold down from the top (line_qc_scratch_scaffold_up, then line_qc_scratch_scaffold_down); reuse line_qc_build_pebble_trail (QC05-06) for walking the steps back. Tape Q25-08 s56 and Q24-13.notes p4.",
+  "The trade: undoing costs extra gates (time) and gives the qubits back (49:45-50:12; Q24-13 25:45-26:11, her answer only: the student question 24:33-26:21 is never used): the same poles go up on the next house (line_qc_scratch_poles_next); reuse line_balance.",
+  "Programmers will not do this by hand; compilers should, as runtimes do garbage collection (clip Q24-13 31:16-31:40; Q24-05 61:31-62:24 for uncomputation inside multi-controlled gates): the robot takes the scaffold down overnight, top first, while the two sleep (line_qc_scratch_night_robot).",
+  "Better uncomputation strategies are an open research problem (54:30-55:32): reuse line_qc_build_jigsaw or line_paper.",
+  "Cover (line_qc_cover_07_02; for the X post and thumbnails, not a film beat): the rookie dangles a scratch card over the bin; a thread is dragging the answer card off the desk; the keeper lunges."
+ ],
+ "reuse": [
+  "line_qc_revers_card_haul",
+  "line_dice_hand",
+  "line_qc_build_two_keys",
+  "line_qc_undo_twist_cube",
+  "line_qc_build_pebble_trail",
+  "line_balance",
+  "line_qc_build_jigsaw",
+  "line_paper"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_scratch_robot_sweep",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "At a desk seen from the front, the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) works busily, scribbling on a sheet of paper and tossing crumpled paper balls over her shoulder without looking; behind her chair, a small friendly robot (a round head with two dot eyes, a barrel-shaped body, two thin arms and three small wheels, outlines only, no markings) sweeps the paper balls into a dustpan with a little broom, cheerfully. Square image 1024x1024; the desk, the rookie and the robot fill about 88% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_scratch_tied_cards",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "At a tidy wooden desk seen from the front: the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) stands at the left holding up one card (a scratch card with a few plain wavy scribble lines) over an open waste-paper basket, about to drop it. A thin thread runs from that card to a second card lying on the desk (the answer card, with one simple five-pointed star drawn on it in outline), and the thread is already pulling the answer card towards the edge of the desk. The keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes), behind the desk, lunges forward with one hand out, alarmed. Landscape image 1536x1024; the characters, the desk, the two cards and the thread fill about 90% of the width and about 80% of the height; the two cards and the thread are drawn large and clear. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_scratch_scaffold_up",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A small plain house with a door and two windows, seen straight from the front, with a simple scaffold of straight poles and planks standing against its front wall (two levels of planks and a short ladder). On the top plank, the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) hangs a round lantern on a hook above the door; on the ground, the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) holds the ladder steady with one hand and passes up a spanner with the other. Landscape image 1536x1024; the house, the scaffold and the characters fill about 85% of the width and about 88% of the height. No house number. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_scratch_scaffold_down",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_qc_scratch_scaffold_up",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The second attached image shows the same house with its scaffold: draw that house again exactly the same way and change only what is described. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "The very same small plain house as in the second attached image, seen from the same straight front view with the same framing; the round lantern now hangs above the door, lit, with a few short ray lines. The scaffold is gone: its poles and planks lie stacked in a neat pile on the ground to the right of the house, the short ladder on top. The keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) and the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) stand in front of the house admiring the lantern; the rookie dusts off her hands. Landscape image 1536x1024; the house, the pile and the characters fill about 85% of the width and about 88% of the height. No house number. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_scratch_poles_next",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "Along a quiet street seen from the side: on the left, a small finished house with a round lantern hanging above its door; on the right, an empty plot of grass with four pegs and a string marking out where the next house will go. Between them, the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) and the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) carry a bundle of long scaffold poles on their shoulders from the finished house towards the empty plot, one at each end, the rookie in front, walking in step. Landscape image 1536x1024; everything fills about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_scratch_night_robot",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_qc_scratch_robot_sweep",
+    "line_qc_scratch_scaffold_up"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The second attached image shows the small robot: draw the same robot. The third shows the house with its scaffold: draw the same house and scaffold. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "At night, shown only by a crescent moon and a few small stars drawn as outlines (the sky stays plain white, no dark fill anywhere). A small plain house with a round lantern above its door, seen straight from the front, still has a simple scaffold of poles and planks against its front wall; a small friendly robot (a round head with two dot eyes, a barrel-shaped body, two thin arms and three small wheels, outlines only, no markings) is taking the scaffold down by itself, starting from the top: it carefully lowers the top plank, and the first few poles already lie stacked neatly on the ground. Through the big front window of the house we see the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) and the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) asleep in two armchairs, eyes closed, heads tilted to one side. Landscape image 1536x1024; the house, the scaffold and the robot fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_07_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_scratch_tied_cards",
+    "line_qc_revers_fresh_card",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters, the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "At a plain wooden desk: on the left, the rookie (the same invented character as in the references: a young woman, simple round face, dot eyes, two short bunches, dungarees, big sneakers) holds a scratch card over an open waste-paper basket, about to drop it; a thin thread ties it to the answer card (one simple five-pointed star drawn on it in outline) lying on the desk, which is sliding towards the edge. Behind the desk, the keeper (the same invented character as in the references: a short, round, older man, simple round face, dot eyes, a bowl haircut, small round spectacles, a knee-length work coat) lunges forward with one hand out, alarmed. The two cards and the thread are large and clear. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

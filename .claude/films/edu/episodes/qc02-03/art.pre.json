@@ -1,0 +1,120 @@
+{
+ "episode": "QC02-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: a program written for an ion trap lands on a superconducting chip that cannot run its two-qubit gate (line_qc_cook_odd_card: the cook takes only three card shapes; the head waiter brings a fourth). Can it run at all, and what does the translation cost? Cast: the head waiter (the compiler), the cook (the chip: does only what is native), the technician (the hardware side, from QC02-01).",
+  "Infinitely many gates in principle, few natively (36:15-37:11).",
+  "Calibration (37:26-38:50, clip 37:26-37:54): each native gate is a pulse whose shape and size must be tuned, and the tuning drifts, so machines go offline for hours to retune (line_qc_piano_tuner; her hours as typical, not exact). Continuous rotations would each need their own tuning (Q24-04 58:08-59:31; reuse line_knob_board).",
+  "Native sets differ by technology (p16 redrawn as lettering, credit Murali et al.; MS/XX on ions, cross-resonance on IBM chips, another set on Rigetti chips; 39:38-41:36); software-visible gates are a bigger set: the same toy house built from three different kits (line_qc_three_kits).",
+  "Gate synthesis (p17, 41:52-43:15): the compiler rewrites any gate into the native ones; one MS gate becomes seven gates on a CNOT-only chip (the count drawn on p17: check) (line_qc_one_into_seven). SWAP = three CNOTs as a matrix product (p18, 43:39-45:05: code on the taped slide).",
+  "Universality (45:31-46:22, clip 45:56-46:22; her answer 52:00-52:59): single-qubit gates plus one entangling gate can run any program ({H, T, CNOT}, Nielsen & Chuang 4.5): the three card shapes can spell every order (the cover shows it).",
+  "The trade-off (57:26-58:59, clip 58:25-58:59): more native gates mean shorter programs but more to calibrate (line_qc_tune_few_or_many).",
+  "What makes a good gate set (Q24-04 59:39-61:24): Z as four T gates vs one native Z; like the matrix units in ML accelerators (reuse line_gpu); a co-design loop between hardware and algorithm people, like reduced and complex instruction sets (Q24-05 33:43-35:34, clip 34:36-35:34) (line_qc_codesign_pingpong). Q24-04 and Q24-05 have student voices: her lines only.",
+  "Cover (line_qc_cover_qc02_03; for the X post and thumbnails, not a film beat): the head waiter hands the cook seven small cards in the three known shapes in place of the one odd card."
+ ],
+ "reuse": [
+  "line_knob_board",
+  "line_clock_face",
+  "line_block_towers",
+  "line_gpu",
+  "line_chef",
+  "line_dials_engineer"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_cook_odd_card",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chef",
+    "line_d_kitchen",
+    "line_paired_cards"
+   ],
+   "prompt": "A restaurant kitchen hatch (a wide window in a wall with a counter shelf), seen from the dining-room side. Behind the hatch stands the cook, an invented character with a simple round face and dot eyes, a tall pleated chef's hat, a neckerchief and a double-breasted chef's jacket, beside three small trays on the counter that hold three neat piles of blank order cards of three different shapes: round cards, triangular cards and square cards. In front of the hatch, the head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, holds up one blank hexagonal card, a shape that matches none of the trays; the cook frowns at it, scratching under the hat. Landscape image 1536x1024; the hatch, the cook and the head waiter fill about 90% of the width and about 85% of the height. No text, no letters, no numbers, no logos. Nothing written or drawn on the cards."
+  },
+  {
+   "name": "line_qc_one_into_seven",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_paired_cards",
+    "line_reader_writer",
+    "line_writer_cover"
+   ],
+   "prompt": "The head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, sits at a small plain desk, seen from the front, a pencil behind one ear, concentrating. On the left end of the desk lies one large blank hexagonal card with a fancy scalloped border. Across the rest of the desk the head waiter lays out a neat row of seven small plain blank cards from left to right, each one round, triangular or square, placing the seventh card with one hand. Landscape image 1536x1024; the desk, the cards and the head waiter fill about 92% of the width and about 80% of the height; the seven cards are clearly separated. No text, no letters, no numbers, no logos. Nothing written or drawn on the cards."
+  },
+  {
+   "name": "line_qc_piano_tuner",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_knob_board",
+    "line_clock_face",
+    "line_tiny_lab"
+   ],
+   "prompt": "An upright piano with its top lid and front panel taken off, so its rows of strings and tuning pins show. The technician, an invented character with a simple round face and dot eyes, short wavy hair, small square glasses and a knee-length lab coat with two pens in the breast pocket, leans into it with a tuning lever on one pin, head tilted, listening to a tuning fork held near one ear. In front of the piano a simple rope barrier on two short posts keeps people away; on the wall a plain round clock with no hands and no numerals. Landscape image 1536x1024; the piano, the technician and the barrier fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos. No signs."
+  },
+  {
+   "name": "line_qc_tune_few_or_many",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_knob_board",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with clear space between them, the same character in both. Left half: The technician, an invented character with a simple round face and dot eyes, short wavy hair, small square glasses and a knee-length lab coat with two pens in the breast pocket, sits relaxed on a stool, tuning a small box-shaped instrument with only three strings that rests on the lap, turning a little key, nearly done, a mug on the floor beside the stool. Right half: the same technician stands on a tall step ladder beside an enormous concert harp with dozens of strings, reaching up with a tuning key in one hand and a tuning fork in the other, sweating, a few drops flying. Landscape image 1536x1024; the two halves fill about 94% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_three_kits",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_block_towers",
+    "line_slip_boxes",
+    "line_balance"
+   ],
+   "prompt": "Three small square tables side by side, seen from the front and a little above, with clear space between them; on each table an open box of toy building pieces of a different kind: on the left table small square wooden bricks, on the middle table thin sticks with round connector balls, on the right table flat triangular tiles. On each table, built only from that table's pieces, stands the same little toy house: a box-shaped body, a pointed roof and a chimney. The left house uses a few big bricks, the middle one many sticks and balls, the right one many triangles. No people. Landscape image 1536x1024; the three tables fill about 94% of the width and about 70% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_codesign_pingpong",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_round_table",
+    "line_dog_chases_cat"
+   ],
+   "prompt": "A ping-pong table seen from the side. On the left, the technician, an invented character with a simple round face and dot eyes, short wavy hair, small square glasses and a knee-length lab coat with two pens in the breast pocket, returns the ball with a bat; on the right, the head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, waits for it with a bat, leaning forward eagerly. A dashed line shows the ball's arc over the net. A few spare balls lie on the floor around them, as if the rally has gone on for a long time. Both are smiling and focused. Landscape image 1536x1024; the table and the two players fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_qc02_03",
+   "kind": "line",
+   "group": "COVER",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_cook_odd_card",
+    "line_qc_one_into_seven",
+    "line_chef"
+   ],
+   "prompt": "At a restaurant kitchen hatch, the head waiter (the same invented character as in the references: simple round face, dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat, a long apron) holds up one large blank hexagonal card in one hand and with the other slides a neat row of seven small blank cards, each round, triangular or square, across the counter to the cook (the same invented character: a tall pleated chef's hat, a neckerchief, a double-breasted chef's jacket), who gives a cheerful thumbs-up. The seven cards are large and clearly separated; nothing written on any card. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere.",
+   "role": "cover",
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's head waiter and cook: draw the same head waiter and cook in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout."
+  }
+ ]
+}

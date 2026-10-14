@@ -1,0 +1,134 @@
+{
+ "episode": "QC05-05",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: your chip's CNOT runs only one way, control on A and target on B; the program needs it the other way round; no new hardware (line_qc_rewire_lead_mover: the mover always leads). Cast for lecture Q25-06 (QC05-05, QC05-06): the planner (bun with a pencil, cardigan) is the compiler; the mover (flat cap, waistcoat) is the hardware.",
+  "CZ flips the sign only when both qubits are 1, and it is symmetric: it does not care which qubit is which, like a high five (Q25-06 17:40-21:20; the recipe: action on basis states -> matrix -> check unitary, 20:33-21:02; line_qc_rewire_high_five).",
+  "CZ = (I x H) CNOT (I x H): seen through the X-basis lenses on the target, a flip becomes a sign (21:20-29:13; Q24-05 29:20-30:56; reuse line_qc_hbridge_two_glasses and line_qc_hbridge_cake_turntable from QC05-02).",
+  "Four Hadamards reverse a CNOT: twirl both partners and the follower leads (29:13-32:18; line_qc_rewire_lead_mover -> line_qc_rewire_twirl -> line_qc_rewire_lead_planner, the cover idea). Why bother: on some chips one direction is the native, easier one (clip 32:44-33:35; Q24-05 31:24-33:40; phrase it generally, as FACTS.md allows).",
+  "SWAP = three CNOTs, exactly the classical in-place XOR swap that needs no spare variable (34:12-45:16, clip 38:41-39:08; Q24-05 36:38-41:44; line_qc_rewire_fishbowl_swap: the everyday way needs a spare bowl; the XOR rows of bits are lettered).",
+  "Linearity: check an identity on the basis states and it holds for every superposition (44:13-45:07; code only).",
+  "Partial equivalence: when the compiler knows an input is still |0>, a SWAP needs only two CNOTs: a bowl known to be empty takes one pour (45:16-51:13, clip 47:39-48:32; line_qc_rewire_fish_pour). Compilers track untouched |0> qubits.",
+  "SWAP is \"classical\": together with single-qubit gates it can never create entanglement; swapping seats does not mix what each one holds (51:13-52:53; Q24-05 49:14-51:36; line_qc_rewire_bench_swap).",
+  "Never caption her 2024 remark that two iSWAPs make a SWAP (iSWAP^2 = Z x Z).",
+  "Cover (line_cover_qc05_05; for the X post and thumbnails, not a film beat): the planner twirls the mover under a raised arm on an empty dance floor."
+ ],
+ "reuse": [
+  "line_qc_hbridge_two_glasses",
+  "line_qc_hbridge_cake_turntable",
+  "line_qc_cnot_flip_card",
+  "line_dog_chases_cat",
+  "line_cat_chases_dog"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_rewire_high_five",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "The planner (an invented character with a simple round face and dot eyes, curly hair tied up in a bun with a pencil stuck through it, a long cardigan over a plain top, trousers) and the mover (an invented sturdy character with a simple round face and dot eyes, a flat cap, a waistcoat over a shirt with the sleeves rolled up, trousers and boots), standing face to face, give each other a big high five, their raised hands meeting in the middle above their heads, with a few short burst lines where the hands meet; both grin; the two poses mirror each other, the same from either side. Full figures on a short ground line, faces and clothes clearly visible. Square image 1024x1024; the two characters fill about 85% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_rewire_lead_mover",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "On an empty dance floor (one plain floor line): the mover (an invented sturdy character with a simple round face and dot eyes, a flat cap, a waistcoat over a shirt with the sleeves rolled up, trousers and boots) walks forward to the right with long, confident strides, leading the planner (an invented character with a simple round face and dot eyes, curly hair tied up in a bun with a pencil stuck through it, a long cardigan over a plain top, trousers) by the hand; the planner follows one step behind, being pulled along, a little surprised. Full figures. Landscape image 1536x1024; the two characters fill about 70% of the width and about 80% of the height, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_rewire_twirl",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "On the same kind of empty dance floor (one plain floor line): the planner (an invented character with a simple round face and dot eyes, curly hair tied up in a bun with a pencil stuck through it, a long cardigan over a plain top, trousers) and the mover (an invented sturdy character with a simple round face and dot eyes, a flat cap, a waistcoat over a shirt with the sleeves rolled up, trousers and boots) stand side by side, a little apart, and each spins on the spot with arms out wide, curved motion lines round each of them, both laughing. Full figures. Landscape image 1536x1024; the two characters fill about 70% of the width and about 80% of the height, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_rewire_lead_planner",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_rewire_lead_mover",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image shows the same two invented characters in the same composition with the roles the other way round (there the mover leads): copy the two characters, the framing, the floor line, the scale and the direction of walking exactly, and change only who leads and who follows. The other attached images are style references only: match their line weight and pen feel, not their content.",
+   "prompt": "On an empty dance floor (one plain floor line): the planner (an invented character with a simple round face and dot eyes, curly hair tied up in a bun with a pencil stuck through it, a long cardigan over a plain top, trousers) walks forward to the right with long, confident strides, leading the mover (an invented sturdy character with a simple round face and dot eyes, a flat cap, a waistcoat over a shirt with the sleeves rolled up, trousers and boots) by the hand; the mover follows one step behind, being pulled along, a little surprised. Full figures. Landscape image 1536x1024; the two characters fill about 70% of the width and about 80% of the height, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_rewire_fishbowl_swap",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "On a long plain table seen from the front: three identical round glass fishbowls in a row; the left one holds one goldfish, the middle one is empty (only its waterline, drawn as one thin line), the right one holds one small turtle. The planner (an invented character with a simple round face and dot eyes, curly hair tied up in a bun with a pencil stuck through it, a long cardigan over a plain top, trousers) stands behind the table holding a small fishing net over the empty middle bowl, thinking, one finger on the chin; the mover (an invented sturdy character with a simple round face and dot eyes, a flat cap, a waistcoat over a shirt with the sleeves rolled up, trousers and boots) leans on the end of the table. Waist up. Landscape image 1536x1024; the bowls and the characters fill about 92% of the width and about 80% of the height; the three bowls are drawn large. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_rewire_fish_pour",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "The mover (an invented sturdy character with a simple round face and dot eyes, a flat cap, a waistcoat over a shirt with the sleeves rolled up, trousers and boots) carefully tips one round glass fishbowl holding a goldfish, so the water and the goldfish pour in one smooth stream into an empty round fishbowl standing right next to it on a plain table; the planner (an invented character with a simple round face and dot eyes, curly hair tied up in a bun with a pencil stuck through it, a long cardigan over a plain top, trousers) watches, pleased, hands clasped. Waist up. Square image 1024x1024; the bowls and the characters fill about 88% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_rewire_bench_swap",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "A plain park bench seen from the front, with one simple round tree behind. The planner (an invented character with a simple round face and dot eyes, curly hair tied up in a bun with a pencil stuck through it, a long cardigan over a plain top, trousers) and the mover (an invented sturdy character with a simple round face and dot eyes, a flat cap, a waistcoat over a shirt with the sleeves rolled up, trousers and boots) are swapping seats: the planner has stood up from the left end and steps across to the right; the mover slides along from the right end to the left; each holds their own lunchbox close to the chest (the planner's lunchbox is round, the mover's is square), sharing nothing; both look straight ahead, calm. Full figures. Landscape image 1536x1024; the bench and the characters fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_cover_qc05_05",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_rewire_lead_planner",
+    "line_qc_rewire_twirl",
+    "line_qc_rewire_high_five"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters (the planner: curly hair in a bun with a pencil, long cardigan; the mover: flat cap, waistcoat, boots): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On an empty dance floor (one plain floor line), the planner (the same invented character as in the references: simple round face, dot eyes, curly hair tied up in a bun with a pencil stuck through it, a long cardigan) raises one arm high and twirls the mover (the same invented character as in the references: sturdy, simple round face, dot eyes, a flat cap, a waistcoat over a shirt with rolled-up sleeves, boots) underneath it; the mover spins with a curved motion line round them; both laugh. Full figures. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

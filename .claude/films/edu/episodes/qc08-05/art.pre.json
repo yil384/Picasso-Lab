@@ -1,0 +1,127 @@
+{
+ "episode": "QC08-05",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (line_qc_catch_two_strips, then the cover): checks and errors are both just strings like XZZXI. Whether an error is caught comes down to one count: in how many positions do the two strings clash? Odd means caught. Code letters I/X/Y/Z on the blank cards; one worked count on screen at a time (the syllabus note: the heaviest QEC part). Cast as in QC08-01 to QC08-04 (Q25-11 continues Q25-10's story, so the lecture keeps that cast), described in full in every prompt: the keeper = the code (encodes, checks, fixes) and the imp = the noise. The props stay too: wall plates with closed flaps = data qubits, bulbs = checks (QC08-02's convention: a lit bulb = the check reads -1), round glasses = the 0/1 (Z) lens, square glasses = the +/- (X) lens (QC08-03). Say once that real errors are random, not a prankster: the imp only stands for chance. Invented characters only: no lecturer figure, never her likeness, no portrait of Shor, Steane, Hamming or anyone real. All of QC08-05 to QC08-08 reference line_qc_vote_switch_fix (QC08-01): make it first.",
+  "Why Pauli operators (Q25-11 30:40-33:50): X, Y, Z are Hermitian and unitary at once, so the same check works as a gate and as a measurement (callback QC06-01); their eigenvalues are only +1 and -1, so the measuring circuit is the simple one of QC06-02; fixing X and Z fixes everything (QC08-04). Tape Q24-11 s7 (the Q25-11 frames carry an old institution's footer: prefer the Q24-11 frames or crop it).",
+  "The Pauli group (33:53-38:58; Q24-11 08:04-14:12): 4^n strings on n qubits; any two either commute or anticommute; weight = the positions that are not I. The clash count: each position where both are non-I and different flips the sign once, so only the parity of the count matters (reuse line_qc_build_stair_switches from QC05-06: every flip toggles the lamp, an even number leaves it as it was). Worked on the five-qubit checks (22:18-25:59): XZZXI against IXZZX clash twice, so they commute.",
+  "Checks are symmetries of the good state: applying one changes nothing, like turning a snowflake by one arm (line_qc_catch_snowflake_turn); so all checks must commute with each other (an abelian group), and n qubits with n - k independent checks keep k logical qubits (38:58-42:16; Q24-11 15:58-22:03). The company named at 41:49-42:16 stays off screen and out of the narration.",
+  "Detection (42:16-47:16; Q24-11 22:06-27:27): an error that anticommutes with a check flips that check from +1 to -1, its bulb lights; the pattern of lit bulbs is the syndrome. Repetition code: X1 lights Z1Z2 only, X2 lights both (reuse line_qc_synd_read_bulbs from QC08-02); the five-qubit code has four bulbs (line_qc_catch_four_bulbs; code letters which error lit which pair).",
+  "Why X errors need Z checks (clip 46:01-46:52, \"X always commutes with X\"): an X never clashes with an X, so an all-X check cannot see an X error; in QC08-03's picture language a flip is seen only through the lens it was made in (reuse line_qc_shor_unseen_trick and line_qc_shor_glasses_catch). Caption: Y clashes with both X and Z, so it is seen through either lens.",
+  "Silent logical errors (47:16-52:12; Q24-11 27:31-33:23): errors that commute with every check but are not checks, N(S) minus S; X1X2X3 turns 000 into 111, a valid codeword, and every bulb stays dark (clip 50:10-50:37, \"a logical error we cannot detect\") (line_qc_catch_all_three_flipped). Caption: it needs three flips at once, rare (about p^3). The distance d is the weight of the smallest such error.",
+  "Detect vs correct (52:12-54:30): d = 2t + 1; the repetition code detects two flips and corrects one; Shor's code is [[9,1,3]] (line_qc_catch_two_villages: one hop from home and you are walked back; two hops and the nearer village is the wrong one; three and nobody notices; code adds 000, 111 and the footprints). The correction condition (Q24-11 33:29-56:14, advanced; skip the quiz 46:37-52:38): one line only.",
+  "Code design is an optimisation over n, k, d: for the same n, a bigger k and a bigger d (61:18-62:46; clip Q24-11 06:54-07:40, \"the design space is huge: where computer science comes in\") (line_qc_catch_brick_houses: the same heap of bricks, many rooms with thin walls or one room with thick walls).",
+  "Cover (line_qc_cover_08_05; for the X post and thumbnails, not a film beat): the keeper counts clashes between two strips of cards; the imp peeks over the table edge."
+ ],
+ "reuse": [
+  "line_qc_synd_read_bulbs",
+  "line_qc_shor_unseen_trick",
+  "line_qc_shor_glasses_catch",
+  "line_qc_build_stair_switches",
+  "line_qc_vote_two_flipped",
+  "line_balance"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_catch_two_strips",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_paired_cards",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the cards only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "At a long plain table seen from the front: two long strips of five large blank square cards each lie one above the other across the table, each card of the upper strip exactly above a card of the lower strip, with clear space between all ten cards. Behind the table, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) leans over the strips, touching the third pair of cards with one fingertip and counting on the fingers of her other hand. At the right end of the table, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) peeks over the table edge, hands on the edge, watching. Landscape image 1536x1024; the strips span about 80% of the width; everything fills about 92% of the width and about 80% of the height. The cards are blank and evenly spaced. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_catch_snowflake_turn",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_clock_face",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the round shape only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A big paper snowflake with six identical arms, cut from plain paper, is pinned through its centre to a plain wall board. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) stands beside it, seen from the waist up, and has just turned it by exactly one arm (one sixth of a turn), one hand still on the tip of an arm; a curved motion line around the rim shows the turn, and the snowflake looks exactly the same as before. She looks at it with a satisfied little nod. Square image 1024x1024; the snowflake is drawn large, about 55% of the width; the snowflake and the keeper fill about 88% of the width and about 80% of the height. Every arm of the snowflake is identical. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_catch_four_bulbs",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_parity_three_switches",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a hallway drawn earlier for this series: draw the same hallway wall, the same wall plates with closed hinged flaps and the same hanging bulbs, the same way. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long plain hallway wall seen straight from the front. Along it, at hand height, five identical wall plates sit in a row, evenly spaced, and each is covered by a small closed hinged flap so its switch cannot be seen. From the ceiling, four bare light bulbs hang on short cords in an even row above the plates (a lit bulb is an empty bulb outline with short straight rays around it; an unlit bulb is a plain empty bulb outline). The second and third bulbs are lit; the first and fourth are unlit. All five flaps stay closed. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) stands in front of the wall looking up at the bulbs, counting them off on her fingers, thoughtful. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) sits on the floor at the far right with his back against the wall, whistling innocently. Landscape image 1536x1024; the wall, the bulbs and the two characters fill about 92% of the width and about 80% of the height. No pictures on the wall. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_catch_all_three_flipped",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_parity_three_switches",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a hallway drawn earlier for this series: draw the same hallway wall, the same wall plates with closed hinged flaps and the same hanging bulbs, the same way. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long plain hallway wall seen straight from the front. Along it, at hand height, three identical wall plates sit in a row, evenly spaced, each with a small hinged flap; all three flaps hang slightly open, and under each one the lever of the switch points down. Short curved motion lines beside each flap show all three were just flipped. From the ceiling hang two bare light bulbs on short cords, one exactly halfway between the first and second plate, the other exactly halfway between the second and third plate (a lit bulb is an empty bulb outline with short straight rays around it; an unlit bulb is a plain empty bulb outline); both bulbs are unlit. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) stands at the left end of the hallway looking up at the two dark bulbs, relaxed, thumbs up. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) strolls away towards the right edge, dusting off his hands, grinning. Landscape image 1536x1024; the wall, the bulbs and the two characters fill about 92% of the width and about 80% of the height. No pictures on the wall. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_catch_two_villages",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_two_banks",
+    "line_two_lanterns"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the landscape only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A gentle landscape seen from the side: on the left bank of a calm stream stands a small village of three cottages, and on the right bank an identical small village of three cottages. Between them, two big flat stepping stones cross the stream at even spacing, so it takes exactly three equal hops to get from one bank to the other. A small woolly sheep (outline only, its wool drawn as small loops) stands on the first stone, the one nearest the left village, looking back. On the left bank, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) holds out one hand to call the sheep home. Landscape image 1536x1024; the two villages, the stones and the stream fill about 94% of the width and about 70% of the height; the two stones are large and evenly spaced. No signs. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_catch_brick_houses",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_block_towers",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the toy bricks only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "On a big drafting table seen from the front stand three small model houses built from plain toy bricks, next to a little leftover heap of the same bricks. Each model is cut away at the front like a doll's house so its walls and rooms show: the left one has four small rooms with thin walls one brick thick; the middle one has two rooms with walls two bricks thick; the right one has one single room with very thick walls, three bricks thick. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) leans over the table, chin on one hand, comparing them. Landscape image 1536x1024; the three models and the keeper fill about 92% of the width and about 80% of the height; the models are large and clearly different. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_08_05",
+   "kind": "line",
+   "group": "COVER",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_catch_two_strips",
+    "line_qc_vote_switch_fix",
+    "line_tiny_lab"
+   ],
+   "role": "cover",
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "In the middle, a long plain table with two strips of four large blank cards lying one above the other, the cards in matching pairs. Behind it, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) touches one pair of cards with a fingertip, counting on the fingers of her other hand. At the right end, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) peeks over the table edge, hands on the edge, grinning. The cards are blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

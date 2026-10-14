@@ -1,0 +1,126 @@
+{
+ "episode": "QC07-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: run a function on all 2^n inputs at once (line_qc_interfere_roller_cards: one stroke of a wide roller marks every card on the table): it sounds like unlimited parallelism. Then you measure and get one random answer (line_qc_interfere_lotto_drum). So where does a quantum speed-up actually come from? Same cast as QC07-01: the keeper and the rookie (cast drawing line_qc_revers_fresh_card).",
+  "H on every qubit gives all 2^n inputs (Q25-08 64:46-67:39): reuse line_two_lanterns (every fork doubles the paths).",
+  "Measure and you get one (67:41-68:21; clip 67:52-68:21); her 2024 caveat that superposition does not immediately give a speed-up (tape Q24-02 p32): line_qc_interfere_lotto_drum; reuse line_dice_hand.",
+  "H then H as two paths (68:45-70:52; clip 70:26-70:52, positive and negative interference): starting from |0>, both paths to 0 add up and the two paths to 1 cancel, so two Hadamards give back 0 for certain. The same thing with light: line_qc_interfere_two_paths (split a beam, bring it back together: one detector always clicks, the other stays dark; caption it as an optics analogue of H then H). Everyday version: pushes in step add, pushes against each other cancel (line_qc_interfere_swing_push); reuse line_qc_arrow_ripple_tank (QC04-02) for ripples crossing.",
+  "Why anything can cancel at all: amplitudes carry signs (QC04-02), probabilities never do; noise-cancelling headphones play the mirror-image wave (line_qc_interfere_noise_cancel).",
+  "The template: H, phase oracle, H, measure (71:17-72:12; Q25-09 18:27-19:04; tape Q25-09 s15); code draws the four stages.",
+  "The Hadamard transform H^n|x> = 2^(-n/2) sum_y (-1)^(x.y) |y> and the parity x.y (Q25-09 06:12-17:28: check in FACTS.md); \"like a Fourier transform\" (09:52-10:42): reuse line_qc_undo_two_prisms (QC05-01).",
+  "The design idea: arrange for the results you do not want to cancel out and the one you want to add up (clip Q24-13 28:17-28:42; her answer only, not the student question at 26:26-27:51): line_qc_interfere_tug_ropes.",
+  "Takeaway: superposition gives the room, interference does the work; next, the first algorithm built this way (QC07-05).",
+  "Cover (line_qc_cover_07_04; for the X post and thumbnails, not a film beat): two playground swings: the keeper and the rookie push one together and it soars; they push the other from opposite sides and it does not move."
+ ],
+ "reuse": [
+  "line_two_lanterns",
+  "line_dice_hand",
+  "line_qc_arrow_ripple_tank",
+  "line_qc_undo_two_prisms",
+  "line_qc_kickback_card_fan"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_interfere_roller_cards",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A very long table seen from the front and a little above, its whole top covered edge to edge with many blank cards laid out in neat rows (about six rows of twelve). The rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) pushes an extra-wide paint roller on a long handle along the table in one stroke; the roller is as wide as the table, so it passes over every row at once: the cards behind it each carry one small empty circle, the cards ahead of it are still plain. The keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) stands at the far end of the table, arms folded. Landscape image 1536x1024; the table and the characters fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_interfere_lotto_drum",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A lottery drum on a small stand: a round wire cage on an axle with a crank handle, holding many identical plain balls. The rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) turns the crank; one single ball has just rolled out of the little chute into a small cup, and she stares at it, disappointed; the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) stands beside her and shrugs. Square image 1024x1024; the drum and the characters fill about 88% of the width and about 80% of the height. The balls are blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_interfere_swing_push",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A picture in two halves side by side, with clear space between them, each showing the same a simple playground swing (an empty wooden seat on two ropes hanging from the crossbar of an A-frame). Left half: the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) and the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) stand side by side behind the seat and push it forward together, at the same moment, both hands on it; the swing flies high forward, with one big curved motion arc. Right half: the same two characters push the seat at the same moment from opposite sides, the keeper in front of it and the rookie behind it; the seat stays still in the middle, both of them straining, with a few short strain lines. Landscape image 1536x1024; the two halves fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_interfere_two_paths",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_balance",
+    "line_switch_dimmer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A large optics table in a generic lab, seen from straight above, drawn as a clean, simple picture with plenty of white space: at the lower left a small boxy laser on a post sends one thin straight beam to the right into a small square glass plate standing at 45 degrees; there the beam splits into two thin beams: one goes straight on to a small round mirror at the lower right, the other goes straight up to a small round mirror at the upper left; each mirror turns its beam so that the two beams meet again at a second, identical 45-degree glass plate at the upper right. From that second plate one exit leads to a small box-shaped detector at the far right, which shows a few short burst lines (it clicks); the other exit leads to a second detector at the top, which is quiet, with no lines. In the lower right corner, beside the table, the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) leans on the table edge, puzzled, looking at the quiet detector. Landscape image 1536x1024; the table and its parts fill about 90% of the width and about 85% of the height; the beams are clear thin straight lines. No labels. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_interfere_noise_cancel",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "On a pavement: at the left, an invented road worker (simple round face, dot eyes, a hard hat) drills the road with a big jackhammer, with jagged noise lines bursting from it. At the right, the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) sits on a bench reading a book, wearing big over-ear headphones, perfectly calm, eyes closed and smiling. Just beside one ear cup, two thin wavy lines, one the mirror image of the other (a crest on one wherever the other has a trough), meet and merge into one flat straight line. Square image 1024x1024; everything fills about 90% of the width and about 80% of the height. No brand on the headphones; the book is blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_interfere_tug_ropes",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A picture in two halves side by side on one grassy field, with clear space between them. Left half: a tug-of-war: two invented characters (simple round faces, dot eyes, different hairstyles) pull a rope to the left and two others pull it to the right with equal effort; the ribbon tied at the middle of the rope stays exactly over a short mark on the ground, and nobody moves. Right half: four invented characters (simple round faces, dot eyes, different hairstyles) all stand on the same side of one rope and pull together in the same direction, dragging a small sled carrying one big round ball, which slides along with speed lines. Landscape image 1536x1024; the two halves fill about 94% of the width and about 70% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_07_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_interfere_swing_push",
+    "line_qc_revers_fresh_card",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters, the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Two identical playground swings side by side with a clear gap between them, each an empty wooden seat on two ropes hanging from an A-frame. Left: the keeper (the same invented character as in the references: a short, round, older man, simple round face, dot eyes, a bowl haircut, small round spectacles, a knee-length work coat) and the rookie (the same invented character as in the references: a young woman, simple round face, dot eyes, two short bunches, dungarees, big sneakers) push the seat forward together and it flies high, with one big curved motion arc. Right: the same two push the other seat at the same moment from opposite sides, and it does not move; both strain. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,119 @@
+{
+ "episode": "QC02-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: four program qubits must all talk to each other; the chip has four qubits wired in a ring (p20): a square table with a tall centrepiece, where each guest can talk only to the two guests on the neighbouring sides (line_qc_square_table). Find a seating plan, or prove there is none. Cast as in QC02-02: the head waiter (compiler), the guests (program qubits), the chairs (physical qubits).",
+  "The coupling graph comes from the resonators (p19, 59:24-59:54; the chip micrograph is covered): recall QC02-01's line_qc_string_village.",
+  "Qubit mapping = deciding who sits where (line_qc_place_cards); like register allocation, with limited connections in place of limited registers (61:22-62:16, clip): a desk with room for three folders, the rest in the cabinet (line_qc_desk_few_folders; reuse line_card_catalog).",
+  "The program is fully connected, a CNOT between every pair (reuse line_cp_handshake_party); the chip is a ring, so every seating leaves two pairs across the flowers: no perfect initial mapping (p21, 62:26-64:14, clip 63:49-64:14) (line_qc_crumpled_plans).",
+  "SWAP (p22, 64:35-65:51): two neighbours trade chairs mid-dinner and the blocked pairs become neighbours (line_qc_swap_seats); the mapping changes as the program runs.",
+  "The bill (66:18-67:45, clip 66:18-67:16): each SWAP is three CNOTs; with an illustrative budget of about 200 gates, a 150-gate program plus 20 SWAPs (60 CNOTs) is 210 and breaks it (line_qc_plate_tower; say it is illustrative). Worked example from the 2024 deck, Q24-01 p38: 6 -> 9 gates, depth 5 -> 8 after one SWAP (taped).",
+  "Fewest SWAPs is NP-complete (e.g. Siraichi et al. 2018; FACTS.md first): the seatings to try grow very fast (reuse line_heap). Next part: how her group's SABRE searches.",
+  "Cover (line_qc_cover_qc02_04; for the X post and thumbnails, not a film beat): the head waiter has two neighbours at the square table trade chairs."
+ ],
+ "reuse": [
+  "line_cp_handshake_party",
+  "line_card_catalog",
+  "line_heap",
+  "line_round_table",
+  "line_balance",
+  "line_burst"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_square_table",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_reader_writer"
+   ],
+   "prompt": "Seen from slightly above and in front: a square dinner table with one chair on each side and, in the middle of the table, a very tall, bushy flower arrangement in a vase that blocks the view straight across the table. The four guests, one on each side: a tall guest with a high top-knot bun and a long striped scarf on the left side, a short, round guest with a flat cap and a cardigan with big round buttons on the near side with the back to us, a guest with long straight hair held back by a headband and a plain dress with a wide round collar on the far side facing us, a guest with curly hair and a thick roll-neck jumper on the right side. The guests on neighbouring sides chat happily across the corners, but the left guest and the right guest each lean far sideways, craning to see round the flowers at each other, without success. All the guests are invented characters with simple round faces and dot eyes. Square image 1024x1024; the table and the four guests fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_place_cards",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_paired_cards",
+    "line_reader_writer"
+   ],
+   "prompt": "Seen from slightly above and in front, before the dinner: a square dinner table with one chair on each side and, in the middle of the table, a very tall, bushy flower arrangement in a vase that blocks the view straight across the table; the four chairs are empty. The head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, bends over the table, setting down four blank folded place cards, one in front of each chair, holding a small blank notepad in the other hand and checking it. Square image 1024x1024; the table and the head waiter fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos. Nothing written on the cards or the notepad."
+  },
+  {
+   "name": "line_qc_desk_few_folders",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_card_catalog",
+    "line_clerk_ladder",
+    "line_reader_writer"
+   ],
+   "prompt": "An invented office clerk (simple round face, dot eyes, a short bob haircut, a cardigan) sits at a very small desk that has room for only three open folders side by side; all three places are taken. Right behind the desk stands a tall filing cabinet with many drawers. With one hand the clerk slides one folder back into an open drawer while the other hand pulls a different folder out; busy but organised. Landscape image 1536x1024; the desk, the clerk and the cabinet fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos. No labels on the drawers or folders."
+  },
+  {
+   "name": "line_qc_crumpled_plans",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_same_question",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "The head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, sits at a small side table in an empty dining room, chin in one hand, frowning at one blank seating card, a pencil in the other hand. All around the chair and across the floor lie many crumpled-up blank seating cards, a few more on the table. In the background, the square dinner table with its very tall flower arrangement in the middle and its four empty chairs, one on each side. Landscape image 1536x1024; The head waiter, the side table and the crumpled cards fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos. Nothing written or drawn on the cards."
+  },
+  {
+   "name": "line_qc_swap_seats",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_tap_two_people"
+   ],
+   "prompt": "Mid-dinner, seen from slightly above and in front: a square dinner table with one chair on each side and, in the middle of the table, a very tall, bushy flower arrangement in a vase that blocks the view straight across the table; plates half eaten. The four guests, one on each side: a tall guest with a high top-knot bun and a long striped scarf on the left side, a short, round guest with a flat cap and a cardigan with big round buttons on the near side with the back to us, a guest with long straight hair held back by a headband and a plain dress with a wide round collar on the far side facing us, a guest with curly hair and a thick roll-neck jumper on the right side. The head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, stands at the corner between the left guest and the near guest, guiding them with open hands: the two of them have stood up and are trading chairs, each carrying their own plate past the other. The far guest and the right guest watch with forks in hand, waiting. All the guests are invented characters with simple round faces and dot eyes. Square image 1024x1024; the table, the guests and the head waiter fill about 90% of the width and about 88% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_plate_tower",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_spike",
+    "line_block_towers",
+    "line_round_table"
+   ],
+   "prompt": "The head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, carries a very tall stack of plain dinner plates in both arms, leaning back to balance it; a second invented waiter (simple round face, dot eyes, a short ponytail, the same kind of waistcoat and apron) stands on a small step stool and adds three more plates to the top. The top plates tilt and wobble, with short wobble lines around them; the head waiter's eyes are wide. Portrait image 1024x1536; the plate stack and the two waiters fill about 80% of the width and about 88% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_qc02_04",
+   "kind": "line",
+   "group": "COVER",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_swap_seats",
+    "line_qc_square_table",
+    "line_round_table"
+   ],
+   "prompt": "A square dinner table seen from slightly above and in front, with a very tall, bushy flower arrangement in the middle that blocks the view across. Four guests, one on each side (the same invented characters as in the references: a tall guest with a high top-knot bun and a long striped scarf; a short, round guest with a flat cap and a cardigan; a guest with long straight hair, a headband and a dress with a wide round collar; a guest with curly hair and a thick roll-neck jumper). The head waiter (the same invented character: neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat, a long apron) guides two neighbouring guests, who stand up holding their plates, to trade chairs. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere.",
+   "role": "cover",
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's head waiter, the four guests and the square table with its tall flowers: draw the same head waiter, four guests and table in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout."
+  }
+ ]
+}

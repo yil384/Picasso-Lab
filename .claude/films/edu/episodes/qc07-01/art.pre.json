@@ -1,0 +1,141 @@
+{
+ "episode": "QC07-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: reversible circuits on three bits can express only 40,320 (8!) of the 16,777,216 (8^8) possible 3-bit functions; give them one spare bit and the reversible count jumps to 16! = 20,922,789,888,000, about 21 trillion. Why does one bit buy so much? (line_qc_revers_hat_pegs: a reversible function hangs every hat on its own peg, any function may pile several on one; line_qc_revers_second_rack: one more bit doubles the pegs and the list of arrangements runs off across the floor.) Cast for QC07-01 to QC07-04 (her lecture Q25-08 and the Q24-13 parts): the keeper (short, round, older; bowl haircut, round spectacles, knee-length work coat), who never throws anything away, and the rookie (young; two bunches, dungarees, big sneakers), who would; the cast is set by line_qc_revers_fresh_card, so make it first.",
+  "Her three questions (Q25-08 02:50-05:16): can a quantum computer do what a classical one does (expressiveness), how cheaply (efficiency), and what insight makes quantum algorithms faster; lettered on paper, no drawing (or reuse line_course_map).",
+  "NAND alone builds every classical circuit (07:06-09:53): line_qc_revers_one_brick_town. But it is not reversible: two inputs, one output, and an output of 1 could come from three different inputs (reuse line_qc_undo_and_bulb from QC05-01).",
+  "The fix: a Toffoli gate with its target set to 1 computes NAND and keeps both inputs (10:06-12:34): the keeper never erases; he writes each answer on a fresh card and leaves the inputs as they were (line_qc_revers_fresh_card); reuse line_qc_build_two_keys (QC05-06: the chest that opens only when both keys turn).",
+  "Toffoli is universal for classical circuits, not for quantum ones (12:34-13:39); its price is 2 H + 7 T + 6 CNOT, and Clifford + T is universal (13:53-14:19; Nielsen & Chuang fig. 4.9: check in FACTS.md; reuse line_qc_build_lock_inside).",
+  "Spare qubits: one in theory, up to one per NAND in practice (15:12-18:48): the fresh stack runs low and the kept cards pile up (line_qc_revers_card_haul); this pile is the garbage of QC07-02.",
+  "The counting argument (18:55-30:09; tape Q24-13.notes p1-p2): reversible functions on n bits are the shuffles of 2^n items, (2^n)!, against (2^n)^(2^n) functions in all; with one extra bit the shuffles already outnumber all the 3-bit functions (back to line_qc_revers_hat_pegs and line_qc_revers_second_rack; code letters 8!, 8^8 and 16!). Honest note on screen: counting shows there is room, not how to build it; Bennett 1973 gives a construction, with more spare bits.",
+  "Clip Q25-08 30:12-30:43: \"reversibility will hurt the expressiveness, but not a lot\".",
+  "In practice: a special accelerator, like GPUs (clip 32:38 up to 33:05 only: the stock-market remark at 33:05-33:32 is never used; reuse line_gpu).",
+  "Honest limits (Q24-13): a quadratic speed-up does not survive the error-correction overhead unless the problem is huge (clip 15:06-15:59; Babbush et al., PRX Quantum 2021: check in FACTS.md): firing up a giant wood oven for one slice of toast (line_qc_revers_oven_toast) pays only when you bake for a banquet (line_qc_revers_oven_banquet), which is why exponential speed-ups are the targets. For machine learning on classical data the speed-up is still in doubt (clip 16:56-17:22; caption only, no drawing).",
+  "Cover (line_qc_cover_07_01; for the X post and thumbnails, not a film beat): the rookie sweats at a giant wood oven holding one slice of bread on a long peel; the keeper munches toast from a little toaster."
+ ],
+ "reuse": [
+  "line_qc_undo_and_bulb",
+  "line_qc_build_two_keys",
+  "line_qc_build_lock_inside",
+  "line_scroll_reader",
+  "line_gpu",
+  "line_course_map",
+  "line_heap"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_revers_fresh_card",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "At a tidy wooden desk seen from the front: the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) sits behind the desk. In front of him lie two blank cards side by side, untouched, and he is writing with a pencil on a third, fresh blank card; at his elbow stands a tall, neat stack of fresh blank cards, and under the desk an empty waste-paper basket. The rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) leans on the right end of the desk, chin in her hands, watching closely. Landscape image 1536x1024; the desk and the two characters fill about 90% of the width and about 80% of the height; the three cards on the desk are drawn large and clearly separated. The cards are blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_revers_hat_pegs",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_card_catalog",
+    "line_switch_dimmer"
+   ],
+   "prompt": "Two identical plain wooden wall racks hang side by side on a plain wall, with a clear gap between them; each rack has one row of eight evenly spaced round wooden pegs. There are eight clearly different hats: a bowler hat, a beret, a baseball cap, a wide sun hat, a top hat, a knitted beanie with a pompom, a straw boater and a bucket hat. Left rack: exactly one hat on every peg, all eight hats, tidy. Right rack: the same eight hats, but three of them are stacked on the second peg, three on the fifth peg and two on the seventh peg, and the other five pegs are empty. No people. Landscape image 1536x1024; the two racks fill about 92% of the width; the hats are drawn large and simple; plain white space above and below the racks. No text, no letters, no numbers, no logos, no badges on the hats."
+  },
+  {
+   "name": "line_qc_revers_second_rack",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_qc_revers_hat_pegs",
+    "line_scroll_reader"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The second attached image shows the wooden peg rack and the eight hats: draw that rack and those hats again. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "On a plain wall, a wooden rack with one row of eight round pegs and one hat on each peg (a bowler hat, a beret, a baseball cap, a wide sun hat, a top hat, a knitted beanie with a pompom, a straw boater and a bucket hat). The keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) stands on a small step stool and screws a second, identical but still empty eight-peg rack onto the wall right next to it, a screwdriver in his hand. Below, the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) sits on the floor unrolling an enormously long blank paper scroll that spills across the floor in many big loops and runs on past her, her eyes wide. Landscape image 1536x1024; the racks, the keeper and the rookie with her scroll fill about 92% of the width and about 85% of the height. The scroll is blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_revers_one_brick_town",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_block_towers",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "On a big playroom floor stands a whole little model town built entirely from one single kind of toy brick: identical small rectangular bricks, every brick outlined. It has three little houses with doors and pitched roofs, a tall tower with a pointed roof, an arched bridge and a low wall with a gate. The rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) kneels in front of it and holds up one single brick of exactly the same kind between finger and thumb, delighted; the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) stands behind the town, nodding, his hands in his coat pockets. Landscape image 1536x1024; the town and the characters fill about 90% of the width and about 80% of the height. No clock faces. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_revers_card_haul",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_heap",
+    "line_slip_boxes"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "The keeper's tidy wooden desk, seen from the front: on its left end, a small, nearly used-up stack of fresh blank cards; on its right end and spilling onto the floor below, a big heap of used cards, each with a few plain wavy scribble lines, all kept. The keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) sits behind the desk writing on one more card, a little overwhelmed. From the right, the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) wheels in a two-wheeled hand truck piled high with four closed cardboard boxes of more blank cards, puffing. Landscape image 1536x1024; the desk, the heap and the characters fill about 92% of the width and about 82% of the height. No labels on the boxes. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_revers_oven_toast",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "In a big kitchen. On the left, an enormous dome-shaped wood-fired brick oven, taller than the characters, every brick outlined, with a big arched opening, a pile of logs beside it and a curl of smoke from its chimney; the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) stands in front of it, sweating, holding a very long wooden peel with one single small slice of bread on its end into the opening, waiting. On the right, at a small table, the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) sits relaxed beside a small plain two-slot toaster; two slices of toast have just popped up and he is already biting into a third. Landscape image 1536x1024; the oven, the table and the characters fill about 92% of the width and about 85% of the height. No dials with numerals, no brand on the toaster. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_revers_oven_banquet",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_qc_revers_oven_toast",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The second attached image shows the same wood-fired oven: draw that oven again the same way. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "The same enormous dome-shaped wood-fired brick oven as in the second attached image, every brick outlined, now with dozens of round loaves of bread baking inside at once. The rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) slides out a wide peel carrying six loaves; beside the oven runs a very long banquet table already lined with rows of loaves, and the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) sets more loaves on it, pleased; a small plain two-slot toaster stands forgotten at the far end of the table. Landscape image 1536x1024; the oven, the table and the characters fill about 94% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_07_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_oven_toast",
+    "line_qc_revers_fresh_card",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters, the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, an enormous dome-shaped wood-fired brick oven with a big arched opening and a curl of smoke from its chimney; the rookie (the same invented character as in the references: a young woman, simple round face, dot eyes, two short bunches, dungarees, big sneakers) stands in front of it, sweating, holding a very long wooden peel with one single small slice of bread on its end into the opening. On the right, at a small table, the keeper (the same invented character as in the references: a short, round, older man, simple round face, dot eyes, a bowl haircut, small round spectacles, a knee-length work coat) sits relaxed beside a small plain two-slot toaster, biting into a slice of toast. No brand on the toaster. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

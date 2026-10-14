@@ -1,0 +1,127 @@
+{
+ "episode": "QC05-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: circuits of H, S and CNOT, as large as you like, a laptop simulates; add one small rotation, the T gate, and no efficient classical method is known. What is special about T? (line_qc_tgate_crate_tiles, the cover idea.) Same cast: the tinkerer and the skeptic.",
+  "Rotations from exponentials: the Taylor series plus Z^2 = I gives e^{-i theta Z} = cos theta I - i sin theta Z (Q25-05 34:18-36:58; Q24-04 37:41-41:35). Show the derivation once, fast, as lettering on paper; keep the takeaway on screen; no drawing.",
+  "Rotation about any axis, and every one-qubit gate is a rotation up to a global phase (37:27-39:37; Q24-04 47:30-49:25; line_qc_tgate_gimbal: three rings, three axes).",
+  "Y, XY = iZ, and X, Y, Z pairwise anticommute: order matters, which compilers care about (37:57-42:21; line_qc_tgate_book_turns, the book-turning demonstration: the same two turns in a different order leave the book differently). The anticommuting sign itself is lettered, not drawn.",
+  "Where does the i come from? Physicists had the pulses first; the matrices describe them (her answer, clip 72:18-73:41, her lines only; line_qc_tgate_pulse_lab: a generic lab bench and cryostat).",
+  "S and T are quarter- and eighth-turn phase gates (T is called the pi/8 gate: check the convention in FACTS.md), Z = S^2 = T^4 (54:34-55:00; reuse line_clock_face with code-drawn hands for half, quarter and eighth turns).",
+  "Why T is special (honest version): the single-qubit Clifford gates are exactly the 24 quarter-turn rotations that carry the X, Y, Z axes onto each other, like a crate turned in quarter turns that stays square with the floor tiles, so the bookkeeping stays small (Gottesman-Knill); T is an eighth turn that knocks the crate off the grid, and known classical methods pay a cost that grows exponentially with the number of T gates (clip 56:07-56:54; Q24-05 15:56-16:52; line_qc_tgate_crate_tiles; reuse line_two_lanterns for the branching cost).",
+  "Smallest universal one-qubit set {H, T}; H + T + CNOT reach everything to any accuracy (Q24-04 54:16-58:07; Solovay-Kitaev only if FACTS.md clears it; reuse line_block_towers).",
+  "Why discrete gate sets at all: error-corrected logical gates cannot be continuous natively; a dial with click-stops snaps back to a notch where a smooth knob drifts (Q24-05 00:29-00:54; line_qc_tgate_click_dial).",
+  "T is the bottleneck of error-corrected computing: \"T gate is difficult, but T gate is very necessary\" (clip 55:00-55:41); magic-state distillation turns many noisy T resources into fewer, cleaner ones (line_qc_tgate_distillery; numbers only from FACTS.md).",
+  "Cover (line_cover_qc05_03; for the X post and thumbnails, not a film beat): one crate square with the floor tiles, one turned an eighth of a turn across them; the skeptic frowns at the crooked one."
+ ],
+ "reuse": [
+  "line_clock_face",
+  "line_two_lanterns",
+  "line_block_towers",
+  "line_temp_knob",
+  "line_tiny_lab",
+  "line_qc_hbridge_roundabout"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_tgate_crate_tiles",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A floor of large square tiles seen from a little above, drawn as a simple grid of thin lines (about six tiles across each half of the picture). Left half: a big plain wooden crate (outlines only, a few plank lines) sits exactly square with the tiles, its edges lined up with the grid lines; the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) stands beside it with a thumbs-up. Right half: an identical crate sits turned by one eighth of a turn, its edges running diagonally across the tile lines; the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) stands beside it, hand on chin, frowning. Full figures. Landscape image 1536x1024; the floor, the crates and the characters fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_tgate_gimbal",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "On a plain table stands a gimbal on a short stand with a round foot: a plain smooth ball held inside three nested thin rings, each ring pivoting on two small pins set at right angles to the pins of the next ring. The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) turns the outer ring with one finger, a short curved motion line beside it; the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) watches from the other side of the table, chin on hand. Waist up. Square image 1024x1024; the gimbal is drawn large in the centre; the gimbal and the two characters fill about 88% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_tgate_book_turns",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "On a plain table lie two identical thick closed hardback books with blank covers, in clearly different positions: the left one stands upright on its bottom edge with its spine facing the viewer; the right one lies flat on its back cover. The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) looks from one book to the other, scratching their head; the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) holds up a third identical book in both hands, mid-turn, with a short curved motion line. Waist up. Landscape image 1536x1024; the books and the characters fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos. No titles on the books."
+  },
+  {
+   "name": "line_qc_tgate_pulse_lab",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A tidy physics lab, drawn generically: at the left, a lab bench with one plain box instrument (a few round knobs and a small screen showing one smooth wavy pulse that swells and fades; no numbers, no brand); a few cables run from it to the right, into a tall cylindrical cryostat hanging from a sturdy metal frame, its outer can lifted off to show a stack of round plates linked by thin coiled cables, the plates getting smaller towards the bottom. The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) turns a knob on the instrument; the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) stands by the cryostat writing in a small notebook with blank pages. Full figures. Landscape image 1536x1024; the bench, the cryostat and the characters fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos. No signs, no warning labels."
+  },
+  {
+   "name": "line_qc_tgate_click_dial",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_temp_knob",
+    "line_knob_board",
+    "line_tap_glass"
+   ],
+   "prompt": "Two big round dials side by side on a plain panel, seen straight from the front. Left: a smooth round knob with no notches at all and one short pointer line; a small wavy wobble line beside the pointer shows it has drifted a little. Right: a chunky dial with deep, regular notches all round its rim, like the dial of an old safe (plain notches only: no numerals, no marks), and an invented hand (only the hand and wrist, coming in from the right) turning it, with two tiny short strokes beside one notch for the click. Landscape image 1536x1024; the two dials fill about 85% of the width and about 70% of the height, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_tgate_distillery",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A small old-fashioned pot still drawn in outline: a round pot on a little stove, a long swan-neck pipe and a coiled cooling pipe ending in a small tap. At the left, a row of eight big jars, the liquid in each shown only by a thin waterline and many small floating specks (small dots); a funnel leads into the pot. Under the tap, one small clear vial with no specks catches a single drop. The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) sits on a stool by the vial, waiting patiently, chin on hand; the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) pours one of the speckled jars into the funnel. Full figures. Landscape image 1536x1024; the still, the jars and the characters fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos. No labels on the jars."
+  },
+  {
+   "name": "line_cover_qc05_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_tgate_crate_tiles",
+    "line_qc_undo_jar_tag",
+    "line_qc_tgate_gimbal"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters (the tinkerer: short bob with a fringe, work apron; the skeptic: tall, beanie with a pompom, long scarf): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A floor of large square tiles seen from a little above, drawn as a simple grid of thin lines. On the left, a big plain wooden crate sits exactly square with the tiles, and the tinkerer (the same invented character as in the references: simple round face, dot eyes, a short bob haircut with a straight fringe, a work apron) stands beside it with a thumbs-up. On the right, an identical crate sits turned by one eighth of a turn, its edges running diagonally across the tile lines, and the skeptic (the same invented character as in the references: tall and lanky, simple round face, dot eyes, a knitted beanie hat with a small pompom, a long plain scarf, a cardigan) stands beside it, hand on chin, frowning. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

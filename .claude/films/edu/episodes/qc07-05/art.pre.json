@@ -1,0 +1,123 @@
+{
+ "episode": "QC07-05",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: a black box is either all zeros or exactly half ones; for 50-bit inputs a classical check that must be certain may need 2^49 + 1 = 562,949,953,421,313 questions; a quantum computer asks once (line_qc_onequery_drawer_hunt). Cast for QC07-05 and QC07-06 (her lecture Q25-09): the sleuth (short; round wide-brimmed hat, belted raincoat, magnifying glass on a cord), who has to find out, and the host (tall, thin; one big curl of hair, wide lapels, polka-dot bow tie), who keeps the box; the cast is set by line_qc_onequery_two_cabinets, so make it first.",
+  "The promise (Q25-09 19:07-21:06): the function is constant (every drawer the same) or balanced (exactly half and half), and we do not know which: line_qc_onequery_two_cabinets. The box is the phase oracle of QC07-03 (reuse line_qc_kickback_sign_box).",
+  "Classically (21:06-23:49): if you are lucky, the first answer is a 1 and it must be balanced; in the worst case 2^(n-1) zeros in a row still prove nothing and you need one more: line_qc_onequery_drawer_hunt; reuse line_clerk_ladder or line_card_catalog for more of the drawer wall.",
+  "The circuit (23:57-31:20): H on every qubit, the phase oracle, H again, measure; the amplitude of |0...0> is 2^-n sum_x (-1)^f(x): plus or minus 1 when f is constant, exactly 0 when balanced (code letters it; tape Q25-09 s28). Clip 31:20-31:44, \"not that complicated once you understand the pattern\".",
+  "Why it works (31:44-33:16; clip 32:28-33:16, two different interference patterns): when f is constant every path arrives in step at the all-zeros outcome; when it is balanced half arrive flipped and they cancel exactly there (line_qc_onequery_centre_spot; reuse line_qc_interfere_tug_ropes from QC07-04).",
+  "Bernstein-Vazirani (33:16-46:39): f(x) = x.v, a panel whose lamp shows the parity of the secretly wired switches you turn on (line_qc_onequery_switch_wiring; it links to the stairwell switches of QC05-06, line_qc_build_stair_switches). Classically you test one switch at a time, n questions (she implies more: correct it, check in FACTS.md); the same circuit returns v in one query, because every wrong v cancels (her words 46:22-46:48). Tape Q25-09 s37.",
+  "Honest limits (47:08-48:54; clip 48:02-48:54, \"examples we are making up\"): a classical checker allowed a tiny chance of error opens a few random drawers and is almost sure (line_qc_onequery_random_drawers; bounded-error classical algorithms solve Deutsch-Jozsa with O(1) queries: say it on screen). Toy problems are test models that showed the way (line_qc_onequery_model_bridge); the next part follows it to a real pattern (QC07-06).",
+  "Papers by name only as FACTS.md has them: Deutsch & Jozsa 1992; Bernstein & Vazirani 1993/1997.",
+  "Cover (line_qc_cover_07_05; for the X post and thumbnails, not a film beat): the sleuth stands before a towering cabinet of drawers and holds up one finger; the host raises his eyebrows."
+ ],
+ "reuse": [
+  "line_clerk_ladder",
+  "line_card_catalog",
+  "line_qc_interfere_tug_ropes",
+  "line_qc_build_stair_switches",
+  "line_qc_kickback_sign_box"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_onequery_two_cabinets",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_card_catalog"
+   ],
+   "prompt": "A simple quiz-show stage: one plain floor line and two round stage lamps on stands at the back. In the middle, the host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) stands between two small wooden cabinets, presenting them with open hands. Each cabinet has eight small drawers in two rows of four, and every drawer is pulled open so its content shows. Left cabinet: every drawer holds one plain ball. Right cabinet: the top row holds, from left to right, a ball, a cube, a cube, a ball; the bottom row holds a cube, a ball, a ball, a cube. Balls and cubes are simple outlines. The sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) bends towards the right cabinet, peering into it through her magnifying glass. Landscape image 1536x1024; the cabinets and the characters fill about 92% of the width and about 82% of the height; the balls and cubes are drawn large and clear. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_onequery_drawer_hunt",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_clerk_ladder",
+    "line_card_catalog"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "An enormous wooden cabinet of small identical drawers fills the back of the picture from floor to ceiling and wall to wall, hundreds of drawers in a regular grid. The sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) stands on a tall rolling library ladder, pulling open one more drawer; a long trail of drawers left open behind her across the lower rows each shows one plain ball inside. At the bottom right, the host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) leans against the cabinet checking a pocket watch (a plain round face with no numbers and no marks), a little bored. Portrait image 1024x1536; the cabinet fills the picture with a margin on every side, the characters clearly visible. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_onequery_centre_spot",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_switch_dimmer",
+    "line_card_catalog"
+   ],
+   "prompt": "Two identical plain projection screens on stands, side by side, with clear space between them, seen from the front; each screen has one small thin ring drawn at its exact centre. Left screen: one bright round spot sits exactly inside the centre ring, with short ray lines around it; the rest of the screen is plain. Right screen: the centre ring is empty and plain; several small bright spots with tiny rays are scattered across the rest of the screen, none of them in or near the ring. No people. Landscape image 1536x1024; the two screens fill about 90% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_onequery_switch_wiring",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A long wall panel seen straight from the front, with a row of eight identical small toggle switches, all pointing down, and one round lamp mounted above the middle of the panel. The lower half of the panel is drawn cut away, showing what is behind it: thin wires run up from exactly three of the switches (the second, the fifth and the sixth from the left) to the lamp; the other five switches have no wires at all. The sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) stands at the left end, flipping up the first switch with one finger and watching the lamp, which stays dark; the host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) stands at the right end with his hands behind his back, smiling knowingly. Landscape image 1536x1024; the panel and the characters fill about 92% of the width and about 75% of the height; the switches, the wires and the lamp are drawn clearly. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_onequery_random_drawers",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_card_catalog",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A big wooden cabinet with many small drawers in a regular grid (about eight across and eight down), seen from the front. Only three drawers are pulled open, far apart from one another (one near the top left, one in the middle right, one near the bottom centre): the first holds one plain ball, the second one plain ball, the third one plain cube. The sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) stands in front, holding the third drawer open with one hand and raising her magnifying glass with the other, confident; the host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) peeks round the side of the cabinet, impressed. Square image 1024x1024; the cabinet and the characters fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_onequery_model_bridge",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "Inside a workshop: on a long workbench stands a small model bridge made of thin sticks, spanning the gap between two piles of books, with a small toy weight hanging from its middle; the sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) examines the model closely through her magnifying glass and the host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) hangs a second small weight beside the first. Through a large window behind them, far away, a real long bridge with two simple towers and cables crosses a wide river (a plain generic bridge, not any real landmark). Landscape image 1536x1024; the bench, the window and the characters fill about 92% of the width and about 85% of the height. No titles on the books. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_07_05",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_qc_onequery_drawer_hunt",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters, the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, a towering wooden cabinet of many small identical drawers, much taller than the characters. In front of it, the sleuth (the same invented character as in the references: a short woman, simple round face, dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, a magnifying glass on a cord round her neck) holds up one single finger, smiling, the magnifying glass in her other hand. On the right, the host (the same invented character as in the references: a tall, thin man, simple round face, dot eyes, one big curl of hair at the front, a jacket with wide lapels, a large polka-dot bow tie) leans back with raised eyebrows. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

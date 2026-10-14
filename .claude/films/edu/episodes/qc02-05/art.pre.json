@@ -1,0 +1,121 @@
+{
+ "episode": "QC02-05",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: the best seating to start a dinner with is the one it ends with, if you serve the dinner backwards (line_qc_dessert_first). Why? Cast as in QC02-02 and QC02-04: the head waiter (compiler), the guests (program qubits), the square table with the tall flowers (a ring of four qubits).",
+  "Her group's SABRE compiler (Li, Ding, Xie, ASPLOS 2019; 67:52-68:43): search for SWAPs in a controllable window, not just the next blocked gate (too greedy) and not the whole program (too slow) (p23, 68:43-70:25; line_qc_window_frame).",
+  "Only related SWAPs, scored by hop distance (70:25-71:27): move a guest one chair closer to the partner they must talk to; leave the rest of the table alone (line_qc_far_apart_guests).",
+  "The initial mapping matters most for shallow circuits (71:51-72:22).",
+  "The reverse trick (p24, 72:53-74:21, clip 73:21-73:53): route the circuit forward from a random seating, then the reversed circuit (dessert first) from where it ended; that run's final seating is a good start for the real one (line_qc_dessert_first, line_qc_copy_seating).",
+  "Random restarts escape local optima (74:21-74:47): marbles dropped from different points settle in different dips; keep the deepest (line_qc_marbles_valleys).",
+  "Results (p25, 75:32-76:03): against the exhaustive method of the time (Zulehner et al. 2018), about 10% fewer gates and a far faster compile (numbers from the paper only) (line_qc_card_mountain; reuse line_clock_face).",
+  "Learning-based mappers retrain for every circuit and so far lag heuristics; search plus language-model agents is a direction she names (76:03-77:22; she reads the question herself: paraphrase, no student voice).",
+  "Adoption (67:52-68:43 and 77:22-77:55, clip 77:22-77:55): a default mapper in IBM's Qiskit (versions and optimization levels in FACTS.md); other compilers stay generic; the p25 logos are covered.",
+  "Cover (line_qc_cover_qc02_05; for the X post and thumbnails, not a film beat): cake served first at the square table while the soup waits."
+ ],
+ "reuse": [
+  "line_two_lanterns",
+  "line_heap",
+  "line_clock_face",
+  "line_balance",
+  "line_burst",
+  "line_sched_stopwatch_trials"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_window_frame",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_scroll_ends",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "A long serving counter runs from the left edge to the far right of the picture, with a long row of identical covered dishes (plain domed lids) lined up in order along it, shrinking into the distance. Near the left, the head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, holds an empty wooden picture frame at arm's length and looks through it along the counter, so that only the next five dishes show inside the frame; calm and focused. Landscape image 1536x1024; the counter, the dishes and the head waiter fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_far_apart_guests",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "A long banquet table seen from the front, with five guests seated in a row along its far side, facing us; from left to right: a tall guest with a high top-knot bun and a long striped scarf, a short, round guest with a flat cap and a cardigan with big round buttons, a guest with long straight hair held back by a headband and a plain dress with a wide round collar, a guest with curly hair and a thick roll-neck jumper, a guest with a long single braid and dungarees. The tall guest at the left end and the curly-haired guest (fourth from the left) lean out over the table and wave at each other, too far apart to talk. Behind the table stands the head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, one hand on the curly-haired guest's shoulder, the other gesturing to the left: the curly-haired guest and the guest with the headband have stood up, each holding their own plate, to trade chairs, which brings the curly-haired guest one chair closer. The guest with the braid at the right end keeps eating, unbothered. All the guests are invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the table, the guests and the head waiter fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_dessert_first",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_tiny_lab"
+   ],
+   "prompt": "Seen from slightly above and in front: a square dinner table with one chair on each side and, in the middle of the table, a very tall, bushy flower arrangement in a vase that blocks the view straight across the table. The four guests, one on each side: a tall guest with a high top-knot bun and a long striped scarf on the left side, a short, round guest with a flat cap and a cardigan with big round buttons on the near side with the back to us, a guest with long straight hair held back by a headband and a plain dress with a wide round collar on the far side facing us, a guest with curly hair and a thick roll-neck jumper on the right side. The head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, serves each guest a slice of cake on a small plate first, while a trolley beside the table holds four untouched bowls of soup, waiting for later. The guests look at the cake and then at the soup trolley, amused and puzzled, spoons in hand. All the guests are invented characters with simple round faces and dot eyes. Square image 1024x1024; the table, the guests, the trolley and the head waiter fill about 90% of the width and about 88% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_copy_seating",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_reader_writer",
+    "line_paired_cards"
+   ],
+   "prompt": "Late in the evening, seen from slightly above and in front: a square dinner table with one chair on each side and, in the middle of the table, a very tall, bushy flower arrangement in a vase that blocks the view straight across the table. The four guests, one on each side: a tall guest with a high top-knot bun and a long striped scarf on the left side, a short, round guest with a flat cap and a cardigan with big round buttons on the near side with the back to us, a guest with long straight hair held back by a headband and a plain dress with a wide round collar on the far side facing us, a guest with curly hair and a thick roll-neck jumper on the right side. The guests lean back, full and content, in front of empty plates. The head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, stands beside the table and, glancing from guest to guest, copies who sits where onto a fresh blank seating card with a pencil. Square image 1024x1024; the table, the guests and the head waiter fill about 90% of the width and about 88% of the height. No text, no letters, no numbers, no logos. Nothing written on the card."
+  },
+  {
+   "name": "line_qc_marbles_valleys",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_wave",
+    "line_clockwork"
+   ],
+   "prompt": "A long, bumpy wooden marble track seen from the side, shaped like a gently rolling hilly landscape cut in profile: five dips of different depths separated by rounded humps, the deepest dip just right of the middle. Six identical marbles: a dashed line shows each one rolling from a different starting point on the humps down into the nearest dip, so they end resting in different dips, one of them in the deepest. An invented hand (only the hand and wrist, from the top left) has just let go of the last marble. Landscape image 1536x1024; the track fills about 94% of the width and about 60% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_card_mountain",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_heap",
+    "line_clerk_ladder",
+    "line_round_table"
+   ],
+   "prompt": "A picture in two halves side by side. Left: an invented clerk (simple round face, dot eyes, messy hair, sleeves rolled up), exhausted, sits half buried in an enormous mountain of blank seating cards, holding one card up and checking it, more cards sliding down around them. Right: The head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, already done, stands relaxed beside a square dinner table with one chair on each side and, in the middle of the table, a very tall, bushy flower arrangement in a vase that blocks the view straight across the table, the table neatly set, holding a single blank seating card and raising an eyebrow at the clerk. Landscape image 1536x1024; the two halves fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos. Nothing written or drawn on the cards."
+  },
+  {
+   "name": "line_qc_cover_qc02_05",
+   "kind": "line",
+   "group": "COVER",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_dessert_first",
+    "line_qc_copy_seating",
+    "line_round_table"
+   ],
+   "prompt": "A square dinner table seen from slightly above and in front, with a very tall, bushy flower arrangement in the middle. Four guests, one on each side (the same invented characters as in the references: a tall guest with a high top-knot bun and a long striped scarf; a short, round guest with a flat cap and a cardigan; a guest with long straight hair, a headband and a dress with a wide round collar; a guest with curly hair and a thick roll-neck jumper), each with a slice of cake in front of them, spoons raised, amused. The head waiter (the same invented character: neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat, a long apron) sets down the last slice of cake; beside the table a trolley holds four untouched bowls of soup, waiting. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere.",
+   "role": "cover",
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's head waiter, the four guests and the square table with its tall flowers: draw the same head waiter, four guests and table in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout."
+  }
+ ]
+}

@@ -1,0 +1,125 @@
+{
+ "episode": "QC05-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: copy and paste is the most basic operation in computing (line_qc_cnot_stamp_rows); here is a three-line proof that no quantum gate can ever do it. Same cast: the tinkerer and the skeptic.",
+  "Why two-qubit gates matter: one-qubit gates keep separate qubits separate; two-qubit gates create entanglement, and on hardware they are the slow, noisy ones (Q24-05 01:25-05:43; Q25-05 57:02-58:28; line_qc_cnot_three_legged: two runners tied together are clumsier than either alone).",
+  "CNOT is a controlled XOR, (z1, z2) -> (z1, z1 xor z2): flip the target if the control is 1 (Q25-06 01:44-05:52; Q24-05 06:15-12:40; line_qc_cnot_flip_card).",
+  "H then CNOT makes the Bell pair (|00> + |11>)/sqrt2; entanglement is a critical computational resource (Q25-05 61:47-66:34; Q25-06 06:05-08:22, clip 07:26-08:22; line_qc_cnot_twin_dice, reuse line_dice_hand). Caveat captions with the dice: each die alone is a fair random roll and nobody can choose the shared result, so no message travels; the dice picture the agreement, not the mechanism (QC04-04 shows the quantum version beats any pre-agreed trick).",
+  "The \"if and else at once\" intuition (clip 63:07-63:56) only with the honest caption from Q24-02 p32: measuring returns one branch, at random (reuse line_spec_play_or_study or line_two_lanterns). Never caption it as \"computes all answers at once\".",
+  "Two CNOTs undo the entanglement: CNOT is its own inverse (Q24-05 20:47-21:38, her answer only; code; reuse line_qc_undo_twist_cube).",
+  "Fan-out is not a copy: CNOT onto a |0> gives alpha|00> + beta|11>, two qubits that always agree when read in the Z basis, not two independent copies of alpha|0> + beta|1>; a reflection moves with you but you cannot take it away and use it on its own (Q25-05 67:02-70:55; Q25-06 14:44-17:34; line_qc_cnot_mirror). Fan-out is used in distributed quantum computing.",
+  "No-cloning in three lines: if one U copied both |psi> and |phi>, unitarity gives <psi|phi> = <psi|phi>^2, so the two must be identical or orthogonal; known, distinguishable cards copy fine, an unknown sealed state cannot (Q25-06 08:29-14:44, clip 13:36-14:32 \"you cannot really have a general copying machine in quantum computing\"; Wootters & Zurek 1982, Dieks 1982; line_qc_cnot_copier_envelope).",
+  "Cover (line_cover_qc05_04; for the X post and thumbnails, not a film beat): the tinkerer offers a sealed envelope to an old photocopier; the skeptic, arms crossed, shakes their head."
+ ],
+ "reuse": [
+  "line_dice_hand",
+  "line_spec_play_or_study",
+  "line_two_lanterns",
+  "line_qc_undo_twist_cube",
+  "line_tiny_lab"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_cnot_stamp_rows",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) happily presses a big wooden rubber stamp down onto a long sheet of paper lying on a plain table; the sheet already shows three neat rows of identical stamped prints, each print a simple flower shape drawn in outline (a round centre and five round petals). The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) watches from the other end of the table. Waist up. Square image 1024x1024; the tinkerer, the stamp and the sheet fill about 88% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cnot_three_legged",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "On a grassy field at a school sports day, a three-legged run: the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) and the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan), their inner ankles tied together with a scarf, stumble forward arm in arm, wobbling and nearly falling, with a few short wobble lines; behind them, two other invented runners (simple round faces, dot eyes), each running alone, jog past easily. Full figures on a short ground line. Landscape image 1536x1024; the runners fill about 92% of the width and about 75% of the height; the tied pair is in front and largest. No text, no letters, no numbers, no logos. No numbers on the runners."
+  },
+  {
+   "name": "line_qc_cnot_flip_card",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "At a plain table seen from the front: the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) sits at the left and raises one hand high, like giving a signal; the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) sits at the right, watching that raised hand, and turns over a big plain card lying on the table; the card's face shows one big plain circle and its back is blank; a short curved motion line shows the flip. Waist up. Landscape image 1536x1024; the two characters and the card fill about 90% of the width and about 80% of the height; the card is drawn large. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cnot_twin_dice",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_dice_hand",
+    "line_two_banks"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A picture in two halves with a wide empty gap between them, as if far apart. Left: the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) sits at a small round table and has just rolled one die, which shows three pips on top. Right: the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) sits at an identical small round table and has just rolled one die, which also shows three pips on top. Each looks only at their own die; neither looks at the other. The dice are large and show only round pips (small circles). Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cnot_mirror",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "In a plain room: the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) stands in front of a tall free-standing mirror on a swivel stand and raises one hand; the reflection in the mirror matches the pose exactly. The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) has walked round to the back of the mirror and peers behind it, puzzled, as if looking for a second tinkerer; behind the mirror there is only the plain back of the frame. Full figures. Landscape image 1536x1024; the mirror and the characters fill about 85% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cnot_copier_envelope",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A big old office photocopier seen from the front and a little to the side, its lid open. On its output tray lies a neat stack of copies of a card showing one big plain circle; the original card lies on the glass. The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) holds a sealed plain envelope towards the open lid, hesitating; the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan), arms crossed, shakes their head, with a few short shake lines beside the head. Full figures. Landscape image 1536x1024; the photocopier and the characters fill about 90% of the width and about 85% of the height. No text, no letters, no numbers, no logos. No buttons with symbols, no writing on the envelope."
+  },
+  {
+   "name": "line_cover_qc05_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_cnot_copier_envelope",
+    "line_qc_undo_jar_tag",
+    "line_qc_cnot_mirror"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters (the tinkerer: short bob with a fringe, work apron; the skeptic: tall, beanie with a pompom, long scarf): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "In the middle, a big old office photocopier with its lid open. On the left, the tinkerer (the same invented character as in the references: simple round face, dot eyes, a short bob haircut with a straight fringe, a work apron) holds a sealed plain envelope towards the open lid, hesitating. On the right, the skeptic (the same invented character as in the references: tall and lanky, simple round face, dot eyes, a knitted beanie hat with a small pompom, a long plain scarf, a cardigan) stands with arms crossed, shaking their head. No writing on the envelope, no buttons with symbols. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}
