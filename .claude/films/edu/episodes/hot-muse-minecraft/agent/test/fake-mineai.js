@@ -51,7 +51,7 @@ export async function startFakeMineAi(opts = {}) {
   const world = {
     username: opts.username ?? 'Tst_fake',
     inventory: new Map(Object.entries(opts.inventory ?? {})),
-    position: { x: 10.5, y: 64, z: -3.5 },
+    position: opts.position ?? { x: 10.5, y: 64, z: -3.5 },
     health: 20, food: 18, lastDeath: null, connected: true, revision: 'rev-1',
     durations: { ...(opts.durations ?? {}) },
     fail: { ...(opts.fail ?? {}) }, // tool -> "[CODE] message"
@@ -172,6 +172,14 @@ export async function startFakeMineAi(opts = {}) {
           if (pick) { add(pick, -1); delete world.durability[pick]; }
           add(drop, got);
           return { collected: { requested: a.count ?? 1, gained: got, gainedByItem: { [drop]: got }, blocksBroken: got }, status: 'partial', error: `[TOOL_TIER_LOST] ${pick ?? 'pickaxe'} was lost at 1,64,2; no pickaxe remains. Broke ${got} matching blocks; inventory gained ${got}/${a.count} requested items.` };
+        }
+        // drops it could not pick up (world.dropsLost: so many of the next collect's drops, once)
+        if (world.dropsLost) {
+          const lost = Math.min(world.dropsLost, (a.count ?? 1) - 1);
+          world.dropsLost = 0;
+          const got = (a.count ?? 1) - lost;
+          add(drop, got);
+          return { collected: { requested: a.count ?? 1, gained: got, gainedByItem: { [drop]: got }, blocksBroken: a.count ?? 1 }, status: 'partial', error: `[DROP_RECOVERY_EXHAUSTED] Mined ${a.count ?? 1} blocks and collected ${got} of the ${a.count ?? 1} requested; the rest were mined but never recovered, so collection stopped instead of mining indefinitely.` };
         }
         add(drop, a.count ?? 1);
         return { collected: { requested: a.count ?? 1, gained: a.count ?? 1, gainedByItem: { [drop]: a.count ?? 1 }, blocksBroken: world.collectBroken ?? a.count ?? 1 }, status: 'succeeded' };

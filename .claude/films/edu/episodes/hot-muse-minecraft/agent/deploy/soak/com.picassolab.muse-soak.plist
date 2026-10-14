@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The nightly soak on staging (scripts/soak-nightly.sh): 3 scripted games, every day at 04:00 local, after the
+     02:00 explainer run. Install: copy to ~/Library/LaunchAgents and `launchctl load` it (README, "The nightly soak"). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.picassolab.muse-soak</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>/Users/linyichen/picasso-work/muse-soak-wt/.claude/films/edu/episodes/hot-muse-minecraft/agent/scripts/soak-nightly.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/Users/linyichen/miniforge3/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>4</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>/Users/linyichen/picasso-work/soak/launchd.out</string>
+  <key>StandardErrorPath</key><string>/Users/linyichen/picasso-work/soak/launchd.err</string>
+</dict>
+</plist>

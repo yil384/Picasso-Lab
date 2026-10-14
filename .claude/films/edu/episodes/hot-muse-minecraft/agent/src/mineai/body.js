@@ -442,6 +442,14 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         const p = latest.position ? floorPos(latest.position) : null;
         const liquid = /\b(lava|water) at (-?\d+) (-?\d+) (-?\d+)/.exec(String(last?.result ?? ''));
         const options = [];
+        // too near the world spawn (frames are refused there): a spot well away, straight out from it
+        if (/world spawn/.test(String(last?.result ?? '')) && p && spawnAt) {
+          const dx = p.x - spawnAt.x;
+          const dz = p.z - spawnAt.z;
+          const len = Math.hypot(dx, dz) || 1;
+          const to = { x: Math.round(spawnAt.x + (dx / len) * (SPAWN_GUARD + 12)), y: p.y, z: Math.round(spawnAt.z + (dz / len) * (SPAWN_GUARD + 12)) };
+          options.push({ text: `build farther from the world spawn: go_to ${to.x} ${to.y} ${to.z}, then build`, hint: { skill: 'go_to', args: to } });
+        }
         if (liquid && p) {
           const to = { x: p.x + 8 * (Math.sign(p.x - Number(liquid[2])) || 1), y: p.y, z: p.z + 8 * (Math.sign(p.z - Number(liquid[4])) || 1) };
           options.push({ text: `build 8 blocks farther from the ${liquid[1]}: go_to ${to.x} ${to.y} ${to.z}, then build`, hint: { skill: 'go_to', args: to } });
@@ -936,7 +944,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       if (side) options.push({ text: `stand right beside it: go_to ${side.x} ${side.y} ${side.z}, then collect obsidian 1`, hint: { skill: 'go_to', args: side } });
     } else parts.push('no formed obsidian is loaded within 12 blocks');
     const data = await rpc('view_blocks', { find: { block_names: ['lava'], limit: 64 } }, 10_000).catch(() => null);
-    const pools = p ? lavaPools(data?.result?.blocks?.find?.[0]?.listed ?? [], p) : [];
+    const pools = p ? lavaPools(data?.result?.blocks?.find?.[0]?.listed ?? [], p).filter((q) => !spawnAt || Math.hypot(q.x - spawnAt.x, q.z - spawnAt.z) > SPAWN_GUARD) : [];
     // the pool here first: their cast gives up on a pool it cannot reach from where it stands; then the next one
     const here = pools.find((q) => q.d <= 16);
     if (here) parts.push(`${poolWords(here)} is here, but no obsidian came from it (their pour could not reach it from where it stood)`);
@@ -982,7 +990,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     // lava listed in sight, but no pool within 16 blocks, and nothing said where one was)
     // pools as their cast groups them, with how many sources each has: one big enough for what is asked first, so the
     // walk goes to a pool that can give it (production game g2409ce, 2026-10-14: three pools in turn, 12 minutes)
-    const pools = lavaPools(listed, floorPos(p));
+    // never a pool by the world spawn (refused there: the soak found the guard sending the bot to one, 2026-10-14)
+    const pools = lavaPools(listed, floorPos(p)).filter((q) => !spawnAt || Math.hypot(q.x - spawnAt.x, q.z - spawnAt.z) > SPAWN_GUARD);
     const enough = pools.find((q) => q.sources >= Math.min(want, 8));
     const pool = enough ?? pools[0];
     const there = pool ? ` The nearest lava pool loaded is at ${pool.x} ${pool.y} ${pool.z}, ${pool.d} blocks away (${poolSize(pool)}${pool !== pools[0] ? `; a nearer one at ${pools[0].x} ${pools[0].y} ${pools[0].z} has only ${pools[0].sources}` : ''}): go_to a spot a few blocks from it first.` : '';
@@ -1251,6 +1260,19 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             res = { ...res, result: spot
               ? `${res.result}; the nearest place to stand near there: go_to ${spot.x} ${spot.y} ${spot.z}`
               : `${res.result}; around there is open air or liquid as far as can be seen: aim at a cave floor you can see, or let collect walk to its target (it finds a way down by itself)` };
+          }
+          // drops it could not pick up (their "the rest were mined but never recovered": logs of a dark oak whose drops
+          // stayed in its leaves, staging 2026-10-14; gravel in g0842ff): once more for what is missing, elsewhere
+          if (!res.ok && call.tool === 'collect_block' && !Number.isInteger(call.args?.x) && /never recovered|DROP_RECOVERY_EXHAUSTED/i.test(`${res.result} ${res.theirs ?? ''}`) && !retried.has(`drops:${i}`) && deadline - Date.now() > 15_000 && !ctl.stopped) {
+            const got = Number(out.output?.result?.collected?.gained) || 0;
+            const left = Math.max(0, (Number(call.args?.count) || 1) - got);
+            if (left > 0) {
+              retried.add(`drops:${i}`);
+              calls[i] = { ...call, args: { ...call.args, count: left } };
+              parts.push({ ok: true, result: `${doneSoFar(call.tool, out.output, call) ?? `collected ${got}`}; the drops it could not reach were left, and it went on for the other ${left}`, code: null });
+              i -= 1;
+              continue;
+            }
           }
           // a collect whose time ran out as its last block came in: done (g2409ce: "timed out after 340 s" with all 11
           // obsidian in)

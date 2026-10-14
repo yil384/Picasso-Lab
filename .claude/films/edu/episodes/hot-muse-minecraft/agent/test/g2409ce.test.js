@@ -133,3 +133,16 @@ test('g2409ce: a fight held back for want of a way to heal is said plainly', () 
   assert.match(r.result, /the body would not start the fight: its health is low and nothing can bring it back up \(no food carried, and food under 18, where health comes back\): eat or hunt first, or shelter/);
   assert.doesNotMatch(r.result, /COMBAT_CONSTRAINED|Recovery is prohibited/);
 });
+
+test('drops it could not pick up (a dark oak canopy, staging 2026-10-14): the collect goes on once for what is missing', async () => {
+  const { body, fake, hosts } = await bodyOf('g2409f', {});
+  try {
+    fake.world.dropsLost = 2;
+    const r = await body.run('collect', { block: 'dark_oak_log', n: 3 });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /the drops it could not reach were left, and it went on for the other 2/);
+    const calls = fake.tools('collect_block').map((c) => c.args.count);
+    assert.deepEqual(calls, [3, 2]);
+    assert.equal(fake.world.inventory.get('dark_oak_log'), 3);
+  } finally { await body.close(); await hosts.closeAll(); }
+});
