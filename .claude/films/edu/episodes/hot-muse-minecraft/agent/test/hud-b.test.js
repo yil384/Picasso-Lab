@@ -281,11 +281,11 @@ test('HUD B: the lab\'s logo (STREAM_LOGO): off by default; on a white card, or 
   assert.equal(plain(870, 22)[3], 0, 'no card around it');
   const sh = plain(960, 84); assert.ok(sh[3] > 0 && sh[0] < 60, 'its hard shadow 2 px down');
   fs.rmSync(dir, { recursive: true, force: true });
-  // plain with no file: the owner's pixel logo (assets/brand), 230 x 68 at the top right from y 16
+  // plain with no file: the owner's pixel logo (assets/brand), 230 x 57 at the top right from y 16
   const pix = frame({ style: 'plain' });
   let seen = 0;
   for (let x = 840; x < 1064; x += 7) for (let y = 18; y < 84; y += 5) if (pix(x, y)[3] > 200) seen += 1;
-  assert.ok(seen > 60, `the pixel logo in 834..1064 x 16..84 (${seen} samples)`);
+  assert.ok(seen > 50, `the pixel logo in 834..1064 x 16..73 (${seen} samples)`);
   for (const [x, y] of [[1064 - 233, 50], [950, 87], [950, 14]]) assert.equal(pix(x, y)[3], 0, `nothing at ${x},${y}`);
   assert.equal(pix(1000, 126)[3], 0);
   assert.equal(loadConfig({}).stream.logo, 'off');
