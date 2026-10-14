@@ -741,6 +741,30 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     return { calls, note: pieces.length ? `crafts ${pieces.map((p) => p.item).join(', ')}` : null };
   }
 
+  /**
+   * The nearest place to stand around a point a walk could not end at: a cell with room for the bot (two cells free)
+   * over a solid block, from two boxes around it (the point's height and 7 below), or null.
+   */
+  async function standNear(t) {
+    const at = new Map();
+    for (const y of [t.y, t.y - 7]) {
+      const data = await rpc('view_blocks', { box: { x: t.x, y, z: t.z, half_width: 4, half_height: 3 } }, 10_000).catch(() => null);
+      const box = data?.result?.blocks?.box;
+      if (!box?.layers) continue;
+      for (const layer of box.layers) for (const row of layer.rows) row.blocks.forEach((name, i) => { at.set(`${box.center.x - box.halfWidth + i},${layer.y},${row.z}`, name); });
+    }
+    const free = (n) => n !== undefined && REPLACEABLE.test(n);
+    const solid = (n) => n !== undefined && n !== 'unloaded' && !REPLACEABLE.test(n) && !/^(water|lava|bubble_column)$|_leaves$/.test(n);
+    let best = null;
+    for (const [key, name] of at) {
+      const [x, y, z] = key.split(',').map(Number);
+      if (!free(name) || !free(at.get(`${x},${y + 1},${z}`)) || !solid(at.get(`${x},${y - 1},${z}`))) continue;
+      const d = Math.hypot(x - t.x, y - t.y, z - t.z);
+      if (!best || d < best.d) best = { x, y, z, d };
+    }
+    return best ? { x: best.x, y: best.y, z: best.z } : null;
+  }
+
   /** The smelt calls from i on, at the furnace a cut-short smelt left standing within 6 blocks (none carried any more). */
   async function smeltAtLeftFurnace(calls, i) {
     await refresh().catch(() => {});
@@ -1150,6 +1174,14 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped, call });
+          // a walk into open air (production game g0842ff, 2026-10-14: go_to straight down to y -8 twice over a big
+          // cavern, "no ground within 64 blocks below it"): the nearest place to stand there, read around the target
+          if (!res.ok && call.tool === 'navigate' && Number.isFinite(call.args?.x) && /no ground within \d+ blocks below it/.test(res.result)) {
+            const spot = await standNear(call.args).catch(() => null);
+            res = { ...res, result: spot
+              ? `${res.result}; the nearest place to stand near there: go_to ${spot.x} ${spot.y} ${spot.z}`
+              : `${res.result}; around there is open air or liquid as far as can be seen: aim at a cave floor you can see, or let collect walk to its target (it finds a way down by itself)` };
+          }
           // the obsidian search that brought nothing in: why, and what else to do, at once
           if (ctl.stalled && !res.ok) {
             const why = await obsidianStuck(ctl.stalled.mined).catch(() => null);
@@ -1181,6 +1213,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           // that was already clear, 3 s into the build, and the game ran out): a clear cell is what the dig was for, so
           // it counts as cleared; another solid block there (gravel or sand fallen in) is dug as that block, once
           if (!res.ok && call.clearing) {
+            // the cell broke and nothing came of it (production game g0842ff, 2026-10-14: leaves drop nothing most of the
+            // time, "Broke 1 matching block; inventory gained 0/1", and the first frame stopped there): it is clear
+            const broke = Number(out.output?.result?.collected?.blocksBroken) || Number(/Broke (\d+) matching block/.exec(`${res.result} ${res.theirs ?? ''}`)?.[1]) || 0;
+            if (broke >= 1) { own = null; continue; }
             const seenNow = /The requested cell at (-?\d+),\s*(-?\d+),\s*(-?\d+) is ([a-z_]+), not/i.exec(`${res.result} ${res.theirs ?? ''}`);
             if (seenNow && REPLACEABLE.test(seenNow[4])) { own = null; continue; }
             if (seenNow && !/^(water|lava|obsidian|bedrock)$/.test(seenNow[4]) && !retried.has(`clear:${i}`)) {

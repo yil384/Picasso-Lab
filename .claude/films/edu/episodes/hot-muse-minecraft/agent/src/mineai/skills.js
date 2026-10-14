@@ -759,6 +759,8 @@ export function plainer(tool, text, call = null) {
     t = t.replace(/No loaded quarry or requested inventory gain was observed (before the requested observation window ended|within the requested wait at the spawner)\./, `no ${mob} came near you: explore 1 to 3 chunks (explore {heading, chunks}) to find some, then hunt again`);
   }
   if (tool === 'navigate') {
+    // their walk's move checks timing out on a busy server (g0842ff): plain words, not their code
+    t = t.replace(/repeated_movement_failure:\s*Server confirmation deadline elapsed\.?/i, 'the walk stopped: the server did not confirm its moves in time (a busy moment); send it again');
     const at = /of (-?\d+), (-?\d+), (-?\d+)\./.exec(t);
     const ground = /The ground in that column is at y=(-?\d+)/.exec(t);
     if (/No usable footing was observed/.test(t) && at && ground) {
