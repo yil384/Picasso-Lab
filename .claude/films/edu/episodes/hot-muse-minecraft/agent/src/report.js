@@ -312,7 +312,7 @@ export function createTracker({ goal: first = { key: 'free', text: null, title: 
       return {
         text: lines.join('\n'),
         data: {
-          game: gameId, goal: goal.key, goalText: goal.text ?? null, goalTitle: title(current), goalReached: r !== null, elapsedS: Math.round(elapsed / 1000),
+          game: gameId, goal: goal.key, goalText: goal.text ?? null, goalTitle: title(current), goalReached: r !== null, goalReachedS: r !== null ? Math.round(r / 1000) : null, elapsedS: Math.round(elapsed / 1000),
           parts: partsData(current),
           goals: history.map((e) => ({ goal: e.goal.key, title: title(e), text: e.goal.text ?? null, by: e.by, fromS: Math.round(e.fromMs / 1000), toS: e.toMs !== null ? Math.round(e.toMs / 1000) : null, reached: reachedOf(e) !== null, parts: partsData(e) })),
           milestones: list.map((m) => ({ key: m.key, name: m.name, atS: reached.has(m.key) ? Math.round(reached.get(m.key) / 1000) : null })),
