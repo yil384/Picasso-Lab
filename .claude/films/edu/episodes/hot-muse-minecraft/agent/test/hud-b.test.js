@@ -267,7 +267,7 @@ test('HUD B: the lab\'s logo (STREAM_LOGO): off by default; on a white card, or 
   };
   assert.equal(frame(null)(1000, 40)[3], 0, 'off by default');
   const card = frame({ style: 'card' });
-  assert.ok(card(1000, 26)[3] > 200 && card(1000, 26)[0] > 200, 'the white card');
+  assert.ok(card(1000, 22)[3] > 200 && card(1000, 22)[0] > 200, 'the white card');
   assert.equal(card(1000, 126)[3], 0, 'nothing between it and the toasts');
   assert.equal(card(60, 40)[3], 0, 'nothing at the top left (Facebook\'s LIVE badge)');
   // a transparent white logo of 600 x 300: drawn at 200 x 100 (100 px high at most) with its shadow, no card
@@ -277,13 +277,16 @@ test('HUD B: the lab\'s logo (STREAM_LOGO): off by default; on a white card, or 
   sx.fillStyle = '#fff'; sx.fillRect(100, 100, 400, 100);
   fs.writeFileSync(path.join(dir, 'white.png'), src.toBuffer('image/png'));
   const plain = frame({ style: 'plain', file: path.join(dir, 'white.png') });
-  assert.ok(plain(962, 70)[0] > 200, 'the white logo');
-  assert.equal(plain(870, 26)[3], 0, 'no card around it');
-  const sh = plain(960, 88); assert.ok(sh[3] > 0 && sh[0] < 60, 'its hard shadow 2 px down');
+  assert.ok(plain(962, 66)[0] > 200, 'the white logo');
+  assert.equal(plain(870, 22)[3], 0, 'no card around it');
+  const sh = plain(960, 84); assert.ok(sh[3] > 0 && sh[0] < 60, 'its hard shadow 2 px down');
   fs.rmSync(dir, { recursive: true, force: true });
-  // plain with no file: the owner's pixel logo (assets/brand), 230 x 49 at the top right from y 20
+  // plain with no file: the owner's pixel logo (assets/brand), 230 x 68 at the top right from y 16
   const pix = frame({ style: 'plain' });
-  assert.ok(pix(1064 - 115, 20 + 24)[3] > 0 && pix(1064 - 233, 20 + 24)[3] === 0 && pix(1064 - 115, 20 + 52)[3] === 0, 'the pixel logo, 230 x 49');
+  let seen = 0;
+  for (let x = 840; x < 1064; x += 7) for (let y = 18; y < 84; y += 5) if (pix(x, y)[3] > 200) seen += 1;
+  assert.ok(seen > 60, `the pixel logo in 834..1064 x 16..84 (${seen} samples)`);
+  for (const [x, y] of [[1064 - 233, 50], [950, 87], [950, 14]]) assert.equal(pix(x, y)[3], 0, `nothing at ${x},${y}`);
   assert.equal(pix(1000, 126)[3], 0);
   assert.equal(loadConfig({}).stream.logo, 'off');
   assert.equal(loadConfig({ STREAM_LOGO: 'plain', STREAM_LOGO_FILE: 'lab-logo-white.png' }).stream.logoFile, 'lab-logo-white.png');
