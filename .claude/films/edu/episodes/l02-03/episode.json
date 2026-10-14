@@ -1,0 +1,3542 @@
+{
+ "id": "l02-03",
+ "lecture": "L02",
+ "facts": "FACTS.md",
+ "title": "L02-03 Where Am I? Positional Encoding",
+ "langs": [
+  "en"
+ ],
+ "voice": {
+  "lines": "vo_lines.json",
+  "clips": "clips.json",
+  "clipDir": "~/picasso-work/clips/l02-03",
+  "rate": "+4%",
+  "slotPad": 0.4
+ },
+ "sound": {
+  "dir": "~/picasso-assets/snd"
+ },
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "slides",
+  "drawings": {
+   "catdog": {
+    "src": "line_cat_chases_dog",
+    "w": 1010
+   },
+   "dogcat": {
+    "src": "line_dog_chases_cat",
+    "w": 900
+   },
+   "bag": {
+    "src": "line_word_bag",
+    "w": 980
+   },
+   "clock": {
+    "src": "line_clock_face",
+    "w": 760
+   },
+   "pour": {
+    "src": "line_paint_pour",
+    "w": 660
+   },
+   "table": {
+    "src": "line_round_table",
+    "w": 900
+   },
+   "question": {
+    "src": "line_same_question",
+    "w": 800
+   },
+   "ribbon": {
+    "src": "line_long_ribbon",
+    "w": 1010
+   },
+   "mic": {
+    "src": "line_mic",
+    "w": 240,
+    "boost": 0.3
+   }
+  },
+  "slides": {
+   "s24": {
+    "src": "h-24.png"
+   },
+   "s26": {
+    "src": "h-26.png"
+   },
+   "s27": {
+    "src": "h-27.png"
+   },
+   "s31": {
+    "src": "h-31.png"
+   }
+  }
+ },
+ "mic": {
+  "drawing": "mic"
+ },
+ "end": {
+  "at": "endCard"
+ },
+ "panels": [
+  {
+   "id": "p0",
+   "note": "cover: a cat chasing a dog; the two sentences; hook F1",
+   "items": [
+    {
+     "id": "cd",
+     "t": "draw",
+     "d": "catdog",
+     "xy": [
+      540,
+      860
+     ],
+     "w": 1010
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cd",
+      0.238,
+      0.5097
+     ],
+     "w": 420,
+     "h": 260,
+     "a": 0.3
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "cd",
+      0.76,
+      0.5743
+     ],
+     "w": 380,
+     "h": 260,
+     "a": 0.3,
+     "rot": -0.1
+    },
+    {
+     "t": "label",
+     "text": "title.0",
+     "xy": [
+      70,
+      345
+     ],
+     "px": 140,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.1",
+     "xy": [
+      84,
+      455
+     ],
+     "px": 74,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "id": "title2"
+    },
+    {
+     "t": "underline",
+     "of": "title2",
+     "dx": 6,
+     "dy": 44,
+     "rise": -8,
+     "bend": 0.03,
+     "at": "title",
+     "dur": 0.6
+    },
+    {
+     "t": "sans",
+     "text": "strip",
+     "xy": [
+      86,
+      535
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left"
+    },
+    {
+     "t": "label",
+     "text": "s1",
+     "xy": [
+      70,
+      1130
+     ],
+     "px": 54,
+     "align": "left",
+     "rot": -0.02
+    },
+    {
+     "t": "label",
+     "text": "s2",
+     "xy": [
+      70,
+      1205
+     ],
+     "px": 54,
+     "align": "left",
+     "rot": -0.02
+    },
+    {
+     "t": "pen",
+     "curve": [
+      [
+       610,
+       1110
+      ],
+      [
+       610,
+       1200
+      ],
+      -0.5
+     ],
+     "lw": 6,
+     "at": "imp1",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "same",
+     "xy": [
+      770,
+      1175
+     ],
+     "px": 54,
+     "color": "red",
+     "at": "imp1",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "note": "the round table: in the encoder every word looks at every other word at once (c2; F1, F2)",
+   "items": [
+    {
+     "t": "label",
+     "text": "ev",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "p1+0.4",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "enc",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n2+0.6"
+    },
+    {
+     "id": "tb",
+     "t": "draw",
+     "d": "table",
+     "xy": [
+      540,
+      850
+     ],
+     "w": 840,
+     "at": "p1+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "tb",
+      0.4859,
+      0.5383
+     ],
+     "w": 520,
+     "h": 260,
+     "a": 0.35,
+     "at": "n2@once"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "tb",
+      0.496,
+      0.4969
+     ],
+     "r": [
+      380,
+      300
+     ],
+     "seed": 3,
+     "at": "c2@40%",
+     "dur": 0.6,
+     "lw": 6
+    },
+    {
+     "t": "label",
+     "text": "ord",
+     "xy": [
+      70,
+      1238
+     ],
+     "px": 52,
+     "color": "red",
+     "align": "left",
+     "at": "n3@first",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "note": "a bag with five word tiles: the, cat, chased, the, dog; same bag, same result (F1)",
+   "items": [
+    {
+     "t": "label",
+     "text": "bagT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 90,
+     "align": "left",
+     "at": "p2+0.4"
+    },
+    {
+     "id": "bag",
+     "t": "draw",
+     "d": "bag",
+     "xy": [
+      540,
+      860
+     ],
+     "w": 980,
+     "at": "p2+0.3",
+     "dur": 2.0
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "bag",
+      0.5104,
+      0.6719
+     ],
+     "w": 760,
+     "h": 420,
+     "a": 0.35,
+     "at": "n4@bag"
+    },
+    {
+     "t": "label",
+     "text": "bw0",
+     "xy": [
+      "bag",
+      0.4753,
+      0.4602
+     ],
+     "px": 50,
+     "rot": 0.24,
+     "font": "latin",
+     "at": "n4@the"
+    },
+    {
+     "t": "label",
+     "text": "bw1",
+     "xy": [
+      "bag",
+      0.2496,
+      0.6245
+     ],
+     "px": 50,
+     "rot": -0.2,
+     "font": "latin",
+     "at": "n4@cat"
+    },
+    {
+     "t": "label",
+     "text": "bw2",
+     "xy": [
+      "bag",
+      0.5917,
+      0.687
+     ],
+     "px": 44,
+     "rot": 0.17,
+     "font": "latin",
+     "at": "n4@chased"
+    },
+    {
+     "t": "label",
+     "text": "bw3",
+     "xy": [
+      "bag",
+      0.3413,
+      0.8664
+     ],
+     "px": 50,
+     "rot": 0.2,
+     "font": "latin",
+     "at": "n4@the#2"
+    },
+    {
+     "t": "label",
+     "text": "bw4",
+     "xy": [
+      "bag",
+      0.6914,
+      0.8876
+     ],
+     "px": 50,
+     "rot": 0.2,
+     "font": "latin",
+     "at": "n4@dog"
+    },
+    {
+     "t": "label",
+     "text": "sb",
+     "xy": [
+      70,
+      1238
+     ],
+     "px": 56,
+     "color": "red",
+     "align": "left",
+     "at": "n4@same",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "note": "her slide 24 taped; red box on the two sentences, underline on \"Without PE ...\"; the 2022 footnote (F1, F3, F4)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs24",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape3+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s24",
+     "xy": [
+      540,
+      860
+     ],
+     "w": 1000,
+     "rot": -0.012,
+     "at": "p3+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      120,
+      585
+     ],
+     "w": 210,
+     "rot": -0.5,
+     "at": "tape3"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      960,
+      585
+     ],
+     "w": 190,
+     "rot": 0.5,
+     "at": "tape3+0.15"
+    },
+    {
+     "t": "box",
+     "rect": [
+      110,
+      565,
+      810,
+      712
+     ],
+     "on": "sl:px",
+     "lw": 5,
+     "at": "n5",
+     "dur": 0.6
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       134,
+       912
+      ],
+      [
+       "sl:px",
+       1053,
+       912
+      ]
+     ],
+     "at": "n5@without",
+     "dur": 0.6,
+     "lw": 5
+    },
+    {
+     "t": "group",
+     "at": "n6",
+     "fadeIn": [
+      "n6",
+      "n6+0.3"
+     ],
+     "items": [
+      {
+       "t": "card",
+       "rect": [
+        470,
+        470,
+        1030,
+        760
+       ],
+       "seed": 5,
+       "r": 14,
+       "lw": 3,
+       "fill": "sheet",
+       "at": "n6",
+       "dur": 0.6
+      },
+      {
+       "t": "label",
+       "text": "dec1",
+       "xy": [
+        500,
+        560
+       ],
+       "px": 46,
+       "align": "left",
+       "at": "n6@decoderonly"
+      },
+      {
+       "t": "label",
+       "text": "dec2",
+       "xy": [
+        500,
+        625
+       ],
+       "px": 46,
+       "align": "left",
+       "at": "n6@sees"
+      },
+      {
+       "t": "label",
+       "text": "dec3",
+       "xy": [
+        500,
+        690
+       ],
+       "px": 46,
+       "color": "red",
+       "align": "left",
+       "at": "n6@before",
+       "fit": 370
+      }
+     ]
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1040,
+      1050
+     ],
+     "r": [
+      230,
+      50
+     ],
+     "seed": 2,
+     "at": "n7@2022",
+     "dur": 0.5,
+     "lw": 5
+    },
+    {
+     "t": "label",
+     "text": "hv1",
+     "xy": [
+      70,
+      1190
+     ],
+     "px": 40,
+     "align": "left",
+     "at": "n7@2022",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "hv2",
+     "xy": [
+      70,
+      1245
+     ],
+     "px": 40,
+     "color": "red",
+     "align": "left",
+     "at": "n7@still",
+     "patch": 0.3,
+     "fit": 800
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "note": "word vector + position vector = what attention sees; eight slots; computed, not learned (c3; F6, F8)",
+   "items": [
+    {
+     "t": "label",
+     "text": "addT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 78,
+     "align": "left",
+     "at": "p4+0.4",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "addS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n9@same"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      230,
+      888
+     ],
+     "w": 144,
+     "h": 520,
+     "a": 0.45,
+     "at": "n9@position"
+    },
+    {
+     "t": "card",
+     "rect": [
+      170,
+      640,
+      290,
+      702
+     ],
+     "seed": 10,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@position+0.00",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      170,
+      702,
+      290,
+      764
+     ],
+     "seed": 11,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@position+0.06",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      170,
+      764,
+      290,
+      826
+     ],
+     "seed": 12,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@position+0.12",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      170,
+      826,
+      290,
+      888
+     ],
+     "seed": 13,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@position+0.18",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      170,
+      888,
+      290,
+      950
+     ],
+     "seed": 14,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@position+0.24",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      170,
+      950,
+      290,
+      1012
+     ],
+     "seed": 15,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@position+0.30",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      170,
+      1012,
+      290,
+      1074
+     ],
+     "seed": 16,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@position+0.36",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      170,
+      1074,
+      290,
+      1136
+     ],
+     "seed": 17,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@position+0.42",
+     "dur": 0.3
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      540,
+      888
+     ],
+     "w": 144,
+     "h": 520,
+     "a": 0.45,
+     "at": "n9@vector"
+    },
+    {
+     "t": "card",
+     "rect": [
+      480,
+      640,
+      600,
+      702
+     ],
+     "seed": 20,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@vector+0.00",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      480,
+      702,
+      600,
+      764
+     ],
+     "seed": 21,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@vector+0.06",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      480,
+      764,
+      600,
+      826
+     ],
+     "seed": 22,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@vector+0.12",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      480,
+      826,
+      600,
+      888
+     ],
+     "seed": 23,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@vector+0.18",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      480,
+      888,
+      600,
+      950
+     ],
+     "seed": 24,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@vector+0.24",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      480,
+      950,
+      600,
+      1012
+     ],
+     "seed": 25,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@vector+0.30",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      480,
+      1012,
+      600,
+      1074
+     ],
+     "seed": 26,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@vector+0.36",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      480,
+      1074,
+      600,
+      1136
+     ],
+     "seed": 27,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@vector+0.42",
+     "dur": 0.3
+    },
+    {
+     "t": "wash",
+     "c": "sage",
+     "xy": [
+      850,
+      888
+     ],
+     "w": 144,
+     "h": 520,
+     "a": 0.45,
+     "at": "n9@add"
+    },
+    {
+     "t": "card",
+     "rect": [
+      790,
+      640,
+      910,
+      702
+     ],
+     "seed": 30,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@add+0.00",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      790,
+      702,
+      910,
+      764
+     ],
+     "seed": 31,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@add+0.06",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      790,
+      764,
+      910,
+      826
+     ],
+     "seed": 32,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@add+0.12",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      790,
+      826,
+      910,
+      888
+     ],
+     "seed": 33,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@add+0.18",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      790,
+      888,
+      910,
+      950
+     ],
+     "seed": 34,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@add+0.24",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      790,
+      950,
+      910,
+      1012
+     ],
+     "seed": 35,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@add+0.30",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      790,
+      1012,
+      910,
+      1074
+     ],
+     "seed": 36,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@add+0.36",
+     "dur": 0.3
+    },
+    {
+     "t": "card",
+     "rect": [
+      790,
+      1074,
+      910,
+      1136
+     ],
+     "seed": 37,
+     "r": 6,
+     "lw": 3,
+     "at": "n9@add+0.42",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "pl",
+     "xy": [
+      385,
+      925
+     ],
+     "px": 90,
+     "font": "latin",
+     "at": "n9@add"
+    },
+    {
+     "t": "label",
+     "text": "eq",
+     "xy": [
+      695,
+      925
+     ],
+     "px": 90,
+     "font": "latin",
+     "at": "n9@together"
+    },
+    {
+     "t": "label",
+     "text": "wd",
+     "xy": [
+      230,
+      600
+     ],
+     "px": 46,
+     "at": "n9@position",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "ps",
+     "xy": [
+      540,
+      600
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n9@vector"
+    },
+    {
+     "t": "label",
+     "text": "in",
+     "xy": [
+      850,
+      600
+     ],
+     "px": 46,
+     "at": "n9@together"
+    },
+    {
+     "t": "label",
+     "text": "two1",
+     "xy": [
+      540,
+      1220
+     ],
+     "px": 56,
+     "color": "red",
+     "at": "n10@position",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "two0",
+     "xy": [
+      540,
+      1150
+     ],
+     "px": 48,
+     "at": "n10@learned"
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "note": "one clock: a sine and a cosine of the same angle = the tip of a hand on a circle of radius one (c4; F7, F9, F17)",
+   "items": [
+    {
+     "t": "label",
+     "text": "pairT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 76,
+     "align": "left",
+     "at": "p5+0.4",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "pairS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n11@sine"
+    },
+    {
+     "id": "ck",
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      540,
+      870
+     ],
+     "w": 740,
+     "at": "p5+0.3",
+     "dur": 1.6
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      540,
+      870
+     ],
+     "w": 600,
+     "h": 600,
+     "a": 0.25,
+     "at": "n12"
+    },
+    {
+     "t": "group",
+     "fadeOut": [
+      "n13@turns",
+      "n13@turns+0.4"
+     ],
+     "items": [
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         870
+        ],
+        [
+         767.2,
+         724.1
+        ]
+       ],
+       "color": "red",
+       "lw": 9,
+       "at": "c4@40%",
+       "dur": 0.35
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         870
+        ],
+        [
+         767,
+         870
+        ]
+       ],
+       "color": "ink",
+       "lw": 4,
+       "dash": [
+        10,
+        10
+       ],
+       "at": "n12@sine",
+       "dur": 0.4
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         767,
+         870
+        ],
+        [
+         767.2,
+         724.1
+        ]
+       ],
+       "color": "ink",
+       "lw": 4,
+       "dash": [
+        10,
+        10
+       ],
+       "at": "n12@cosine",
+       "dur": 0.4
+      },
+      {
+       "t": "label",
+       "text": "sn",
+       "xy": [
+        655,
+        930
+       ],
+       "px": 44,
+       "at": "n12@sine",
+       "patch": 0.3
+      },
+      {
+       "t": "label",
+       "text": "cs",
+       "xy": [
+        830,
+        810
+       ],
+       "px": 40,
+       "at": "n12@cosine",
+       "patch": 0.3
+      }
+     ]
+    },
+    {
+     "t": "group",
+     "at": "n13@turns",
+     "fadeIn": [
+      "n13@turns",
+      "n13@turns+0.3"
+     ],
+     "items": [
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         870
+        ],
+        [
+         767.2,
+         724.1
+        ]
+       ],
+       "color": "pencil",
+       "lw": 6,
+       "at": "n13@turns",
+       "dur": 0.01
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         870
+        ],
+        [
+         785.5,
+         982.4
+        ]
+       ],
+       "color": "red",
+       "lw": 9,
+       "at": "n13@turns+0.2",
+       "dur": 0.35
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         641.0,
+         805.2
+        ],
+        [
+         643.6,
+         809.4
+        ],
+        [
+         646.0,
+         813.8
+        ],
+        [
+         648.3,
+         818.3
+        ],
+        [
+         650.3,
+         822.8
+        ],
+        [
+         652.2,
+         827.5
+        ],
+        [
+         653.9,
+         832.2
+        ],
+        [
+         655.4,
+         836.9
+        ],
+        [
+         656.6,
+         841.8
+        ],
+        [
+         657.7,
+         846.7
+        ],
+        [
+         658.6,
+         851.6
+        ],
+        [
+         659.2,
+         856.5
+        ],
+        [
+         659.7,
+         861.5
+        ],
+        [
+         659.9,
+         866.5
+        ],
+        [
+         660.0,
+         871.5
+        ],
+        [
+         659.8,
+         876.5
+        ],
+        [
+         659.4,
+         881.5
+        ],
+        [
+         658.9,
+         886.5
+        ],
+        [
+         658.1,
+         891.4
+        ],
+        [
+         657.1,
+         896.3
+        ],
+        [
+         655.9,
+         901.1
+        ],
+        [
+         654.5,
+         905.9
+        ],
+        [
+         652.9,
+         910.7
+        ],
+        [
+         651.1,
+         915.3
+        ],
+        [
+         649.1,
+         919.9
+        ]
+       ],
+       "color": "red",
+       "lw": 5,
+       "at": "n13@turns+0.4",
+       "dur": 0.5
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "ow",
+     "xy": [
+      70,
+      1238
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "n13@later",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "note": "four small clocks in a row (d_model = 8): speeds 1, 0.1, 0.01, 0.001 radians per word; hands at positions 0-3 (F11, F13)",
+   "items": [
+    {
+     "t": "label",
+     "text": "fourT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 76,
+     "align": "left",
+     "at": "p6+0.4",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "fourS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n15@radian"
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      150,
+      830
+     ],
+     "w": 236,
+     "at": "p6+0.30",
+     "dur": 1.0
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      400,
+      830
+     ],
+     "w": 236,
+     "at": "p6+0.50",
+     "dur": 1.0
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      650,
+      830
+     ],
+     "w": 236,
+     "at": "p6+0.70",
+     "dur": 1.0
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      900,
+      830
+     ],
+     "w": 236,
+     "at": "p6+0.90",
+     "dur": 1.0
+    },
+    {
+     "t": "label",
+     "text": "sp0",
+     "xy": [
+      150,
+      660
+     ],
+     "px": 48,
+     "color": "red",
+     "font": "latin",
+     "at": "n15@one"
+    },
+    {
+     "t": "label",
+     "text": "sp1",
+     "xy": [
+      400,
+      660
+     ],
+     "px": 48,
+     "color": "ink",
+     "font": "latin",
+     "at": "n16@40%"
+    },
+    {
+     "t": "label",
+     "text": "sp2",
+     "xy": [
+      650,
+      660
+     ],
+     "px": 48,
+     "color": "ink",
+     "font": "latin",
+     "at": "n16@65%"
+    },
+    {
+     "t": "label",
+     "text": "sp3",
+     "xy": [
+      900,
+      660
+     ],
+     "px": 48,
+     "color": "ink",
+     "font": "latin",
+     "at": "n16@90%"
+    },
+    {
+     "t": "label",
+     "text": "deg",
+     "xy": [
+      150,
+      1000
+     ],
+     "px": 40,
+     "color": "red",
+     "at": "n15@57degrees",
+     "align": "left",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "slow",
+     "xy": [
+      860,
+      1000
+     ],
+     "px": 36,
+     "at": "n16@barely",
+     "patch": 0.3
+    },
+    {
+     "t": "group",
+     "at": "n14@four+0.3",
+     "fadeIn": [
+      "n14@four+0.3",
+      "n14@four+0.3+0.30"
+     ],
+     "items": [
+      {
+       "t": "pen",
+       "pts": [
+        [
+         150,
+         830
+        ],
+        [
+         150.0,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n14@four+0.3",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         400,
+         830
+        ],
+        [
+         400.0,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n14@four+0.3",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         650,
+         830
+        ],
+        [
+         650.0,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n14@four+0.3",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         900,
+         830
+        ],
+        [
+         900.0,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n14@four+0.3",
+       "dur": 0.3
+      },
+      {
+       "t": "label",
+       "text": "pp0",
+       "xy": [
+        540,
+        1110
+       ],
+       "px": 72,
+       "color": "red",
+       "at": "n14@four+0.3"
+      }
+     ],
+     "fadeOut": [
+      "n15",
+      "n15+0.30"
+     ]
+    },
+    {
+     "t": "group",
+     "at": "n15",
+     "fadeIn": [
+      "n15",
+      "n15+0.30"
+     ],
+     "items": [
+      {
+       "t": "pen",
+       "pts": [
+        [
+         150,
+         830
+        ],
+        [
+         219.0,
+         785.7
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n15",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         400,
+         830
+        ],
+        [
+         408.2,
+         748.4
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n15",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         650,
+         830
+        ],
+        [
+         650.8,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n15",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         900,
+         830
+        ],
+        [
+         900.1,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n15",
+       "dur": 0.3
+      },
+      {
+       "t": "label",
+       "text": "pp1",
+       "xy": [
+        540,
+        1110
+       ],
+       "px": 72,
+       "color": "red",
+       "at": "n15"
+      }
+     ],
+     "fadeOut": [
+      "n16",
+      "n16+0.30"
+     ]
+    },
+    {
+     "t": "group",
+     "at": "n16",
+     "fadeIn": [
+      "n16",
+      "n16+0.30"
+     ],
+     "items": [
+      {
+       "t": "pen",
+       "pts": [
+        [
+         150,
+         830
+        ],
+        [
+         224.6,
+         864.1
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n16",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         400,
+         830
+        ],
+        [
+         416.3,
+         749.6
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n16",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         650,
+         830
+        ],
+        [
+         651.6,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n16",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         900,
+         830
+        ],
+        [
+         900.2,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n16",
+       "dur": 0.3
+      },
+      {
+       "t": "label",
+       "text": "pp2",
+       "xy": [
+        540,
+        1110
+       ],
+       "px": 72,
+       "color": "red",
+       "at": "n16"
+      }
+     ],
+     "fadeOut": [
+      "n17",
+      "n17+0.30"
+     ]
+    },
+    {
+     "t": "group",
+     "at": "n17",
+     "fadeIn": [
+      "n17",
+      "n17+0.30"
+     ],
+     "items": [
+      {
+       "t": "pen",
+       "pts": [
+        [
+         150,
+         830
+        ],
+        [
+         161.6,
+         911.2
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n17",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         400,
+         830
+        ],
+        [
+         424.2,
+         751.7
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n17",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         650,
+         830
+        ],
+        [
+         652.5,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n17",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         900,
+         830
+        ],
+        [
+         900.2,
+         748.0
+        ]
+       ],
+       "color": "red",
+       "lw": 7,
+       "at": "n17",
+       "dur": 0.3
+      },
+      {
+       "t": "label",
+       "text": "pp3",
+       "xy": [
+        540,
+        1110
+       ],
+       "px": 72,
+       "color": "red",
+       "at": "n17"
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "apart",
+     "xy": [
+      70,
+      1238
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n17@together",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p7",
+   "note": "her slide 26, the table (positions 0-4, slots 0-7); rings on 0.841471 and 0.001000; fast / slow; between -1 and 1 (c5; F10, F11, F12)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs26",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape7+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s26",
+     "xy": [
+      540,
+      830
+     ],
+     "w": 1000,
+     "rot": -0.012,
+     "at": "p7+0.7",
+     "crop": [
+      0.0,
+      0.1511,
+      0.6,
+      0.6889
+     ]
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      120,
+      515
+     ],
+     "w": 210,
+     "rot": -0.5,
+     "at": "tape7"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      960,
+      515
+     ],
+     "w": 190,
+     "rot": 0.5,
+     "at": "tape7+0.15"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      503,
+      362
+     ],
+     "r": [
+      90,
+      40
+     ],
+     "seed": 3,
+     "at": "n18@0841471",
+     "dur": 0.5,
+     "lw": 6
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      504,
+      862
+     ],
+     "r": [
+      90,
+      36
+     ],
+     "seed": 5,
+     "at": "n19@0001",
+     "dur": 0.5,
+     "lw": 6
+    },
+    {
+     "t": "label",
+     "text": "fast",
+     "xy": [
+      "sl:px",
+      1100,
+      300
+     ],
+     "px": 50,
+     "color": "red",
+     "at": "n19@fast",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "slw",
+     "xy": [
+      "sl:px",
+      1100,
+      905
+     ],
+     "px": 50,
+     "color": "red",
+     "at": "n19@slow",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "hl",
+     "xy": [
+      70,
+      1255
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "n20@minus",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "np",
+     "xy": [
+      70,
+      1198
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n20@parameters",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p8",
+   "note": "a long film strip: fast hands tell neighbours apart, slow hands tell near from far; 6.28 words vs about 60,000 (F12, F14, F15)",
+   "items": [
+    {
+     "t": "label",
+     "text": "msT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 80,
+     "align": "left",
+     "at": "p8+0.4"
+    },
+    {
+     "id": "rb",
+     "t": "draw",
+     "d": "ribbon",
+     "xy": [
+      540,
+      800
+     ],
+     "w": 940,
+     "at": "p8+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "rb",
+      0.2654,
+      0.2248
+     ],
+     "w": 260,
+     "h": 220,
+     "a": 0.35,
+     "at": "n21@fast"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "rb",
+      0.7498,
+      0.7648
+     ],
+     "w": 520,
+     "h": 260,
+     "a": 0.35,
+     "at": "n21@slow"
+    },
+    {
+     "t": "label",
+     "text": "nb",
+     "xy": [
+      70,
+      530
+     ],
+     "px": 46,
+     "color": "red",
+     "align": "left",
+     "at": "n21@fast",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "nf",
+     "xy": [
+      520,
+      640
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n21@slow",
+     "patch": 0.3,
+     "fit": 520
+    },
+    {
+     "t": "label",
+     "text": "w1",
+     "xy": [
+      70,
+      1185
+     ],
+     "px": 44,
+     "align": "left",
+     "at": "n22@628",
+     "patch": 0.3,
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "w2",
+     "xy": [
+      70,
+      1240
+     ],
+     "px": 44,
+     "color": "red",
+     "align": "left",
+     "at": "n22@slowest",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p9",
+   "note": "a student at a laptop, two bubbles: a long document, then the question; the question moves later (c8; F17, F21)",
+   "items": [
+    {
+     "t": "label",
+     "text": "qT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 76,
+     "align": "left",
+     "at": "n23@sine",
+     "fit": 940
+    },
+    {
+     "id": "qu",
+     "t": "draw",
+     "d": "question",
+     "xy": [
+      540,
+      975
+     ],
+     "w": 640,
+     "at": "p9+0.3",
+     "dur": 2.0
+    },
+    {
+     "t": "label",
+     "text": "doc",
+     "xy": [
+      "qu",
+      0.2415,
+      0.1045
+     ],
+     "px": 40,
+     "at": "n24@document",
+     "fit": 330
+    },
+    {
+     "t": "label",
+     "text": "qq",
+     "xy": [
+      "qu",
+      0.7445,
+      0.1045
+     ],
+     "px": 40,
+     "color": "red",
+     "at": "c8@60%",
+     "fit": 330
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "qu",
+      0.2866,
+      0.2383
+     ],
+     "to": [
+      "qu",
+      0.7475,
+      0.2383
+     ],
+     "bend": 0.25,
+     "lw": 6,
+     "at": "n25@later",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "ml",
+     "xy": [
+      76,
+      455
+     ],
+     "px": 44,
+     "align": "left",
+     "at": "n25@later",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "sm",
+     "xy": [
+      560,
+      455
+     ],
+     "px": 44,
+     "color": "red",
+     "align": "left",
+     "at": "n25@meaning",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p10",
+   "note": "one clock, two hands (two words); both turned by the same angle: the angle between stays; dot product depends only on distance (F17, F18)",
+   "items": [
+    {
+     "t": "label",
+     "text": "rT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 78,
+     "align": "left",
+     "at": "p10+0.4",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "rS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n26@rotation"
+    },
+    {
+     "id": "ck2",
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      540,
+      860
+     ],
+     "w": 780,
+     "at": "p10+0.3",
+     "dur": 1.6
+    },
+    {
+     "t": "group",
+     "fadeOut": [
+      "n26@rotation",
+      "n26@rotation+0.4"
+     ],
+     "items": [
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         860
+        ],
+        [
+         676.6,
+         609.9
+        ]
+       ],
+       "color": "ink",
+       "lw": 9,
+       "at": "n26",
+       "dur": 0.35
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         860
+        ],
+        [
+         814.6,
+         783.8
+        ]
+       ],
+       "color": "ink",
+       "lw": 9,
+       "at": "n26+0.3",
+       "dur": 0.35
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         602.3,
+         745.9
+        ],
+        [
+         606.1,
+         748.1
+        ],
+        [
+         609.8,
+         750.3
+        ],
+        [
+         613.4,
+         752.7
+        ],
+        [
+         616.9,
+         755.2
+        ],
+        [
+         620.4,
+         757.8
+        ],
+        [
+         623.7,
+         760.6
+        ],
+        [
+         627.0,
+         763.4
+        ],
+        [
+         630.2,
+         766.4
+        ],
+        [
+         633.3,
+         769.4
+        ],
+        [
+         636.2,
+         772.6
+        ],
+        [
+         639.1,
+         775.8
+        ],
+        [
+         641.8,
+         779.2
+        ],
+        [
+         644.5,
+         782.6
+        ],
+        [
+         647.0,
+         786.2
+        ],
+        [
+         649.4,
+         789.8
+        ],
+        [
+         651.7,
+         793.4
+        ],
+        [
+         653.8,
+         797.2
+        ],
+        [
+         655.9,
+         801.0
+        ],
+        [
+         657.8,
+         804.9
+        ],
+        [
+         659.5,
+         808.9
+        ],
+        [
+         661.2,
+         812.9
+        ],
+        [
+         662.7,
+         817.0
+        ],
+        [
+         664.0,
+         821.1
+        ],
+        [
+         665.3,
+         825.2
+        ]
+       ],
+       "color": "red",
+       "lw": 5,
+       "at": "n26+0.6",
+       "dur": 0.4
+      }
+     ]
+    },
+    {
+     "t": "group",
+     "at": "n26@rotation",
+     "fadeIn": [
+      "n26@rotation",
+      "n26@rotation+0.3"
+     ],
+     "items": [
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         860
+        ],
+        [
+         676.6,
+         609.9
+        ]
+       ],
+       "color": "pencil",
+       "lw": 5,
+       "at": "n26@rotation",
+       "dur": 0.01
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         860
+        ],
+        [
+         814.6,
+         783.8
+        ]
+       ],
+       "color": "pencil",
+       "lw": 5,
+       "at": "n26@rotation",
+       "dur": 0.01
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         698.2,
+         570.4
+        ],
+        [
+         716.0,
+         580.8
+        ],
+        [
+         733.1,
+         592.4
+        ],
+        [
+         749.4,
+         605.0
+        ],
+        [
+         764.9,
+         618.5
+        ],
+        [
+         779.6,
+         633.1
+        ],
+        [
+         793.3,
+         648.5
+        ],
+        [
+         806.0,
+         664.7
+        ],
+        [
+         817.7,
+         681.7
+        ],
+        [
+         828.3,
+         699.4
+        ],
+        [
+         837.7,
+         717.7
+        ],
+        [
+         846.1,
+         736.6
+        ],
+        [
+         853.2,
+         755.9
+        ],
+        [
+         859.1,
+         775.7
+        ],
+        [
+         863.7,
+         795.8
+        ],
+        [
+         867.1,
+         816.1
+        ],
+        [
+         869.2,
+         836.7
+        ],
+        [
+         870.0,
+         857.3
+        ],
+        [
+         869.5,
+         877.9
+        ],
+        [
+         867.8,
+         898.4
+        ],
+        [
+         864.7,
+         918.8
+        ],
+        [
+         860.4,
+         939.0
+        ],
+        [
+         854.8,
+         958.8
+        ],
+        [
+         848.1,
+         978.3
+        ],
+        [
+         840.1,
+         997.3
+        ]
+       ],
+       "color": "pencil",
+       "lw": 4,
+       "at": "n26@rotation+0.1",
+       "dur": 0.6
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         860
+        ],
+        [
+         799.1,
+         978.6
+        ]
+       ],
+       "color": "ink",
+       "lw": 9,
+       "at": "n26@rotation+0.4",
+       "dur": 0.35
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         540,
+         860
+        ],
+        [
+         635.5,
+         1128.5
+        ]
+       ],
+       "color": "ink",
+       "lw": 9,
+       "at": "n26@rotation+0.6",
+       "dur": 0.35
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         658.2,
+         914.1
+        ],
+        [
+         656.3,
+         918.0
+        ],
+        [
+         654.3,
+         921.9
+        ],
+        [
+         652.2,
+         925.6
+        ],
+        [
+         650.0,
+         929.3
+        ],
+        [
+         647.6,
+         933.0
+        ],
+        [
+         645.1,
+         936.5
+        ],
+        [
+         642.5,
+         940.0
+        ],
+        [
+         639.8,
+         943.3
+        ],
+        [
+         636.9,
+         946.6
+        ],
+        [
+         634.0,
+         949.8
+        ],
+        [
+         631.0,
+         952.9
+        ],
+        [
+         627.8,
+         955.9
+        ],
+        [
+         624.6,
+         958.7
+        ],
+        [
+         621.2,
+         961.5
+        ],
+        [
+         617.8,
+         964.1
+        ],
+        [
+         614.3,
+         966.7
+        ],
+        [
+         610.7,
+         969.1
+        ],
+        [
+         607.0,
+         971.4
+        ],
+        [
+         603.3,
+         973.6
+        ],
+        [
+         599.4,
+         975.6
+        ],
+        [
+         595.6,
+         977.5
+        ],
+        [
+         591.6,
+         979.3
+        ],
+        [
+         587.6,
+         981.0
+        ],
+        [
+         583.5,
+         982.5
+        ]
+       ],
+       "color": "red",
+       "lw": 6,
+       "at": "n27@angle",
+       "dur": 0.5
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "stay",
+     "xy": [
+      70,
+      1180
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "imp2",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "dp",
+     "xy": [
+      70,
+      1240
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n28@depends",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p11",
+   "note": "her slide 27 taped; red box on PE(pos + k) = Rk · PE(pos) and on the dot-product line; proof is self-study (c9; F17-F20)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs27",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape11+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s27",
+     "xy": [
+      540,
+      860
+     ],
+     "w": 1000,
+     "rot": -0.012,
+     "at": "p11+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      120,
+      585
+     ],
+     "w": 210,
+     "rot": -0.5,
+     "at": "tape11"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      960,
+      585
+     ],
+     "w": 190,
+     "rot": 0.5,
+     "at": "tape11+0.15"
+    },
+    {
+     "t": "box",
+     "rect": [
+      550,
+      255,
+      1020,
+      325
+     ],
+     "on": "sl:px",
+     "lw": 5,
+     "at": "n29@equals",
+     "dur": 0.6
+    },
+    {
+     "t": "box",
+     "rect": [
+      860,
+      800,
+      1760,
+      875
+     ],
+     "on": "sl:px",
+     "lw": 5,
+     "at": "n29@rotate",
+     "dur": 0.6
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       231,
+       975
+      ],
+      [
+       "sl:px",
+       527,
+       975
+      ]
+     ],
+     "at": "n29@unchanged",
+     "dur": 0.4,
+     "lw": 5
+    },
+    {
+     "t": "label",
+     "text": "pf",
+     "xy": [
+      70,
+      1190
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n30@proof",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "pf2",
+     "xy": [
+      70,
+      1248
+     ],
+     "px": 46,
+     "color": "red",
+     "align": "left",
+     "at": "n31@mix",
+     "patch": 0.3,
+     "fit": 800
+    }
+   ]
+  },
+  {
+   "id": "p12",
+   "note": "two jars into one glass: the word and its clock reading become one vector; cross terms change (c10; F22)",
+   "items": [
+    {
+     "t": "label",
+     "text": "cT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 78,
+     "align": "left",
+     "at": "n32@remember",
+     "fit": 940
+    },
+    {
+     "id": "pr",
+     "t": "draw",
+     "d": "pour",
+     "xy": [
+      540,
+      840
+     ],
+     "w": 580,
+     "at": "p12+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "pr",
+      0.3221,
+      0.1699
+     ],
+     "w": 170,
+     "h": 170,
+     "a": 0.45,
+     "at": "n33@jars"
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "pr",
+      0.6358,
+      0.174
+     ],
+     "w": 170,
+     "h": 170,
+     "a": 0.5,
+     "at": "n33@jars+0.3"
+    },
+    {
+     "t": "wash",
+     "c": "sage",
+     "xy": [
+      "pr",
+      0.5015,
+      0.7637
+     ],
+     "w": 260,
+     "h": 420,
+     "a": 0.4,
+     "at": "n33@single"
+    },
+    {
+     "t": "label",
+     "text": "jw",
+     "xy": [
+      "pr",
+      0.1456,
+      0.3152
+     ],
+     "px": 46,
+     "at": "n33@word",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "jp",
+     "xy": [
+      "pr",
+      0.8613,
+      0.3152
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n33@reading",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "jv",
+     "xy": [
+      "pr",
+      0.8613,
+      0.7471
+     ],
+     "px": 46,
+     "at": "n33@single",
+     "patch": 0.3
+    },
+    {
+     "t": "group",
+     "at": "n34",
+     "fadeIn": [
+      "n34",
+      "n34+0.3"
+     ],
+     "items": [
+      {
+       "t": "label",
+       "text": "x1",
+       "xy": [
+        70,
+        1225
+       ],
+       "px": 40,
+       "align": "left",
+       "at": "n34@positionwithposition",
+       "patch": 0.3,
+       "fit": 940
+      },
+      {
+       "t": "label",
+       "text": "x2",
+       "xy": [
+        70,
+        1280
+       ],
+       "px": 46,
+       "color": "red",
+       "align": "left",
+       "at": "n34@change",
+       "patch": 0.3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "p13",
+   "note": "her slide 31 taped; the third-party diagram covered by a blank sheet; ring on \"!=\"; underline \"sum\" (F22)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs31",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape13+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s31",
+     "xy": [
+      540,
+      860
+     ],
+     "w": 1000,
+     "rot": -0.012,
+     "at": "p13+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      120,
+      585
+     ],
+     "w": 210,
+     "rot": -0.5,
+     "at": "tape13"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      960,
+      585
+     ],
+     "w": 190,
+     "rot": 0.5,
+     "at": "tape13+0.15"
+    },
+    {
+     "id": "cv",
+     "t": "cover",
+     "xy": [
+      348,
+      842
+     ],
+     "size": [
+      590,
+      345
+     ],
+     "at": "tape13+0.3",
+     "tape": {
+      "i": 2,
+      "dx": 0,
+      "dy": -170,
+      "w": 200,
+      "rot": 0.05,
+      "at": "tape13+0.5"
+     }
+    },
+    {
+     "t": "label",
+     "text": "cw1",
+     "xy": [
+      "cv",
+      0.5,
+      0.36
+     ],
+     "px": 50,
+     "at": "tape13+0.6"
+    },
+    {
+     "t": "label",
+     "text": "cw2",
+     "xy": [
+      "cv",
+      0.5,
+      0.62
+     ],
+     "px": 50,
+     "color": "red",
+     "at": "tape13+0.9"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1357,
+      568
+     ],
+     "r": [
+      40,
+      34
+     ],
+     "seed": 4,
+     "at": "n35@not",
+     "dur": 0.4,
+     "lw": 6
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1340,
+       552
+      ],
+      [
+       "sl:px",
+       1801,
+       552
+      ]
+     ],
+     "at": "n35@position",
+     "dur": 0.5,
+     "lw": 5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1384,
+       597
+      ],
+      [
+       "sl:px",
+       1845,
+       597
+      ]
+     ],
+     "at": "n35@2",
+     "dur": 0.5,
+     "lw": 5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       360,
+       966
+      ],
+      [
+       "sl:px",
+       434,
+       966
+      ]
+     ],
+     "at": "n36",
+     "dur": 0.3,
+     "lw": 5
+    },
+    {
+     "t": "label",
+     "text": "gap",
+     "xy": [
+      70,
+      1190
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n35@gap",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "pt",
+     "xy": [
+      70,
+      1250
+     ],
+     "px": 56,
+     "color": "red",
+     "align": "left",
+     "at": "imp3",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p14",
+   "note": "her rule of thumb (paraphrase): addition? try multiplication or concatenation; RoPE turns the query and key (F25, F26)",
+   "items": [
+    {
+     "t": "label",
+     "text": "ruT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 80,
+     "align": "left",
+     "at": "n37@addition"
+    },
+    {
+     "t": "sans",
+     "text": "ruS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n37@multiplication"
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      540,
+      840
+     ],
+     "w": 560,
+     "at": "p14+0.3",
+     "dur": 1.4
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      540,
+      840
+     ],
+     "w": 440,
+     "h": 440,
+     "a": 0.25,
+     "at": "n38@multiply"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       540,
+       840
+      ],
+      [
+       621.8,
+       646.6
+      ]
+     ],
+     "color": "pencil",
+     "lw": 6,
+     "at": "n38@multiply",
+     "dur": 0.35
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       602.3,
+       692.6
+      ],
+      [
+       609.6,
+       695.9
+      ],
+      [
+       616.7,
+       699.6
+      ],
+      [
+       623.6,
+       703.6
+      ],
+      [
+       630.3,
+       707.9
+      ],
+      [
+       636.8,
+       712.6
+      ],
+      [
+       643.1,
+       717.6
+      ],
+      [
+       649.1,
+       722.9
+      ],
+      [
+       654.8,
+       728.5
+      ],
+      [
+       660.2,
+       734.4
+      ],
+      [
+       665.3,
+       740.5
+      ],
+      [
+       670.1,
+       746.9
+      ],
+      [
+       674.6,
+       753.6
+      ],
+      [
+       678.8,
+       760.4
+      ],
+      [
+       682.6,
+       767.4
+      ],
+      [
+       686.0,
+       774.6
+      ],
+      [
+       689.1,
+       782.0
+      ],
+      [
+       691.8,
+       789.5
+      ],
+      [
+       694.2,
+       797.2
+      ],
+      [
+       696.1,
+       805.0
+      ],
+      [
+       697.7,
+       812.8
+      ],
+      [
+       698.8,
+       820.7
+      ],
+      [
+       699.6,
+       828.7
+      ],
+      [
+       700.0,
+       836.7
+      ],
+      [
+       699.9,
+       844.7
+      ]
+     ],
+     "color": "red",
+     "lw": 5,
+     "at": "n38@turns",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       540,
+       840
+      ],
+      [
+       749.9,
+       846.1
+      ]
+     ],
+     "color": "red",
+     "lw": 9,
+     "at": "n38@turns+0.3",
+     "dur": 0.35
+    },
+    {
+     "t": "label",
+     "text": "rp",
+     "xy": [
+      70,
+      1180
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "at": "n38@rope",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "su",
+     "xy": [
+      76,
+      1240
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n38@next"
+    }
+   ]
+  },
+  {
+   "id": "p15",
+   "note": "bookend: the two chases; clock hands give a place, added they keep distance only partly; turn, don't add",
+   "items": [
+    {
+     "t": "label",
+     "text": "bk1",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "n39@place"
+    },
+    {
+     "id": "cd2",
+     "t": "draw",
+     "d": "catdog",
+     "xy": [
+      540,
+      660
+     ],
+     "w": 900,
+     "at": "p15+0.2",
+     "dur": 1.4
+    },
+    {
+     "id": "dc2",
+     "t": "draw",
+     "d": "dogcat",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 900,
+     "at": "p15+0.6",
+     "dur": 1.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cd2",
+      0.238,
+      0.5097
+     ],
+     "w": 380,
+     "h": 230,
+     "a": 0.3,
+     "at": "p15+0.8"
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "dc2",
+      0.7545,
+      0.5142
+     ],
+     "w": 340,
+     "h": 220,
+     "a": 0.3,
+     "at": "p15+1.0"
+    },
+    {
+     "t": "label",
+     "text": "bk2",
+     "xy": [
+      70,
+      1240
+     ],
+     "px": 60,
+     "color": "red",
+     "align": "left",
+     "at": "n39@turn",
+     "patch": 0.3
+    }
+   ]
+  }
+ ]
+}

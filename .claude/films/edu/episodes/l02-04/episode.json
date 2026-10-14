@@ -1,0 +1,2179 @@
+{
+ "id": "l02-04",
+ "lecture": "L02",
+ "facts": "FACTS.md",
+ "title": "L02-04 RoPE: Position as a Rotation",
+ "langs": [
+  "en"
+ ],
+ "voice": {
+  "lines": "vo_lines.json",
+  "clips": "clips.json",
+  "clipDir": "~/picasso-work/clips/l02-04",
+  "rate": "+4%",
+  "slotPad": 0.4
+ },
+ "sound": {
+  "dir": "~/picasso-assets/snd"
+ },
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "slides",
+  "drawings": {
+   "reader": {
+    "src": "line_scroll_reader",
+    "w": 640
+   },
+   "catdog": {
+    "src": "line_cat_chases_dog",
+    "w": 880
+   },
+   "dogcat": {
+    "src": "line_dog_chases_cat",
+    "w": 880
+   },
+   "pour": {
+    "src": "line_paint_pour",
+    "w": 560
+   },
+   "clock": {
+    "src": "line_clock_face",
+    "w": 740
+   },
+   "whisper": {
+    "src": "line_whisper_line",
+    "w": 980
+   },
+   "squeeze": {
+    "src": "line_squeeze_strip",
+    "w": 980
+   },
+   "gears": {
+    "src": "line_clockwork",
+    "w": 1000
+   },
+   "ends": {
+    "src": "line_scroll_ends",
+    "w": 1000
+   },
+   "mic": {
+    "src": "line_mic",
+    "w": 240,
+    "boost": 0.3
+   }
+  },
+  "slides": {
+   "s32": {
+    "src": "p-32.png"
+   },
+   "s33": {
+    "src": "p-33.png"
+   },
+   "s36": {
+    "src": "p-36.png"
+   }
+  }
+ },
+ "mic": {
+  "drawing": "mic"
+ },
+ "end": {
+  "at": "endCard"
+ },
+ "panels": [
+  {
+   "id": "p0",
+   "note": "cover: a student reads an endless scroll under a clock; title; 4,000 vs 128,000 (F9, F14)",
+   "items": [
+    {
+     "id": "reader",
+     "t": "draw",
+     "d": "reader",
+     "xy": [
+      540,
+      1028
+     ],
+     "w": 640
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "reader",
+      0.4899,
+      0.1404
+     ],
+     "w": 300,
+     "h": 300,
+     "a": 0.3
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "reader",
+      0.5409,
+      0.7588
+     ],
+     "w": 560,
+     "h": 260,
+     "a": 0.3,
+     "rot": -0.1
+    },
+    {
+     "t": "dial",
+     "xy": [
+      "reader",
+      0.4899,
+      0.1404
+     ],
+     "r": 92,
+     "a": 0.55,
+     "head": false,
+     "lw": 9,
+     "color": "red"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      "reader",
+      0.4899,
+      0.1404
+     ],
+     "r": 66,
+     "a": -1.9,
+     "head": false,
+     "lw": 9,
+     "color": "red"
+    },
+    {
+     "t": "label",
+     "text": "title.0",
+     "xy": [
+      70,
+      345
+     ],
+     "px": 140,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.1",
+     "xy": [
+      84,
+      452
+     ],
+     "px": 70,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "id": "title2"
+    },
+    {
+     "t": "underline",
+     "of": "title2",
+     "dx": 6,
+     "dy": 42,
+     "rise": -8,
+     "bend": 0.03,
+     "at": "title",
+     "dur": 0.6
+    },
+    {
+     "t": "sans",
+     "text": "strip",
+     "xy": [
+      86,
+      525
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left"
+    },
+    {
+     "t": "label",
+     "text": "cv1",
+     "xy": [
+      795,
+      850
+     ],
+     "px": 40,
+     "fit": 165
+    },
+    {
+     "t": "label",
+     "text": "cv2",
+     "xy": [
+      795,
+      985
+     ],
+     "px": 46,
+     "color": "red",
+     "fit": 165
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "note": "attention alone sees no order: the cat chased the dog / the dog chased the cat",
+   "items": [
+    {
+     "t": "label",
+     "text": "ordT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 74,
+     "align": "left",
+     "at": "p1+0.4",
+     "fit": 940
+    },
+    {
+     "id": "catdog",
+     "t": "draw",
+     "d": "catdog",
+     "xy": [
+      540,
+      650
+     ],
+     "w": 880,
+     "at": "p1+0.3",
+     "dur": 1.8
+    },
+    {
+     "t": "label",
+     "text": "s1",
+     "xy": [
+      540,
+      880
+     ],
+     "px": 50,
+     "at": "n2@cat",
+     "font": "latin"
+    },
+    {
+     "id": "dogcat",
+     "t": "draw",
+     "d": "dogcat",
+     "xy": [
+      540,
+      1070
+     ],
+     "w": 880,
+     "at": "n2@dog",
+     "dur": 1.6
+    },
+    {
+     "t": "label",
+     "text": "s2",
+     "xy": [
+      540,
+      1255
+     ],
+     "px": 50,
+     "at": "n2@dog#2",
+     "font": "latin",
+     "patch": 0.3
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "catdog",
+      0.4956,
+      0.5097
+     ],
+     "w": 900,
+     "h": 280,
+     "a": 0.25,
+     "at": "n2@same"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "dogcat",
+      0.4936,
+      0.5142
+     ],
+     "w": 900,
+     "h": 260,
+     "a": 0.25,
+     "at": "n2@same+0.3"
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "note": "her slide 32 taped: sine 2017, learned absolute, relative, RoPE 2021-now (F1-F4)",
+   "kind": "slide",
+   "slide": {
+    "src": "s32",
+    "tape": "tape2",
+    "label": "hs32"
+   },
+   "items": [
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1225,
+       362
+      ],
+      [
+       "sl:px",
+       1670,
+       362
+      ]
+     ],
+     "at": "n3@2017",
+     "dur": 0.5,
+     "lw": 5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1225,
+       668
+      ],
+      [
+       "sl:px",
+       1455,
+       668
+      ]
+     ],
+     "at": "n3@gpt2",
+     "dur": 0.4,
+     "lw": 5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1220,
+       902
+      ],
+      [
+       "sl:px",
+       1270,
+       902
+      ]
+     ],
+     "at": "n3@t5",
+     "dur": 0.3,
+     "lw": 5
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      400,
+      1025
+     ],
+     "r": [
+      260,
+      42
+     ],
+     "seed": 4,
+     "at": "n4@rotary",
+     "dur": 0.5,
+     "lw": 6
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1740,
+      1045
+     ],
+     "r": [
+      175,
+      44
+     ],
+     "seed": 7,
+     "at": "n4@2021",
+     "dur": 0.5,
+     "lw": 6
+    },
+    {
+     "t": "label",
+     "text": "add3",
+     "xy": [
+      70,
+      1190
+     ],
+     "px": 54,
+     "align": "left",
+     "at": "n3@added#2",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "rope1",
+     "xy": [
+      70,
+      1250
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "n4@2021",
+     "patch": 0.3,
+     "fit": 800
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "note": "two jars poured into one glass: the word and its position mixed for good; cross terms (c31; F7)",
+   "items": [
+    {
+     "t": "label",
+     "text": "addT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 84,
+     "align": "left",
+     "at": "n5@add"
+    },
+    {
+     "id": "pour",
+     "t": "draw",
+     "d": "pour",
+     "xy": [
+      540,
+      860
+     ],
+     "w": 560,
+     "at": "p3+0.3",
+     "dur": 2.0
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      420,
+      600
+     ],
+     "w": 170,
+     "h": 170,
+     "a": 0.45,
+     "at": "n5"
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      640,
+      600
+     ],
+     "w": 170,
+     "h": 170,
+     "a": 0.5,
+     "at": "n5+0.3"
+    },
+    {
+     "t": "wash",
+     "c": "sage",
+     "xy": [
+      535,
+      1000
+     ],
+     "w": 220,
+     "h": 320,
+     "a": 0.4,
+     "at": "n6@mixed"
+    },
+    {
+     "t": "label",
+     "text": "jw",
+     "xy": [
+      215,
+      560
+     ],
+     "px": 48,
+     "at": "n6@word",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "jp",
+     "xy": [
+      860,
+      560
+     ],
+     "px": 48,
+     "color": "red",
+     "at": "n6@position",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "jm",
+     "xy": [
+      790,
+      1040
+     ],
+     "px": 44,
+     "at": "n6@mixed",
+     "patch": 0.3,
+     "fit": 170
+    },
+    {
+     "t": "label",
+     "text": "xt",
+     "xy": [
+      70,
+      1240
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "at": "n6@cross",
+     "patch": 0.3,
+     "fit": 900
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "note": "RoPE does not add, it turns: a pair of numbers = an arrow; one step per position (c27; F5)",
+   "items": [
+    {
+     "t": "label",
+     "text": "turnT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "n7",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "turnS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "n8@pair"
+    },
+    {
+     "id": "ck",
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      540,
+      830
+     ],
+     "w": 660,
+     "at": "p4+0.3",
+     "dur": 1.6
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      540,
+      830
+     ],
+     "w": 560,
+     "h": 560,
+     "a": 0.22,
+     "at": "n8@dial"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      540,
+      830
+     ],
+     "r": 220,
+     "a": -0.9,
+     "head": 26,
+     "lw": 10,
+     "color": "red",
+     "at": "n8@arrow",
+     "turns": [
+      {
+       "at": "n8@one",
+       "a": -0.2,
+       "dur": 0.6
+      },
+      {
+       "at": "n8@two#2",
+       "a": 0.5,
+       "dur": 0.6
+      },
+      {
+       "at": "n8@so",
+       "a": 1.2,
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "st1",
+     "xy": [
+      540,
+      1230
+     ],
+     "px": 48,
+     "color": "red",
+     "at": "n8@one",
+     "out": "n8@two#2",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "st2",
+     "xy": [
+      540,
+      1230
+     ],
+     "px": 48,
+     "color": "red",
+     "at": "n8@two#2",
+     "out": "n8@so",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "st3",
+     "xy": [
+      540,
+      1230
+     ],
+     "px": 48,
+     "color": "red",
+     "at": "n8@so",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "note": "her slide 33 taped; its figure covered by a blank sheet; our arrows: \"we know that\" vs \"of course we know\"; same angle (F6, F18, c24)",
+   "kind": "slide",
+   "slide": {
+    "src": "s33",
+    "tape": "tape5",
+    "label": "hs33"
+   },
+   "items": [
+    {
+     "id": "cv",
+     "t": "cover",
+     "xy": [
+      470,
+      885
+     ],
+     "size": [
+      780,
+      300
+     ],
+     "at": "tape5+0.3",
+     "tape": {
+      "i": 2,
+      "dx": 0,
+      "dy": -150,
+      "w": 200,
+      "rot": 0.05,
+      "at": "tape5+0.5"
+     }
+    },
+    {
+     "t": "label",
+     "text": "ph1",
+     "xy": [
+      300,
+      1065
+     ],
+     "px": 34,
+     "at": "n9@we",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "ph2",
+     "xy": [
+      650,
+      1065
+     ],
+     "px": 34,
+     "at": "n10@course",
+     "font": "latin"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      290,
+      990
+     ],
+     "r": 125,
+     "a": -0.45,
+     "head": 18,
+     "lw": 7,
+     "color": "ink",
+     "at": "n9@we#2",
+     "text": "w_we",
+     "px": 32
+    },
+    {
+     "t": "dial",
+     "xy": [
+      290,
+      990
+     ],
+     "r": 125,
+     "a": 0.55,
+     "head": 18,
+     "lw": 7,
+     "color": "red",
+     "at": "n9@know#2",
+     "text": "w_know",
+     "px": 32,
+     "arc": {
+      "r": 48,
+      "d": -1.0,
+      "at": "n10@angle"
+     }
+    },
+    {
+     "t": "dial",
+     "xy": [
+      650,
+      990
+     ],
+     "r": 125,
+     "a": -0.45,
+     "head": 18,
+     "lw": 7,
+     "color": "ink",
+     "at": "n10@we",
+     "turns": [
+      {
+       "at": "n10@both",
+       "a": 0.39,
+       "dur": 1.0
+      }
+     ],
+     "text": "w_we",
+     "px": 32
+    },
+    {
+     "t": "dial",
+     "xy": [
+      650,
+      990
+     ],
+     "r": 125,
+     "a": 0.55,
+     "head": 18,
+     "lw": 7,
+     "color": "red",
+     "at": "n10@know",
+     "turns": [
+      {
+       "at": "n10@both",
+       "a": 1.81,
+       "dur": 1.0
+      }
+     ],
+     "text": "w_know",
+     "px": 32,
+     "arc": {
+      "r": 48,
+      "d": -1.42,
+      "at": "n10@angle"
+     }
+    },
+    {
+     "t": "label",
+     "text": "pos1",
+     "xy": [
+      300,
+      790
+     ],
+     "px": 32,
+     "color": "red",
+     "at": "n9@zero",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "pos2",
+     "xy": [
+      650,
+      790
+     ],
+     "px": 32,
+     "color": "red",
+     "at": "n10@two",
+     "font": "latin"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       30,
+       1040
+      ],
+      [
+       "sl:px",
+       1855,
+       1040
+      ]
+     ],
+     "at": "c24",
+     "dur": 1.2,
+     "lw": 5
+    },
+    {
+     "t": "label",
+     "text": "same5",
+     "xy": [
+      70,
+      1240
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "at": "imp2",
+     "patch": 0.3,
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "note": "three clocks: positions 0-1, 2-3, 100-101 turned by m and n steps; the same score 0.513 (F19)",
+   "items": [
+    {
+     "t": "label",
+     "text": "distT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 74,
+     "align": "left",
+     "at": "p6+0.4",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "distS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "n12@scores"
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      190,
+      820
+     ],
+     "w": 320,
+     "at": "p6+0.3",
+     "dur": 1.0
+    },
+    {
+     "t": "label",
+     "text": "pp0",
+     "xy": [
+      190,
+      610
+     ],
+     "px": 40,
+     "color": "red",
+     "at": "n12@0",
+     "font": "latin"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      190,
+      820
+     ],
+     "r": 105,
+     "a": 5.6832,
+     "head": 14,
+     "lw": 6,
+     "color": "ink",
+     "at": "n12@0"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      190,
+      820
+     ],
+     "r": 105,
+     "a": 0.9,
+     "head": 14,
+     "lw": 6,
+     "color": "red",
+     "at": "n12@0+0.2"
+    },
+    {
+     "t": "label",
+     "text": "sc0",
+     "xy": [
+      190,
+      1040
+     ],
+     "px": 40,
+     "at": "n12@0+0.6",
+     "font": "latin"
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      540,
+      820
+     ],
+     "w": 320,
+     "at": "p6+0.6",
+     "dur": 1.0
+    },
+    {
+     "t": "label",
+     "text": "pp1",
+     "xy": [
+      540,
+      610
+     ],
+     "px": 40,
+     "color": "red",
+     "at": "n12@2",
+     "font": "latin"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      540,
+      820
+     ],
+     "r": 105,
+     "a": 0.0,
+     "head": 14,
+     "lw": 6,
+     "color": "ink",
+     "at": "n12@2"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      540,
+      820
+     ],
+     "r": 105,
+     "a": 1.5,
+     "head": 14,
+     "lw": 6,
+     "color": "red",
+     "at": "n12@2+0.2"
+    },
+    {
+     "t": "label",
+     "text": "sc1",
+     "xy": [
+      540,
+      1040
+     ],
+     "px": 40,
+     "at": "n12@2+0.6",
+     "font": "latin"
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      890,
+      820
+     ],
+     "w": 320,
+     "at": "p6+0.8",
+     "dur": 1.0
+    },
+    {
+     "t": "label",
+     "text": "pp2",
+     "xy": [
+      890,
+      610
+     ],
+     "px": 40,
+     "color": "red",
+     "at": "n12@100",
+     "font": "latin"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      890,
+      820
+     ],
+     "r": 105,
+     "a": 4.2673,
+     "head": 14,
+     "lw": 6,
+     "color": "ink",
+     "at": "n12@100"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      890,
+      820
+     ],
+     "r": 105,
+     "a": 5.7673,
+     "head": 14,
+     "lw": 6,
+     "color": "red",
+     "at": "n12@100+0.2"
+    },
+    {
+     "t": "label",
+     "text": "sc2",
+     "xy": [
+      890,
+      1040
+     ],
+     "px": 40,
+     "at": "n12@100+0.6",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "only6",
+     "xy": [
+      70,
+      1240
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "at": "n12@only",
+     "patch": 0.3,
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p7",
+   "note": "her slide 35 lettered (not taped): a block-diagonal matrix, one 2x2 turn per pair, zeros elsewhere; it multiplies q and k (F5, F7)",
+   "items": [
+    {
+     "t": "label",
+     "text": "matT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 74,
+     "align": "left",
+     "at": "p7+0.4",
+     "fit": 940
+    },
+    {
+     "t": "card",
+     "rect": [
+      150,
+      500,
+      930,
+      1010
+     ],
+     "seed": 3,
+     "r": 10,
+     "lw": 4,
+     "at": "n13@matrix",
+     "dur": 0.8
+    },
+    {
+     "t": "card",
+     "rect": [
+      175,
+      520,
+      345,
+      640
+     ],
+     "seed": 10,
+     "r": 10,
+     "lw": 3,
+     "dur": 0.35,
+     "at": "n13@pair+0.00"
+    },
+    {
+     "t": "label",
+     "text": "blk0",
+     "xy": [
+      260,
+      585
+     ],
+     "px": 40,
+     "font": "latin",
+     "color": "red",
+     "dur": 0.25,
+     "at": "n13@pair+0.00+0.21"
+    },
+    {
+     "t": "card",
+     "rect": [
+      360,
+      640,
+      530,
+      760
+     ],
+     "seed": 11,
+     "r": 10,
+     "lw": 3,
+     "dur": 0.35,
+     "at": "n13@pair+0.25"
+    },
+    {
+     "t": "label",
+     "text": "blk1",
+     "xy": [
+      445,
+      705
+     ],
+     "px": 40,
+     "font": "latin",
+     "color": "red",
+     "dur": 0.25,
+     "at": "n13@pair+0.25+0.21"
+    },
+    {
+     "t": "card",
+     "rect": [
+      545,
+      760,
+      715,
+      880
+     ],
+     "seed": 12,
+     "r": 10,
+     "lw": 3,
+     "dur": 0.35,
+     "at": "n13@pair+0.50"
+    },
+    {
+     "t": "label",
+     "text": "blk2",
+     "xy": [
+      630,
+      825
+     ],
+     "px": 40,
+     "font": "latin",
+     "color": "red",
+     "dur": 0.25,
+     "at": "n13@pair+0.50+0.21"
+    },
+    {
+     "t": "card",
+     "rect": [
+      730,
+      880,
+      900,
+      1000
+     ],
+     "seed": 13,
+     "r": 10,
+     "lw": 3,
+     "dur": 0.35,
+     "at": "n13@pair+0.75"
+    },
+    {
+     "t": "label",
+     "text": "blk3",
+     "xy": [
+      815,
+      945
+     ],
+     "px": 40,
+     "font": "latin",
+     "color": "red",
+     "dur": 0.25,
+     "at": "n13@pair+0.75+0.21"
+    },
+    {
+     "t": "label",
+     "text": "z0",
+     "xy": [
+      700,
+      590
+     ],
+     "px": 54,
+     "color": "pencil",
+     "at": "n13@zeros+0.00",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "z1",
+     "xy": [
+      820,
+      680
+     ],
+     "px": 54,
+     "color": "pencil",
+     "at": "n13@zeros+0.08",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "z2",
+     "xy": [
+      260,
+      860
+     ],
+     "px": 54,
+     "color": "pencil",
+     "at": "n13@zeros+0.16",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "z3",
+     "xy": [
+      380,
+      960
+     ],
+     "px": 54,
+     "color": "pencil",
+     "at": "n13@zeros+0.24",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "z4",
+     "xy": [
+      600,
+      930
+     ],
+     "px": 54,
+     "color": "pencil",
+     "at": "n13@zeros+0.32",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "z5",
+     "xy": [
+      820,
+      560
+     ],
+     "px": 54,
+     "color": "pencil",
+     "at": "n13@zeros+0.40",
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "rot2",
+     "xy": [
+      540,
+      1080
+     ],
+     "px": 58,
+     "at": "n13@sineandcosine",
+     "font": "latin",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "nox",
+     "xy": [
+      70,
+      1250
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "at": "n13@nothing",
+     "patch": 0.3,
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p8",
+   "note": "a whisper line: a position added once at the bottom gets lost up the stack; LLaMA turns q and k in every layer (c22, c12; F8)",
+   "items": [
+    {
+     "t": "label",
+     "text": "onceT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 74,
+     "align": "left",
+     "at": "n14@once",
+     "fit": 940
+    },
+    {
+     "id": "whisper",
+     "t": "draw",
+     "d": "whisper",
+     "xy": [
+      540,
+      800
+     ],
+     "w": 980,
+     "at": "p8+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "whisper",
+      0.1065,
+      0.4844
+     ],
+     "w": 260,
+     "h": 520,
+     "a": 0.35,
+     "at": "n14@position"
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "whisper",
+      0.8829,
+      0.4844
+     ],
+     "w": 280,
+     "h": 520,
+     "a": 0.3,
+     "at": "c22@40%"
+    },
+    {
+     "t": "label",
+     "text": "l1",
+     "xy": [
+      190,
+      1150
+     ],
+     "px": 44,
+     "at": "n14@bottom",
+     "patch": 0.3,
+     "font": "latin"
+    },
+    {
+     "t": "label",
+     "text": "lost",
+     "xy": [
+      800,
+      1150
+     ],
+     "px": 58,
+     "color": "red",
+     "at": "c22@60%",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "every",
+     "xy": [
+      70,
+      1205
+     ],
+     "px": 54,
+     "color": "red",
+     "align": "left",
+     "at": "n15@every",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "qk",
+     "xy": [
+      76,
+      1250
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n15@values"
+    }
+   ]
+  },
+  {
+   "id": "p9",
+   "note": "two clocks of the 64 in a Llama 2 7B head: the fastest (about 57 degrees a token) and the slowest (one turn per about 54,000 tokens) (F10)",
+   "items": [
+    {
+     "t": "label",
+     "text": "clkT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 78,
+     "align": "left",
+     "at": "n16@64",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "clkS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "n16@128"
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      290,
+      800
+     ],
+     "w": 420,
+     "at": "p9+0.3",
+     "dur": 1.2
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      790,
+      800
+     ],
+     "w": 420,
+     "at": "p9+0.6",
+     "dur": 1.2
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      290,
+      800
+     ],
+     "w": 330,
+     "h": 330,
+     "a": 0.25,
+     "at": "n17@fastest"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      790,
+      800
+     ],
+     "w": 330,
+     "h": 330,
+     "a": 0.25,
+     "at": "n17@slowest"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      290,
+      800
+     ],
+     "r": 150,
+     "a": 0,
+     "head": 20,
+     "lw": 8,
+     "color": "red",
+     "at": "n16@clocks",
+     "turns": [
+      {
+       "at": "n17@fastest",
+       "a": 1.0,
+       "dur": 0.5
+      },
+      {
+       "at": "n17@neighbours",
+       "a": 2.0,
+       "dur": 0.5
+      },
+      {
+       "at": "n17@slowest",
+       "a": 12.0,
+       "dur": 7.0
+      }
+     ]
+    },
+    {
+     "t": "dial",
+     "xy": [
+      790,
+      800
+     ],
+     "r": 150,
+     "a": 0,
+     "head": 20,
+     "lw": 8,
+     "color": "red",
+     "at": "n16@clocks",
+     "turns": [
+      {
+       "at": "n17@slowest",
+       "a": 0.1,
+       "dur": 6.0
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "fst",
+     "xy": [
+      290,
+      1065
+     ],
+     "px": 40,
+     "at": "n17@fastest",
+     "fit": 420
+    },
+    {
+     "t": "label",
+     "text": "slw",
+     "xy": [
+      790,
+      1065
+     ],
+     "px": 40,
+     "at": "n17@slowest",
+     "fit": 420
+    },
+    {
+     "t": "label",
+     "text": "nb",
+     "xy": [
+      290,
+      590
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n17@neighbours",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "nf",
+     "xy": [
+      790,
+      590
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n17@near",
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p10",
+   "note": "the slowest clock: about 27 degrees seen in training (4,096 tokens); at 128,000 more than two turns (c29; F11)",
+   "items": [
+    {
+     "t": "label",
+     "text": "prT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 84,
+     "align": "left",
+     "at": "n18@problem"
+    },
+    {
+     "t": "sans",
+     "text": "prS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "n18@slowest"
+    },
+    {
+     "t": "draw",
+     "d": "clock",
+     "xy": [
+      540,
+      815
+     ],
+     "w": 660,
+     "at": "p10+0.3",
+     "dur": 1.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      585,
+      690
+     ],
+     "w": 190,
+     "h": 240,
+     "a": 0.35,
+     "at": "n18@27degrees"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      540,
+      815
+     ],
+     "r": 225,
+     "a": 0,
+     "head": false,
+     "lw": 5,
+     "color": "pencil",
+     "at": "n18@trained",
+     "arc": {
+      "r": 180,
+      "d": 0.473,
+      "at": "n18@27degrees",
+      "lw": 6
+     }
+    },
+    {
+     "t": "dial",
+     "xy": [
+      540,
+      815
+     ],
+     "r": 225,
+     "a": 0,
+     "head": 26,
+     "lw": 10,
+     "color": "red",
+     "at": "n18@trained",
+     "turns": [
+      {
+       "at": "n18@27degrees",
+       "a": 0.473,
+       "dur": 1.2
+      },
+      {
+       "at": "n18@feed",
+       "a": 15.14,
+       "dur": 4.0
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "seen",
+     "xy": [
+      70,
+      1180
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n18@27degrees",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "never",
+     "xy": [
+      70,
+      1240
+     ],
+     "px": 46,
+     "color": "red",
+     "align": "left",
+     "at": "n18@feed",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "fix",
+     "xy": [
+      540,
+      1060
+     ],
+     "px": 54,
+     "color": "red",
+     "at": "n19@slow",
+     "patch": 0.4
+    }
+   ]
+  },
+  {
+   "id": "p11",
+   "note": "Position Interpolation: squeeze the positions so the long text fits the known angles; 2,048 to 32,768 (F12)",
+   "items": [
+    {
+     "t": "label",
+     "text": "piT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 74,
+     "align": "left",
+     "at": "n20@interpolation",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "piS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "n20@chen"
+    },
+    {
+     "id": "squeeze",
+     "t": "draw",
+     "d": "squeeze",
+     "xy": [
+      540,
+      770
+     ],
+     "w": 980,
+     "at": "p11+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "squeeze",
+      0.2076,
+      0.6605
+     ],
+     "w": 520,
+     "h": 260,
+     "a": 0.3,
+     "at": "n20@squeezes"
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "squeeze",
+      0.6682,
+      0.686
+     ],
+     "w": 260,
+     "h": 200,
+     "a": 0.4,
+     "at": "n21@catch"
+    },
+    {
+     "t": "label",
+     "text": "sq",
+     "xy": [
+      70,
+      1110
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n20@32",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "pi2",
+     "xy": [
+      70,
+      1180
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n21@2048",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "pi3",
+     "xy": [
+      70,
+      1245
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "at": "n21@catch",
+     "patch": 0.3,
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p12",
+   "note": "NTK-aware scaling: fast gears left alone, the big slow gear braked most; no fine-tuning (F13)",
+   "items": [
+    {
+     "t": "label",
+     "text": "ntT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 78,
+     "align": "left",
+     "at": "n22@ntkaware",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "ntS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "n22@community"
+    },
+    {
+     "id": "gears",
+     "t": "draw",
+     "d": "gears",
+     "xy": [
+      540,
+      800
+     ],
+     "w": 1000,
+     "at": "p12+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "gears",
+      0.1739,
+      0.4127
+     ],
+     "w": 380,
+     "h": 240,
+     "a": 0.35,
+     "at": "n22@fast"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "gears",
+      0.7023,
+      0.362
+     ],
+     "w": 440,
+     "h": 440,
+     "a": 0.3,
+     "at": "n22@slow"
+    },
+    {
+     "t": "label",
+     "text": "fa",
+     "xy": [
+      260,
+      1110
+     ],
+     "px": 44,
+     "at": "n22@fast",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "sl",
+     "xy": [
+      760,
+      1110
+     ],
+     "px": 44,
+     "color": "red",
+     "at": "n22@slow#2",
+     "patch": 0.3
+    },
+    {
+     "t": "label",
+     "text": "nof",
+     "xy": [
+      70,
+      1250
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n22@without",
+     "patch": 0.3,
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p13",
+   "note": "her slide 36 taped; box on the YaRN row; ring on the last column (a rough range) (c28; F14, F15, F20)",
+   "kind": "slide",
+   "slide": {
+    "src": "s36",
+    "tape": "tape13",
+    "label": "hs36"
+   },
+   "items": [
+    {
+     "t": "box",
+     "rect": [
+      105,
+      688,
+      1925,
+      868
+     ],
+     "on": "sl:px",
+     "lw": 5,
+     "at": "n23@yarn",
+     "dur": 0.7
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1755,
+      585
+     ],
+     "r": [
+      100,
+      165
+     ],
+     "seed": 6,
+     "at": "n24@column",
+     "dur": 0.6,
+     "lw": 6
+    },
+    {
+     "t": "label",
+     "text": "ya1",
+     "xy": [
+      70,
+      1180
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n23@10",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "ya2",
+     "xy": [
+      70,
+      1245
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "n24@rough",
+     "patch": 0.3,
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p14",
+   "note": "reading is not using: a student checks only the two ends of a long scroll; RULER 2024 (F16)",
+   "items": [
+    {
+     "t": "label",
+     "text": "limT",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 80,
+     "align": "left",
+     "at": "n25@reading",
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "limS",
+     "xy": [
+      76,
+      450
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "n25@2024"
+    },
+    {
+     "id": "ends",
+     "t": "draw",
+     "d": "ends",
+     "xy": [
+      540,
+      820
+     ],
+     "w": 1000,
+     "at": "p14+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "coral",
+     "xy": [
+      "ends",
+      0.4948,
+      0.4283
+     ],
+     "w": 520,
+     "h": 120,
+     "a": 0.35,
+     "at": "n25@using"
+    },
+    {
+     "t": "label",
+     "text": "r1",
+     "xy": [
+      70,
+      1180
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n25@17",
+     "patch": 0.3,
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "r2",
+     "xy": [
+      70,
+      1245
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "n25@half",
+     "patch": 0.3,
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p15",
+   "note": "bookend: the reader under the clock; the hand turns slowly; turn, do not add",
+   "items": [
+    {
+     "t": "label",
+     "text": "bk1",
+     "xy": [
+      70,
+      370
+     ],
+     "px": 74,
+     "align": "left",
+     "at": "n26@position",
+     "fit": 940
+    },
+    {
+     "id": "reader2",
+     "t": "draw",
+     "d": "reader",
+     "xy": [
+      540,
+      880
+     ],
+     "w": 560,
+     "at": "p15+0.2",
+     "dur": 1.8
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "reader2",
+      0.4899,
+      0.1404
+     ],
+     "w": 260,
+     "h": 260,
+     "a": 0.3,
+     "at": "p15+0.6"
+    },
+    {
+     "t": "dial",
+     "xy": [
+      "reader2",
+      0.4899,
+      0.1404
+     ],
+     "r": 80,
+     "a": 0.55,
+     "head": false,
+     "lw": 8,
+     "color": "red",
+     "at": "p15+1.0",
+     "turns": [
+      {
+       "at": "n26@distance",
+       "a": 1.2,
+       "dur": 4.0
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "bk2",
+     "xy": [
+      70,
+      1250
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "n26@further",
+     "patch": 0.3,
+     "fit": 940
+    }
+   ]
+  }
+ ]
+}

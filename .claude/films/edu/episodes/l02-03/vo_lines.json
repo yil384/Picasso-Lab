@@ -1,0 +1,202 @@
+[
+ {
+  "id": "n0",
+  "en": "The cat chased the dog. The dog chased the cat.",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "To attention with no positions, these two are the same sentence. So how does a Transformer know where each word sits?",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "In the 2017 Transformer, the encoder lets every word look at every other word, all at once.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "Each word mixes in the others by how well they match. Nothing in that mix says which word came first.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "Shake the words into a bag: the, cat, chased, the, dog. Both sentences give the same bag, and the same result for every word.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "Her slide says it plainly: without positional encoding, you cannot tell these two apart.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "One honest footnote. In a decoder-only model, each word sees only the words before it, so the two sentences already look different.",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "A 2022 paper by Haviv and colleagues found that such models, with no positional encoding at all, still learn word order and come close to the usual ones. Encoders that see both ways do not.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "Positional encoding is still the standard. So what does it look like?",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "The 2017 answer: give every position a vector, the same length as a word's vector, and add the two together.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "And that vector is not learned. It is computed from just two numbers: the position, and the slot.",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "Here is the trick. Take the slots in pairs. The first gets a sine, the second a cosine, of the same angle.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "A sine and a cosine of one angle are just the tip of a clock hand, on a circle of radius one.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "So each pair of slots is one clock hand. Move one word later, and the hand turns.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "Her example uses eight slots, so four hands.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "The first hand turns one radian per word, about 57 degrees.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "The next turns 0.1 of a radian, then 0.01, then 0.001. The slowest hand barely moves.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "Read all four hands together, and the positions are told apart.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "Her slide 26 prints the readings. Position 1, slot 0: 0.841471, the sine of one radian.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "Down in slot 6, the slow hand reads 0.001. Fast at the top, slow at the bottom.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "Every value stays between minus one and one, and there are no extra parameters.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "Why so many speeds? Fast hands tell neighbours apart. Slow hands tell near from far, across a whole text.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "In the 512-wide model, the fastest hand comes round every 6.28 words. The slowest takes about 60,000.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "Now the clever part. Why a sine and a cosine, and not just a sine?",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "Think of a question you ask after pasting in a long document.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "Every word of the question moves later by the document's length. Its meaning should not change.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "Moving every word k places later turns each hand by its own fixed angle. That is a rotation, and it depends only on k, not on where you started.",
+  "zh": ""
+ },
+ {
+  "id": "n27",
+  "en": "Turn two hands by the same angle, and the angle between them stays put.",
+  "zh": ""
+ },
+ {
+  "id": "n28",
+  "en": "So the dot product of two position vectors, a score of how much two arrows point the same way, depends only on how far apart the words are.",
+  "zh": ""
+ },
+ {
+  "id": "n29",
+  "en": "Her slide 27 writes it as: P E of pos plus k equals R k times P E of pos. Rotate both, and the dot product is unchanged.",
+  "zh": ""
+ },
+ {
+  "id": "n30",
+  "en": "The proof is on her next slides, as self-study.",
+  "zh": ""
+ },
+ {
+  "id": "n31",
+  "en": "The short version: the sine and cosine of a sum of angles mix into each other, exactly like a turning hand.",
+  "zh": ""
+ },
+ {
+  "id": "n32",
+  "en": "So, problem solved? Not quite. Remember, the position is added to the word.",
+  "zh": ""
+ },
+ {
+  "id": "n33",
+  "en": "Like two jars poured into one glass, the word and its clock reading become a single vector.",
+  "zh": ""
+ },
+ {
+  "id": "n34",
+  "en": "Attention compares those mixed vectors. The position-with-position part keeps the distance, but the word-with-position parts change when both words move.",
+  "zh": ""
+ },
+ {
+  "id": "n35",
+  "en": "Her slide 31: How at position 1 with You at position 3 does not score the same as How at 2 with You at 4, even though the gap is the same.",
+  "zh": ""
+ },
+ {
+  "id": "n36",
+  "en": "The relative distance is only partly there.",
+  "zh": ""
+ },
+ {
+  "id": "n37",
+  "en": "Her rule of thumb: when you see an addition, ask whether a multiplication or a concatenation would do better.",
+  "zh": ""
+ },
+ {
+  "id": "n38",
+  "en": "Multiply instead, and you get RoPE, from Su and colleagues in 2021. It turns the query and the key themselves. That is the next episode.",
+  "zh": ""
+ },
+ {
+  "id": "n39",
+  "en": "Clock hands at many speeds give every word its place. Added to the word, they keep the distance only partly. Next time: turn, don't add.",
+  "zh": ""
+ }
+]

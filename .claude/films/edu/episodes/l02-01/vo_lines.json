@@ -1,0 +1,217 @@
+[
+ {
+  "id": "n0",
+  "en": "The paper that started it all was about translation. Today's big chatbots threw away half of its design.",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "From Lecture 2 of Professor Yufei Ding's CSE 291P at UC San Diego.",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "The paper: Attention Is All You Need, 2017. Its model, the Transformer, was built to translate: a sentence in, its translation out.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "The encoder reads the sentence; the decoder writes the translation.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "Picture a team at one desk: a reader and a writer.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "He reads a sentence in a made-up language. She writes the translation: I am a student.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "Before 2017, the best translators were mostly recurrent networks.",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "A recurrent network reads one word after another, like a whisper passed down a line: one step per word.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "The 2017 paper dropped recurrence and kept only attention. Hence the title.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "Attention is a round table. Each word asks: which of the others are like me? It gathers from them, weighted by that, and updates itself.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "Unlike the whisper line, all the words do this in the same step, so a GPU can work on them at the same time.",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "The reader uses attention: every word can look at every other word, before and after it.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "Models read text in tokens: words or pieces of words. Professor Ding:",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "Writing, though, is still one word at a time, and each new word joins the input for the next.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "Before each word, she reads his notes on the whole input. That is cross-attention.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "That's the 2017 team. Professor Ding's advice for reading an older paper:",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "So, what would you cut?",
+  "zh": ""
+ },
+ {
+  "id": "n16b",
+  "en": "Most of today's large chat models that publish their design keep only the decoder. They fired the reader.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "Slide 11 of the lecture shades the cut in red. Delete the encoder. The cross-attention has nothing left to look at, so it goes too.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "What stays: the decoder alone. It's called decoder-only.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "Alone, the writer keeps the rule she always had: a card hides the rest of her strip.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "Each word may look at itself and the words before it, never ahead. That's called masked, or causal, attention.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "So how does she translate now? Write the request at the start of her page. It came first, so the card never hides it, and she simply continues the text.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "What does she lose? Try this: The bank was full of fish.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "When she reaches “bank”, the card hides the fish. Money, or river? The reader saw the whole sentence at once.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "Why read both ways at all? Professor Ding:",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "Looking only backward can hurt on some understanding tasks.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "So why accept a less exact model? Professor Ding's slide 12 keeps the books.",
+  "zh": ""
+ },
+ {
+  "id": "n27",
+  "en": "First gain: one stack instead of two.",
+  "zh": ""
+ },
+ {
+  "id": "n28",
+  "en": "The numbers a model learns are called parameters, or weights. Each half is a stack of layers; two stacks carry more: about 1.5 to 2 times, the slide estimates.",
+  "zh": ""
+ },
+ {
+  "id": "n29",
+  "en": "By our count, that cut takes the 2017 base model from about 63 million parameters to about 38 million: about 40% fewer.",
+  "zh": ""
+ },
+ {
+  "id": "n30",
+  "en": "Second gain: practice.",
+  "zh": ""
+ },
+ {
+  "id": "n31",
+  "en": "To learn translation directly you need pairs: a sentence and its translation. That's paired data. The 2017 model learned from about 4.5 million sentence pairs.",
+  "zh": ""
+ },
+ {
+  "id": "n32",
+  "en": "A next-word model, like our writer, can learn from any text: hide the next word, guess it, check.",
+  "zh": ""
+ },
+ {
+  "id": "n33",
+  "en": "GPT-3 read about 300 billion tokens; Llama 3, about 15 trillion.",
+  "zh": ""
+ },
+ {
+  "id": "n34",
+  "en": "One honest limit. A 2022 study found next-word models best right after training on plain text, but two-stack models ahead after extra training on many tasks.",
+  "zh": ""
+ },
+ {
+  "id": "n35",
+  "en": "And two-stack models still show up in translation.",
+  "zh": ""
+ },
+ {
+  "id": "n36",
+  "en": "So which is better? Professor Ding asks the question students ask:",
+  "zh": ""
+ },
+ {
+  "id": "n37",
+  "en": "Accurate: the team, reading both ways. Simple: the lone writer, any text.",
+  "zh": ""
+ },
+ {
+  "id": "n38",
+  "en": "Remember episode one: scale changes what models can do. The simple design that scales won, for now. Nobody has proven it is the best design.",
+  "zh": ""
+ },
+ {
+  "id": "n39",
+  "en": "Professor Ding's verdict:",
+  "zh": ""
+ },
+ {
+  "id": "n40",
+  "en": "Most of today's big chat models kept only the writer: she never peeks ahead, but any text is practice.",
+  "zh": ""
+ },
+ {
+  "id": "n41",
+  "en": "Next time you read an older paper, try Professor Ding's test: guess what comes after it.",
+  "zh": ""
+ }
+]
