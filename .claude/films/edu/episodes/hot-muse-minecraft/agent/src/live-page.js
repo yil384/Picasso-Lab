@@ -86,9 +86,9 @@ const logoData = () => {
 function posterSvg(game, aw, ah, logo = null) {
   const W = 1080, H = Math.round((1080 * ah) / aw), cy = H / 2;
   if (logo) {
-    // the logo (230 x 68, drawn at twice its size with its blocks kept), then the title under it
+    // the logo (230 x 57, drawn at twice its size with its blocks kept), then the title under it
     return `<svg class="poster" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-label="Muse plays Minecraft, live"><rect width="${W}" height="${H}" fill="#0b0e14"/>`
-      + `<image href="${logo}" x="310" y="${cy - 176}" width="460" height="136" style="image-rendering:pixelated"/>`
+      + `<image href="${logo}" x="310" y="${cy - 160}" width="460" height="114" style="image-rendering:pixelated"/>`
       + `<g font-family="system-ui,sans-serif" fill="#f3f5f9" text-anchor="middle"><text x="540" y="${cy + 50}" font-size="56" font-weight="700">MUSE PLAYS MINECRAFT</text>`
       + `<rect x="${540 - 48}" y="${cy + 84}" width="96" height="40" rx="8" fill="#e5484d"/><text x="540" y="${cy + 113}" font-size="24" font-weight="700">LIVE</text>`
       + `${game ? `<text x="540" y="${cy + 168}" font-size="26" fill="#aeb6c6">game ${game}</text>` : ''}</g></svg>`;
