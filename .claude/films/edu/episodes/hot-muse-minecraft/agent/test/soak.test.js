@@ -65,3 +65,14 @@ test('soak: production and a non-test client name are refused', async () => {
   assert.equal(await main(['http://127.0.0.1:9', '--name', 'muse'], { print: () => {}, printErr: (l) => errs.push(l) }), 2);
   assert.match(errs.at(-1), /must start with "e2e-"/);
 });
+
+test('soak-compare: a kind new tonight or worse starts a fix run; the same kinds as before do not', async () => {
+  const { compare } = await import('../scripts/soak-compare.mjs');
+  const night = (games) => ({ games: games.map(([game, outcome, kinds]) => ({ game, outcome, failures: kinds.map((kind) => ({ kind })) })) });
+  const prev = night([['g1', 'nether and back', ['LAVA no lava pool']], ['g2', 'nether and back', ['FAILED no obsidian came in']]]);
+  assert.deepEqual(compare(prev, night([['g3', 'nether and back', ['LAVA no lava pool']], ['g4', 'nether and back', []]])), [], 'nothing new');
+  assert.deepEqual(compare(prev, night([['g3', 'nether and back', ['FAILED no way there was found']], ['g4', 'nether and back', []]])), ['new: FAILED no way there was found (1 in 1 game)']);
+  assert.deepEqual(compare(prev, night([['g3', 'nether and back', ['FAILED no obsidian came in', 'FAILED no obsidian came in']], ['g4', 'nether and back', ['FAILED no obsidian came in']]])), ['worse: FAILED no obsidian came in (1 -> 3, games 1 -> 2)']);
+  assert.deepEqual(compare(prev, night([['g3', 'no portal', []], ['g4', 'nether and back', []]])), ['worse: 1 of 2 games got to the Nether and back (2 the night before)']);
+  assert.deepEqual(compare(null, night([['g3', 'nether and back', ['X y']]])), ['new: X y (1 in 1 game)'], 'no night before: all new');
+});
