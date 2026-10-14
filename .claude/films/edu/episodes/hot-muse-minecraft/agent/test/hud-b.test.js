@@ -267,7 +267,7 @@ test('HUD B: the lab\'s logo (STREAM_LOGO): off by default; on a white card, or 
   };
   assert.equal(frame(null)(1000, 40)[3], 0, 'off by default');
   const card = frame({ style: 'card' });
-  assert.ok(card(1000, 20)[3] > 200 && card(1000, 20)[0] > 200, 'the white card');
+  assert.ok(card(1000, 26)[3] > 200 && card(1000, 26)[0] > 200, 'the white card');
   assert.equal(card(1000, 126)[3], 0, 'nothing between it and the toasts');
   assert.equal(card(60, 40)[3], 0, 'nothing at the top left (Facebook\'s LIVE badge)');
   // a transparent white logo of 600 x 300: drawn at 200 x 100 (100 px high at most) with its shadow, no card
@@ -277,13 +277,13 @@ test('HUD B: the lab\'s logo (STREAM_LOGO): off by default; on a white card, or 
   sx.fillStyle = '#fff'; sx.fillRect(100, 100, 400, 100);
   fs.writeFileSync(path.join(dir, 'white.png'), src.toBuffer('image/png'));
   const plain = frame({ style: 'plain', file: path.join(dir, 'white.png') });
-  assert.ok(plain(962, 64)[0] > 200, 'the white logo');
-  assert.equal(plain(870, 20)[3], 0, 'no card around it');
-  const sh = plain(960, 82); assert.ok(sh[3] > 0 && sh[0] < 60, 'its hard shadow 2 px down');
+  assert.ok(plain(962, 70)[0] > 200, 'the white logo');
+  assert.equal(plain(870, 26)[3], 0, 'no card around it');
+  const sh = plain(960, 88); assert.ok(sh[3] > 0 && sh[0] < 60, 'its hard shadow 2 px down');
   fs.rmSync(dir, { recursive: true, force: true });
-  // plain with no file: the owner's pixel logo (assets/brand), 180 px wide at the top right
+  // plain with no file: the owner's pixel logo (assets/brand), 230 x 49 at the top right from y 20
   const pix = frame({ style: 'plain' });
-  assert.ok(pix(1064 - 90, 14 + 30)[3] > 0 && pix(1064 - 183, 14 + 30)[3] === 0, 'the pixel logo, 180 px wide');
+  assert.ok(pix(1064 - 115, 20 + 24)[3] > 0 && pix(1064 - 233, 20 + 24)[3] === 0 && pix(1064 - 115, 20 + 52)[3] === 0, 'the pixel logo, 230 x 49');
   assert.equal(pix(1000, 126)[3], 0);
   assert.equal(loadConfig({}).stream.logo, 'off');
   assert.equal(loadConfig({ STREAM_LOGO: 'plain', STREAM_LOGO_FILE: 'lab-logo-white.png' }).stream.logoFile, 'lab-logo-white.png');
