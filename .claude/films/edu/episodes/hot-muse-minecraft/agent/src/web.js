@@ -543,6 +543,25 @@ export function createWeb(opts = {}) {
   const ended = new Map(); // token -> {reason, at}, so an old link explains itself
   // game id -> its end ({at, reason, caller, report, attribution}): the live page asks after its game (src/live-page.js)
   const endedGames = new Map();
+  // the owner's key (MCP_OWNER_KEY): compared in constant time, never logged
+  const ownerDigest = web.ownerKey ? crypto.createHash('sha256').update(web.ownerKey).digest() : null;
+  const isOwner = (req) => {
+    if (!ownerDigest) return false;
+    let k = String(req.headers['x-muse-owner'] ?? '');
+    if (!k) { try { k = new URL(req.url, 'http://local').searchParams.get('owner') ?? ''; } catch { k = ''; } }
+    if (!k) return false;
+    return crypto.timingSafeEqual(crypto.createHash('sha256').update(k).digest(), ownerDigest);
+  };
+  // the camera's state per game for the live page (2 s cache: every page asks every 15 s)
+  const camCache = new Map();
+  const camState = async (id) => {
+    const c = camCache.get(id);
+    if (c && now() - c.at < 2_000) return c.st;
+    const st = opts.liveState ? await opts.liveState(id) : null;
+    camCache.set(id, { at: now(), st });
+    if (camCache.size > 500) camCache.delete(camCache.keys().next().value);
+    return st;
+  };
   const sessionLimiter = createLimiter(opts.sessionsPerHour ?? 30, now);
   const askLimiter = createLimiter(web.askPerHour, now);
   const adminFails = createLimiter(5, now);
@@ -1467,6 +1486,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
         links: (s, b) => ({ eyes: `${b}/eyes/${s.viewId}/`, watch: `${b}/watch/${s.viewId}/` }),
         liveVideo: (s) => { try { return opts.liveVideo?.(s.id) ?? null; } catch { return null; } },
         liveView: opts.liveView ? (s, o) => Promise.resolve(opts.liveView(s.id, o)).catch(() => null) : null,
+        isOwner: (req) => isOwner(req),
         liveEnabled: opts.liveEnabled === true,
         term: typeof opts.term === 'function' ? (id, u) => { try { opts.term(id, u); } catch { /* the video goes on without it */ } } : null,
         leaveQueue: (key) => { const i = waiting.findIndex((w) => w.key === key); if (i >= 0) waiting.splice(i, 1); },
@@ -1486,12 +1506,21 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (p === '/favicon.ico') return send(res, 204, '', {});
     // the live page's question (an image: muse.ai's panel allows no fetch): has this game ended? 1 px wide no, 2 px
     // yes; and the ended game's card
-    const lv = /^\/live\/(g[0-9a-f]{6,16})\/(state|end)\.svg$/.exec(p);
+    const lv = /^\/live\/(g[0-9a-f]{6,16})\/(state|end|v[0-2])\.svg$/.exec(p);
     if (lv) {
       only('GET');
       const e = endedGames.get(lv[1]);
       const img = { 'content-type': 'image/svg+xml', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'", 'cross-origin-resource-policy': 'cross-origin' };
-      if (lv[2] === 'state') return send(res, 200, `<svg xmlns="http://www.w3.org/2000/svg" width="${e ? 2 : 1}" height="1"/>`, img);
+      // on camera and live: 3 px wide (a page in line swaps in the player); its live video's id in v0..v2.svg, 4 digits
+      // in each side (+1), the id padded to 24 digits
+      const st = e ? null : await camState(lv[1]);
+      const vid = st && st.state === 'live' && st.game === lv[1] && /^\d{1,24}$/.test(String(st.videoId ?? '')) ? String(st.videoId).padStart(24, '0') : null;
+      if (lv[2] === 'state') return send(res, 200, `<svg xmlns="http://www.w3.org/2000/svg" width="${e ? 2 : vid ? 3 : 1}" height="1"/>`, img);
+      if (lv[2][0] === 'v') {
+        if (!vid) return send(res, 404, '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>', img);
+        const k = Number(lv[2][1]);
+        return send(res, 200, `<svg xmlns="http://www.w3.org/2000/svg" width="${1 + Number(vid.slice(k * 8, k * 8 + 4))}" height="${1 + Number(vid.slice(k * 8 + 4, k * 8 + 8))}"/>`, img);
+      }
       if (!e) return send(res, 404, '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>', img);
       return send(res, 200, endCardSvg({ game: lv[1], caller: e.caller, reason: e.reason, report: e.report, attribution: e.attribution }), img);
     }

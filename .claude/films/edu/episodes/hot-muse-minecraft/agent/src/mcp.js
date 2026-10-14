@@ -650,6 +650,8 @@ export function createMcp(hooks) {
   }
   /** A game whose play waits for live_view: the server has the live channel, the user watches, and it was not called. */
   const liveRequired = (s) => hooks.liveEnabled === true && s && !s.liveViewed && s.liveOff !== true;
+  /** A game in line for the camera, in words. */
+  const queuedText = (id, q) => `Live view of game ${id}: the camera is filming another game right now; yours runs normally. You are number ${q?.position ?? '?'} in line (about ${q?.waitMin ?? '?'} min). Call live_view again later, or keep playing: when the camera reaches you, your stream starts.`;
 
   /** The dry-run check for steps on this game: the plan, or null when the check cannot run (then nothing is refused). */
   function checkSteps(s, steps) {
@@ -1109,7 +1111,7 @@ export function createMcp(hooks) {
     });
 
     server.registerTool('live_view', {
-      description: 'Read-only for the game. format "html" (default): a web page of about 2 KB that shows this game\'s live video (Facebook\'s video player, starting muted, a status line and a few lines of script that reload the player; no request of its own; it can be shown as a web artifact), and a plain link. The server has one camera: it films the game whose live_view call came last. While the video starts, the call waits up to about 40 s. "link": JSON with two 3D views of the bot (first_person_url, behind_url). "embed": JSON with the player URL.',
+      description: 'Read-only for the game. format "html" (default): a web page of about 2 KB that shows this game\'s live video (Facebook\'s video player, starting muted, a status line and a few lines of script that reload the player; no request of its own; it can be shown as a web artifact), and a plain link. The server has one camera, first come, first served: it stays on a game until that game ends, and a game that calls live_view while another has it is put in line (the reply says its place; the game itself runs normally). While the video starts, the call waits up to about 40 s. "link": JSON with two 3D views of the bot (first_person_url, behind_url). "embed": JSON with the player URL.',
       inputSchema: { format: z.enum(['html', 'link', 'embed']).optional().describe('"html" (default), "link" or "embed"') },
       annotations: { readOnlyHint: true },
     }, async ({ format = 'html' }, extra) => {
@@ -1122,18 +1124,21 @@ export function createMcp(hooks) {
       // shape of answer, the 3D view instead of the video, and the camera stays where it is
       if (s.caller === 'TEST SCRIPT' && !hooks.testLives) {
         safely(() => hooks.log.event('live_view_test', { session: sid8(), game: s.id, caller: s.caller, format, record: Boolean(hooks.testRecord) }));
-        // MCP_TEST_RECORD: the camera films it for the recording only (how the recording is tested; no live video)
-        if (hooks.testRecord) safely(() => hooks.liveView?.(s, { waitMs: 0, local: true }));
-        if (format === 'embed') return text(JSON.stringify({ format, game: s.id, live: false, state: 'test', camera_game: null, player: null, embed_url: null, video_url: null }));
+        // MCP_TEST_RECORD: the camera films it for the recording only (how the recording is tested; no live video), in
+        // line behind the game that has the camera
+        const tv = hooks.testRecord ? await Promise.resolve(hooks.liveView?.(s, { waitMs: 0, local: true })).catch(() => null) : null;
+        const tq = tv?.state === 'queued' ? tv.queue : null;
+        if (format === 'embed') return text(JSON.stringify({ format, game: s.id, live: false, state: 'test', camera_game: null, player: null, embed_url: null, video_url: null, ...(tq ? { queue: tq } : {}) }));
         const html = liveViewHtml({ state: 'test', game: s.id, fb: false });
         const lines = [`Live view of game ${s.id}: test caller: no Facebook live (the live videos a day are few and kept for players). The game itself works.`,
+          ...(tq ? [queuedText(s.id, tq)] : []),
           `3D view in a web page (plain link): ${l.eyes}`, '', 'HTML page (a status line):', html];
         return { content: [{ type: 'text', text: lines.join('\n') }], structuredContent: { format: 'html', game: s.id, state: 'test', live: false, camera_game: null, video_url: null, embed_url: null, html } };
       }
       // the Facebook live channel: the camera is pointed at this game and the call waits for Facebook to show it
       const budget = Math.max(0, waitMs - 3_000);
       const asked = Date.now();
-      const v = (await hooks.liveView?.(s, { waitMs: budget, signal: signalOf(extra) })) ?? (() => {
+      const v = (await hooks.liveView?.(s, { waitMs: budget, signal: signalOf(extra), owner: Boolean(entry.owner) })) ?? (() => {
         const old = hooks.liveVideo?.(s) ?? null; // STREAM_VIDEO_URL while the game's stream runs
         return old ? { fb: false, state: 'live', camera: s.id, videoUrl: old.videoUrl, embedUrl: old.embedUrl } : { fb: false, state: 'off' };
       })();
@@ -1142,16 +1147,17 @@ export function createMcp(hooks) {
       const embedUrl = v.embedUrl ?? null;
       const videoUrl = v.videoUrl ?? null;
       if (format === 'embed') {
-        return text(JSON.stringify({ format, game: s.id, live, state: v.state, camera_game: camera, player: embedUrl ? 'facebook' : null, embed_url: embedUrl, video_url: videoUrl }));
+        return text(JSON.stringify({ format, game: s.id, live, state: v.state, camera_game: camera, player: embedUrl ? 'facebook' : null, embed_url: embedUrl, video_url: videoUrl, ...(v.queue ? { queue: v.queue } : {}) }));
       }
       // at the cap: until when, in UTC (the game is not affected)
       const capUntil = v.state === 'capped' && Number.isFinite(v.retryInS) ? new Date(Date.now() + v.retryInS * 1000).toISOString().slice(11, 16) : null;
       const daily = /24 hours|day/.test(String(v.error ?? ''));
-      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb, ownerOnly: Boolean(v.warning), aspect: v.aspect, until: capUntil, daily, statusBase: entry.base, logo: Boolean(hooks.posterLogo) });
+      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb, ownerOnly: Boolean(v.warning), aspect: v.aspect, until: capUntil, daily, statusBase: entry.base, logo: Boolean(hooks.posterLogo), queue: v.queue, fbOwner: v.owner });
       const lines = [];
       const since = v.liveSince ? ` since ${String(v.liveSince).slice(11, 19)} UTC` : '';
       if (live) lines.push(`Live view of game ${s.id}: live on Facebook${since}.`);
-      else if (v.state === 'live') lines.push(`Live view: the camera is on game ${camera} now, not on ${s.id}: that game asked for the live view after this one. A new live_view call points the camera back at ${s.id}.`);
+      else if (v.state === 'queued') lines.push(queuedText(s.id, v.queue));
+      else if (v.state === 'live') lines.push(`Live view: the camera is on game ${camera} now, not on ${s.id}; ${s.id} is in line for it. Call live_view again later.`);
       else if (v.state === 'capped') {
         const mins = Math.max(1, Math.ceil((v.retryInS ?? 60) / 60));
         const inWords = mins < 90 ? `${mins} min` : `${Math.floor(mins / 60)} h ${mins % 60} min`;
@@ -1167,11 +1173,11 @@ export function createMcp(hooks) {
       else lines.push(`Live view of game ${s.id}: live video is off on this server.`);
       lines.push(videoUrl ? `Video (plain link): ${videoUrl}` : `3D view in a web page (plain link): ${l.eyes}`);
       if (v.warning) lines.push(`Warning: ${v.warning}`);
-      if (v.fb) lines.push('One camera serves every game on this server: it films the game whose live_view call came last, so if another game calls live_view, this video shows that game until live_view is called again here. When no game is left the live video ends; the next game gets a new one.');
+      if (v.fb) lines.push('One camera serves every game on this server, first come, first served: it stays on a game until that game ends (or makes no call for 5 minutes while others wait), then moves to the next game in line, which gets a live video of its own.');
       lines.push('', 'HTML page (Facebook\'s video player and a status line; a small script reloads the player, no request of its own):', html);
       return {
         content: [{ type: 'text', text: lines.join('\n') }],
-        structuredContent: { format: 'html', game: s.id, state: v.state, live, camera_game: camera, video_url: videoUrl, embed_url: embedUrl, ...(v.warning ? { warning: v.warning } : {}), html },
+        structuredContent: { format: 'html', game: s.id, state: v.state, live, camera_game: camera, video_url: videoUrl, embed_url: embedUrl, ...(v.queue ? { queue: v.queue } : {}), ...(v.warning ? { warning: v.warning } : {}), html },
       };
     });
 
@@ -1353,6 +1359,8 @@ export function createMcp(hooks) {
       entry.hits.push(t);
     }
     entry.lastCall = now();
+    // the owner's connection (MCP_OWNER_KEY, ?owner= or X-Muse-Owner): its games are first in line for the camera
+    if (!entry.owner && safely(() => hooks.isOwner?.(req), false)) entry.owner = true;
     // be lenient with hand-written clients: a POST that forgot the Accept types the spec asks for gets them added
     // (the SDK would answer 406, which Muse's first client hit on 2026-10-07)
     if (req.method === 'POST') {

@@ -250,6 +250,11 @@ export function loadConfig(env = process.env) {
   }
   if (proxySecret && trustProxy === 'off') problems.push('WEB_PROXY_SECRET needs WEB_TRUST_PROXY (cloudflare, or the number of proxies that append to X-Forwarded-For)');
   hidden(web, 'proxySecret', proxySecret);
+  // The owner's key for demos (deploy/.env, never in code): an MCP connection that brings it (?owner=<key> on the /mcp
+  // URL, or the header X-Muse-Owner) puts its games first in line for the camera (src/fb-live.js)
+  const ownerKey = r.str('MCP_OWNER_KEY', '');
+  if (ownerKey && (ownerKey.length < 16 || !/^[A-Za-z0-9_-]+$/.test(ownerKey))) problems.push('MCP_OWNER_KEY must be at least 16 letters, digits, _ or - (make one with: openssl rand -hex 16)');
+  hidden(web, 'ownerKey', ownerKey);
 
   // Which body plays a guest game: ours (mineflayer in this process, src/body.js) or mineai (one Mine AI MCP host per
   // game in its own process, src/mineai/). Production keeps ours until the switch is flipped.
