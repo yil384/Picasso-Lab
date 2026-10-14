@@ -22,6 +22,7 @@ import { TOOLS, TOOL_NAMES, SCHEMAS, validateArgs, coerceArgs } from './contract
 import { createLogger, scrub } from './log.js';
 import { reportedDone } from './brain.js';
 import { createMcp } from './mcp.js';
+import { endCardSvg } from './live-page.js';
 
 const HOUR = 3_600_000;
 const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
@@ -503,6 +504,8 @@ export function createWeb(opts = {}) {
 
   const sessions = new Map(); // token -> session
   const ended = new Map(); // token -> {reason, at}, so an old link explains itself
+  // game id -> its end ({at, reason, caller, report, attribution}): the live page asks after its game (src/live-page.js)
+  const endedGames = new Map();
   const sessionLimiter = createLimiter(opts.sessionsPerHour ?? 30, now);
   const askLimiter = createLimiter(web.askPerHour, now);
   const adminFails = createLimiter(5, now);
@@ -695,6 +698,12 @@ export function createWeb(opts = {}) {
     const attribution = typeof s.body?.attribution === 'function' ? (() => { try { return s.body.attribution(); } catch { return null; } })() : null;
     // who acted, as get_state says it: Muse directly, by its rules (which, with when each was set), the body on its own
     const rulesNow = typeof s.body?.rules === 'function' ? (() => { try { return s.body.rules(); } catch { return null; } })() : null;
+    if (/^g[0-9a-f]{6,16}$/.test(String(s.id))) {
+      let report = null;
+      try { report = s.tracker?.report?.({ gameId: s.id, attribution })?.data ?? null; } catch { report = null; }
+      endedGames.set(s.id, { at: now(), reason, caller: s.caller ?? null, report, attribution: attribution ? { muse: attribution.muse, reflex: attribution.reflex, musePct: attribution.musePct, ...(attribution.rule != null ? { rule: attribution.rule, body: attribution.body, decidedPct: attribution.decidedPct } : {}) } : null });
+      while (endedGames.size > 200) endedGames.delete(endedGames.keys().next().value);
+    }
     log.event('session_end', { session: s.id, reason, ...(attribution ? { attribution: { muse: attribution.muse, reflex: attribution.reflex, care: attribution.care, musePct: attribution.musePct, ...(attribution.rule != null ? { rule: attribution.rule, body: attribution.body, decidedPct: attribution.decidedPct, byRule: attribution.byRule, ...(rulesNow ? { rules: rulesNow.rules, set: rulesNow.set } : {}) } : {}) } } : {}) });
     const body = s.body;
     s.closed = !body ? Promise.resolve() : Promise.resolve()
@@ -1363,6 +1372,17 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
 
     if (p === '/') { only('GET'); return sendHtml(res, 200, landingPage(req)); }
     if (p === '/favicon.ico') return send(res, 204, '', {});
+    // the live page's question (an image: muse.ai's panel allows no fetch): has this game ended? 1 px wide no, 2 px
+    // yes; and the ended game's card
+    const lv = /^\/live\/(g[0-9a-f]{6,16})\/(state|end)\.svg$/.exec(p);
+    if (lv) {
+      only('GET');
+      const e = endedGames.get(lv[1]);
+      const img = { 'content-type': 'image/svg+xml', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'", 'cross-origin-resource-policy': 'cross-origin' };
+      if (lv[2] === 'state') return send(res, 200, `<svg xmlns="http://www.w3.org/2000/svg" width="${e ? 2 : 1}" height="1"/>`, img);
+      if (!e) return send(res, 404, '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>', img);
+      return send(res, 200, endCardSvg({ game: lv[1], caller: e.caller, reason: e.reason, report: e.report, attribution: e.attribution }), img);
+    }
     if (p === '/openapi.json') { only('GET'); return sendJson(res, 200, openApiSpec(base(req), { leaseMs: web.leaseMs }), { 'access-control-allow-origin': '*' }); }
     if (p === '/log') {
       // the decision log is the operator's (who played what, the say text): admin token only
