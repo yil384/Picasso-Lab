@@ -1,0 +1,129 @@
+{
+ "episode": "QC06-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: can you find out whether two qubits are equal without finding out what either of them is? A staircase light wired to two hidden switches lights when they agree: you learn agree or disagree, never which way either switch is (line_qc_parity_hall_bulb, then the cover).",
+  "The blunt way (Q25-07 23:39-28:26, s22): ZZ as two separate Z measurements: four outcomes, both values learnt. Harmless for a plain 00 or 11, but for an entangled pair (|00>+|11>)/sqrt2 it destroys the very superposition you wanted to keep (Q24-08 36:36-37:17) (line_qc_parity_open_flaps: lifting both flaps; reuse line_qc_meas_flick_or_slap for 'reading ends it').",
+  "XX: turn both qubits first with Hadamards, then the same Z readings (27:23-28:22; reuse line_qc_meas_fixed_camera).",
+  "The four Bell states form a basis (28:28-33:17); the Bell circuit (H, then CNOT) is the pairing machine: two plain inputs in, one of four matched pairs out (line_qc_pair_machine). Honest caveat: matching cups stand for matching Z readings only; a real Bell pair also matches when both halves are read the X way, which no pair of dice does (QC04-04).",
+  "Bell measurement = the Bell circuit run backwards, then two Z readings: two lamps, two bits, which of the four pairs it was (33:17-38:56, Q24-08 40:30-46:22; clip Q25-07 34:03-34:29 'like a hello world program'; line_qc_pair_machine_reverse; tape Q25-07 s34).",
+  "Measuring any +-1 operator U with one helper (38:56-49:35): the helper starts at 0, then H, controlled-U, H, and only the helper is read: 0 means eigenvalue +1, 1 means -1; the data qubits are never read (clips 42:03-42:32 and 49:05-49:33; line_qc_parity_wall_wiring: the bulb is the helper, wired to both switches).",
+  "With U = ZZ that is the agree / disagree question; a pair in (|00>+|11>)/sqrt2 answers 'agree' and stays exactly as it was: the quantum payoff a light switch cannot show (back to line_qc_parity_hall_bulb).",
+  "Partial measurement (Q24-08 46:40-52:27, Q24-08.notes p4): read one qubit of a Bell pair and the other's Z reading is settled too, yet its holder sees nothing change: no message travels (line_qc_parity_far_cups; full story in QC04-04). Avoid Q24-08 43:04 (a student's answer).",
+  "Plant for QC08-02: three hidden switches and two bulbs between neighbours; a lit bulb points at the odd switch without anyone reading a switch: this circuit becomes the syndrome measurement (line_qc_parity_three_switches).",
+  "Cover (line_qc_cover_06_02; for the X post and thumbnails, not a film beat): the staircase, two hidden switches, one lit bulb, the experimenter looking up at it, pleased."
+ ],
+ "reuse": [
+  "line_qc_meas_fixed_camera",
+  "line_qc_meas_flick_or_slap",
+  "line_switch_dimmer"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_parity_hall_bulb",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_switch_dimmer",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "prompt": "Inside a plain house, a straight staircase seen from the side, rising from the lower left to the upper right, with a simple handrail. On the wall at the foot of the stairs and on the wall at the top of the stairs is one wall plate each, and each wall plate is covered by a small closed hinged flap, so the switch under it cannot be seen. Halfway up, one bare light bulb hangs from the ceiling on a short cord; it is lit (an empty bulb outline with short straight rays around it). The experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) stands at the foot of the stairs, looking up at the bulb with one finger raised, pleased, as if something has just become clear. Portrait image 1024x1536; the staircase, the bulb and the character fill about 85% of the width and about 88% of the height. No text, no letters, no numbers, no logos, no pictures on the walls."
+  },
+  {
+   "name": "line_qc_parity_open_flaps",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_parity_hall_bulb",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is the earlier picture of the same staircase: redraw it exactly the same way (the same characters, objects, proportions, framing and line weight) and change only what the description says. The other attached image is a style reference only (a line drawing made earlier for this series): match its line weight and pen feel, not its content.",
+   "prompt": "The very same staircase as in the first attached image, drawn the same way (the same stairs and handrail, the two wall plates with hinged flaps, the lit bulb halfway up, the same framing). Now both flaps are propped open, showing the two light switches underneath, and both switch levers point up. The traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers) stands halfway up the stairs holding a small torch, bending down to peer at the lower switch, delighted. At the foot of the stairs, the experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) covers the eyes with one hand, dismayed. Portrait image 1024x1536, framed like the first attached image. No text, no letters, no numbers, no logos, no pictures on the walls."
+  },
+  {
+   "name": "line_qc_parity_wall_wiring",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_switch_dimmer",
+    "line_balance",
+    "line_tiny_lab"
+   ],
+   "prompt": "A plain house wall seen straight from the front, drawn as a cutaway: a large rectangular area of the wall is open, showing the wiring inside. At the lower left of the opening sits one light switch on its wall plate, and at the lower right sits another identical light switch on its wall plate. At the top centre, one bare light bulb hangs from a ceiling rose, lit (an empty bulb outline with short straight rays around it). From each switch, two neat parallel wires run up inside the wall to a small square junction box just beside the ceiling rose, and one short wire runs from the junction box to the bulb; the wires are clean single lines with gentle bends, no tangles. No people. Landscape image 1536x1024; the cutaway fills about 85% of the width and about 80% of the height, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_pair_machine",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_knob_board",
+    "line_tiny_lab"
+   ],
+   "prompt": "On a workbench seen from the front and a little above stands the pairing machine: a small boxy wooden machine on four short legs, about as big as a microwave oven; on its flat top two funnels stand side by side, and just in front of each funnel sits one round lamp; a big hand crank sticks out of its right side; at the bottom of its front face is one wide, low opening. The traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers), at the left, drops one plain die into each of the two funnels. The experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers), at the right, turns the crank. Out of the bottom opening slides a little tray holding two identical small cups with closed domed lids, side by side on a little tray: a matched pair. Both lamps are unlit (plain empty circles). Landscape image 1536x1024; the machine and the two characters fill about 92% of the width and about 80% of the height, the machine in the centre. No text, no letters, no numbers, no logos, no markings on the machine."
+  },
+  {
+   "name": "line_qc_pair_machine_reverse",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_pair_machine",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is the earlier picture of the same pairing machine and characters: redraw it exactly the same way (the same characters, objects, proportions, framing and line weight) and change only what the description says. The other attached image is a style reference only (a line drawing made earlier for this series): match its line weight and pen feel, not its content.",
+   "prompt": "The very same scene as in the first attached image, drawn again the same way: the same pairing machine (a small boxy wooden machine on four short legs, two funnels on top, a round lamp in front of each funnel, a big crank on its right side, a wide low opening at the bottom of its front), the same two characters (the traveller: tall, curly hair under a knitted beanie, a padded jacket, a messenger bag; the experimenter: short spiky hair, safety goggles pushed up on the forehead, a lab coat) and the same framing. Only this changes: the machine now runs backwards. The experimenter turns the crank the other way, shown by a small curved arrow beside the crank; the traveller pushes the little tray with the two lidded cups into the bottom opening; both funnels are empty; on top, the left lamp is lit (short straight rays around it) and the right lamp is unlit. Both characters look up at the lamps. Landscape image 1536x1024, framed like the first attached image. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_parity_far_cups",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_three_readers",
+    "line_tiny_lab"
+   ],
+   "prompt": "A very long plain table runs across the whole picture from the left edge to the right edge, seen from the front. At its far left end sits the experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers), lifting the domed lid of a small cup with one hand and peering inside at a single die. At its far right end sits the traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers), reading a book, with an identical small closed cup on the table in front, unaware of anything. The long stretch of table between them is completely empty: no lines, no strings, nothing connecting the two cups. Landscape image 1536x1024; the table and the two characters fill about 94% of the width and about 60% of the height. No text, no letters, no numbers, no logos, nothing on the book's cover."
+  },
+  {
+   "name": "line_qc_parity_three_switches",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_switch_dimmer",
+    "line_balance",
+    "line_tiny_lab"
+   ],
+   "prompt": "A long plain hallway wall seen straight from the front. Along it, at hand height, three identical wall plates sit in a row, evenly spaced, and each is covered by a small closed hinged flap so its switch cannot be seen. From the ceiling hang two bare light bulbs on short cords: one exactly halfway between the first and second plate, the other exactly halfway between the second and third plate. The left bulb is unlit (a plain empty bulb outline); the right bulb is lit (an empty bulb outline with short straight rays around it). No people, nothing else on the wall. Landscape image 1536x1024; the plates and bulbs fill about 88% of the width and about 70% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_06_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_parity_hall_bulb",
+    "line_qc_meas_fixed_camera",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this lecture's experimenter (short spiky hair, safety goggles pushed up on the forehead, a white lab coat): draw the same character (same face, hair and clothes) in the new cover composition described, and no one else. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A straight staircase seen from the side, rising from the lower left to the upper right, with a simple handrail; at the foot and at the top of the stairs is one wall plate each, covered by a small closed hinged flap. Halfway up, one bare light bulb hangs on a short cord, drawn large and lit (short straight rays around it). The experimenter (the same invented character as in the reference images: simple round face, dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with rolled-up sleeves) stands at the foot of the stairs, looking up at the bulb with one finger raised, pleased. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,132 @@
+{
+ "episode": "QC03-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (tape p22, 61:42-62:59): at 1% error per CNOT, 0.99^70 is about 0.495, so a 70-CNOT program is a coin flip (she says 60 aloud, the slide says 70: use the slide); every gate has to go right, like every stone on a long crossing (line_qc_surf_stepping_stones; reuse line_dice_hand for \"the results look random\", clip 62:33-62:59). Cast as in QC03-01: the programmer crosses, the fabricator makes the rope, the planner checks and ties.",
+  "Error correction = redundancy, composed the quantum way (p22, 62:59-63:24): many noisy physical qubits make one logical qubit with fewer errors; not by copying (quantum states cannot be copied, QC05-04) but by weaving them together (line_qc_surf_rope_wheel).",
+  "What a check learns (65:57-66:30): a parity-check qubit learns only whether its data qubits agree, never their values (line_qc_surf_balance_boxes: the beam says same or different, the boxes stay shut). QC08-02 does this properly.",
+  "The surface code at distance 3 (tape p23, 63:54-66:30): 25 qubits, 13 data + 12 checks in a 5x5 grid, leaving one degree of freedom, the logical qubit; the grid itself is red-pen rings on the taped slide. Check first: unrotated (25, 81) vs rotated (17, 49) layouts: say which.",
+  "Why \"distance 3\" (64:19-65:11): an error the checks cannot see needs three flips in a line, edge to edge; distance 5 needs five (line_qc_surf_crack_tiles).",
+  "Why it is popular (63:37-63:46, 66:30-69:36, clip 69:11-69:36): every check is CNOTs, every CNOT needs a physical link, and each check reaches only its nearest neighbours, so a flat 2D grid fits (line_qc_surf_quilt_knots: each knot tied to the four patches around it; QC03-05 stitches the same quilt).",
+  "Bigger code, fewer errors (p24, 70:04-71:08, clip 70:44-71:08): distance 5 uses 81 qubits; Google Quantum AI (Nature 2023) showed d=5 making slightly fewer logical errors than d=3, and a 2025 result went below threshold at d=7 (line_qc_surf_two_ropes). p24's plot is Google's: redraw as two dots and a falling line; numbers only via FACTS.md. Honest limit: more qubits only help when each one is good enough.",
+  "Scale (Q25-01 p12, 54:14-55:40): a distance-15 code is about 500 physical qubits for one logical qubit (line_qc_surf_teacup_crowd). The theory under all this is QC08.",
+  "Cover (line_qc_cover_03_04; for the X post and thumbnails, not a film beat): the fabricator cranks a rope-making wheel; many thin, frayed threads become one strong rope that the planner tugs."
+ ],
+ "reuse": [
+  "line_dice_hand",
+  "line_mic",
+  "line_paper",
+  "line_heap",
+  "line_course_map"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_surf_stepping_stones",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_banks",
+    "line_two_lanterns",
+    "line_tiny_lab"
+   ],
+   "prompt": "A wide, calm river seen from the side at a slant, its water shown only with a few simple ripple lines. A long winding line of about thirty small flat stepping stones runs from the near bank on the left to the far bank on the right; several stones have short wobble lines, as if a little loose. The programmer, a tall, lanky invented young man with a simple round face and dot eyes, a mop of wavy hair, a long plain scarf, a small backpack and sneakers, is halfway across, balancing on one stone on one foot with his arms out, his scarf flying, a look of nervous concentration. Landscape image 1536x1024; the river and the stones fill about 94% of the width and about 75% of the height; the programmer is large enough to read his face. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_surf_rope_wheel",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_long_ribbon",
+    "line_press",
+    "line_tiny_lab"
+   ],
+   "prompt": "An old rope-making yard seen from the side: on the left, a wooden rope-making wheel with a hand crank and many small hooks, which the fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, turns with both hands. From the hooks, many thin separate threads run to the right, several of them visibly frayed with little split ends; towards the right they come together and twist into one single thick, strong, neatly twisted rope. At the right end, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, holds the finished end of the thick rope and gives it a strong tug, satisfied. Landscape image 1536x1024; the wheel, the threads, the rope and the two characters fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_surf_balance_boxes",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, stands behind a plain table, seen from the front, with an old two-pan balance on the table in front of her; on each pan sits one small closed box with its lid tied shut with string, the two boxes looking the same from outside. The balance beam is perfectly level. She keeps her hands behind her back and looks only at the pointer at the middle of the beam, never into the boxes, nodding. Square image 1024x1024; the planner, the table and the balance fill about 85% of the width and about 85% of the height; the balance is large. No text, no letters, no numbers, no logos, no scale markings."
+  },
+  {
+   "name": "line_qc_surf_quilt_knots",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_glue_tiles",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "prompt": "A square patchwork quilt laid flat on a big table, seen from the front and above: four by four plain square patches, each with a simple, different outline pattern (a stitched border, a few dots, a small circle, or plain), drawn in outline only, nothing filled. At every inner corner where four patches meet there is one small tied knot with four short threads running into the four patches around it, nine knots in all. The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, leans over the table from the right and ties the last knot with a needle and thread. Landscape image 1536x1024; the quilt fills about 70% of the width and about 75% of the height; with the planner at the right, everything fills about 92% of the width. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_surf_crack_tiles",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_glue_tiles",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture in two halves side by side, with clear space between them, both floors seen from above at a slant. Left: a small square floor of three by three large square tiles; one crack runs straight across one whole row of three tiles, from the left edge of the floor to the right edge. Right: a bigger square floor of five by five tiles of the same size; a crack starts at the left edge and stops after two tiles. Between the two floors, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, kneels and points at the small floor's full crack with a worried face. Landscape image 1536x1024; the two floors and the planner fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_surf_two_ropes",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_balance",
+    "line_tiny_lab"
+   ],
+   "prompt": "From a sturdy wooden beam hang two ropes side by side, each holding the same heavy round weight just above the floor, the weights drawn in outline. The left rope is thin, twisted from a few strands, and has one small frayed spot with split ends. The right rope is clearly thicker, twisted from many more strands, tight and whole. The fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, stands to the right of them with his arms folded, nodding approvingly at the thick rope. Portrait image 1024x1536; the beam, the ropes, the weights and the fabricator fill about 85% of the width and about 88% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_surf_teacup_crowd",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_kv_remake_tags",
+    "line_whisper_line",
+    "line_round_table"
+   ],
+   "prompt": "A big crowd of about thirty small, identical invented helpers (simple round faces, dot eyes, plain overalls, short hair) walk in step from left to right, carrying one big flat wooden platform together on their raised hands, very carefully. In the very middle of the platform sits one single small teacup on a saucer. In front of them, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, walks backwards, guiding them with raised hands. Landscape image 1536x1024; the crowd, the platform and the planner fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_03_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_surf_rope_wheel",
+    "line_qc_surf_balance_boxes",
+    "line_qc_surf_two_ropes"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's fabricator (bald, walrus moustache, goggles, work apron), the planner (two short braids, round glasses, utility vest) and the rope-making wheel: draw the same characters and props in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the fabricator (the same invented character as in the references: a stocky older man with a simple round face, dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead, a heavy work apron over a turtleneck sweater) turns the crank of a wooden rope-making wheel; many thin separate threads, some frayed, run from its hooks to the right and twist together into one single thick, strong rope. On the right, the planner (the same invented character as in the references: a young woman with a simple round face, dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, a pencil tucked behind one ear) holds the end of the thick rope and gives it a strong tug, satisfied. Full figures on one short ground line. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

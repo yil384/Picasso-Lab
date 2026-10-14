@@ -1,0 +1,120 @@
+{
+ "episode": "QC01-05",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (line_qc_sw_same_piano): same chip, same program, two compilers: one output is the answer, the other is noise. Same piano, same sheet, two players. Cast for all of QC01 (the six parts cut from her first lecture, Q25-01): the physicist (older, bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (lanky, a tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag); both invented. No lecturer figure anywhere and never her likeness: her voice and her slides carry her part. Here the physicist stands for hardware, the student for software.",
+  "The matmul ladder (tape p13 and keep its \"Charles Leiserson, MIT 6.172\" credit): Python loops, Java, C, optimisation flags, parallel loops, vectorisation: 53,292x on the same CPU (check: MIT 6.172 Fall 2018 lecture 1; Science 2020 has 62,806x for a newer setup: say which). Reuse line_cluster_stairs or line_tiles_staircase as the staircase; code draws the bars on a log scale.",
+  "Why the first step is so slow: plain Python is translated word by word as it runs; C is translated once, ahead of time (line_qc_sw_live_interpreter).",
+  "\"You cannot imagine a human programming in binary\" (clip 61:17-61:40; line_qc_sw_switch_wall).",
+  "A quantum program: wires are qubits, layers of two-qubit gates (tape p14 with the chip photo covered; code draws the circuit).",
+  "Noise caps program size, like the tide caps a sandcastle; with software optimisation about 2x larger programs still give usable answers (line_qc_sw_tide_castles; her report of IBM collaborators' data: attribute it, do not present it as published).",
+  "Half of the decade's gain in runnable circuit size from hardware, half from software (clip 64:26-64:51; line_qc_sw_tandem; reuse line_balance).",
+  "As hardware grows more complex, software matters more (line_qc_sw_pipe_organ; clip 59:16-59:52).",
+  "Cover (line_qc_cover_01_05; for the X post and thumbnails, not a film beat): the physicist and the student pedal one tandem uphill, a tiny chip riding in the basket. Clips start after 59:16 (57:54-59:16 is on the syllabus avoid list: never used)."
+ ],
+ "reuse": [
+  "line_cluster_stairs",
+  "line_tiles_staircase",
+  "line_balance",
+  "line_coders",
+  "line_clockwork",
+  "line_grow"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_sw_same_piano",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_coder_storyteller",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "A picture in two halves side by side, with clear space between them: two identical upright pianos, each with the same open sheet of music on its stand (the sheets blank except a few plain horizontal lines). Left: the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) pecks at the keys with one finger, squinting at the sheet, and out of the piano tumbles a jumble of tangled scribbly lines. Right: an invented pianist (simple round face, dot eyes, tidy swept-back hair, a tailcoat) plays the same kind of piano with both hands flying, eyes closed in joy, and out of it flows a smooth, even ribbon of gently curving wavy lines. Landscape image 1536x1024; the two pianos and players fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no musical notes or symbols, no brand marks."
+  },
+  {
+   "name": "line_qc_sw_live_interpreter",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_lost_word",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture in two halves side by side, with clear space between them, the same small table in both. Left half: the student (the same invented character in both halves: a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) talks to an invented listener (simple round face, dot eyes, curly pigtails, a cardigan) across the table, and between them an invented interpreter (simple round face, dot eyes, a tall quiff of hair, a knitted vest) frantically flips through an enormous thick dictionary for every single word, sweating; the listener yawns, chin on hand. Right half: the listener reads a small neat book on her own, fluently and delighted, while the student sits back smiling and the interpreter relaxes in a chair behind with a cup of tea, the big dictionary closed on a shelf: the book was translated once, ahead of time. Landscape image 1536x1024; the two halves fill about 94% of the width and about 78% of the height. No text, no letters, no numbers, no logos, no writing in the books."
+  },
+  {
+   "name": "line_qc_sw_switch_wall",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_knob_board",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "prompt": "A huge wall covered from edge to edge with hundreds of tiny identical two-way toggle switches in neat rows. The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) stands on a small stepladder in front of it, flipping one tiny switch at a time with a fingertip, sweating, while a very long checklist scroll spills from the other hand down to the floor and curls across it. Square image 1024x1024; the wall, ladder and student fill about 90% of the width and about 88% of the height. No text, no letters, no numbers, no logos, no writing on the scroll (only a few wavy lines)."
+  },
+  {
+   "name": "line_qc_sw_tide_castles",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_block_towers",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "A picture in two halves side by side on one sandy beach, with clear space between them; along the top of both halves the sea, its small waves creeping up the sand and nearly reaching the castles. Left: the student (the same invented character in both halves: a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) kneels beside a small, lumpy sandcastle with one half-collapsed tower, sand scattered all around from wasted digging, glancing anxiously at the water. Right: the same student kneels beside a sandcastle twice as tall and twice as wide, neat, with towers, walls and a gate, built from a simple plan scratched into the sand beside it (just a few straight lines), the bucket and spade laid neatly; the waves are just as close, and the student smiles. Landscape image 1536x1024; the two halves fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_sw_tandem",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_cat_chases_dog",
+    "line_tiny_lab"
+   ],
+   "prompt": "A tandem bicycle rides up a gentle hill from left to right, with a few speed lines behind it. The physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) pedals at the front, holding the handlebars; the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) pedals at the back with exactly the same effort; both lean forward, pushing hard, smiling, in step. In a small wicker basket on the front sits a tiny square computer chip with dot eyes and a small smile. Landscape image 1536x1024; the tandem and riders fill about 90% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no brand marks."
+  },
+  {
+   "name": "line_qc_sw_pipe_organ",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_knob_board",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) sits on the bench of an enormous pipe organ, seen from behind and a little to the side: four rows of keyboards stacked like stairs, dozens of round stop knobs in rows on both sides, pedals below, and above it a towering wall of organ pipes of many heights reaching up near the top of the picture. The student cracks their knuckles, looking up in awe and delight. Portrait image 1024x1536; the organ and the student fill about 85% of the width and about 90% of the height. No text, no letters, no numbers, no logos, no labels on the knobs."
+  },
+  {
+   "name": "line_qc_cover_01_05",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_sw_tandem",
+    "line_qc_sw_switch_wall",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's characters (the first shows the physicist and the student on the tandem): draw the same characters (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A tandem bicycle rides up a gentle hill from left to right, a few speed lines behind it. The physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) pedals at the front; the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) pedals at the back with exactly the same effort; both lean forward, smiling, in step. In a small wicker basket on the front rides a tiny square computer chip with dot eyes and a small smile. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

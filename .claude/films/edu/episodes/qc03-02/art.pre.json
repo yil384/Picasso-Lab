@@ -1,0 +1,146 @@
+{
+ "episode": "QC03-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (p9): two circuits compute exactly the same 16-by-16 matrix with the same seven gates; on a real chip one needs three SWAPs and the other needs one; a compiler that decides the circuit before it looks at the chip will often pick wrong (line_qc_recipe_twin_cards: two different recipes, the same cake). Cast as in QC03-01: the planner = the compiler, the four hatted guests = the four qubits; new prop: one coin = the parity being gathered, the dial = the rotation R.",
+  "Her analogy (p9, clip 14:22-15:22): y = x*2 + 3 + t computed by two different three-address codes, the same answer in different steps (code letters the two columns on paper; reuse line_qc_recipe_twin_cards).",
+  "The insight (16:46-18:07): the CNOTs gather the parity of the qubits onto one qubit, R rotates by that parity, the mirror CNOTs undo the gathering. The coin is a light stand-in: each handoff is one CNOT, and the dial is turned one way or the other by what the coin shows (line_qc_recipe_coin_chain). Honest caveat in the voice: nothing is copied or looked at; the parity is held by a qubit, not read out. Parity gates are done properly in QC05-06.",
+  "Chain vs tree (p9, 18:39-19:34): the same seven gates, depth 7 vs 5: the chain hands the coin on one step at a time, the tree does two handoffs at once (line_qc_recipe_coin_chain vs line_qc_recipe_coin_tree). In general (Q25-04 p5, 08:12-10:12; tape it): N gates and depth N vs 2N-1 gates and depth 2logN+1.",
+  "On a real coupling graph (p10-p11, 20:33-25:58; tape p11): for the same starting placement one recipe needs 3 SWAPs, the other 1: pick the tree that fits where the qubits already sit (line_qc_recipe_swap_scramble: left half, three swaps of chaos; right half, one calm swap; reuse line_qc_pass_seat_swap). Clip 25:32-25:58: both are equivalent, choose the one the mapping favours.",
+  "Modular passes vs co-design (clip 23:09-23:34): a compiler that picks the recipe before it looks at the chip (line_qc_recipe_blinkers) vs one that picks it with the chip in view (line_qc_recipe_both_plans).",
+  "Paulihedral (Li, ..., Ding, ASPLOS 2022; tape p12, 28:55-30:04): fewer gates and lower depth than TKET on chemistry and physics simulation programs, on superconducting and ion-trap-like layouts; numbers only from the paper via FACTS.md. Honest limit: it takes longer to compile (line_qc_recipe_long_night). Soften the \"adopted by IBM Qiskit\" line (p13) unless the integration path is verified.",
+  "Takeaway (30:36-30:56): keep the high-level structure through the compiler instead of flattening it into gates early (line_qc_recipe_puzzle_sections).",
+  "Cover (line_qc_cover_03_02; for the X post and thumbnails, not a film beat): the four guests twice, once in a line passing one coin, once as two pairs passing coins at once; the planner between them holds up two recipe cards."
+ ],
+ "reuse": [
+  "line_qc_pass_seat_swap",
+  "line_qc_pass_good_chairs",
+  "line_mic",
+  "line_paper",
+  "line_balance",
+  "line_clock_face"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_recipe_twin_cards",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, stands behind a plain kitchen counter, seen from the front, holding up two blank recipe cards, one in each hand, comparing them with a puzzled look: one card is long and narrow, the other short and wide, both blank. On the counter in front of her stand two identical round layer cakes on two identical cake stands, exactly the same size and the same simple decoration, side by side. Landscape image 1536x1024; the planner, the cards and the cakes fill about 85% of the width and about 85% of the height. The cards are blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_recipe_coin_chain",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "The four guests, invented characters with simple round faces and dot eyes, told apart by their hats: the first wears a beret, the second a beanie with a pom-pom, the third a tall top hat, the fourth a flat cap. They sit in one straight row along a long plain table, seen from the front, in this order from left to right: beret, beanie, top hat, flat cap. One big plain coin travels along the row one handoff at a time: the beret guest has just passed it into the open hand of the beanie guest, who looks at it; the top hat guest and the flat cap guest wait their turn, one drumming fingers, one yawning. At the right end of the table, beside the flat cap guest, stands a big round dial on a short post with a pointer knob, like an old radio tuning knob, with no markings. Landscape image 1536x1024; the table, the four guests and the dial fill about 94% of the width and about 70% of the height. The coin is plain, no symbols. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_recipe_coin_tree",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "The four guests, invented characters with simple round faces and dot eyes, told apart by their hats: the first wears a beret, the second a beanie with a pom-pom, the third a tall top hat, the fourth a flat cap. They sit at two small plain tables, seen from the front: the beret guest and the beanie guest at the left table, the top hat guest and the flat cap guest at the right table, with a clear gap between the tables. At the same moment, at both tables, one big plain coin is handed over: on the left the beret guest passes a coin to the beanie guest, on the right the top hat guest passes a coin to the flat cap guest; all four are busy at once. In the gap between the two tables, on a low step, stands a big round dial on a short post with a pointer knob, like an old radio tuning knob, with no markings; the beanie guest and the flat cap guest already turn towards it. Landscape image 1536x1024; the two tables, the four guests and the dial fill about 94% of the width and about 72% of the height. The coins are plain, no symbols. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_recipe_swap_scramble",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with clear space between them; each half shows the same small dinner table seen from the front with four chairs behind it, and the four guests, invented characters with simple round faces and dot eyes, told apart by their hats: the first wears a beret, the second a beanie with a pom-pom, the third a tall top hat, the fourth a flat cap. Left half: chaos. All four guests are on their feet carrying their plates, criss-crossing between the chairs to trade seats, bumping into each other, one plate tipping, the top hat knocked askew, sweat drops; the planner (an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets, a pencil behind one ear) waves her arms beside the table. Right half: calm. Three guests sit and chat; only the flat cap guest moves one chair over, plate in hand, smiling; the same planner stands beside the table, relaxed, thumbs up. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_recipe_blinkers",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "In the right half, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, walks confidently towards the right edge with a pair of horse blinkers strapped around her head, so she can see only straight ahead; she holds one blank recipe card right in front of her nose and reads it. Behind her, in the left half and out of her view, the four guests (invented characters with simple round faces and dot eyes, told apart by their hats: a beret, a beanie with a pom-pom, a tall top hat, a flat cap) bump into each other around a small dinner table, carrying plates, one chair tipping over. Landscape image 1536x1024; the planner is large; together the scene fills about 92% of the width and about 80% of the height. The card is blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_recipe_both_plans",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "prompt": "The planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, sits at a plain desk, seen from the front, with a pencil held crosswise in her teeth, holding a blank recipe card in her left hand and, in her right, a seating plan: a sheet showing only a simple outline of a table with six small empty circles for the chairs around it; she looks carefully from one to the other. Behind her, the programmer, a tall, lanky invented young man with a simple round face and dot eyes, a mop of wavy hair, a long plain scarf, a small backpack and sneakers, leans over her shoulder, curious. Landscape image 1536x1024; the desk and the two characters fill about 85% of the width and about 85% of the height; the card and the plan are large and clearly separate. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_recipe_long_night",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_clock_face",
+    "line_writer_cover"
+   ],
+   "prompt": "Late at night at a plain desk under a desk lamp, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, leans back in her chair, tired but pleased, holding up one neat finished plan sheet; around her chair and on the desk lie many crumpled paper balls of discarded drafts, an empty coffee pot and a mug; on the wall a plain round clock with no hands and no numerals, and a window with an outlined crescent moon and a few small outlined stars on white (no dark sky, no shading). Square image 1024x1024; the planner, the desk and the drafts fill about 88% of the width and about 85% of the height. The sheet is blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_recipe_puzzle_sections",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_glue_tiles",
+    "line_tiny_lab",
+    "line_heap"
+   ],
+   "prompt": "A picture in two halves side by side. Left: the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, carefully carries a big flat tray on which a jigsaw puzzle lies in three large assembled sections, each section already joined together; she smiles. Right: the programmer, a tall, lanky invented young man with a simple round face and dot eyes, a mop of wavy hair, a long plain scarf, a small backpack and sneakers, has tipped a big puzzle box upside down and hundreds of loose pieces pour out into a heap on the floor; he scratches his head. All puzzle pieces are blank outlines with no picture on them. Landscape image 1536x1024; each half fills most of its side; together they fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_03_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_recipe_coin_chain",
+    "line_qc_recipe_coin_tree",
+    "line_qc_recipe_both_plans"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's four guests (told apart by their hats: a beret, a beanie with a pom-pom, a tall top hat, a flat cap) and the planner (two short braids, round glasses, utility vest): draw the same characters and props in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the four guests (the same invented characters as in the references: simple round faces, dot eyes, told apart by their hats: a beret, a beanie with a pom-pom, a tall top hat, a flat cap) stand in one straight line passing a single big plain coin from hand to hand. On the right, the same four guests stand as two pairs side by side, each pair handing over a big plain coin at the same moment. In the middle, between the two groups, the planner (the same invented character as in the references: a young woman with a simple round face, dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, a pencil tucked behind one ear) holds up two blank recipe cards, one towards each group, deciding. Full figures on one short ground line. The coins and cards are plain. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

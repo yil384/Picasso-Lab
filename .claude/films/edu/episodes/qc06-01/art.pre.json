@@ -1,0 +1,129 @@
+{
+ "episode": "QC06-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: her slide (Q25-07 s14, 15:31-16:24) puts |+> through the matrix Z twice. As a gate, Z turns |+> into |-> (one definite new state, nothing random, and a second Z undoes it); as a measurement, Z turns |+> into 0 or 1 with odds 1/2 each, and nothing undoes it. Same matrix: a flick or a slap (line_qc_meas_flick_or_slap, then the cover). FACT CHECK: the syllabus hook says the gate 'leaves |+> untouched' and the machine transcript at Q25-07 16:05 says 'it will be still a plus': Z|+> = |->. Never clip 16:03-16:11; 'totally different' is clean at 15:31-15:45 and 16:11-16:24 (check by ear).",
+  "The only window (clip Q25-07 02:59-03:25): everything we ever learn from a quantum computer comes out as measurement results; nothing else leaves the box (line_qc_meas_sealed_cabinet). Cast for all of QC06: the experimenter (spiky hair, goggles pushed up, lab coat) and the traveller (tall, curly hair, knitted beanie, padded jacket, messenger bag); props: the reading box (two round lamps = the two outcomes) and the coin with a daisy face.",
+  "Why measurements are Hermitian matrices: what nature hands us is a real reading, a needle on a dial, never a complex number (clip Q24-08 02:24-02:52; reuse line_postal_scale). Hermitian matrices have real eigenvalues (the short proof, Q25-07 03:49-09:29, Q24-08.notes p1); the possible readings are the eigenvalues: +1 and -1 for Z.",
+  "A projector is a shadow (Q24-08 15:38-16:36): the arrow's shadow on the floor under a lamp straight above; an arrow already lying on the floor casts exactly itself, so projecting twice is projecting once, P^2 = P (line_qc_meas_shadow_twice).",
+  "Born rule (12:37-15:31): each reading is random; its odds are the squared length of the shadow, |<0|psi>|^2. One run shows one lamp; odds show only by repeating the run on fresh copies and counting (line_qc_meas_bead_jars: two even jars for |+>; line_qc_meas_bead_jars_tilted: a tilted arrow, about 4 to 1). The average reading is <Z> = (+1)p0 + (-1)p1 = <psi|Z|psi>. Any arrow goes in, only one of two answers comes out (reuse line_switch_dimmer: a switch, not a dimmer; reuse line_dice_hand for the randomness).",
+  "After the reading the state is the eigenvector that was read: a slapped coin stays slapped; read it again and you get the same answer (line_qc_meas_flick_or_slap, right half).",
+  "X measurement = H, then Z measurement (16:51-23:36, Q25-07 s16, Q24-08 28:51-31:31): H turns the X-basis states into the Z-basis states, so the camera stays bolted to the floor and you turn the object instead (line_qc_meas_fixed_camera).",
+  "Why it matters (clip Q25-07 18:16-18:42): hardware calibrates one measurement well and builds every other one from gates, as it calibrates one two-qubit gate and builds the rest (line_qc_meas_one_box_calm); the general recipe: any measurement = a unitary, then Z measurements (Q24-08 34:10-35:04). Tape Q25-07 s16 and Q24-08.notes p3.",
+  "Takeaway: a gate is an action you can undo; a measurement is a question whose answer replaces the state. Next: asking two qubits one question (QC06-02). Avoid Q24-08 32:39-33:05 (quiz logistics).",
+  "Cover (line_qc_cover_06_01; for the X post and thumbnails, not a film beat): the experimenter flicks one spinning coin and slaps another flat."
+ ],
+ "reuse": [
+  "line_postal_scale",
+  "line_switch_dimmer",
+  "line_dice_hand"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_meas_fixed_camera",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "A small, plain photo studio seen from the side and a little in front. On the left, a big old-fashioned box camera with a bellows and a round lens stands on a heavy tripod whose three feet are bolted to the floor with chunky metal brackets and bolts; the experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) stands behind it, bent forward with one eye at the camera's viewfinder and one hand on the camera body. On the right, a low round plinth carries a round turntable (a lazy Susan) with one plain vase standing on it, a vase with a single loop handle; the traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers) kneels beside the plinth and turns the turntable a quarter turn with both hands; a curved arrow drawn on the floor in front of the plinth shows the direction of the turn. The camera points straight at the vase. A plain floor line and a plain back wall with nothing on it. Landscape image 1536x1024; the camera, the two characters and the turntable fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no markings on the camera."
+  },
+  {
+   "name": "line_qc_meas_sealed_cabinet",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_postal_scale",
+    "line_knob_board"
+   ],
+   "prompt": "A plain lab corner seen from the front. On the left stands a big closed metal cabinet, taller than a door and twice as wide, completely sealed: bolted panels edged with rows of small round bolt heads, no doors, no windows, no handles, and a few thin pipes and cables entering its top from the ceiling. From the lower right side of the cabinet one thick cable runs along the floor and up onto a small workbench on the right, where it plugs into the back of the reading box: a plain rectangular box about the size of a shoebox, with a small round opening on its top and two identical round lamps side by side on its front face, a left lamp and a right lamp; the right lamp is lit and the left lamp is unlit (a lit lamp is an empty circle with short straight rays around it, an unlit lamp is a plain empty circle). the experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) sits on a tall stool at the bench, chin resting on both fists, watching the two lamps intently. Nothing else comes out of the cabinet. Landscape image 1536x1024; the cabinet, the bench and the character fill about 90% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no dials, no screens, no labels, no warning signs."
+  },
+  {
+   "name": "line_qc_meas_flick_or_slap",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_dice_hand",
+    "line_glue_tiles",
+    "line_balance"
+   ],
+   "prompt": "A picture in two halves side by side on one long plain table top, with clear space between the halves. Left half: a large coin whose one face shows a simple raised daisy outline and whose other face is plain spins upright on its edge on the table, drawn with a few curved motion lines around it to show it is spinning; a friendly hand comes in from the upper left and gives its rim a light flick with one fingertip, and a small curved arrow around the coin shows the spin; the coin keeps spinning. Right half: an identical coin lies flat on the table with its daisy face up; a friendly hand from the upper right is just lifting off it, palm open, after slapping it down, with a few short straight impact lines around the coin. Nothing else on the table. Landscape image 1536x1024; each half is centred in its side; together they fill about 90% of the width and about 60% of the height. No text, no letters, no numbers, no logos, no symbols other than the daisy outline on the coin."
+  },
+  {
+   "name": "line_qc_meas_shadow_twice",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_switch_dimmer",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture in two halves side by side on one long plain table top, with clear space between the halves. Above each half one simple lamp shade hangs on a short cord from the top edge, pointing straight down, with a few short straight rays below it. Left half: a thin straight wire arrow (a rod with a small arrowhead at its top end) stands tilted at about forty-five degrees, its lower end held in a small clamp stand on the table. On the table directly below it lies its shadow, drawn only as the thin empty outline of a narrow strip ending in a small arrowhead shape (outline only, not filled), clearly shorter than the arrow, running from the arrow's foot to the point right under the arrowhead; three thin dotted lines drop straight down from points on the arrow to the shadow. Right half: an identical wire arrow lies flat on the table, and its shadow, drawn the same way as a thin empty outline, lies just under it and is exactly as long as the arrow itself. Landscape image 1536x1024; each half is centred in its side; together they fill about 90% of the width and about 70% of the height. No text, no letters, no numbers, no logos; the shadows are outlines only: no grey, no fills, no solid black."
+  },
+  {
+   "name": "line_qc_meas_bead_jars",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_postal_scale",
+    "line_tap_glass"
+   ],
+   "prompt": "The experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) sits at a workbench, seen from the front, waist up. On the bench in front stands the reading box: a plain rectangular box about the size of a shoebox, with a small round opening on its top and two identical round lamps side by side on its front face, a left lamp and a right lamp, a short cable trailing from its back out of the picture; the right lamp is lit and the left lamp is unlit (a lit lamp is an empty circle with short straight rays around it, an unlit lamp is a plain empty circle). Directly in front of the reading box stand two identical tall clear glass jars, one under each lamp. The experimenter is dropping one small round bead into the right jar; a small bowl of loose beads sits at the side of the bench. Both jars are about one third full of small round beads (drawn as small empty circles), to nearly the same level. Square image 1024x1024; the character, the box and the jars fill about 88% of the width and about 85% of the height, centred. No text, no letters, no numbers, no logos, no scale marks or labels on the jars."
+  },
+  {
+   "name": "line_qc_meas_bead_jars_tilted",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_meas_bead_jars",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is the earlier picture of the same scene: redraw it exactly the same way (the same characters, objects, proportions, framing and line weight) and change only what the description says. The other attached image is a style reference only (a line drawing made earlier for this series): match its line weight and pen feel, not its content.",
+   "prompt": "The very same scene as in the first attached image, drawn again exactly the same way: the same experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with rolled-up sleeves), the same workbench, the same reading box with its two round lamps, the same two tall glass jars, the same bowl of beads and the same framing. Only this changes: the left jar is now about four fifths full of small round beads and the right jar holds only a thin layer of beads at the bottom; the left lamp is lit (short straight rays around it) and the right lamp is unlit; the experimenter drops one bead into the left jar. Square image 1024x1024, framed exactly like the first attached image. No text, no letters, no numbers, no logos, no scale marks or labels on the jars."
+  },
+  {
+   "name": "line_qc_meas_one_box_calm",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_knob_board",
+    "line_reader_writer"
+   ],
+   "prompt": "A picture in two halves side by side, with clear space between them. Left half: the experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) stands at a crowded workbench covered with a dozen different measuring boxes of all shapes and sizes, each with its own little round lamps and knobs, tangled cables everywhere; the experimenter is frazzled, hair sticking out, a drop of sweat, holding a small screwdriver in each hand and adjusting two boxes at once. Right half: the same experimenter sits relaxed and smiling at a tidy workbench that holds only one small round turntable and, just behind it, the reading box: a plain rectangular box about the size of a shoebox, with a small round opening on its top and two identical round lamps side by side on its front face, a left lamp and a right lamp; a single small screwdriver lies neatly beside them. Landscape image 1536x1024; each half fills most of its side; together they fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no scale marks on the knobs."
+  },
+  {
+   "name": "line_qc_cover_06_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_meas_fixed_camera",
+    "line_qc_meas_flick_or_slap",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this lecture's experimenter (short spiky hair, safety goggles pushed up on the forehead, a white lab coat): draw the same character (same face, hair and clothes) in the new cover composition described, and no one else. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The experimenter (the same invented character as in the reference images: simple round face, dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with rolled-up sleeves) stands behind a long plain table, seen from the front, waist up, both arms out. On the left, the experimenter's left hand gives a light flick to a large coin spinning upright on its edge, with a few curved motion lines around it. On the right, the experimenter's right hand has just slapped a second, identical coin flat onto the table, with a few short straight impact lines around it; the flat coin shows a simple raised daisy outline. The experimenter looks from one coin to the other with raised eyebrows. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

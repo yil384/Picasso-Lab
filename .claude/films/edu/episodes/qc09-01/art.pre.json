@@ -1,0 +1,154 @@
+{
+ "episode": "QC09-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (line_qc_out_unfinished_road, then the cover): forty years in, nobody has found a law of physics that forbids a useful quantum computer; so what could still stop it, and what should a computer scientist build next? The road has no wall across it, only stretches not yet built. Cast: the series finale brings back the QC01 cast (her first lecture), the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tuft of hair, round glasses, striped T-shirt, messenger bag); both invented. No lecturer figure anywhere and never her likeness: her voice carries this part (math none, heavier on her clips). No race framing of any kind; name no company, lab or funding programme.",
+  "What could make it fail (Q24-02 p40, slide only; tape it): (1) error correction assumes errors do not grow with the number of qubits (line_qc_out_crowded_cafe: the more guests, the louder everyone must talk); (2) bigger chips may lose quality, addressability and gate fidelity (reuse line_qc_pitch_souffle from QC01-04).",
+  "Quadratic speed-ups vs overhead (Q24-13 14:39-15:59, clip 15:06-15:59): a shortcut that needs only the square root of the steps does not pay when every error-corrected step is far slower, unless the job is enormous (line_qc_out_shortcut_snail; FACTS: Babbush et al., PRX Quantum 2, 010103, 2021); exponential speed-ups survive the overhead (reuse line_qc_analog_toll_tunnel from QC01-03).",
+  "Quantum machine learning on classical data (Q24-13 15:59-17:52): after error-correction overhead the speed-up is unproven, and classical machine learning is already strong with approximations (line_qc_out_peeler_jury: the judge has not decided); learning methods for quantum problems such as chemistry simulation are a different, still active line (her distinction at 16:00-16:40).",
+  "Near-term applications are still being looked for (Q25-01 52:20-53:45, her answer; the chat question is a student's: paraphrase it) (reuse line_qc_hier_compass_trail from QC01-06).",
+  "Directions (Q24-13 73:51-74:40): machine learning for quantum systems, for decoders, mapping and code design (line_qc_out_sheepdog_pens: the trained dog pens the sheep while the physicist chases one); software stacks for neutral-atom and photonic, measurement-based machines are new (Q24-13 75:00-77:00; the companies she names stay off screen and out of the narration) (line_qc_out_new_lab_shelves; reuse line_qc_hier_hybrid_lab). Never use Q24-13 65:58-73:51 (logistics, grading, remarks on chatbot-written reports).",
+  "Two kinds of research (clip Q24-13 77:19-77:46; Q25-03 51:29-52:22): improve a known solution, or open a new area (line_qc_out_two_researches).",
+  "Classical philosophy, quantum details (clip Q25-01 74:54-75:20): the same blueprint, built in new material with new tools (line_qc_out_brick_and_ice). Research that reaches industry (clip Q25-02 77:22-77:55; the compiler names in that window stay off screen).",
+  "Cover (line_qc_cover_09_01; for the X post and thumbnails, not a film beat): the student points along an unfinished road towards far mountains; the physicist shades his eyes beside the student."
+ ],
+ "reuse": [
+  "line_qc_pitch_souffle",
+  "line_qc_analog_toll_tunnel",
+  "line_qc_hier_compass_trail",
+  "line_qc_hier_hybrid_lab",
+  "line_course_map",
+  "line_qc_analog_bail_boats"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_out_unfinished_road",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_analog_bail_boats",
+    "line_qc_hier_compass_trail",
+    "line_two_lanterns"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing its first two invented characters, who return here: the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tall tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A wide landscape at sunrise, the sun a simple circle with short rays low on the horizon: from the foreground a road leads away across rolling hills towards a far range of mountains. The road is only partly built: finished stretches alternate with stretches marked only by a row of small stakes and a string line, and at one river crossing a bridge still lacks its middle span, with a small crane beside it. There is no wall, gate or barrier anywhere across the road. In the foreground, the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) and the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) stand at the roadside looking ahead; the student points towards the mountains, the physicist holds a rolled-up plan under his arm. Landscape image 1536x1024; the road and the landscape fill the picture with a margin on every side; the two characters stand in the lower left, about 35% of the height tall. No signs. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_out_crowded_cafe",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_analog_bail_boats",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing its first two invented characters, who return here: the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tall tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A picture in two halves side by side, with clear space between them, the same small cafe in both. Left: two invented customers (simple round faces, dot eyes) at one small table chat quietly, with only a few small soft sound lines. Right: the same cafe packed with about twelve invented customers at crowded tables, everyone talking loudly to be heard over everyone else, with many big jagged sound lines everywhere. In the right half, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) sits squeezed in among them with both hands over the ears, while the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) leans close and shouts across the table. Landscape image 1536x1024; the two halves fill about 94% of the width and about 80% of the height. No signs, no menus. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_out_shortcut_snail",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_analog_bail_boats",
+    "line_qc_analog_toll_tunnel",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing its first two invented characters, who return here: the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tall tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A big park seen from above at a slant, with a gate at its left side and a gate at its right side: a long road winds all the way round the outside of the park in many bends, while a short straight footpath cuts across the middle between the same two gates. The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) rides a light bicycle along the long road with speed lines behind, a small parcel on the rack, already near the right gate. On the short footpath, a snail with an identical small parcel strapped on top of its shell (outline only, nothing filled) inches along, still near the start of the path, leaving a tiny trail. At the right gate, the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) waits with a pocket watch in his hand. Landscape image 1536x1024; the park, the road and the characters fill about 94% of the width and about 85% of the height. No numerals on the watch. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_out_peeler_jury",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_analog_bail_boats",
+    "line_knob_board",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing its first two invented characters, who return here: the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tall tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "At a village fair, seen from the front: on the left part of a long table, a huge new apple-peeling contraption of gears, cranks, belts and little chutes is still slowly turning its very first apple; at the right end of the same table, an invented farmer (simple round face, dot eyes, a straw hat, dungarees) peels apples quickly with a small knife, a bowl of peeled apples already beside her. In the middle stands the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) as the judge, holding a stopwatch and looking from one to the other with raised eyebrows, undecided; the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) leans in to study the gears of the contraption. Landscape image 1536x1024; everything fills about 94% of the width and about 80% of the height. No banners, no ribbons, no numerals on the stopwatch. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_out_sheepdog_pens",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_analog_bail_boats",
+    "line_tired_dog_street",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing its first two invented characters, who return here: the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tall tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A green hillside seen from a little above, with a grid of six small square sheep pens made of low wooden hurdles. A trained sheepdog (a friendly invented collie, outline only, nothing filled) swiftly guides a little group of sheep (woolly outlines drawn as small loops), each into its own pen, neat and calm. The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) stands at the top of the hill and whistles with two fingers, directing the dog; the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket), out of breath, holds in his arms one sheep he has been chasing by hand and watches the dog with admiration. Landscape image 1536x1024; the pens, the sheep, the dog and the characters fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_out_new_lab_shelves",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_analog_bail_boats",
+    "line_qc_hier_hybrid_lab",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing its first two invented characters, who return here: the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tall tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout. The second attached image shows a lab drawn earlier in this series: draw the glass cell with the grid of dots in the same way.",
+   "prompt": "A brand-new, bright lab, seen from the front. On a table at the left stands a small square glass cell with a neat grid of tiny dots inside, each dot held at the tip of a thin beam of light coming down from a round lens above. On the right, a long optics table with small round mirrors on posts and a few small cubes, with thin light beams bouncing between them into small box-shaped detectors. Along the back wall runs a big empty wooden shelf unit and a pegboard showing only the drawn outlines of tools, with no tools on it. The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) stands on a step stool placing the very first small toolbox on the empty shelf; the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) unpacks a crate of tools on the floor beside the stool. Landscape image 1536x1024; everything fills about 94% of the width and about 85% of the height. No brand marks. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_out_two_researches",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_analog_bail_boats",
+    "line_qc_hier_compass_trail",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing its first two invented characters, who return here: the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tall tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A picture in two halves side by side, with clear space between them. Left: in a tidy garage workshop, the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) fine-tunes an existing bicycle on a stand, tightening a bolt with a small spanner, a slightly better new wheel leaning beside it. Right: at the edge of a wild valley of tall grass, rocks and a few twisted trees with no path at all, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) sets off with a walking stick, a blank map unrolled in one hand, taking the first steps of a new trail. Landscape image 1536x1024; the two halves fill about 94% of the width and about 80% of the height. The map is blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_out_brick_and_ice",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_analog_bail_boats",
+    "line_block_towers",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing its first two invented characters, who return here: the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tall tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "Two small houses of exactly the same shape stand side by side on a snowy field: the same door, the same two windows, the same roof line, built to one plan. The left house is built of ordinary bricks with a tidy chimney; the right house is built of big ice blocks (outlined blocks, nothing filled), with small icicles under the roof edge. The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) holds up one big unrolled plan between them (a blank sheet with only a simple outline of the house on it) and looks from one house to the other; the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket), in thick mittens and a fur hat over his goggles, carefully sets one more ice block with a pair of ice tongs. Landscape image 1536x1024; the houses and the characters fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_09_01",
+   "kind": "line",
+   "group": "COVER",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_out_unfinished_road",
+    "line_qc_analog_bail_boats",
+    "line_qc_hier_compass_trail"
+   ],
+   "role": "cover",
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show the physicist (bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (tall tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On a hilltop in the lower part of the picture, the student (the same invented character as in the references: young and lanky, simple round face, dot eyes, a tall tuft of straight hair, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag) points ahead along a road that winds away towards distant mountains; the road is only partly built, with finished stretches and stretches marked only by small stakes and a string line. Beside him, the physicist (the same invented character as in the references: older, simple round face, dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, goggles pushed up, a long lab coat) shades his eyes with one hand, a rolled-up plan under his arm. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,132 @@
+{
+ "episode": "QC02-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: on one five-qubit chip some qubits' gates fail several times as often as others' (line_qc_five_chairs: five identical chairs, two wobbly). You have a one-qubit program: where does it go (line_qc_one_guest_best_chair)? And if the program needs all five (line_qc_full_table)? Cast for QC02-02 to QC02-05: the head waiter = the compiler, the chairs = physical qubits, the five guests (top-knot bun and striped scarf; flat cap and cardigan; headband and round collar; curly hair and roll-neck; braid and dungarees) = program qubits; the technician from QC02-01 = the hardware side.",
+  "Three constraints (p13, 28:12-28:56): noise, few native gates, sparse connections; this part takes the first, QC02-03 the second, QC02-04 and QC02-05 the third (code: a three-line list on the taped p13).",
+  "The calibration table (p14, redrawn as lettering, credit Murali et al., ASPLOS 2019; 29:01-32:26): every gate and every connected pair is measured, chair by chair (line_qc_chair_inspector); single-qubit errors around 1 in 1,000, two-qubit around 1 in 100 in the 2019 data; much better today (32:00-32:54; figures through FACTS.md first).",
+  "Why two-qubit gates are worse: doing something together is harder than doing it alone (line_qc_three_legged_race), and her reason (Q24-05 04:30-05:21, clip): a qubit linked to two neighbours is a common friend who leaks what one says to the other (line_qc_common_friend).",
+  "Not all qubits are equal (32:54-33:47, clip): manufactured qubits vary like cups thrown to one design (line_qc_potter_cups); ions and neutral atoms of one kind are identical by nature (QC02-01's line_qc_built_vs_found, right half).",
+  "Noise-aware mapping (34:40-35:58, clip 34:40-35:07): a one-qubit program takes the best qubit (line_qc_one_guest_best_chair); a five-qubit program must use all five, so the busiest program qubits get the best hardware and the quiet ones the weak (line_qc_full_table). The student question at 33:47-34:40: her answer only.",
+  "Takeaway: placement is the compiler's first lever against noise; next, the few gates a chip can speak (QC02-03).",
+  "Cover (line_qc_cover_qc02_02; for the X post and thumbnails, not a film beat): the head waiter pulls out the one sturdy chair for a guest, past two wobbly ones."
+ ],
+ "reuse": [
+  "line_round_table",
+  "line_tap_two_people",
+  "line_whisper_line",
+  "line_balance",
+  "line_dice_hand",
+  "line_postal_scale"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_five_chairs",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_round_table",
+    "line_balance",
+    "line_slip_boxes"
+   ],
+   "prompt": "Seen from the front on a plain floor line: five identical plain wooden dining chairs (a straight back with three upright slats, four legs); the two at the left end are wobbly: the first has one leg clearly shorter so it tilts, with short wobble lines at its feet, the second leans a little and has a thin crack across its seat; the three chairs on the right stand firm and straight. The five chairs stand in one straight row from left to right, evenly spaced, with clear space between them, all clearly of exactly the same design. No people. Landscape image 1536x1024; the five chairs fill about 92% of the width and about 60% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_chair_inspector",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "In an empty restaurant before opening, seen from the front: five identical plain wooden dining chairs (a straight back with three upright slats, four legs); the two at the left end are wobbly: the first has one leg clearly shorter so it tilts, with short wobble lines at its feet, the second leans a little and has a thin crack across its seat; the other three are firm. They stand in one row from left to right. The technician, an invented character with a simple round face and dot eyes, short wavy hair, small square glasses and a knee-length lab coat with two pens in the breast pocket, kneels beside the third chair and tests it, pressing down on its seat with one hand and holding a clipboard with a blank sheet in the other, serious and careful. Landscape image 1536x1024; the chairs and the technician fill about 92% of the width and about 75% of the height. No text, no letters, no numbers, no logos. Nothing written on the clipboard."
+  },
+  {
+   "name": "line_qc_potter_cups",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_paint_pour",
+    "line_tiny_lab"
+   ],
+   "prompt": "An invented potter (simple round face, dot eyes, a headscarf and a clay-smeared apron) sits at a potter's wheel, finishing a cup with wet hands. On a long shelf behind, five cups made to the very same design stand in a row, but each turned out a little different: one leans to the side, one has a wavy rim, one is a little taller, one has a small dent, one is just right. The potter glances back at them with a small shrug. Landscape image 1536x1024; the potter, wheel and shelf fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_three_legged_race",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_dog_chases_cat",
+    "line_whisper_line",
+    "line_block_towers"
+   ],
+   "prompt": "A sunny sports-day field with a simple ground line and a few tufts of grass. On the left, a guest with a long single braid and dungarees jogs along alone, easily and steadily, smiling. On the right, two runners tied together at the ankles by a cloth band in a three-legged race, a tall guest with a high top-knot bun and a long striped scarf and a guest with curly hair and a thick roll-neck jumper, are out of step: one leans forward, the other back, arms flailing, about to stumble, small dust puffs at their feet. All the guests are invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the runners fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_common_friend",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_round_table",
+    "line_reader_writer"
+   ],
+   "prompt": "Three dinner guests sit side by side on one side of a plain dinner table, seen from the front, plates and glasses in front of them. In the middle, a short, round guest with a flat cap and a cardigan with big round buttons, listening. On the left, a tall guest with a high top-knot bun and a long striped scarf, who leans in and whispers into the middle guest's ear, one hand cupped round the mouth. On the right, a guest with long straight hair held back by a headband and a plain dress with a wide round collar, who leans in from the other side with one hand cupped behind the ear, overhearing, eyes wide; the middle guest does not notice. All the guests are invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the three guests and the table fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_one_guest_best_chair",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "In a small restaurant, seen from the front: five identical plain wooden dining chairs (a straight back with three upright slats, four legs); the two at the left end are wobbly: the first has one leg clearly shorter so it tilts, with short wobble lines at its feet, the second leans a little and has a thin crack across its seat; the other three are firm. They stand in one row along the near side of a long empty dinner table. The head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, leads one guest, a short, round guest with a flat cap and a cardigan with big round buttons, along the row by the arm, past the wobbly chairs, and with a little bow pulls out the firmest chair, in the middle of the row, for the guest. All the guests are invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the chairs, table and two figures fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_full_table",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_reader_writer"
+   ],
+   "prompt": "All five guests now sit in a row along the far side of a long dinner table, seen from the front, each on one of five identical plain wooden dining chairs (a straight back with three upright slats, four legs); the two at the left end are wobbly: the first has one leg clearly shorter so it tilts, with short wobble lines at its feet, the second leans a little and has a thin crack across its seat. From left to right: on the tilting chair, a guest with long straight hair held back by a headband and a plain dress with a wide round collar, sitting very still and reading a small blank booklet; on the cracked chair, a guest with a long single braid and dungarees, carefully sipping from a cup; then, on the three firm chairs, a tall guest with a high top-knot bun and a long striped scarf, a short, round guest with a flat cap and a cardigan with big round buttons and a guest with curly hair and a thick roll-neck jumper, the busiest of the evening, talking, gesturing and passing dishes to each other. Behind the table stands the head waiter, an invented character with a simple round face and dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat over a long-sleeved shirt and a long apron, checking a small blank notepad, satisfied. All the guests are invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the table, guests and head waiter fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_qc02_02",
+   "kind": "line",
+   "group": "COVER",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_one_guest_best_chair",
+    "line_qc_five_chairs",
+    "line_qc_full_table"
+   ],
+   "prompt": "On the left, two wobbly plain wooden dining chairs: one with a clearly shorter leg, tilting, with short wobble lines at its feet, one leaning with a crack across its seat. On the right, three firm chairs of exactly the same design. The head waiter (the same invented character as in the references: simple round face, dot eyes, neatly combed hair with a side parting, a small bow tie, a buttoned waistcoat, a long apron) bows a little and pulls out the middle firm chair for a guest (the same invented character: short and round, a flat cap and a cardigan with big round buttons). Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere.",
+   "role": "cover",
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's head waiter, the short round guest in a flat cap and the five chairs: draw the same head waiter, guest and chairs in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout."
+  }
+ ]
+}

@@ -1,0 +1,139 @@
+{
+ "episode": "QC08-08",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (line_qc_ft_patch_new_hole, then the cover): every error check is built from CNOT gates, and a CNOT can turn one error into two; a code that fixes one error per block now faces two. How can correction work when the corrector is noisy too? The question was a student's (Q24-09 23:29): paraphrase it in a caption, clip only her answer (Q24-09 23:50-24:30). Same cast as QC08-05: the keeper and the imp; closes the error-correction block.",
+  "Compute on encoded data: classical schemes decode, compute and encode again; a fault-tolerant machine stays encoded the whole time and decodes only at the end, if at all (Q25-11 68:11-69:01) (line_qc_ft_glovebox: work through the gloves, never open the box). Her word for it, bootstrapping (clip Q24-13 01:58-02:25): the code is the core and everything is built on it while it runs (line_qc_ft_ship_at_sea: new planks fitted at sea, no dry dock).",
+  "A CNOT spreads errors (69:08-71:24): an X error on the control is copied forward to the target; a Z error on the target is copied backward to the control (line_qc_ft_skaters_slip: the leader slips and pulls the follower down; the Z-backward rule stays a code-drawn circuit, not the skaters). Clip 70:56-71:24 \"error propagation will kill you\".",
+  "Inside one block, spreading is a cascade: one fault becomes several errors in the same block, more than a one-error code can fix (line_qc_ft_domino_block; reuse line_qc_cnot_three_legged from QC05-04 for \"two-qubit gates tie qubits together\").",
+  "Transversal gates (71:31-72:52, clip 71:31-72:26): a logical CNOT between two seven-qubit Steane blocks made of seven CNOTs, gate i touching only qubit i of each block; a single fault reaches at most one qubit per block, which each block can fix (line_qc_ft_dance_pairs). Tape Q25-11 s27 and s28 (crop the footer).",
+  "Logical X and Z (72:54-75:34): commute with every check, are not checks, and anticommute with each other; the silent error of QC08-05, done on purpose, is a logical gate (line_qc_ft_flip_all_on_purpose, the mirror of line_qc_catch_all_three_flipped).",
+  "Not every gate can be transversal (72:26-72:52): no code has a universal transversal gate set (Eastin-Knill 2009); the T gate is the hard one, made with magic states (reuse line_qc_tgate_distillery from QC05-03). Below the threshold, more encoding wins (callback QC01-03: reuse line_qc_analog_bail_boats or line_qc_analog_toll_tunnel). Still a research field.",
+  "Cover (line_qc_cover_08_08; for the X post and thumbnails, not a film beat): the keeper hammers a patch onto a rowboat and the nail splits a new leak; the imp holds a bucket at the stern."
+ ],
+ "reuse": [
+  "line_qc_tgate_distillery",
+  "line_qc_analog_bail_boats",
+  "line_qc_analog_toll_tunnel",
+  "line_qc_cnot_three_legged",
+  "line_qc_catch_all_three_flipped",
+  "line_qc_synd_bulb_prank"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_ft_patch_new_hole",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_analog_bail_boats",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image shows the rowboats drawn earlier in this series: draw the boat the same way. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A small wooden rowboat on calm water, seen from the side and a little above, its near side cut away so the inside shows. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) kneels in the boat hammering a small square wooden patch over a small hole in the floor boards, one nail half in; right beside the patch, the blow has split the plank, and a new thin crack spurts a little fountain of water. Her face shows dismay. At the stern, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) holds up an empty bucket, ready to bail. Landscape image 1536x1024; the boat and the characters fill about 90% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_ft_glovebox",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "In a tidy workshop, a sealed glove box stands on a table: a box with a big clear window on top and two round ports in its front, each with a long rubber glove sealed into it and reaching inside. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) has her hands in the gloves and carefully works on a small closed wooden crate inside the box, turning a small screw on it with a screwdriver held in one gloved hand, without ever opening the box. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) presses his nose against the outside of the window, curious. Landscape image 1536x1024; the glove box and the characters fill about 90% of the width and about 80% of the height. No warning signs. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_ft_ship_at_sea",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the water only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A small wooden sailing ship on the open sea far from any land, seen from the side, sails full, gentle waves drawn as simple lines. Over the side hangs a small plank seat on two ropes, where the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) sits and fits one new plank into the hull while the ship keeps sailing; a stack of new planks waits on deck, and one old plank floats away behind the ship. On deck, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) hands down the next plank. Landscape image 1536x1024; the ship and the characters fill about 90% of the width and about 80% of the height. No flags. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_ft_skaters_slip",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_cnot_three_legged",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image shows two characters tied together drawn earlier in this series: a style reference for the pair only, not for their faces or clothes. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "On a frozen pond, two invented skaters (simple round faces, dot eyes, woolly hats and long scarves) glide hand in hand, one in front leading and one behind following. The leader's skate has caught a small crack in the ice and she is tipping over with her free arm flailing, and because their hands are joined she pulls her partner off balance too: both are about to fall, with short wobble lines around them. On the bank at the right, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) watches with both hands over her mouth. Landscape image 1536x1024; the skaters and the keeper fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_ft_domino_block",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_block_towers",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the blocks only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long shallow wooden tray on a table, seen from the front and a little above, holds one row of seven plain upright dominoes standing close together, their faces blank. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) has just nudged the first domino with one finger, and the whole row is toppling one after another: the first ones already down, the last ones still tilting, with short motion lines. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) reaches out from behind the tray, too late, alarmed. Landscape image 1536x1024; the tray and the characters fill about 90% of the width and about 75% of the height. No dots on the dominoes. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_ft_dance_pairs",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for a group of invented people only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A folk dance seen from above at a slant: two rows of seven invented dancers (simple round faces, dot eyes, a mix of hairstyles and plain clothes) face each other across a gap, and every dancer holds hands only with the one partner directly opposite, so the joined arms make seven separate bridges across the gap; nobody touches a neighbour in their own row. The third dancer in the front row has messy paint on both hands (small outlined blobs and dots, nothing filled), and the same paint shows only on the hands of that dancer's partner opposite; everyone else is clean. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) watches from the end of the rows, nodding. Landscape image 1536x1024; the two rows fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_ft_flip_all_on_purpose",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_catch_all_three_flipped",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is the matching hallway drawn earlier for this series (the imp flipped all three switches unseen): draw the same wall, plates, flaps and bulbs the same way; here the keeper flips them on purpose. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long plain hallway wall seen straight from the front. Along it, at hand height, three identical wall plates sit in a row, evenly spaced, each with a small hinged flap; all three flaps hang slightly open. From the ceiling hang two bare light bulbs on short cords, one exactly halfway between the first and second plate, the other exactly halfway between the second and third plate (a lit bulb is an empty bulb outline with short straight rays around it; an unlit bulb is a plain empty bulb outline); both bulbs are unlit. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) herself, calm and in control, presses one long flat wooden ruler down across all three levers at once, so all three switches flip together, with one long motion line along the ruler. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) sits on the floor at the right, watching, impressed. Landscape image 1536x1024; the wall, the bulbs and the two characters fill about 92% of the width and about 80% of the height. No pictures on the wall, no markings on the ruler. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_08_08",
+   "kind": "line",
+   "group": "COVER",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_ft_patch_new_hole",
+    "line_qc_vote_switch_fix",
+    "line_tiny_lab"
+   ],
+   "role": "cover",
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A small wooden rowboat on calm water, seen from the side. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) kneels in it hammering a square patch over a hole, and right beside the nail a new little fountain of water spurts up; she looks at it in dismay. At the stern, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) holds up a bucket. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

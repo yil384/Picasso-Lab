@@ -1,0 +1,135 @@
+{
+ "episode": "QC03-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (p15, 40:43-42:29): every extra wire on a chip saves SWAP gates, so which layout is better? The denser one, obviously. So why did IBM's newer chips give each qubit fewer neighbours, not more? (line_qc_chip_wires_refused). Cast as in QC03-01: the fabricator = the chip maker, the planner = the compiler; new prop: a tuning fork = one qubit, its pitch = the qubit's frequency. p15's smiley faces are clip art: cover them.",
+  "Dense saves SWAPs (55:31-57:07): a two-qubit gate between qubits that are not linked costs SWAPs, and a 10-CNOT program can triple (reuse line_qc_pass_seat_swap).",
+  "The trend (tape p16, 42:42-44:55): IBM went sparse, dense, then sparse again (heavy-hex: at most three neighbours); Google keeps a square grid with four. Check the IBM topology history in FACTS.md.",
+  "Each qubit is driven by microwave pulses at its own frequency, set when the chip is made; she calls the frequency the fingerprint of each qubit (clip 53:45-54:13).",
+  "Too similar = crosstalk (46:14-47:52): a pulse meant for one qubit also drives a linked neighbour with the same frequency, like a second tuning fork humming along (line_qc_chip_forks_same; sympathetic resonance is a real effect, so the picture is honest).",
+  "Too different = slow two-qubit gates (48:26-49:00): (line_qc_chip_forks_far). So linked neighbours must differ, but not by much: a careful frequency plan for the whole chip (line_qc_chip_forks_board).",
+  "Fabrication spread (50:10-51:04): you plan 12, you get 15; with more links, more linked pairs can collide, and a collision can make the chip useless; the final thing is fabrication yield (clip 45:47-46:14) (line_qc_chip_forks_batch, then line_qc_chip_reject_bin). The yield plots on p17-p18 are third-party (Brink et al. 2018; Hertzberg et al. 2021): redraw as a falling line, never tape them.",
+  "General-purpose vs application-specific (tape p19, 57:48-59:07; clip 58:13-58:40): dense links only where the target program needs them; \"one good chip in 500\" is her illustration, never captioned as data.",
+  "The design flow (tape p20, 59:20-60:39; Li, Ding, Xie, ASPLOS 2020): profile the program, add links only as needed (line_qc_chip_desire_paths: pave only the paths people actually walk). Honest limit: a chip shaped for one program serves other programs less well.",
+  "Research advice (clip 51:29-52:22): find the physical limitation, or improve a known solution (reuse line_mic).",
+  "Cover (line_qc_cover_03_03; for the X post and thumbnails, not a film beat): the planner offers an armful of wires, the fabricator folds his arms beside a sparse honeycomb tile and a bin of dense rejects."
+ ],
+ "reuse": [
+  "line_qc_pass_seat_swap",
+  "line_qc_pass_one_sheet_many_chips",
+  "line_mic",
+  "line_paper",
+  "line_balance",
+  "line_tiny_lab"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_chip_wires_refused",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_tap_two_people",
+    "line_postal_scale"
+   ],
+   "prompt": "In a small workshop, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, eagerly holds out a big, tangled armful of extra wires to the fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, who stands behind his workbench with his arms folded, shaking his head firmly. On the workbench between them lies one chip tile: a flat square tile on four stubby legs, its top dotted with round studs joined by only a few short bars in a sparse honeycomb pattern of hexagons. Landscape image 1536x1024; the two characters and the workbench fill about 92% of the width and about 82% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_chip_forks_same",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "On a workbench stands a small wooden box, and on top of it two identical tuning forks, exactly the same size, side by side a hand's width apart. The fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, has just tapped the left fork with a small rubber mallet (short vibration lines around its prongs); the right fork, which nobody touched, is vibrating too, with the same short vibration lines around its prongs. He stares at the right fork in surprise, eyebrows up. Square image 1024x1024; the fabricator, the box and the two forks fill about 85% of the width and about 85% of the height; the forks are large. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_chip_forks_far",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "On a workbench stands a long wooden box with two tuning forks on it, very different in size: a huge tall fork on the left and a tiny short fork on the right. The huge fork has just been tapped and vibrates (short vibration lines around its prongs); the tiny fork stays perfectly still, no lines. The fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, leans on the bench beside the tiny fork with his chin on one hand, bored, waiting, holding a pocket watch with no numerals in the other hand. Landscape image 1536x1024; the box, the forks and the fabricator fill about 90% of the width and about 82% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_chip_forks_board",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "Seen from the front and a little above: a wide wooden board on a workbench with tuning forks standing upright in a neat grid of three rows of four; neighbouring forks are joined by short taut strings, and every fork is a slightly different height from each fork it is joined to (a few close heights alternating in a careful pattern, no two joined neighbours the same). One place at the front right is still empty: the fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, bends over the board from behind and lowers the last fork into it with great care, tongue out in concentration. Landscape image 1536x1024; the board, the forks and the fabricator fill about 90% of the width and about 82% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_chip_forks_batch",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "The fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, holds up a wide tray of freshly made tuning forks lying side by side in a row, just taken out of a small workshop kiln behind him (its door open). They were meant to step down neatly in length from left to right, but they came out a little uneven: one is too long, one too short, and two neighbours are exactly the same length. He squints at them, one eyebrow raised. Landscape image 1536x1024; the fabricator, the tray and the kiln fill about 90% of the width and about 82% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_chip_reject_bin",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_heap",
+    "line_tiny_lab",
+    "line_postal_scale"
+   ],
+   "prompt": "The fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, stands beside his workbench and, with a sigh, drops a chip tile into a tall bin that is already overflowing with many rejected chip tiles. Every rejected tile is crowded with bars: its round studs are joined by many crossing bars, each stud linked to many neighbours. On the workbench, on a small cushion, rests one single good chip tile with a sparse honeycomb pattern of studs and few bars; he glances at it fondly. Each chip tile is a flat square tile on four stubby legs, drawn in outline. Portrait image 1024x1536; the fabricator, the bin and the workbench fill about 85% of the width and about 88% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_chip_desire_paths",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "prompt": "A small square park seen from above at a slant: a lawn with a round fountain in the middle and a gate in each of the four corners. Across the grass run only a few worn footpaths, exactly where people actually walk: two diagonal paths from gate to gate past the fountain and one short cut from a gate to a bench; the rest of the lawn is untouched grass shown with a few short tufts. A few small invented walkers stroll along the worn paths. The fabricator, a stocky invented older man with a simple round face and dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead (drawn in outline), and a heavy work apron over a turtleneck sweater, lays square paving stones along one of the worn paths only, a wheelbarrow of stones beside him. On a bench at the side, the planner, an invented young woman with a simple round face and dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, and a pencil tucked behind one ear, watches the walkers and takes notes on a blank notepad. Landscape image 1536x1024; the park fills about 94% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no signs."
+  },
+  {
+   "name": "line_qc_cover_03_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_chip_wires_refused",
+    "line_qc_chip_reject_bin",
+    "line_qc_chip_forks_same"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's planner (two short braids, round glasses, utility vest), the fabricator (bald, walrus moustache, goggles, work apron) and the chip tiles: draw the same characters and props in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the planner (the same invented character as in the references: a young woman with a simple round face, dot eyes, two short braids, round glasses, a utility vest with many pockets over a long-sleeved T-shirt, a pencil tucked behind one ear) eagerly holds out a big armful of extra wires. On the right, the fabricator (the same invented character as in the references: a stocky older man with a simple round face, dot eyes, a bald head, a big walrus moustache, clear safety goggles pushed up on his forehead, a heavy work apron over a turtleneck sweater) stands with his arms folded, shaking his head; beside him on the floor a bin overflows with rejected chip tiles crowded with crossing bars. Between them, on a plain stand, rests one large chip tile: a flat square tile on four stubby legs with round studs joined by a few bars in a sparse honeycomb pattern of hexagons. Full figures on one short ground line. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

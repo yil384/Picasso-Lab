@@ -1,0 +1,113 @@
+{
+ "episode": "QC08-07",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (line_qc_css_three_hoops, then the cover): a 1950 code from Bell Labs fixes any single flipped bit among seven. Use it twice, once for flips and once for signs, and you get a seven-qubit quantum code, but only if the two copies get along. The Hamming code drawn as three overlapping hoops with seven dishes: each hoop must hold an even number of pebbles; one flipped bit upsets exactly the hoops it sits in, and that pattern names the dish (code draws the pebbles). Same cast as QC08-05: the keeper and the imp. No portrait of Hamming, Steane, Calderbank or Shor.",
+  "Classical linear codes (Q24-11 66:37-73:22): a generator G makes the codewords, a parity-check matrix H gives Hx = 0 for every codeword, and He is the syndrome that points at the error; the repetition code's two parity checks map one to one onto the Z checks Z1Z2, Z2Z3 (Q25-11 63:40-65:00, clip 64:30-65:00; reuse line_qc_synd_read_bulbs). Skip the screen-share trouble at Q24-11 68:40-69:20.",
+  "The Hamming [7,4,3] code (Q24-11 73:22-73:45; Q25-11 65:00-65:40): four data bits, three checks, fixes one flip. Tape Q24-11 s22 and s24.",
+  "CSS (Q25-11 63:05-65:59; Q24-11 73:58-74:52): each check is all Z or all X; one classical code becomes the Z checks (round lens: they catch bit flips), a second becomes the X checks (square lens: they catch phase flips); Steane uses the Hamming code for both (line_qc_css_twin_boards; QC08-03's glasses).",
+  "They must commute, and that is not automatic (65:59-67:42; Q24-11 76:36-77:29): every X check must overlap every Z check on an even number of qubits; the Hamming checks happen to (four overlaps, two overlaps) (line_qc_css_gears_mesh: gears that mesh vs gears that jam).",
+  "Steane [[7,1,3]] beats Shor [[9,1,3]] at the same distance (67:17-67:42; reuse line_qc_min_three_rafts from QC08-06), yet the strategy is not always the best: five qubits is the minimum (clip Q24-11 74:52-75:17). Tape Q25-11 s25 (crop the footer).",
+  "Wiring (Q24-11 74:52-76:36, clip 75:43-76:36): a weight-4 Hamming check needs one helper linked to four qubits scattered across the chip; chips link only neighbours, so hardware-aware codes followed: the surface code (each check touches four neighbours) and low-density parity-check codes (line_qc_css_rooftop_strings; reuse line_qc_string_village and line_qc_surf_quilt_knots).",
+  "Codes with k > 1 (Q25-11 41:49-42:16, which names a company: keep it off screen): high-rate qLDPC codes hold many logical qubits in one block (line_qc_css_ferry_rowboats). FACTS before any number: e.g. a [[144,12,12]] bivariate bicycle code (2024) against twelve distance-12 surface-code patches; name no company.",
+  "Cover (line_qc_cover_08_07; for the X post and thumbnails, not a film beat): the keeper between two identical three-hoop patterns, round glasses towards one, square glasses towards the other."
+ ],
+ "reuse": [
+  "line_qc_min_three_rafts",
+  "line_qc_hbridge_two_glasses",
+  "line_qc_string_village",
+  "line_qc_surf_quilt_knots",
+  "line_qc_synd_read_bulbs",
+  "line_qc_shor_glasses_catch"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_css_three_hoops",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the floor only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "Seen from above at a slant on a plain playground floor: three big hula hoops lie flat and overlap like the classic three-circle diagram, one at the top and two below, so that together they make exactly seven separate regions: one in the middle where all three overlap, three where two overlap, and three where only one hoop is. In each of the seven regions sits one small empty round dish. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) kneels at the lower right edge and points into the middle region; the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) peeks out from behind the top hoop. Landscape image 1536x1024; the hoops fill about 60% of the width and about 80% of the height, centred; the seven dishes are clearly separated. The dishes are empty. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_css_twin_boards",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_hbridge_two_glasses",
+    "line_qc_css_three_hoops",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image shows the two kinds of glasses used earlier in this series (perfectly round frames and square frames): draw the same two frame shapes. The third attached image shows the three overlapping hoops with seven dishes: draw the same three-circle pattern. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "Two identical low square tables side by side with a clear gap between them, seen from the front and a little above; on each lies the very same sheet with three overlapping circles drawn on it, making seven regions, with one small empty dish in each region. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) stands between the tables: towards the left table she holds up a pair of glasses with perfectly round frames, towards the right table a pair with square frames, looking from one to the other. Landscape image 1536x1024; the two tables and the keeper fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_css_gears_mesh",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_clockwork",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the gears only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A picture in two halves side by side, with clear space between them, each on a plain wall panel. Left: two big toothed gears of the same size mesh neatly, their teeth slotting into each other's gaps, with smooth curved motion lines showing them turning together. Right: two identical big gears pushed together tooth tip against tooth tip, jammed, with small jolt lines and a few tiny spark marks (short lines, nothing filled) where they clash; the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) strains at a big spanner on the right pair. Landscape image 1536x1024; the gears and the keeper fill about 90% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_css_rooftop_strings",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_string_village",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image shows the tin-can strings used earlier in this series: draw strings and cans the same way. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A small town seen from a little above: a neat grid of about twelve small houses with simple roofs. From a window of the house in the middle, four long taut strings with a tin can at each end stretch far across the town to four distant houses, passing over many rooftops and crossing each other. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) stands on a ladder against the middle house, trying to string a fifth line over the roofs and getting tangled in string; the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) sits on a nearby roof holding a loose tin can. Along the bottom row of houses, by contrast, short strings join only next-door windows. Landscape image 1536x1024; the town fills about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_css_ferry_rowboats",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the water only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A wide harbour seen from the side, the water shown only with a few ripple lines. On the left, a crowd of twelve small identical rowboats, each carrying one small closed crate and each rowed by its own tiny invented rower (simple round face, dot eyes), jostle for room. On the right, one big flat ferry carries twelve identical small closed crates in neat rows on its deck and glides along easily; the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) stands at the ferry's rail, waving. Landscape image 1536x1024; the boats and the ferry fill about 94% of the width and about 70% of the height. No flags. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_08_07",
+   "kind": "line",
+   "group": "COVER",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_css_twin_boards",
+    "line_qc_vote_switch_fix",
+    "line_qc_css_three_hoops"
+   ],
+   "role": "cover",
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout; the third shows the three-hoop pattern to draw.",
+   "prompt": "On a plain floor, two identical patterns of three big overlapping hoops lie side by side with clear space between them. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) stands between them, holding up a pair of glasses with perfectly round frames towards the left pattern and a pair with square frames towards the right one. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) sits in the middle of the right pattern, looking up at her. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,117 @@
+{
+ "episode": "QC06-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: two states differ only by a minus sign. In one case (|+> against -|+>) no experiment in the universe can tell them apart; in the other (|+> against |->) a single measurement can. Where does the sign sit? (line_qc_phase_dancers.) A 2024-only part: primary Q24-08 53:32-72:49 (in-person recording: check every clip for student voices and room noise).",
+  "Measured, result unknown (Q24-08 53:49-58:22): a coin that has landed under a cup is heads or tails, we just don't know which: a mixture, written as a density matrix rho = sum p_i |psi_i><psi_i|. A spinning coin is not secretly heads or tails (line_qc_mix_spin_or_cup). Honest caveat: a real spinning coin is classical; here it only stands in for the definite state |+>.",
+  "The test that tells them apart: turn, then read (the X measurement of QC06-01): |+> lights the same lamp every time; the 50/50 mixture of |0> and |1> still gives a coin flip; read the 0/1 way, both give 50/50. In the matrix, the mixture has lost its off-diagonal terms (line_qc_mix_jars_compare; reuse line_qc_meas_bead_jars; tape Q24-08.notes p5).",
+  "Noise is the environment measuring your qubits and telling no one (clip Q24-08 58:48-59:41): even a sealed, very cold machine still touches the outside (reuse line_qc_meas_sealed_cabinet; line_qc_mix_nosy_peek).",
+  "Why programmers meet density matrices (clip Q24-08 60:04-60:55): like static analysis of a loop that may run any number of times, you carry every outcome you cannot rule out, with its odds (line_qc_mix_every_weather).",
+  "Gates still work on a mixture: rho -> U rho U-dagger, every possibility turned the same way (60:59-62:55); this is how noise is simulated and analysed (drawn as pen work, no drawing).",
+  "Global phase (62:59-65:59; clip 65:03-65:30): multiply the whole state by a complex number of size 1 and every measurement's odds stay the same: no experiment can tell, so the two are treated as the same state (line_qc_phase_dancers, left: both dancers late by the same amount look exactly the same).",
+  "Relative phase (66:21-69:44): |+> and |-> have the same odds read the 0/1 way (50/50 each) but opposite certain answers read the +/- way: they are distinguishable because one measurement exists that tells them apart (line_qc_phase_coin_turn; line_qc_phase_dancers, right; reuse line_qc_meas_fixed_camera). 2025 touches global phase only in passing (Q25-05 43:05-43:31). Tape Q24-08.notes p6.",
+  "Takeaway: a mixture is not knowing which state; a superposition is one definite state; a global sign is nothing; a relative sign is what interference runs on (QC07-04).",
+  "Cover (line_qc_cover_06_04; for the X post and thumbnails, not a film beat): the nosy neighbour peeks under the cup while the experimenter looks away."
+ ],
+ "reuse": [
+  "line_qc_meas_sealed_cabinet",
+  "line_qc_meas_bead_jars",
+  "line_qc_meas_fixed_camera",
+  "line_qc_meas_flick_or_slap"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_mix_spin_or_cup",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_dice_hand",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "prompt": "A plain table seen from the front. On the left of the table, a large coin whose one face shows a simple raised daisy outline and whose other face is plain spins upright on its edge, drawn with a few curved motion lines around it. On the right of the table sits a plain cup turned upside down, hiding a coin that has already landed underneath it. Behind the table, between the two, the experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) stands, seen waist up, and shrugs with both palms up and eyebrows raised, looking at the upturned cup. Landscape image 1536x1024; the character, the table, the coin and the cup fill about 85% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_mix_nosy_peek",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_tap_two_people"
+   ],
+   "prompt": "A small plain lab room seen from the front, with one open window in the back wall. A small table stands right in front of the window, with a plain cup turned upside down on it. The experimenter (an invented young adult with a simple round face and dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with the sleeves rolled up over a plain T-shirt, and sneakers) has turned away towards the right side of the picture, reaching up to a high shelf for a box, unaware. Meanwhile the nosy neighbour (an invented older person with a simple round face, dot eyes, big bushy eyebrows, a woolly bobble hat and a cardigan) leans in through the open window from outside, lifts the upturned cup a little with one hand to peek at the coin lying underneath, and holds one finger of the other hand to the lips, sly and secretive. Landscape image 1536x1024; the room, the two characters and the table fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_mix_jars_compare",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_tap_glass",
+    "line_balance",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two identical small workbenches side by side, seen from the front, with a clear gap between them. On each bench stands the reading box: a plain rectangular box about the size of a shoebox, with a small round opening on its top and two identical round lamps side by side on its front face, a left lamp and a right lamp (a lit lamp is an empty circle with short straight rays around it, an unlit lamp is a plain empty circle), with two identical tall clear glass jars in front of it, one under each lamp, and a small round turntable beside it. Left bench: next to its turntable a large coin spins upright on its edge (a few curved motion lines); its left lamp is lit, its left jar is filled to the top with small round beads and its right jar is completely empty. Right bench: next to its turntable sits a plain cup turned upside down; its right lamp is lit, and its two jars are each about half full of small round beads, to the same level. No people. Landscape image 1536x1024; the two benches fill about 92% of the width and about 70% of the height. No text, no letters, no numbers, no logos; the beads are drawn as small empty circles; no scale marks or labels on the jars."
+  },
+  {
+   "name": "line_qc_mix_every_weather",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_word_bag"
+   ],
+   "prompt": "The traveller (an invented tall young adult with a simple round face and dot eyes, curly hair under a knitted beanie, a padded jacket, a messenger bag worn across the body, and sneakers) kneels on the floor beside a big open suitcase, packing for every possible weather at once: in the suitcase already lie a folded umbrella, a sun hat, a pair of sunglasses, a woolly scarf and a pair of mittens, and the traveller is squeezing in a rolled-up raincoat. Through a window above, the sky shows a round sun on one side and a rain cloud with a few raindrops on the other. Square image 1024x1024; the character, the suitcase and the window fill about 88% of the width and about 88% of the height, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_phase_dancers",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture in two halves side by side, each half on its own short stage floor line, with clear space between the halves. The same two invented dancers appear in both halves: simple round faces and dot eyes, plain matching leotards and soft dance shoes, one with a short ponytail and one with short curly hair. Left half: the two dance side by side in perfect step, in exactly the same pose: right arm raised in a curve, left leg lifted, both smiling. Right half: the two dancers again, but the one with curly hair is out of step, in the mirrored pose (left arm raised, right leg lifted), so their raised arms bump; both look surprised. No audience, no music stands. Landscape image 1536x1024; each half fills most of its side; together they fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_phase_coin_turn",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_dice_hand",
+    "line_balance",
+    "line_switch_dimmer"
+   ],
+   "prompt": "A picture in two halves side by side on one plain table top, with clear space between the halves. In each half, two identical small round turntables stand side by side, each holding one large coin standing upright on its edge in a small clip stand. Left half: both coins are seen exactly edge-on, so each looks like the same thin upright strip, and the two look exactly alike. Right half: both turntables have been turned a quarter turn (a small curved arrow on the rim of each turntable): now the left coin faces the viewer and shows a simple raised daisy outline, and the right coin faces the viewer and shows its plain face. Landscape image 1536x1024; each half is centred in its side; together they fill about 90% of the width and about 60% of the height. No text, no letters, no numbers, no logos, no symbols other than the daisy outline."
+  },
+  {
+   "name": "line_qc_cover_06_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_mix_nosy_peek",
+    "line_qc_meas_fixed_camera",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show the nosy neighbour (bushy eyebrows, a woolly bobble hat, a cardigan) and the experimenter (short spiky hair, safety goggles pushed up on the forehead, a lab coat): draw the same two characters (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the nosy neighbour (an invented older person with a simple round face, dot eyes, big bushy eyebrows, a woolly bobble hat and a cardigan) leans in through an open window and lifts an upturned cup on a small table to peek at the coin underneath, one finger to the lips, sly. On the right, the experimenter (the same invented character as in the reference images: simple round face, dot eyes, short spiky hair, safety goggles pushed up on the forehead, a white lab coat with rolled-up sleeves) stands with the back half-turned, reaching up to a shelf, unaware. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

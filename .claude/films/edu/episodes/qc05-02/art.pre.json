@@ -1,0 +1,124 @@
+{
+ "episode": "QC05-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: X flips 0 and 1 but leaves |+> as it is; Z leaves 0 and 1 alone but swaps + and -. Which single gate turns one into the other? (line_qc_hbridge_two_glasses: one qubit, two pairs of glasses, the Z basis and the X basis.) Same cast as QC05-01: the tinkerer and the skeptic.",
+  "X, the quantum NOT: it swaps |0> and |1> (reuse line_switch_dimmer, the toggle half) and keeps |+> (|-> only gains a sign) (Q25-05 13:29-18:34, clip 17:42-18:09). The states a gate leaves pointing the same way (its eigenvectors) are its axis, like the centre of a spinning roundabout (line_qc_hbridge_roundabout).",
+  "Z: leaves |0> and |1> alone and acts as a NOT on |+> and |-> (19:25-24:53). X and Z are two lenses on the same qubit (24:12-24:37; line_qc_hbridge_two_glasses again).",
+  "H = (X + Z)/sqrt2 is the bridge between the lenses: 0 -> +, 1 -> -, + -> 0, - -> 1, and crossing twice brings you back, H^2 = I (24:57-28:11, clip 26:47-27:12; line_qc_hbridge_footbridge).",
+  "Z = HXH and X = HZH: change basis, act, change back, like piping icing on the back of a cake: turn the stand, pipe at the front, turn it back (Q24-04 24:56-32:36, clip 30:50-31:45; line_qc_hbridge_cake_turntable).",
+  "Is it a coincidence that the sum of X and Z swaps their bases? A teaser for the \"grand unification of quantum algorithms\" (Martyn, Rossi, Tan, Chuang, PRX Quantum 2021) (Q25-05 28:39-31:06; Q24-04 33:17-34:43; taped slide, no drawing).",
+  "Global vs relative phase: a minus sign on the whole state changes nothing you can measure; a minus sign on one branch is real, because branches interfere, like ripples from two dippers whose overlap pattern shifts when one dipper is moved out of step (Q24-04 13:25-15:21, clip 14:24-15:21; 19:18-22:00; line_qc_hbridge_ripple_tank).",
+  "The light version of the same point: the whole band one beat late sounds the same song; only the drummer late sounds wrong (line_qc_hbridge_duet_offbeat). Caption it as a picture of \"only the relative part matters\", not as phase being timing.",
+  "Cover (line_cover_qc05_02; for the X post and thumbnails, not a film beat): the skeptic on a small arched footbridge swaps round glasses for square ones; the tinkerer waves from the bank."
+ ],
+ "reuse": [
+  "line_switch_dimmer",
+  "line_clock_face",
+  "line_tiny_lab",
+  "line_qc_undo_twist_cube"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_hbridge_two_glasses",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "Waist up: the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) holds up two pairs of glasses, one in each hand, comparing them with raised eyebrows: in the left hand a pair with perfectly round frames, in the right hand a pair with square frames; the two pairs are large and clearly different. The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) peeks in from the lower right corner, curious. Square image 1024x1024; the skeptic and the two pairs of glasses fill about 85% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_hbridge_roundabout",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A small playground roundabout seen from a little above: a flat round platform with a few curved handrails rising from a short central post. The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) stands exactly at the centre, holding the central post with both hands, calm and perfectly still; the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) runs along beside the rim, pushing a handrail, with curved motion lines round the rim showing that the platform spins. Square image 1024x1024; the roundabout and the two characters fill about 88% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_hbridge_footbridge",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A small arched wooden footbridge over a narrow stream between two grassy banks, with a few simple round trees, seen from the side. In the middle of the bridge stands the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan), taking off a pair of round-framed glasses with one hand and putting on a pair of square-framed glasses with the other. On the left bank, the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) waves. Full figures. Landscape image 1536x1024; the bridge, the banks and the characters fill about 92% of the width and about 75% of the height; the two pairs of glasses are drawn a little larger than life so they read clearly. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_hbridge_cake_turntable",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "The tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) decorates a round layer cake standing on a cake turntable (a round plate on a short pedestal) on a plain table, seen from the front: one hand gives the turntable a turn, with a curved motion line round its edge; the other hand holds a piping bag over the front edge of the cake; a row of small piped rosettes runs part of the way round the top edge. The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) watches from behind the table. Waist up. Square image 1024x1024; the cake, the turntable and the tinkerer fill about 85% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_hbridge_ripple_tank",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A shallow rectangular glass tray of water on four thin legs, seen from a little above. Above it, a horizontal bar holds two small dippers, each touching the water at one point near the middle; from each point, circular ripples spread as evenly spaced thin concentric circles, and the two sets of circles overlap across the tray. The skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) leans over the tray at the right, watching closely; the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) at the left holds the end of the bar. Landscape image 1536x1024; the tray and the characters fill about 90% of the width and about 80% of the height. The ripples are thin lines only: no shading, no grey. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_hbridge_duet_offbeat",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_undo_jar_tag",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the tinkerer (short bob with a straight fringe, work apron) and the skeptic (tall, knitted beanie with a pompom, long scarf, cardigan). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "On a small low stage: the tinkerer (an invented young character with a simple round face and dot eyes, a short bob haircut with a straight fringe, a plain long-sleeved top with the sleeves rolled up and a work apron with one big front pocket) plays a violin, and the skeptic (an invented tall, lanky character with a simple round face and dot eyes, a knitted beanie hat with a small pompom, a long plain scarf and a cardigan) sits at a small drum kit (one bass drum and one snare drum, plain, no logos) and has just hit the snare too early: the tinkerer's bow stops in mid-air and both wince at each other; a few short jagged lines near the drum show the clash. Full figures. Landscape image 1536x1024; the two musicians and their instruments fill about 88% of the width and about 80% of the height. No text, no letters, no numbers, no logos. No sheet music."
+  },
+  {
+   "name": "line_cover_qc05_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_hbridge_footbridge",
+    "line_qc_hbridge_two_glasses",
+    "line_qc_undo_jar_tag"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters (the tinkerer: short bob with a fringe, work apron; the skeptic: tall, beanie with a pompom, long scarf): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A small arched wooden footbridge over a narrow stream between two grassy banks, seen from the side. In the middle of the bridge stands the skeptic (the same invented character as in the references: tall and lanky, simple round face, dot eyes, a knitted beanie hat with a small pompom, a long plain scarf, a cardigan), holding a pair of round-framed glasses in one raised hand and a pair of square-framed glasses in the other, mid-swap; both pairs are drawn large. On the left bank, the tinkerer (the same invented character as in the references: simple round face, dot eyes, a short bob haircut with a straight fringe, a work apron) waves. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

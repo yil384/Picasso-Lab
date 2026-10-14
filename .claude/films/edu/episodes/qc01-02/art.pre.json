@@ -1,0 +1,119 @@
+{
+ "episode": "QC01-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (line_qc_perfect_ledger_double): describing 50 interacting electrons exactly on a classical computer takes 2^50, about a quadrillion, complex numbers (check: about 18 PB at 16 bytes each); add one electron and the count doubles: every stack is twice the one before. Cast for all of QC01 (the six parts cut from her first lecture, Q25-01): the physicist (older, bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (lanky, a tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag); both invented. No lecturer figure anywhere and never her likeness: her voice and her slides carry her part.",
+  "Nature does it effortlessly; could a computer made of the same stuff? (line_qc_perfect_nature_easy; the early 1980s: Feynman 1982, Deutsch 1985; the slide marks 1983, say \"the early 1980s\").",
+  "Wave 1 imagines a perfect machine: unlimited qubits, perfect gates, no cold; even then, is it worth building, and for what? (line_qc_perfect_dream_machine; tape p9; clip 20:20-20:45).",
+  "Quantum data: n two-state particles need a state vector of 2^n numbers, and every step a 2^n x 2^n matrix, on a classical machine (back to line_qc_perfect_ledger_double; clip 23:31-24:26).",
+  "Classical data with hidden structure: factoring (21 = 3 x 7). Multiplying is quick, undoing it is slow for big numbers, and much of today's encryption rests on that (line_qc_perfect_factor_tiles; Shor 1994; keep to \"much of today's encryption\", no security or state framing).",
+  "Why classical simulation stops near 50 qubits even on supercomputers: one more qubit needs a whole second warehouse (line_qc_perfect_two_warehouses; reuse line_cluster_campus for the supercomputer; clip 56:38-57:05; largest full state-vector simulations ~45-50 qubits, check).",
+  "Not every problem speeds up: the quantum key fits only some locks (line_qc_perfect_special_key; points ahead to QC07-01).",
+  "Cover (line_qc_cover_01_02; for the X post and thumbnails, not a film beat): the student staggers beside a swaying tower of notebooks while a little molecule floats calmly beside it."
+ ],
+ "reuse": [
+  "line_heap",
+  "line_cabinet_tower",
+  "line_cluster_campus",
+  "line_paper",
+  "line_balance",
+  "line_lab_2017"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_perfect_ledger_double",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_cabinet_tower",
+    "line_tiny_lab"
+   ],
+   "prompt": "Five small identical side tables stand in a row from left to right on a plain floor. On each table sits a small shallow dish holding little round balls: one ball on the first table, two on the second, three on the third, four on the fourth, five on the fifth. Beside each table, on the floor, stands a neat stack of identical thick notebooks: the first stack is a single notebook, and each stack is exactly twice as tall as the one before it, so the fifth stack is a tall tower, taller than a person. At the far right, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) stands on a small stepladder beside the tall tower, carefully adding one more notebook to its top, wobbling a little, worried. Landscape image 1536x1024; the tables, stacks and student fill about 94% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no writing on the notebooks."
+  },
+  {
+   "name": "line_qc_perfect_nature_easy",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_heap",
+    "line_chat_first",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture in two halves side by side, with clear space between them. Left half: a small simple model of a molecule, three round balls joined by two short sticks, floats calmly in the air above a small round dish, with a few soft curved lines around it showing it gently vibrating; it looks effortless and peaceful. Right half: the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) sits at a desk almost buried behind teetering towers of paper sheets and open notebooks, scribbling furiously with a pencil in each hand, sweat drops flying, crumpled sheets on the floor. Landscape image 1536x1024; the two halves together fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no formulas on the papers (only a few wavy lines)."
+  },
+  {
+   "name": "line_qc_perfect_dream_machine",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_lab_2017",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "The physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) dozes in a comfortable old armchair, a book lying open face-down on his chest, smiling in his sleep. Above him a big dream cloud (a cloud-shaped bubble joined to his head by three small circles) shows an enormous, perfectly tidy machine stretching away to the horizon: endless straight rows of identical round units on long shelves, all gleaming, with a few small sparkle marks, no cables loose, nobody needed to tend it. Landscape image 1536x1024; the armchair in the lower left, the dream cloud filling the upper two thirds and most of the width; together about 92% of the width and about 88% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_perfect_factor_tiles",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_glue_tiles",
+    "line_postal_scale",
+    "line_block_towers"
+   ],
+   "prompt": "A picture in two halves side by side on one long table, with clear space between them. Left half: the student (the same invented character in both halves: a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) cheerfully finishes laying small identical square tiles into one neat flat rectangle of exactly three rows of seven tiles, done in a moment, relaxed. Right half: the same student faces an enormous loose heap of hundreds of the same square tiles, scratching their head; around the heap lie several half-built rectangles that do not come out even, each with one or two leftover tiles sticking out at its end. Landscape image 1536x1024; the two halves together fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no symbols on the tiles."
+  },
+  {
+   "name": "line_qc_perfect_two_warehouses",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_cabinet_tower",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two big plain warehouses stand side by side, their front walls cut away so we can see inside. The left warehouse is completely full: tall shelves from floor to ceiling packed with identical binders, a small forklift parked in front, and the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) on top of a tall rolling ladder, squeezing the very last binder into the last gap on the top shelf. The right warehouse is exactly the same size but still empty: only its frame, roof beams and scaffolding are up, and an invented builder (simple round face, dot eyes, a hard hat) on the scaffolding waves to the student. Landscape image 1536x1024; the two warehouses fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no signs, no writing on the binders."
+  },
+  {
+   "name": "line_qc_perfect_special_key",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chat_first",
+    "line_tiny_lab",
+    "line_dusty_drawer"
+   ],
+   "prompt": "A long straight corridor seen from the front, with a row of seven doors along its back wall. The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) stands in the middle holding up one big, fancy, ornate key. Two of the doors have a big ornate keyhole matching the key and stand open, with light pouring out of them (a few ray lines); the other five are ordinary doors with plain round knobs and no keyhole at all, where the fancy key is no help. The student looks from the key to the plain doors, thoughtful. Landscape image 1536x1024; the corridor and the student fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no signs or numbers on the doors."
+  },
+  {
+   "name": "line_qc_cover_01_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_perfect_ledger_double",
+    "line_qc_perfect_nature_easy",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's student and the floating molecule: draw the same characters (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) staggers with an armful of thick notebooks beside a tall, swaying tower of identical notebooks that is taller than the student. On the right, a small simple model of a molecule, three round balls joined by two short sticks, floats calmly in the air with a few soft curved lines around it, effortless. The student full figure on a short ground line. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,133 @@
+{
+ "episode": "QC04-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: to program a GPU you need its instruction set, not semiconductor physics; what is the instruction set of a quantum computer, and who decided it? (line_qc_isa_panel_wall: the tinkerer works a tidy front panel while the engineer keeps the tangle behind the wall running; reuse line_gpu). Cast for all of QC04 (lecture Q25-04), described in every prompt: the tinkerer (a short tuft of hair standing up, an open lab coat with rolled-up sleeves) and the friend (curly hair under a bucket hat, a long knitted scarf); QC04-01 adds the engineer (short beard, headlamp, bib overalls), QC04-04 the referee (big round moustache, peaked cap, whistle). Invented characters only: never the professor's likeness, never a real person (no Einstein, no laureates).",
+  "A classical ISA (Q25-04 p2, her clip 00:40-01:06): data types, even low-precision formats for machine learning (reuse line_train_scoop_spoon), arithmetic, control flow, memory (load into registers, compute there); the three zones of line_qc_isa_panel_wall carry these labels first.",
+  "Her clip 01:06-01:35: that morning's Nobel Prize in Physics went to superconducting-circuit pioneers (Clarke, Devoret, Martinis; check the affiliations in FACTS.md); descendants of those circuits sit at the bottom of fridges like this one (line_qc_isa_fridge, the engineer at the cables). Generic lab: no brands, no named company or country, no race framing.",
+  "The quantum ISA asks the same three questions (p2): what are valid states (quantum data), what are valid gates (state changes), and which small universal set builds (or approximates as closely as you like) every gate (line_qc_isa_few_bricks: a box of three brick shapes, a whole castle built only from them).",
+  "Course goals (p3-p6): read the teleportation circuit as easily as a page of music (line_qc_isa_score_reading); gate synthesis trades gate count against depth (reuse line_recipe_relay_vs_row: one lane of relay runners vs. runners side by side).",
+  "Why a Hilbert space? Her clip 20:04-20:57: \"it's not why, it's our assumption\", like the laws of motion; assumptions tested by experiment again and again for a century (line_qc_isa_ramp_bells: a ball on a ramp past bells, a long shelf of notebooks behind). Physics proposes and tests; mathematics proves (39:29-40:55). Skip 46:42-47:39 (the Einstein and \"God\" wording).",
+  "Understanding vs harnessing (Q24-02 p26-p31; the photos on p25, p27, p28 are third-party: redraw, never tape): quantum mechanics explains nature, quantum computing puts it to work, like watching birds vs. building planes (line_qc_isa_bird_plane) and studying wild plants vs. breeding crops (line_qc_isa_wild_farm); good abstractions hide the physics, and sometimes physics offers a shortcut (phase kickback, error correction: later parts).",
+  "Takeaway (her one-sentence summary, Q25-07 49:36-51:00; clip 50:02-50:54): states are unit vectors in a complex vector space, gates are unitary matrices, measurements are Hermitian matrices; relabel the three zones of line_qc_isa_panel_wall (tray = state, knobs = gates, window = measurement). Next: the data type itself (QC04-02).",
+  "Cover (line_qc_cover_04_01; for the X post and thumbnails, not a film beat): the tinkerer at the tidy front panel; behind the cut-open wall the engineer waves from the tangle."
+ ],
+ "reuse": [
+  "line_gpu",
+  "line_train_scoop_spoon",
+  "line_recipe_relay_vs_row",
+  "line_course_map",
+  "line_paper",
+  "line_mic"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_isa_panel_wall",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_kv_cloakroom_tower",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "prompt": "A big machine seen from the side and cut open like a doll's house. On the left, the outside of the machine is a tidy upright control panel, and the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, stands in front of it working the controls, relaxed. The panel has exactly three clearly separate zones from top to bottom: a small open loading tray holding three round tokens; a row of four big round knobs; a small round window with a single pointer inside it. Right of the panel, behind a solid wall, the inside of the machine is cut open to show an enormous tangle of pipes, coils, gears, valves and looping wires, and the engineer, an invented stocky man with a simple round face, dot eyes, a short beard and a headlamp on an elastic band round his head, wearing bib overalls over a T-shirt, crouches inside it tightening a pipe joint with a big wrench. The tinkerer cannot see the engineer and does not need to. Landscape image 1536x1024; the machine and both characters fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no markings or numbers on the knobs or in the window."
+  },
+  {
+   "name": "line_qc_isa_fridge",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_lab_2017",
+    "line_gpu",
+    "line_tiny_lab"
+   ],
+   "prompt": "A generic cryogenic refrigerator for superconducting quantum chips, with its outer cans removed so the inside shows: a tall hanging structure of five round metal plates stacked from top to bottom, each a little smaller than the one above, joined by thin straight rods, with many thin coiled cables looping down between the plates, and a small square chip holder at the very bottom. It hangs from a sturdy metal frame. Beside it, the engineer, an invented stocky man with a simple round face, dot eyes, a short beard and a headlamp on an elastic band round his head, wearing bib overalls over a T-shirt, stands on a small step stool and gently adjusts one cable with gloved fingers, careful and proud. Portrait image 1024x1536; the refrigerator and the engineer fill about 80% of the width and about 88% of the height. No text, no letters, no numbers, no logos, no brands, no labels, no screens."
+  },
+  {
+   "name": "line_qc_isa_few_bricks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_block_towers",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "prompt": "On a playroom floor, a small open box holds only three kinds of plain toy bricks: long bars, squares and round discs, a few of each. Beside the box stands a tall, elaborate model castle built entirely from those same three shapes: towers, arches, a gate and a little bridge, every part clearly made of bars, squares and discs. The tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, kneels by the box holding up one square brick, pleased; the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, stands on the other side of the castle admiring it, hands on his hat. Landscape image 1536x1024; the box, the castle and both characters fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no pictures or studs printed on the bricks."
+  },
+  {
+   "name": "line_qc_isa_score_reading",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "The tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, stands at a music stand, reading a large sheet as easily as a page of music, tapping the beat in the air with a pencil, at ease. The sheet is drawn large and clearly: three long straight horizontal lines run across it, evenly spaced; on the lines sit a few small empty squares, one small filled-in dot on the top line joined by a short vertical line to a small circle on the line below it, and at the right end of each line a small half-circle dial with one short needle. Square image 1024x1024; the tinkerer, the stand and the sheet fill about 85% of the width and about 85% of the height. No text, no letters, no numbers, no logos, nothing written inside the squares, no musical notes."
+  },
+  {
+   "name": "line_qc_isa_ramp_bells",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_lab_2017",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "prompt": "Indoors at a long wooden workbench: a long straight wooden ramp tilted gently down from left to right, with five small bells hanging from little posts along it at growing distances apart; a ball rolls down the ramp, a few short motion lines behind it, and the bell it just passed swings. The tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, crouches at the low end with her eyes on the ball, holding up a plain stopwatch. Behind the bench, a long shelf holds a very long row of many identical notebooks with blank spines, as if the same experiment had been checked again and again for years. Landscape image 1536x1024; the bench, the ramp, the tinkerer and the shelf fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no numbers on the stopwatch, no writing on the notebooks."
+  },
+  {
+   "name": "line_qc_isa_bird_plane",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_banks",
+    "line_two_lanterns",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with a little space between them. Left half: the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, stands in a meadow looking up through binoculars at one large bird gliding overhead with its wings spread, a closed sketchbook under his arm; he is studying how it flies. Right half: the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, stands on a small step ladder beside a small modern single-propeller aeroplane parked in front of an open hangar, tightening a bolt on the wing with a spanner; she is building something that flies. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 78% of the height. No text, no letters, no numbers, no logos, no markings on the plane, no signs on the hangar."
+  },
+  {
+   "name": "line_qc_isa_wild_farm",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_banks",
+    "line_two_lanterns",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with a little space between them. Left half: the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, kneels beside one wild plant growing between rocks on a hillside, studying a leaf through a big magnifying glass, a closed notebook on his knee; he is learning how it grows. Right half: the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, pushes a wheelbarrow heaped with big vegetables (pumpkins, cabbages, carrots) along long, tidy, straight rows of crops in a field; she is growing more of it. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 78% of the height. No text, no letters, no numbers, no logos, no signs, no fences with writing."
+  },
+  {
+   "name": "line_qc_cover_04_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_isa_panel_wall",
+    "line_qc_isa_fridge",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows this episode's machine, tinkerer and engineer, the second the engineer again: draw the same two characters (same faces, hair and clothes) and the same kind of machine in the new cover composition described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the tinkerer (the same invented character as in the first reference: a short messy tuft of hair standing up, an open lab coat with rolled-up sleeves over a T-shirt, sneakers) stands at the tidy front panel of a big machine and turns one of a row of four big round knobs, relaxed; above the knobs a small open tray with three round tokens, below them a small round window with one pointer. The machine is cut open on the right like a doll's house: behind a solid wall, a big tangle of pipes, coils and looping cables, and in the middle of it the engineer (the same invented character as in the references: short beard, headlamp, bib overalls) pops his head up and waves a wrench cheerfully. The knobs and the window are blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

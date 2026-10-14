@@ -1,0 +1,124 @@
+{
+ "episode": "QC08-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: send each bit three times and take a vote: at a 1% error rate failures drop to about 0.03%; at 60% the vote makes things worse. Where is the crossover, and does the trick survive the jump to qubits? (line_qc_vote_switch_fix, then the cover; reuse line_qc_analog_pigeon_vote, the QC01-03 callback: \"send 000, vote at the other end\".) Cast for QC08-01 to QC08-04 (lecture Q25-10, and the start of Q25-11 that finishes its story), described in full in every prompt: the keeper = the code (encodes, checks, fixes; chin-length hair with one hair clip, a zip-up work overall, a torch on the chest pocket, work boots) and the imp = the noise (knee-high, bean-shaped, big pointed ears, curly tail; the narration may call it a gremlin, the prompts never do). Bits are toggle switches on wall plates, the props of QC06-02's parity hallway; in this classical part the plates have no covers, so the keeper can simply look. Invented characters only: no lecturer figure, never her likeness; her voice and slides carry her part.",
+  "Why a course of its own (00:07-01:10) and why it is needed (02:00-02:29): her illustration, hardware at about 1e-5 errors per operation against a need of 1e-15 or better; a program is an endless row of switches and one slip spoils it (line_qc_vote_long_hall; reuse line_qc_surf_stepping_stones, QC03-04: every stone has to hold).",
+  "Repetition and majority vote (02:57-04:28; tape Q24-09 p2): store each bit on three switches; when one disagrees, set it back to match the other two (line_qc_vote_switch_fix; the code letters 0 0 0 -> 0 1 0 -> 0 0 0 over the levers).",
+  "Physical vs logical error (04:28-06:43): the imp flips each switch on its own, with probability p each (line_qc_vote_imp_dice: one die per switch); the vote is right when none or one flipped: P(correct) = (1-p)^3 + 3p(1-p)^2, so it fails with 3p^2 - 2p^3 (p = 0.01: 0.000298). Two flips fool it, and the keeper \"fixes\" the one good switch (line_qc_vote_two_flipped).",
+  "A threshold (06:43-07:59; Q24-09 28:06-29:56; clips Q25-10 07:34-07:59 and Q24-09 28:06-28:32): voting helps only while p < 1/2; at p = 0.6 it fails 64.8% of the time, worse than one switch (line_qc_vote_calm_vs_swarm; the code plots 3p^2 - 2p^3 against p, crossing the diagonal at 1/2; reuse line_balance for the tipping point). The simplest error threshold; real codes' thresholds are far lower and depend on the noise model (QC01-03).",
+  "Bit flips happen to qubits too, but a qubit cannot be copied (07:59-14:07; Q24-09 06:57-11:04; reuse line_qc_cnot_copier_envelope, QC05-04). Fan-out instead: two CNOTs turn alpha|0> + beta|1> (plus two |0> helpers) into alpha|000> + beta|111>, repeating only the basis states (clip Q25-10 12:48-13:13: \"the Bell circuit plus one more CNOT\"; line_qc_vote_triple_machine: QC06-02's pairing machine with a third funnel; reuse line_qc_pair_machine; tape Q24-09 p4, p5). Honest caveat in the narration: the three lidded cups match only when read the 0/1 way; it is one shared state, not three copies of the qubit. Avoid Q24-09 00:05-00:33 (quiz logistics).",
+  "Cover (line_qc_cover_08_01; for the X post and thumbnails, not a film beat): the imp has flipped the middle one of three switches; the keeper, unbothered, points at the two that still agree."
+ ],
+ "reuse": [
+  "line_qc_analog_pigeon_vote",
+  "line_qc_surf_stepping_stones",
+  "line_qc_cnot_copier_envelope",
+  "line_qc_pair_machine",
+  "line_balance",
+  "line_switch_dimmer",
+  "line_dice_hand"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_vote_switch_fix",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_switch_dimmer",
+    "line_tiny_lab",
+    "line_tap_two_people"
+   ],
+   "prompt": "A plain wall panel seen straight from the front, with three identical wall plates in a row, evenly spaced, each holding one chunky toggle switch with no cover, its lever clearly pointing up or clearly down. The left and right levers point up; the middle lever points down, with one short curved motion line beside it showing it has just been flipped. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) sits on top of the panel, pulling his hand back from the middle switch, grinning. At the right, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots), shown from the waist up, looks calmly along all three switches, her fingertip already on the middle lever, about to push it back up. Square image 1024x1024; the panel and the two characters fill about 88% of the width and about 80% of the height; the three switches are drawn large and clearly apart. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_vote_long_hall",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_switch_dimmer",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the switches only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A very long plain hallway seen from one end at a slant, its wall running from the front left far into the distance at the right. Along the wall, at hand height, an endless row of identical small wall plates, each with one chunky toggle switch with no cover, every lever pointing up, the plates getting smaller and smaller with distance until they vanish at the far end. In the foreground, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) strolls along the row with his hands clasped behind his back, eyeing the switches with a cheeky grin, as if choosing one. At the front left, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) watches him warily, one hand raised as if to say wait. Landscape image 1536x1024; the hallway and the two characters fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no signs or pictures on the wall."
+  },
+  {
+   "name": "line_qc_vote_imp_dice",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_dice_hand",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the dice only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A plain wall panel seen straight from the front, with three identical wall plates in a row, evenly spaced, each holding one chunky toggle switch with no cover, its lever clearly pointing up or clearly down, low on the wall; all three levers point up. On the floor just below, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) kneels and has just rolled three dice, which lie on the floor in a row, one directly under each switch: the left die shows five pips, the middle die shows four pips, the right die shows one single pip. The imp looks up at the right switch, rubbing his hands with glee. Landscape image 1536x1024; the panel, the dice and the imp fill about 85% of the width and about 75% of the height; the dice are drawn large enough to count their pips. The dice show only round pips drawn as small empty circles. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_vote_two_flipped",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_switch_dimmer",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference for the switches only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A plain wall panel seen straight from the front, with three identical wall plates in a row, evenly spaced, each holding one chunky toggle switch with no cover, its lever clearly pointing up or clearly down. The left and middle levers point down; the right lever points up. At the right, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots), shown from the waist up, nods confidently with her eyes half closed, her fingertip on the right lever, about to push it down to match the other two. The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) sits on top of the panel at the left, both hands over his mouth, shaking with suppressed laughter (a few short shake lines). Square image 1024x1024; the panel and the two characters fill about 88% of the width and about 80% of the height; the three switches are drawn large and clearly apart. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_vote_calm_vs_swarm",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series (black ink on white) showing this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new scene described; do not copy its pose, panel or layout. The second attached image is a style reference only. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A picture in two halves side by side, with clear space between them; each half shows the same small plain wall panel with three identical wall plates in a row, each holding one chunky toggle switch with no cover. Left half: all three levers point up; the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) sleeps in a tiny hammock strung below the panel, eyes closed, mouth open, no sleep symbols; the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots) leans on the wall beside the panel, relaxed, holding a plain mug. Right half: a swarm of about eight identical imps, each exactly like the one described, climbs all over the panel; two of the three levers point down with imps hanging from them; the keeper stands beside it with both hands on her head, overwhelmed. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_vote_triple_machine",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_pair_machine",
+    "line_qc_vote_switch_fix",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image shows the pairing machine drawn earlier for this series: draw the same machine (the same boxy wooden body on four short legs, the same funnels, round lamps, hand crank and low opening, the same line weight), widened to hold three funnels and three lamps; do not copy its characters. The second attached image shows this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, ears and tail); do not copy its pose or layout. The last attached image is a style reference only. Match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "On a workbench seen from the front and a little above stands a small boxy wooden machine on four short legs, a little wider than a microwave oven; on its flat top three funnels stand side by side in a row, and just in front of each funnel sits one round lamp; a big hand crank sticks out of its right side; at the bottom of its front face is one wide, low opening. In the mouth of the left funnel sits one plain die; the middle and right funnels each hold one plain blank wooden cube with no pips. The keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots), at the right, turns the crank. Out of the bottom opening slides a little tray holding three identical small cups with closed domed lids, side by side: a matched triple. All three lamps are unlit (plain empty circles). The imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) peeks over the back edge of the machine at the left, puzzled, both hands on its top. Landscape image 1536x1024; the machine and the two characters fill about 92% of the width and about 80% of the height, the machine in the centre. No text, no letters, no numbers, no logos, no markings on the machine."
+  },
+  {
+   "name": "line_qc_cover_08_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_vote_switch_fix",
+    "line_qc_vote_two_flipped",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's two characters, the keeper (a young woman in a work overall) and the imp (a small creature with big pointed ears and a curly tail): draw the same two characters (same faces, hair, clothes, the same ears and tail) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "In the middle, one big plain wall panel with three identical wall plates in a row, each holding one chunky toggle switch with no cover, drawn large: the left and right levers point up, the middle lever points down. On top of the panel, the imp (an invented small mischievous creature, about knee-high to an adult: a round, bean-shaped body, a simple round face with dot eyes and a wide cheeky grin, two big pointed ears sticking out sideways, thin arms and legs, small three-fingered hands and a thin curly tail; drawn in clean outline only: no fur, no horns, no claws, no teeth) pulls his hand back from the middle switch with a cheeky grin. On the right, the keeper (an invented young woman with a simple round face and dot eyes, chin-length straight hair held back on one side by a single plain hair clip, a plain one-piece zip-up work overall with the sleeves rolled up and a small torch clipped to its chest pocket, and sturdy work boots), shown from the waist up, points two fingers at the two switches that still agree, smiling and unbothered. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

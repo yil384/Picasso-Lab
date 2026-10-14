@@ -1,0 +1,131 @@
+{
+ "episode": "QC01-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: an analog computer can hold 0.37 on one wire, a digital one only 0 or 1 (reuse line_switch_dimmer: the toggle and the dimmer). Analog lost anyway. A qubit holds a continuum of values too; why is it not doomed the same way? Cast for all of QC01 (the six parts cut from her first lecture, Q25-01): the physicist (older, bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (lanky, a tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag); both invented. No lecturer figure anywhere and never her likeness: her voice and her slides carry her part. For this part only: the 1950s engineer (side parting, thick-rimmed glasses, short sleeves, narrow tie, pocket protector).",
+  "Noise: qubit gates fail about once in 100 to 1,000 operations; classical logic almost never (her order of magnitude is 10^-15: source it or say \"almost never\"); classical machines correct errors too (reuse line_whisper_line: one slip every hundred hand-offs ruins a long chain).",
+  "The analog story: once seen as a more powerful replacement for digital (line_qc_analog_machine_room; clip 27:46-28:40).",
+  "Drift: a wire holding 0.4 creeps to 0.5 and nothing can tell (line_qc_analog_two_dials, the smooth dial).",
+  "Why digital wins: close to 1 means 1; every nudge rolls back to the bottom of its valley (line_qc_analog_two_valleys; the click-stop dial of line_qc_analog_two_dials says the same).",
+  "Her one-liner: computes like analog, corrects like digital (clip 31:03-31:32); her answer to the 0.5 question (35:42-36:42): a measurement always returns 0 or 1, so information is embedded the way bits embed it (line_qc_analog_coin_land, only as \"every look returns one of two answers\"; caveat in the narration: a spinning coin is an ordinary object with a definite face at every instant, a qubit is not, so never call the blur \"both at once\"). Do not use her cat line as a joke.",
+  "Threshold: below a noise level of roughly 1%-0.1% correction keeps up; at 20%, one error every five steps, it sinks (line_qc_analog_bail_boats; tape p10; values depend on the code and noise model, surface code ~1%).",
+  "Repetition-code intuition: send 000 for 0, vote at the other end (line_qc_analog_pigeon_vote; the three cards are blank and identical, code letters 0 0 1 on them). Copying a qubit is not allowed, so the quantum version needs a trick: QC08-01 and QC08-02.",
+  "The overhead is polynomial (polylog), the speed-up exponential: a small toll for a tunnel through the mountain (line_qc_analog_toll_tunnel; clip 33:54-34:22; threshold theorem: Aharonov and Ben-Or; Knill, Laflamme and Zurek; Kitaev; 1996-98).",
+  "Cover (line_qc_cover_01_03; for the X post and thumbnails, not a film beat): the 1950s engineer sweats at a drifting needle; the student clicks a two-position switch firmly into place."
+ ],
+ "reuse": [
+  "line_switch_dimmer",
+  "line_whisper_line",
+  "line_temp_knob",
+  "line_knob_board",
+  "line_balance",
+  "line_burst"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_analog_machine_room",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_knob_board",
+    "line_tiny_lab",
+    "line_lab_2017"
+   ],
+   "prompt": "A 1950s-style analog computer fills a wide wall: a long cabinet covered in rows of round meters with needles, chunky knobs, and a big patch panel of sockets with many looping patch cables. In front of it an invented 1950s engineer (a simple round face and dot eyes, short neat hair parted at the side, thick-rimmed glasses, a short-sleeved white shirt with a narrow tie, and a pocket protector full of pencils) proudly plugs one more patch cable into the panel, chest out, while a few needles on the meters quiver (tiny wobble lines). A swivel chair and a rolling cart with spare cables stand beside him. Landscape image 1536x1024; the machine and the engineer fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no scales or numerals on the meters, no brand marks."
+  },
+  {
+   "name": "line_qc_analog_two_dials",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_temp_knob",
+    "line_switch_dimmer",
+    "line_knob_board"
+   ],
+   "prompt": "Two big round dials side by side on two plain square panels, seen straight from the front, with clear space between them. Left: a smooth dial with no stops at all and a single long pointer; one small triangular mark sits at the top of the panel, and the pointer has crept a little to one side of it, with a few faint wobble lines showing it slowly drifting. Right: a chunky rotary switch with only two deep notches, one at the upper left and one at the upper right; its pointer sits firmly clicked into the left notch, and a short curved motion line shows it has just snapped back into the notch after a bump. Landscape image 1536x1024; the two panels fill about 88% of the width and about 70% of the height. No text, no letters, no numbers, no logos, no tick labels."
+  },
+  {
+   "name": "line_qc_analog_two_valleys",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_ruler_curve",
+    "line_glue_tiles"
+   ],
+   "prompt": "Two long wooden trays side by side on a table, seen straight from the side so the shape of each tray's floor is clear, each with one marble. Left: a perfectly flat tray; a fingertip has just nudged the marble, which has rolled to some random spot and simply stays wherever it stopped, with a faint dotted trail behind it. Right: a tray whose floor is shaped into two deep, smooth valleys with a rounded hump between them; the marble sits at the bottom of the left valley, and curved motion lines show it rolling back down to the bottom after a fingertip nudged it a little way up the slope. Landscape image 1536x1024; the two trays fill about 90% of the width and about 60% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_analog_coin_land",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_dice_hand",
+    "line_balance",
+    "line_glue_tiles"
+   ],
+   "prompt": "A picture in two halves side by side on one plain tabletop line, with clear space between them. Left: a coin spinning upright on its edge so fast that it blurs into a ghostly ball shape, with curved motion lines around it. Right: the same coin lying flat after it has fallen, one face up showing a simple embossed leaf, and an open hand just lifting away above it. Landscape image 1536x1024; the two halves fill about 85% of the width and about 60% of the height. No text, no letters, no numbers, no logos, no portrait or other symbol on the coin, only the leaf."
+  },
+  {
+   "name": "line_qc_analog_bail_boats",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "prompt": "A picture in two halves side by side on one calm lake, with clear space between them. Left: a small rowboat with one tiny hole in its bottom letting in a thin trickle; the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) easily scoops the water out with a bucket, a small arc of water flying over the side, and the boat floats high, relaxed. Right: an identical rowboat with many holes and little fountains spurting in everywhere; the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) bails frantically with a bucket in each hand, but the water is already up to his knees and the boat sits low, sinking. Landscape image 1536x1024; the two boats and characters fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_analog_pigeon_vote",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_paired_cards",
+    "line_tiny_lab"
+   ],
+   "prompt": "On the left, the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) leans out of a window and releases three identical carrier pigeons, each carrying the same small blank card in its beak. They fly to the right across the picture; the middle pigeon is buffeted by a gust of wind (a few swirl lines and a small cloud) but keeps its card. On the right, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) leans out of another window holding up the three cards fanned out, all three blank and exactly alike, and taps two of them with a finger, nodding. Landscape image 1536x1024; the two windows, the pigeons and the characters fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos, the cards blank."
+  },
+  {
+   "name": "line_qc_analog_toll_tunnel",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_tiny_lab",
+    "line_tired_dog_street"
+   ],
+   "prompt": "A big rocky mountain fills the middle of the picture. A long road winds up over it in many tight switchbacks to the summit and down the other side. At the foot of the mountain a straight road leads into a tunnel straight through its base, with a tiny toll booth at the entrance; the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) sits on a small scooter and hands one coin through the booth window to an invented booth attendant (simple round face, dot eyes, a peaked cap), smiling; daylight shows at the far end of the tunnel. Landscape image 1536x1024; the mountain, roads and booth fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no signs, no symbols on the coin."
+  },
+  {
+   "name": "line_qc_cover_01_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_analog_machine_room",
+    "line_qc_analog_bail_boats",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's characters (the first shows the 1950s engineer, the second the student, the one in the striped T-shirt): draw the same characters (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, an invented 1950s engineer (a simple round face and dot eyes, short neat hair parted at the side, thick-rimmed glasses, a short-sleeved white shirt with a narrow tie, and a pocket protector full of pencils) sweats and frowns at one big round meter on a panel, its single needle drifting off its small mark, with wobble lines around it. On the right, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) confidently turns one chunky rotary switch with only two deep notches, its pointer clicked firmly into one of them, and smiles. Both shown from the waist up. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

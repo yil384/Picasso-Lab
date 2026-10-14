@@ -1,0 +1,159 @@
+{
+ "episode": "QC04-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (her puzzle): a qubit is either |0> or |1>: one look tells you which. Now it is either |0> or |+>, and you may look once. Why can't you always tell? (line_qc_arrow_one_look: the friend slides a box with one peephole across the table; two blank answer cards for the code to letter). Cast as in QC04-01: the tinkerer and the friend.",
+  "Complex numbers (12:23-16:39): a + bi; the conjugate flips the sign of the imaginary part; a ket is a column vector, a bra its conjugate row (dagger = transpose, then conjugate every entry) (line_qc_arrow_dagger_mirror: the mirror lays the column of two tiles down as a row).",
+  "Why amplitudes, not plain probabilities (her clip 17:09-17:42, \"interference is driven by complex numbers\"): amplitudes carry a sign or a phase, so they can cancel as well as add, like ripples in a tank (line_qc_arrow_ripple_tank). Honest wording: negative amplitudes already cancel; why nature uses complex ones is Scott Aaronson's blog post (title and year in FACTS.md); never say probabilities interfere. Skip the student question 18:07-18:37.",
+  "A qubit is a unit arrow: |0> = (1, 0), |1> = (0, 1), any state alpha|0> + beta|1> (22:19-24:57); the X basis |+> = (|0>+|1>)/sqrt2, |-> = (|0>-|1>)/sqrt2. A real qubit with exactly this geometry: a photon's polarization, vertical = |0>, horizontal = |1>, diagonal = |+>; a filter passes or blocks one photon (line_qc_arrow_filter_bench). kit2d draws the arrows and axes; the drawings never do.",
+  "Superposition is relative to a basis (her clip 24:57-25:48): |+> is a mix of |0> and |1> but a plain basis state in the X basis, like a diagonal avenue that is a zigzag in grid steps and one straight street on its own (line_qc_arrow_grid_walk).",
+  "Inner product = overlap: how much of one arrow lies along the other, its shadow (line_qc_arrow_stick_shadow); orthogonal (no shadow) means perfectly distinguishable in one look (|0> vs |1>); any overlap means they can be confused: <0|+> = 1/sqrt2 (26:55-31:33, her clip 29:56-30:55). Skip the student question 28:43-29:04.",
+  "The hook answered: measured in the Z basis, |0> always gives 0, |+> gives 0 or 1 half the time each, so one 0 cannot tell them apart, like a coin with a sun on both faces vs. a fair sun-and-moon coin after one toss (line_qc_arrow_two_coins). Caveat on screen: the coins copy only the statistics of one chosen question; |+> is not secretly 0 or 1, and asked in the X basis it answers + every time.",
+  "One look vs. many copies (Q24-08 70:00-72:49): with many copies the statistics give it away (line_qc_arrow_coin_piles: two equal piles); with one copy no single look is always right (the best single try, about 85%, only if FACTS.md keeps it).",
+  "Length 1 because the probabilities |alpha|^2 + |beta|^2 add to 1 (33:42-34:52), and in the X basis |alpha+beta|^2/2 + |alpha-beta|^2/2 adds to 1 too (35:20-38:21): one jug of water, split differently by each pair of glasses, never more or less than one jug (line_qc_arrow_jug_glasses). Close on her clip 25:48-26:16: practise until it is like 8 + 3 in your head (reuse line_tally_pages).",
+  "Cover (line_qc_cover_04_02; for the X post and thumbnails, not a film beat): the tinkerer holds up a big round frame with one arrow pointing between its two guide marks; the friend tilts his head."
+ ],
+ "reuse": [
+  "line_qc_isa_panel_wall",
+  "line_dice_hand",
+  "line_tally_pages",
+  "line_balance",
+  "line_mic"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_arrow_one_look",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "At a small square table seen from the front: on the right, the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, sits as a quiz host and slides a small closed wooden box across the table with one hand, holding up a single finger of the other hand (only one look). The box has one tiny round peephole with a little sliding shutter on its side. On the left, the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, leans in with one eye close to the peephole, tense and focused. On the table between them, two blank cards stand upright on two little stands side by side (the two possible answers). Landscape image 1536x1024; the two characters, the table, the box and the cards fill about 90% of the width and about 82% of the height; the box and the two cards are large and clear. No text, no letters, no numbers, no logos, nothing on the cards."
+  },
+  {
+   "name": "line_qc_arrow_dagger_mirror",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_word_three_things",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "The tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, stands on the left in front of a tall free-standing mirror with a plain wooden frame, seen from a little to the side, holding up at chest height a column of two blank square tiles stacked one on top of the other. In the mirror on the right, her reflection holds the same two blank tiles lying side by side as a row, and the reflection winks, while the real tinkerer stares at it in surprise. Portrait image 1024x1536; the tinkerer and the mirror fill about 85% of the width and about 85% of the height; the tiles are large and clearly blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_arrow_ripple_tank",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_wave",
+    "line_tap_glass",
+    "line_tiny_lab"
+   ],
+   "prompt": "A wide, shallow rectangular glass tray of water on a table, seen from the front and a little above. Near its left end, two small pointed dippers hanging from one bar tap the water at two points a short distance apart, and from each point a set of thin concentric circular ripples spreads out across the tray; where the two sets of rings cross, they make a fan of tall ripples separated by narrow lanes of perfectly flat, calm water (no rings at all in those lanes). The tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, leans over the far side of the tray with her chin on her hands, fascinated. Landscape image 1536x1024; the tray fills about 85% of the width; everything fills about 90% of the width and about 75% of the height. Rings drawn as thin clean lines only, no grey water, no shading. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_arrow_filter_bench",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_lab_2017",
+    "line_switch_dimmer",
+    "line_tiny_lab"
+   ],
+   "prompt": "A long, narrow optics table seen from the front and a little above, in a generic lab. At the left end, a small boxy lamp on a post points right, and one single tiny round dot of light, with three short motion lines behind it, flies from it towards the middle. In the middle stands a round filter disc in a ring holder on a post, the disc filled with thin, straight, evenly spaced parallel lines all tilted at 45 degrees, a small handle on the ring for turning it. At the right end, a small box-shaped detector on a post with a little bell on top. Behind the table, the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, turns the filter's handle with one hand and watches the bell, curious. Landscape image 1536x1024; the table, the parts and the friend fill about 92% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no brands, no screens."
+  },
+  {
+   "name": "line_qc_arrow_grid_walk",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_course_map",
+    "line_tiny_lab"
+   ],
+   "prompt": "A bird's-eye view, seen from high above and a little to the front, of a small invented town of square blocks (simple flat roofs and a few round tree tops) laid out in a perfectly regular grid of streets running up-down and left-right, with one wide, straight, diagonal avenue cutting across the grid from the lower left corner to the upper right corner. At the lower left corner, two small walkers set off together: the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, follows a dashed zigzag path of alternating short up and right steps along the grid streets, and the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, strolls straight up the diagonal avenue; both head to the same small round fountain at the upper right corner. Square image 1024x1024; the town fills about 90% of the width and height; the two walkers are small but clear. No text, no letters, no numbers, no logos, no street signs, no compass, no landmarks."
+  },
+  {
+   "name": "line_qc_arrow_stick_shadow",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_two_lanterns",
+    "line_tiny_lab"
+   ],
+   "prompt": "Outdoors on flat open ground at noon, the sun a simple circle with short rays high at the top centre, and three thin straight dashed lines falling straight down from it. On the ground, two straight wooden sticks of the same length are joined at their left ends by a small pin: one stick lies flat along the ground pointing right; the other is raised at about 45 degrees, propped on a small forked twig. Directly under the raised stick, its shadow lies along the flat stick, drawn as a clean outline only (not filled), clearly shorter than the flat stick. The tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, kneels in front and measures the outline of the shadow with a plain folding ruler. Landscape image 1536x1024; the sticks, the shadow outline and the tinkerer fill about 88% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no markings on the ruler, no solid black shadow."
+  },
+  {
+   "name": "line_qc_arrow_two_coins",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_dice_hand",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "The tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, sits at a small table, seen from the front, scratching her head and frowning at one large coin lying in front of her that has just landed with a simple sun face up (a small circle with short rays, drawn in outline). Beside the coin, two small open coin boxes lie on the table, both empty, one on each side (which box did it come from?). Behind her, the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, stands with his hands behind his back, smiling as if he knows. Square image 1024x1024; the tinkerer, the friend, the table and the coin fill about 88% of the width and about 85% of the height; the coin is drawn large. No text, no letters, no numbers, no logos, only the sun picture on the coin."
+  },
+  {
+   "name": "line_qc_arrow_coin_piles",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_dice_hand",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "At a long table seen from the front: the tinkerer, an invented young woman with a simple round face, dot eyes and a short messy tuft of hair sticking straight up on top of her head, wearing an open lab coat with the sleeves rolled up over a plain T-shirt, and sneakers, sits with a big glass jar full of identical coins, tossing them one at a time; one coin spins in the air above her hand with a few short motion lines. In front of her on the table stand two neat stacks of coins of about the same height: the coin on top of the left stack shows a small sun face (a circle with short rays), the coin on top of the right stack shows a small crescent moon. At the right end of the table, the friend, an invented young man with a simple round face, dot eyes and short curly hair under a soft bucket hat, wearing a long knitted scarf wrapped once round his neck, a plain jacket and sneakers, stands holding a blank clipboard, nodding. Landscape image 1536x1024; everything fills about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos, only the sun and moon pictures on the coins."
+  },
+  {
+   "name": "line_qc_arrow_jug_glasses",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_paint_pour",
+    "line_tap_glass",
+    "line_balance"
+   ],
+   "prompt": "A picture split into two halves side by side, with a little space between them, on one shared table line. In each half stands the same empty water jug, tipped on its side as if just poured out, and two drinking vessels holding all of its water between them. Left half: two tall narrow glasses, the left one three quarters full, the right one a quarter full. Right half: two short wide bowls, each exactly half full. The water levels are drawn as single clean lines with a gentle curve, no fill. Landscape image 1536x1024; each half fills most of its side; together they fill about 90% of the width and about 70% of the height. No text, no letters, no numbers, no logos, no measuring marks on the glasses."
+  },
+  {
+   "name": "line_qc_cover_04_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_arrow_one_look",
+    "line_qc_arrow_two_coins",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's tinkerer (tuft of hair, lab coat) and friend (curly hair, bucket hat, scarf): draw the same two characters (same faces, hair and clothes) in the new cover composition described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "In the middle, the tinkerer (the same invented character as in the references: a short messy tuft of hair standing up, an open lab coat with rolled-up sleeves over a T-shirt, sneakers) holds up in both hands a big round wooden frame, like an empty clock face with no numbers, with one single long arrow pivoting at its centre and pointing diagonally up to the right; the frame has only two small plain guide notches on its rim, one at the top and one at the right. Beside her, the friend (the same invented character as in the references: short curly hair under a bucket hat, a long knitted scarf) tilts his head, puzzled, pointing at the gap between the two notches. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

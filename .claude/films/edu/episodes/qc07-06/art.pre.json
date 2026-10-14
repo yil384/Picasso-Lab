@@ -1,0 +1,123 @@
+{
+ "episode": "QC07-06",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: with 23 people in a room it is more likely than not that two share a birthday (her framing, Q25-09 54:47-56:36; 50.7%: check in FACTS.md): line_qc_simon_birthday_party. Simon's problem is a birthday hunt over 2^n days: a classical search needs about 2^(n/2) tries, a quantum computer about n runs. Same cast as QC07-05: the sleuth and the host (cast drawing line_qc_onequery_two_cabinets).",
+  "Beyond exact values, a hidden periodicity (48:54-51:07; clip 49:21-50:12: periodicity, then the Fourier transform, then Shor): line_qc_simon_wallpaper (find the repeat of the pattern).",
+  "The problem (51:43-53:34): f(x1) = f(x2) exactly when x2 = x1 xor s, so every output is shared by exactly one pair, like a basket in which every sock has exactly one twin (line_qc_simon_sock_basket; reuse line_paired_cards); find s.",
+  "Classically, pull socks until two match (53:34-56:36): a birthday hunt, about 2^(n/2) queries (Simon 1994, lower bound Omega(2^(n/2)): check in FACTS.md); her 23-people version, back to line_qc_simon_birthday_party.",
+  "The circuit (56:49-59:25): H, the oracle into a second register, measure that register, H, measure; code draws it (tape Q25-09 s42).",
+  "Each run returns a random y with y.s = 0 (59:37-70:44; clip 70:21-70:44, \"you immediately know that y times s equals zero\"): one clue, which rules out half of the candidates for s (line_qc_simon_flip_board).",
+  "Collect n-1 independent clues and solve the linear equations: about n runs in expectation (70:45-75:11; her 4(n-1) bound is loose: use the standard statement; tape Q25-09 s50): line_qc_simon_clue_board; clip 75:11-75:36, \"much better results\". Code draws n against 2^(n/2).",
+  "Where it led: the quantum Fourier transform and Shor's factoring algorithm (Shor 1994), the problem much of today's encryption rests on (keep it at that): line_qc_simon_stepping_stones (Deutsch-Jozsa, Bernstein-Vazirani, Simon, then the big lock on the far bank); reuse line_qc_perfect_special_key (QC01-02).",
+  "Cover (line_qc_cover_07_06; for the X post and thumbnails, not a film beat): the sleuth sits by an overflowing sock basket holding up two matching socks; the host leans in, impressed."
+ ],
+ "reuse": [
+  "line_paired_cards",
+  "line_qc_perfect_special_key",
+  "line_qc_onequery_two_cabinets"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_simon_birthday_party",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A crowded party in a living room seen from the front: about twenty invented guests (simple round faces, dot eyes, many different hairstyles and outfits, a few in cone-shaped party hats) chat in small groups, holding cups; a few paper streamers hang along the ceiling. In the middle, two guests have just found out they share a birthday: each holds up a small cupcake with one candle, and they point at each other in delighted surprise. At the front left, the sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) watches them through her magnifying glass; at the front right, the host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) carries a tray of cups. Landscape image 1536x1024; the room and the guests fill about 94% of the width and about 85% of the height, the two guests in the middle drawn a little larger and clearly visible. No banners, no calendars. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_simon_sock_basket",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "An enormous wicker laundry basket overflows with loose socks of many different patterns (stripes, small empty circles, zigzags, little stars, checks, plain), each pattern appearing on exactly two socks. The sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) sits on the floor beside it; in front of her lies a long row of single socks laid out on the floor, all different, none matching, and in her raised hand she holds up two socks with the very same zigzag pattern, triumphant. The host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) leans on the basket, impressed. Landscape image 1536x1024; the basket, the row of socks and the characters fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_simon_flip_board",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A tabletop guessing game seen from the front: an upright frame holding sixteen small hinged picture tiles in four rows of four, each tile showing one different simple invented face (round face, dot eyes, sixteen different hairstyles and hats). The whole second column and the whole fourth column are flipped down flat, showing only their plain backs. The sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) peers at the faces still standing through her magnifying glass, one finger on a tile, about to flip it; the host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) sits across the table, hands folded. Square image 1024x1024; the frame and the characters fill about 88% of the width and about 82% of the height; the frame is drawn large. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_simon_clue_board",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A corkboard on an easel, seen from the front: down its left side, a neat column of five small blank clue cards, each pinned with a round pin, and from each pin a thin thread runs to one empty card-shaped frame drawn at the right side of the board. The sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) pins a sixth blank clue card at the bottom of the column, satisfied; the host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) stands beside the easel holding a cup of tea, watching. Square image 1024x1024; the board and the characters fill about 88% of the width and about 85% of the height. The cards are blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_simon_wallpaper",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "The host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) unrolls a long strip of wallpaper along a long table; the paper shows one simple motif (a leaf beside a small flower) repeating at an even spacing along its whole length. The sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) stretches a plain cloth measuring tape (no marks and no numbers on it) from one leaf to the next identical leaf, measuring the repeat and peering through her magnifying glass. Landscape image 1536x1024; the table, the wallpaper and the characters fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_simon_stepping_stones",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_onequery_two_cabinets",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "Seen from a little above: a wide, calm river runs from the top of the picture to the bottom, between a grassy left bank and a grassy right bank. A row of four flat stepping stones crosses it from the left bank towards the right bank. The sleuth (an invented short woman with a simple round face and dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, and a magnifying glass hanging on a cord round her neck) stands on the third stone, about to step onto the fourth; the host (an invented tall, thin man with a simple round face and dot eyes, his hair swept up into one big curl at the front, a jacket with wide lapels, and a large bow tie with polka dots drawn as small empty circles) waits on the left bank, waving her on. On the right bank stands an enormous old padlock, as big as a garden shed, with a round keyhole. Landscape image 1536x1024; the river, the banks, the padlock and the characters fill about 94% of the width and about 85% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_07_06",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_simon_sock_basket",
+    "line_qc_onequery_two_cabinets",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters, the sleuth (short woman; round wide-brimmed hat, belted raincoat, magnifying glass on a cord) and the host (tall, thin man; one big curl of hair at the front, wide lapels, polka-dot bow tie): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "An enormous wicker laundry basket overflowing with loose patterned socks (stripes, small empty circles, zigzags, little stars, checks). The sleuth (the same invented character as in the references: a short woman, simple round face, dot eyes, a round wide-brimmed hat, a long belted raincoat with big buttons, a magnifying glass on a cord round her neck) sits beside it and holds up two socks with the very same zigzag pattern, triumphant. The host (the same invented character as in the references: a tall, thin man, simple round face, dot eyes, one big curl of hair at the front, a jacket with wide lapels, a large polka-dot bow tie) leans in over the basket, impressed. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,134 @@
+{
+ "episode": "QC01-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook (line_qc_pitch_investor_no): the pitch \"give me billions of dollars and twenty years; I can't guarantee it will work\" and nobody signs (her clip 37:43-38:40, her words only; the investor is invented, and nobody speaks her lines). So what do you show them first? Cast for all of QC01 (the six parts cut from her first lecture, Q25-01): the physicist (older, bald with a fluffy fringe, bushy moustache, goggles pushed up, lab coat) and the student (lanky, a tuft of hair, round glasses, striped long-sleeved T-shirt, messenger bag); both invented. No lecturer figure anywhere and never her likeness: her voice and her slides carry her part. For this part: the investor (stout, slicked-back hair, neat beard, three-piece suit, bow tie, watch chain).",
+  "Why so big: factoring-scale machines need millions of qubits at 0.1-0.01% gate error (line_qc_pitch_hangar_fridges; give one sourced estimate, e.g. Gidney and Ekeraa 2021, ~20 million noisy qubits; newer estimates are lower).",
+  "NISQ (Preskill 2018): dozens to hundreds of noisy qubits, too few for even one well-protected qubit, which takes hundreds (line_qc_pitch_brick_cottage; her answer 54:40-55:40: a distance-15 surface code, \"hundreds of qubits\" for about 1e-9).",
+  "Wave 3, show something first: small noisy chips beat classical machines on random-circuit tasks (a 53-qubit chip, 2019, Arute et al.; she says 2017: correct it), real but not yet useful, which is why she crosses out \"practical\" (line_qc_pitch_scribble_contest; clip 41:11-41:47). Never tape p11's machine photos; never name the other advantage labs.",
+  "Wave 4, task 1: use noisy machines without error correction: variational algorithms, quantum machine learning (reuse line_dials_engineer: set the knobs, check, set them again).",
+  "Task 2: error-corrected machines with cheaper codes: fewer bricks per cottage (back to line_qc_pitch_brick_cottage).",
+  "Task 3: scale up. Every qubit needs its own lines out of the fridge, and they bring heat (line_qc_pitch_fridge_spaghetti); hence chiplets and distributed machines (line_qc_pitch_linked_fridges; reuse line_cluster_chip_trio).",
+  "Honest limit (2024 deck Q24-02 p40): error correction assumes errors do not grow with the qubit count, and bigger chips may lose quality (line_qc_pitch_souffle).",
+  "Cover (line_qc_cover_01_04; for the X post and thumbnails, not a film beat): the physicist pitches a giant machine at an easel; the investor sits back, arms crossed, chequebook closed."
+ ],
+ "reuse": [
+  "line_dials_engineer",
+  "line_cluster_chip_trio",
+  "line_two_lanterns",
+  "line_course_map",
+  "line_grow",
+  "line_burst",
+  "line_cluster_campus"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_pitch_investor_no",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "In a grand office with tall windows, the investor (a stout invented businessman with a simple round face and dot eyes, slicked-back hair, a small neat beard, and a three-piece suit with a bow tie and a pocket-watch chain) sits back in a big leather chair behind a huge desk, arms crossed, one eyebrow raised, unimpressed; on the desk lie a closed chequebook and a capped fountain pen, untouched. Facing him, the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) stands beside an easel holding a big sheet with a sketch of an enormous machine, pointing at it eagerly with a long pointer stick, the other arm flung wide. Landscape image 1536x1024; the desk, the investor, the physicist and the easel fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no writing on the sheet or the chequebook."
+  },
+  {
+   "name": "line_qc_pitch_hangar_fridges",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_cluster_campus",
+    "line_kv_cloakroom_tower",
+    "line_tiny_lab"
+   ],
+   "prompt": "A vast hall the size of an aircraft hangar, seen from its front entrance: rows and rows of identical tall cylindrical refrigerator cans, each a plain tall cylinder hanging from a small frame with a bundle of cables rising from its top, recede in perfect perspective all the way to the far wall, dozens of them. In the foreground at the entrance the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) holds out one open hand with a single tiny chip on the palm, looking from the tiny chip to the endless rows, mouth open. Landscape image 1536x1024; the hall fills about 94% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no brand marks."
+  },
+  {
+   "name": "line_qc_pitch_brick_cottage",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_block_towers",
+    "line_tiny_lab",
+    "line_postal_scale"
+   ],
+   "prompt": "On the left stands a small, sturdy, finished brick cottage with a door, two windows and a chimney, built from hundreds of small neat bricks, every brick outlined. On the right, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) holds the handles of a wheelbarrow carrying only a small heap of about forty loose bricks, a few of them cracked; in front of the wheelbarrow the outline of the same cottage is marked out on the ground with string and pegs, still empty. The student looks from the small heap to the finished cottage, realising it is far too few even for one. Landscape image 1536x1024; the cottage, the wheelbarrow and the student fill about 92% of the width and about 78% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_pitch_scribble_contest",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_cat_chases_dog",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "A contest on a plain stage, seen from the front. On the left, a small square computer chip drawn as a cheerful little character (dot eyes, a smile, short stick arms and legs) proudly holds up a big sheet covered in a dense tangle of random scribbles, finished. On the right, a long row of tall plain computer cabinets (tall boxes with rows of small vents and little round lights) is still grinding away, with puffs of steam and sweat drops, and a half-scribbled sheet only slowly coming out of one of them. In the middle, the investor (a stout invented businessman with a simple round face and dot eyes, slicked-back hair, a small neat beard, and a three-piece suit with a bow tie and a pocket-watch chain) holds a copy of the scribble sheet upside down, peering at it and shrugging, puzzled. Landscape image 1536x1024; the chip, the cabinets and the investor fill about 94% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no brand marks, no flags."
+  },
+  {
+   "name": "line_qc_pitch_fridge_spaghetti",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_kv_parcel_flood",
+    "line_tiny_lab",
+    "line_lab_2017"
+   ],
+   "prompt": "A tall cylindrical refrigerator can hangs from a sturdy frame, and from the top of it pours an absurd waterfall of hundreds of thin cables that spill over the frame and pile up on the floor in great tangled heaps. The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) stands knee-deep in the cable pile holding a huge armful of tangled cables, overwhelmed; the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) stands beside the can fanning the cables with a big hand fan, a few wavy heat lines rising from them. Portrait image 1024x1536; the fridge, cables and characters fill about 85% of the width and about 88% of the height. No text, no letters, no numbers, no logos, no brand marks."
+  },
+  {
+   "name": "line_qc_pitch_linked_fridges",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_cluster_chip_trio",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "prompt": "Four smaller identical refrigerator cans, each a plain tall cylinder hanging from a small frame with a neat, tidy small bundle of cables on top, stand in a row from left to right with space between them. Between neighbouring cans runs one single thin cable, linking them into a chain. The student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) kneels in the gap between the second and third can, plugging the end of a linking cable into a small connector, pleased; the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) watches beside the first can with a thumbs-up. Landscape image 1536x1024; the four cans and the characters fill about 92% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no brand marks."
+  },
+  {
+   "name": "line_qc_pitch_souffle",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_recipe_test_kitchen",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "A picture in two halves side by side on one kitchen counter. Left: a small round souffle dish with a perfect tall souffle rising straight and proud above the rim. Right: a huge souffle dish, four times as wide, whose souffle has sunk in the middle into a cracked crater, its edges collapsed. Between them the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) in one oven mitt peers at the big one, worried, a finger on his chin. Landscape image 1536x1024; the two dishes and the physicist fill about 90% of the width and about 72% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_01_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_pitch_investor_no",
+    "line_qc_pitch_hangar_fridges",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's characters (the first shows the physicist and the investor): draw the same characters (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) stands at an easel holding a big sheet with a sketch of an enormous machine, arms flung wide, pitching eagerly. On the right, the investor (a stout invented businessman with a simple round face and dot eyes, slicked-back hair, a small neat beard, and a three-piece suit with a bow tie and a pocket-watch chain) sits back in a big chair behind a plain desk, arms crossed, one eyebrow raised; on the desk a closed chequebook and a capped pen. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

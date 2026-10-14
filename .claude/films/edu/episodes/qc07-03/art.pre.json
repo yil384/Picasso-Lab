@@ -1,0 +1,127 @@
+{
+ "episode": "QC07-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "series": "qc",
+ "beats": [
+  "Hook: in a CNOT the control qubit is never supposed to change (reuse line_qc_cnot_flip_card from QC05-04); feed the target |-> and the control picks up a minus sign. Who is controlling whom? (line_qc_kickback_puppet: the marionette pulls its own string and tips the puppeteer over; reuse line_dog_leash for \"who is walking whom\".) Same cast as QC07-01: the keeper and the rookie (cast drawing line_qc_revers_fresh_card). Primary source Q24-13: 2025 only names phase kickback (Q25-08 64:12-64:39).",
+  "Oracles: a classical function handed over as a box you may only query, never open (Q25-08 55:52-59:11; Q24-13 31:40-35:52): line_qc_kickback_no_peek. The bit oracle |x>|b> -> |x>|b xor f(x)>: the card comes out unchanged and a little lever on the lid flips over when f(x) = 1 (line_qc_kickback_lever_box; code letters the XOR).",
+  "Feed it a superposition (Q25-08 59:26-61:14): one call acts on every input at once, but a look returns only one (line_qc_kickback_card_fan; the measurement caveat on screen; QC07-04 picks it up).",
+  "The phase oracle |x> -> (-1)^f(x)|x>: the answer goes into a sign instead of a new bit (Q25-08 61:14-63:56; Q24-13 36:09-40:47): line_qc_kickback_sign_box (the card comes back upside down). CZ is the phase oracle for AND (reuse line_qc_rewire_high_five from QC05-05). Tape Q24-13.notes p7.",
+  "From bit oracle to phase oracle: set the spare qubit to |-> (Q24-13 41:26-46:55; clip 44:55-45:23, \"set b to the minus state and you directly get a phase oracle\"): flipping |-> changes only its sign, and that sign can be read as belonging to the input; lettered by code, no drawing.",
+  "Phase kickback (Q24-13 47:04-51:29; tape Q24-13.notes p8): look at a CNOT through the X-basis glasses and control and target trade places (reuse line_qc_hbridge_two_glasses from QC05-02, then line_qc_rewire_lead_mover and line_qc_rewire_lead_planner from QC05-05). Her clip 50:22-51:16, \"you want to control me, I will secretly give you a phase\": back to line_qc_kickback_puppet. Name Cleve, Ekert, Macchiavello and Mosca (1998) only if FACTS.md clears it.",
+  "Her other picture (Q24-05 17:06-17:58, clip): if you push someone, you definitely get a force: line_qc_kickback_skaters (both glide apart). Caption it as her analogy for \"the control changes too\", not as a claim about forces.",
+  "Takeaway: a phase oracle plus kickback turns a function into signs, and signs are what interference works on (QC07-04). Skip the questions and the in-class quiz (Q24-13 35:25, 52:28-62:23).",
+  "Cover (line_qc_cover_07_03; for the X post and thumbnails, not a film beat): the rookie on the bridge of a little puppet theatre, tipped forward because her marionette is pulling its own string; the keeper smiles."
+ ],
+ "reuse": [
+  "line_qc_cnot_flip_card",
+  "line_dog_leash",
+  "line_qc_rewire_high_five",
+  "line_qc_hbridge_two_glasses",
+  "line_qc_rewire_lead_mover",
+  "line_qc_rewire_lead_planner",
+  "line_qc_interfere_lotto_drum"
+ ],
+ "drawings": [
+  {
+   "name": "line_qc_kickback_puppet",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "A small puppet theatre seen from the front: a plain wooden frame with a little curtain tied back at each side. The rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) stands on the bridge behind the top of the theatre holding the wooden control bar of a marionette (a simple wooden puppet with a round face, dot eyes and jointed limbs), which dangles on its strings on the stage below. But the marionette has grabbed one of its own strings with both hands and is pulling it down hard, so the rookie is tipped forward over the rail, her bunches flying, surprised. At the right, beside the theatre, the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) watches with his arms folded, smiling knowingly. Landscape image 1536x1024; the theatre and the characters fill about 88% of the width and about 88% of the height; the strings are clear thin lines. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_kickback_no_peek",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "On a plain table seen from the front stands a closed wooden box drawn in outline only (nothing filled in), with one card-sized slot in its left side, one card-sized slot in its right side and a small keyhole on its front, drawn large in the middle. The rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) bends down and squints into the keyhole with one eye; the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes), standing behind the table, taps her on the shoulder and wags one finger: no peeking. Landscape image 1536x1024; the box and the characters fill about 88% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_kickback_lever_box",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_qc_kickback_no_peek",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The second attached image shows the closed wooden box: draw that box again the same way, adding only what is described. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "The same closed wooden box as in the second attached image, on a plain table seen from the front (outline only, nothing filled in, a slot in each side), now with a small flip-over lever on its lid (a short straight arm on a round pivot). At the left, the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) has just pushed a card with one simple circle drawn on it into the left-hand slot; the same card, still showing the same circle, is sliding out of the right-hand slot. The little lever on the lid has just flipped over from pointing left to pointing right, with two short curved motion lines. At the right, the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) watches the lever. Landscape image 1536x1024; the box, the cards and the characters fill about 90% of the width and about 80% of the height; the box and the lever are drawn large. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_kickback_card_fan",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_qc_kickback_no_peek",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The second attached image shows the closed wooden box: draw that box again the same way, adding only what is described. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "The same closed wooden box as in the second attached image, on a plain table seen from the front (outline only, nothing filled in, a slot in each side), with a small flip-over lever on its lid (a short straight arm on a round pivot). At the left, the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) eagerly feeds a whole fanned-out spread of about ten blank cards into the left-hand slot at once; the lever on the lid wobbles half-way over, drawn with a few short wobble lines. At the right, the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) holds up one single finger in warning, and holds one single blank card in his other hand. Landscape image 1536x1024; the box, the cards and the characters fill about 90% of the width and about 80% of the height. The cards are blank. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_kickback_sign_box",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_qc_kickback_no_peek",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The second attached image shows the closed wooden box: draw that box again the same way, changing only what is described. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "The same closed wooden box as in the second attached image, on a plain table seen from the front (outline only, nothing filled in, a slot in each side), with nothing on its lid. At the left, the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) has just pushed a card with one simple triangle drawn on it, pointing up, into the left-hand slot; the same card is sliding out of the right-hand slot turned upside down, so its triangle now points down. At the right, the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes) catches the card and points at the downward triangle. Landscape image 1536x1024; the box, the cards and the characters fill about 90% of the width and about 80% of the height; the two triangles are drawn large and clear, as outlines. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_kickback_skaters",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_revers_fresh_card",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The first attached image is a line drawing made earlier for this series showing this lecture's two invented characters: the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers). Draw the same characters (same faces, hair and clothes) in the new scene described, not the scene of that image. The other attached images are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy their poses, backgrounds or layout.",
+   "prompt": "On a smooth ice rink (one plain ice line and a few curved skate trails), the rookie (an invented young woman with a simple round face and dot eyes, her hair tied in two short bunches on either side of her head, dungarees over a plain T-shirt, and big sneakers) and the keeper (an invented short, round, older man with a simple round face and dot eyes, a neat bowl haircut, small round spectacles, a knee-length buttoned work coat with two big front pockets, and soft flat shoes), both on ice skates, have just pushed off each other's palms: they glide apart in opposite directions, the rookie to the left and the keeper to the right, each with a few speed lines behind, arms still stretched out towards each other, both surprised. Landscape image 1536x1024; the two characters fill about 88% of the width and about 70% of the height, with a wide gap between them. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_qc_cover_07_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_kickback_puppet",
+    "line_qc_revers_fresh_card",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's characters, the keeper (short, round, older man; bowl haircut, small round spectacles, knee-length work coat) and the rookie (young woman; two short bunches, dungarees, big sneakers): draw the same characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A small puppet theatre seen from the front, a plain wooden frame with a little curtain tied back at each side. The rookie (the same invented character as in the references: a young woman, simple round face, dot eyes, two short bunches, dungarees, big sneakers) stands on the bridge behind the top of the theatre holding the wooden control bar of a marionette (a simple wooden puppet with a round face and dot eyes); the marionette pulls hard on one of its own strings with both hands, and the rookie is tipped forward over the rail, surprised. At the right, the keeper (the same invented character as in the references: a short, round, older man, simple round face, dot eyes, a bowl haircut, small round spectacles, a knee-length work coat) watches with arms folded, smiling. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}
