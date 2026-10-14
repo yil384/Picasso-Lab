@@ -89,7 +89,7 @@ test('console: validated lines; a FIFO nobody reads fails at once instead of han
   // the console only tags; the Paper datapack (deploy/paper-datapack/muse_cam) rides the eye or the head every tick
   assert.deepEqual(followCommands('MuseCam', 'Muse_g1'), [
     ['gamemode spectator MuseCam', 'execute as MuseCam run spectate', 'tag @a remove muse_cam_target', 'tag MuseCam add muse_cam', 'tag MuseCam add muse_cam_third',
-      'tag MuseCam remove muse_cam_ineye', 'tag MuseCam remove muse_cam_inhead', 'effect give MuseCam minecraft:night_vision infinite 0 true', 'tp MuseCam Muse_g1'],
+      'tag MuseCam remove muse_cam_ineye', 'tag MuseCam remove muse_cam_inhead', 'tag MuseCam remove muse_cam_fp', 'effect give MuseCam minecraft:night_vision infinite 0 true', 'tp MuseCam Muse_g1'],
     ['tag Muse_g1 add muse_cam_target', 'function muse_cam:fresh'],
   ]);
   assert.ok(followCommands('MuseCam', 'Muse_g1', 'first')[0].includes('tag MuseCam remove muse_cam_third'), 'CAMERA_VIEW=first: the bot\'s head');
@@ -97,7 +97,7 @@ test('console: validated lines; a FIFO nobody reads fails at once instead of han
   assert.deepEqual(keep, ['tag Muse_g1 add muse_cam_target', 'execute unless score cam_seq muse_cam_y = cam_logged muse_cam_y run data get storage muse_cam:spot',
     'execute unless score cam_seq muse_cam_y = cam_logged muse_cam_y run scoreboard players operation cam_logged muse_cam_y = cam_seq muse_cam_y'], 'and the evidence of a new camera spot, into the server log once');
   assert.deepEqual(parkCommands('MuseCam'), ['tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', 'kill @e[type=minecraft:marker,tag=muse_cam_try]',
-    'tag MuseCam remove muse_cam_ineye', 'tag MuseCam remove muse_cam_inhead', 'execute as MuseCam run spectate', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
+    'tag MuseCam remove muse_cam_ineye', 'tag MuseCam remove muse_cam_inhead', 'tag MuseCam remove muse_cam_fp', 'execute as MuseCam run spectate', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
   for (const l of [...followCommands('MuseCam', 'Muse_g1').flat(), ...keep, ...parkCommands('MuseCam')]) await consoleCommand(file, l);
 });
 
@@ -181,7 +181,7 @@ test('rig on stand-in programs: joins, spectator and park on the console, F1 onc
     assert.equal(JSON.stringify(rows).includes(TOKEN), false, 'nor in the log rows');
 
     await rig.follow('Muse_g1');
-    assert.deepEqual(lines().slice(-11), followCommands('MuseCam', 'Muse_g1').flat());
+    assert.deepEqual(lines().slice(-12), followCommands('MuseCam', 'Muse_g1').flat());
     assert.equal(await rig.follow('bad name; op'), false, 'never a console line from a bad name');
 
     const pid = (await rig.stats()).clientPid;

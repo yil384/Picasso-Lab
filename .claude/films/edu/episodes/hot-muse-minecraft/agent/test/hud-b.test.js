@@ -15,6 +15,7 @@ import { cleanTerm } from '../src/terminal.js';
 import { createRecording } from '../src/recorder.js';
 import { cameraOptions, FILM_SIZE } from '../src/camera.js';
 import { loadConfig } from '../src/config.js';
+import { createRequire } from 'node:module';
 
 const KEYS = ['wooden_pickaxe', 'stone_pickaxe', 'iron_ingot', 'iron_pickaxe', 'diamond', 'diamond_pickaxe', 'water_bucket', 'obsidian', 'flint_and_steel', 'portal', 'nether', 'back'];
 const goal = (done = 0) => ({ key: 'nether_and_back', title: 'Nether and back', text: null, list: KEYS.map((k, i) => ({ k, t: k.replace(/_/g, ' '), atS: i < done ? 40 + i * 70 : null })) });
@@ -256,6 +257,32 @@ test('HUD B: a refused command gets no toast (its row says why); a frame is writ
   g.run(600);
   assert.equal(g.events.filter((e) => e.ev === 'toast').length, 1);
   assert.ok(g.model().feed.some((r) => r.code === 'NO' && r.result === 'NEED_LIVE_VIEW'));
+});
+
+test('HUD B: the lab\'s logo (STREAM_LOGO): off by default; on a white card, or a transparent light one drawn as it is with a hard shadow; top right, clear of the toasts\' band and the LIVE badge', () => {
+  const frame = (logo) => {
+    const p = createUiPanel({ width: 1080, height: 472, over: 608, now: () => 1_000_000, ...(logo ? { logo } : {}) });
+    const c = p.render(1_000_000).getContext('2d');
+    return (x, y) => [...c.getImageData(x, y, 1, 1).data];
+  };
+  assert.equal(frame(null)(1000, 40)[3], 0, 'off by default');
+  const card = frame({ style: 'card' });
+  assert.ok(card(1000, 20)[3] > 200 && card(1000, 20)[0] > 200, 'the white card');
+  assert.equal(card(1000, 126)[3], 0, 'nothing between it and the toasts');
+  assert.equal(card(60, 40)[3], 0, 'nothing at the top left (Facebook\'s LIVE badge)');
+  // a transparent white logo of 600 x 300: drawn at 160 x 80 with its shadow, no card
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logo-'));
+  const { createCanvas } = createRequire(import.meta.url)('canvas');
+  const src = createCanvas(600, 300), sx = src.getContext('2d');
+  sx.fillStyle = '#fff'; sx.fillRect(100, 100, 400, 100);
+  fs.writeFileSync(path.join(dir, 'white.png'), src.toBuffer('image/png'));
+  const plain = frame({ style: 'plain', file: path.join(dir, 'white.png') });
+  assert.ok(plain(1064 - 80, 14 + 40)[0] > 200, 'the white logo');
+  assert.equal(plain(1064 - 158, 16)[3], 0, 'no card around it');
+  const sh = plain(980, 68); assert.ok(sh[3] > 0 && sh[0] < 60, 'its hard shadow 2 px down');
+  fs.rmSync(dir, { recursive: true, force: true });
+  assert.equal(loadConfig({}).stream.logo, 'off');
+  assert.equal(loadConfig({ STREAM_LOGO: 'plain', STREAM_LOGO_FILE: 'lab-logo-white.png' }).stream.logoFile, 'lab-logo-white.png');
 });
 
 test('HUD B: the model reads the state as the panel builds it (fixture: the long sample)', () => {

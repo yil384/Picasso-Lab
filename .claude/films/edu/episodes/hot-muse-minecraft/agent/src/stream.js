@@ -895,7 +895,7 @@ export function managerConfig(c) {
     enabled: Boolean(c?.enabled), outputs: c?.outputs ?? [], outDir: c?.outDir || '', max: c?.max ?? 0,
     options: {
       fps: c?.fps, scale: c?.scale, bitrateK: c?.bitrateK, far: c?.far, maxRssMB: c?.maxRssMB, noSandbox: c?.noSandbox, clock: c?.clock || undefined, clockTz: c?.clockTz,
-      layout: c?.layout, terminalSize: c?.terminalSize, uiSize: c?.uiSize, hud: c?.hud,
+      layout: c?.layout, terminalSize: c?.terminalSize, uiSize: c?.uiSize, hud: c?.hud, logo: c?.logo, logoFile: c?.logoFile,
       gameAudio: c?.gameAudio, music: c?.music, musicFile: c?.musicFile, musicDb: c?.musicDb, gameDb: c?.gameDb,
     },
   };

@@ -47,6 +47,14 @@ execute if score #hd muse_cam_y matches 0 if score #p14 muse_cam_y matches 1 if 
 execute if score #hd muse_cam_y matches 0 if score #p14 muse_cam_y matches 1 if score #v14 muse_cam_y matches 1 run scoreboard players set #sr muse_cam_y 14
 execute if score #hd muse_cam_y matches 0 if score #p15 muse_cam_y matches 1 if score #v15 muse_cam_y matches 1 as @a[tag=muse_cam_target,limit=1] at @s anchored eyes positioned ^ ^ ^ rotated as @e[type=minecraft:marker,tag=muse_cam_yaw,limit=1] rotated ~ 20 run tp @e[type=minecraft:item_display,tag=muse_cam_eye,limit=1] ^-0.7 ^0.6 ^-3.2 facing ^ ^ ^12
 execute if score #hd muse_cam_y matches 0 if score #p15 muse_cam_y matches 1 if score #v15 muse_cam_y matches 1 run scoreboard players set #sr muse_cam_y 15
+# first person (g0842ff 6:31, smelting underground: at the bot's eyes, 11, or just ahead of them, 12, the camera sat
+# inside its head and the picture was the brown inside of it): through the bot's own eyes, its model not drawn
+# (muse_cam:view), from the tick such a spot is taken; back over the shoulder once another spot has held for a second
+execute if score #sr muse_cam_y matches 11..12 run tag @a[tag=muse_cam] add muse_cam_fp
+execute if score #sr muse_cam_y matches 11..12 run scoreboard players set #fq muse_cam_y 0
+execute unless score #sr muse_cam_y matches 11..12 run scoreboard players add #fq muse_cam_y 1
+execute if score #fq muse_cam_y matches 20.. run tag @a[tag=muse_cam] remove muse_cam_fp
+execute if score #fq muse_cam_y matches 100.. run scoreboard players set #fq muse_cam_y 100
 # the evidence (muse_cam:note_new) of every change of the spot over the shoulder (11 its eyes, 12 just ahead, 13 above
 # its head: a hole, a shaft, a burrow under leaves; 14 and 15 behind it; 16 to 21 from above at an angle; 22 behind it
 # in a tunnel), at most once

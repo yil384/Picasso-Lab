@@ -328,6 +328,11 @@ export function loadConfig(env = process.env) {
     uiSize: r.oneOf('STREAM_UI_SIZE', '1080x1080', ['1080x1080', '1080x1200', '1080x1350']),
     // the HUD's design in the ui layout: 'b' (concept B "Speedrun broadcast", src/hud-b.js) or 'final' (the one before)
     hud: r.oneOf('STREAM_HUD', 'b', ['b', 'final']),
+    // the lab's logo at the top right of the video (B only; never in the clean recording): off, a light logo on a white
+    // card (card), or a transparent light logo drawn as it is with a hard dark shadow (plain); STREAM_LOGO_FILE its PNG,
+    // a name in assets/muse-ui or an absolute path (default: the official logo, assets/muse-ui/lab-logo-152.png)
+    logo: r.oneOf('STREAM_LOGO', 'off', ['off', 'card', 'plain']),
+    logoFile: r.str('STREAM_LOGO_FILE', ''),
     terminalSize: r.oneOf('STREAM_TERMINAL_SIZE', '1080x1920', ['1080x1920', '1080x1350']),
     // the sound (camera only): the game's own from the client (STREAM_GAME_AUDIO, its music off), and a soft CC0
     // music bed under it (STREAM_MUSIC, assets/muse-ui/music), ducked while the game is loud, then a limiter
