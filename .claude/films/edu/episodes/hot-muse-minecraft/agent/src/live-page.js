@@ -18,6 +18,8 @@
 // player goes and the game's end card takes its place (/live/<game>/end.svg: when it ended or reached its goal, the
 // splits with their times, who decided). If the panel blocks images from our server, the page stays as it was.
 
+import fs from 'node:fs';
+
 const PLAYER = 'https://www.facebook.com/plugins/video.php?';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -73,8 +75,24 @@ addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement&&document.
  * The poster under the player, from the first paint and with no request (inline SVG): MUSE PLAYS MINECRAFT, LIVE, the
  * game, a stair of blocks in the HUD's colours. muse.ai's card thumbnail shows it; the player covers it once loaded.
  */
-function posterSvg(game, aw, ah) {
+// the lab's pixel logo for the poster, a data: image (read once; none when the file is not there)
+let LOGO_DATA;
+const logoData = () => {
+  if (LOGO_DATA === undefined) {
+    try { LOGO_DATA = `data:image/png;base64,${fs.readFileSync(new URL('../assets/brand/picasso-lab-pixel-230.png', import.meta.url)).toString('base64')}`; } catch { LOGO_DATA = null; }
+  }
+  return LOGO_DATA;
+};
+function posterSvg(game, aw, ah, logo = null) {
   const W = 1080, H = Math.round((1080 * ah) / aw), cy = H / 2;
+  if (logo) {
+    // the logo (230 x 49, drawn at twice its size with its blocks kept), then the title under it
+    return `<svg class="poster" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-label="Muse plays Minecraft, live"><rect width="${W}" height="${H}" fill="#0b0e14"/>`
+      + `<image href="${logo}" x="310" y="${cy - 150}" width="460" height="98" style="image-rendering:pixelated"/>`
+      + `<g font-family="system-ui,sans-serif" fill="#f3f5f9" text-anchor="middle"><text x="540" y="${cy + 50}" font-size="56" font-weight="700">MUSE PLAYS MINECRAFT</text>`
+      + `<rect x="${540 - 48}" y="${cy + 84}" width="96" height="40" rx="8" fill="#e5484d"/><text x="540" y="${cy + 113}" font-size="24" font-weight="700">LIVE</text>`
+      + `${game ? `<text x="540" y="${cy + 168}" font-size="26" fill="#aeb6c6">game ${game}</text>` : ''}</g></svg>`;
+  }
   const blocks = [[0, 3, '#9d8cff'], [1, 3, '#5fd39b'], [1, 2, '#9d8cff'], [2, 3, '#efa443'], [2, 2, '#5fd39b'], [2, 1, '#9d8cff'], [3, 3, '#2a3040'], [3, 2, '#efa443'], [3, 1, '#5fd39b'], [3, 0, '#9d8cff']];
   const bx = 120, by = cy - 150, b = 60;
   return `<svg class="poster" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-label="Muse plays Minecraft, live"><rect width="${W}" height="${H}" fill="#0b0e14"/>`
@@ -98,7 +116,7 @@ export function liveViewHtml(v) {
   const g = gameId(v.game);
   const st = live && g && isStatusBase(v.statusBase) ? `${String(v.statusBase).replace(/\/+$/, '')}/live/${g}/` : '';
   const player = live
-    ? `<div id="v" data-src="${esc(src)}"${st ? ` data-st="${esc(st)}"` : ''}>${posterSvg(g, aw, ah)}</div>`
+    ? `<div id="v" data-src="${esc(src)}"${st ? ` data-st="${esc(st)}"` : ''}>${posterSvg(g, aw, ah, v.logo ? logoData() : null)}</div>`
     : '';
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
     + '<title>Minecraft live</title><style>html,body{margin:0;background:#0c0e10;color:#e8e4dc;font:13px/1.4 system-ui,sans-serif}'
