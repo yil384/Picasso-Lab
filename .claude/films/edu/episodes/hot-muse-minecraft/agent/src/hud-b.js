@@ -635,9 +635,11 @@ function drawRaw(M) {
 // the lab's logo at the top right of the video (2026-10-14, STREAM_LOGO, off by default): 'card', a light logo (the
 // official one, home/static/PicassoLab-Logo.png put on white at full size and scaled to 152 px with lanczos:
 // assets/muse-ui/lab-logo-152.png) on a white card (radius 10, 7 px around, a 1 px dark edge, no blur) at 92 %; or
-// 'plain', a transparent light logo drawn as it is, at most 160 x 100, with a hard dark shadow 2 px down (no blur).
+// 'plain', a transparent light logo drawn as it is, at most 240 x 100, with a hard dark shadow 2 px down (no blur): by
+// default the owner's pixel logo (assets/brand/picasso-lab-pixel.png trimmed, 230 px with an area filter: its blocks
+// stay sharp and UC SAN DIEGO legible).
 // 16 px in from the corner, above the toasts' band (from y 136) and away from Facebook's LIVE badge (top left)
-export const LOGO = { right: 1064, y: 14, pad: 7, alpha: 0.92, maxW: 160, maxH: 100 };
+export const LOGO = { right: 1064, y: 14, pad: 7, alpha: 0.92, maxW: 160, maxWPlain: 240, maxH: 100 };
 // a large image down to w x h in halves (a single big step aliases the fine lines)
 function shrink(img, w, h) {
   let src = img, sw = img.width, sh = img.height;
@@ -646,7 +648,7 @@ function shrink(img, w, h) {
   return out;
 }
 function buildLogo(img, style = 'card') {
-  const k = Math.min(1, LOGO.maxW / img.width, LOGO.maxH / img.height);
+  const k = Math.min(1, (style === 'plain' ? LOGO.maxWPlain : LOGO.maxW) / img.width, LOGO.maxH / img.height);
   const w = Math.round(img.width * k), h = Math.round(img.height * k);
   const im = k < 1 ? shrink(img, w, h) : img;
   if (style === 'plain') {

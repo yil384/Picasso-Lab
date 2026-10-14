@@ -31,6 +31,8 @@ RUN if [ "$MINEAI" = "1" ]; then \
 COPY src ./src
 COPY scripts ./scripts
 COPY README.md ./
+# the lab's logo for the live page's poster (STREAM_LOGO)
+COPY assets/brand ./assets/brand
 ENV MINEAI_DIR=/opt/mine-ai-mcp MINEAI_RUNTIME=bun MINEAI_EXEC=/usr/local/bin/bun
 ENV WEB_HOST=0.0.0.0 WEB_PORT=8787 LOG_DIR=/logs NODE_ENV=production
 EXPOSE 8787

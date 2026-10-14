@@ -270,17 +270,21 @@ test('HUD B: the lab\'s logo (STREAM_LOGO): off by default; on a white card, or 
   assert.ok(card(1000, 20)[3] > 200 && card(1000, 20)[0] > 200, 'the white card');
   assert.equal(card(1000, 126)[3], 0, 'nothing between it and the toasts');
   assert.equal(card(60, 40)[3], 0, 'nothing at the top left (Facebook\'s LIVE badge)');
-  // a transparent white logo of 600 x 300: drawn at 160 x 80 with its shadow, no card
+  // a transparent white logo of 600 x 300: drawn at 200 x 100 (100 px high at most) with its shadow, no card
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'logo-'));
   const { createCanvas } = createRequire(import.meta.url)('canvas');
   const src = createCanvas(600, 300), sx = src.getContext('2d');
   sx.fillStyle = '#fff'; sx.fillRect(100, 100, 400, 100);
   fs.writeFileSync(path.join(dir, 'white.png'), src.toBuffer('image/png'));
   const plain = frame({ style: 'plain', file: path.join(dir, 'white.png') });
-  assert.ok(plain(1064 - 80, 14 + 40)[0] > 200, 'the white logo');
-  assert.equal(plain(1064 - 158, 16)[3], 0, 'no card around it');
-  const sh = plain(980, 68); assert.ok(sh[3] > 0 && sh[0] < 60, 'its hard shadow 2 px down');
+  assert.ok(plain(962, 64)[0] > 200, 'the white logo');
+  assert.equal(plain(870, 20)[3], 0, 'no card around it');
+  const sh = plain(960, 82); assert.ok(sh[3] > 0 && sh[0] < 60, 'its hard shadow 2 px down');
   fs.rmSync(dir, { recursive: true, force: true });
+  // plain with no file: the owner's pixel logo (assets/brand), 230 px wide at the top right
+  const pix = frame({ style: 'plain' });
+  assert.ok(pix(1064 - 115, 14 + 38)[3] > 0 && pix(1064 - 232, 14 + 38)[3] === 0, 'the pixel logo, 230 px wide');
+  assert.equal(pix(1000, 126)[3], 0);
   assert.equal(loadConfig({}).stream.logo, 'off');
   assert.equal(loadConfig({ STREAM_LOGO: 'plain', STREAM_LOGO_FILE: 'lab-logo-white.png' }).stream.logoFile, 'lab-logo-white.png');
 });

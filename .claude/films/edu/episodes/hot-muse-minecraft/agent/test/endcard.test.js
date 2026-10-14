@@ -60,6 +60,14 @@ test('end card: a goal reached reads "<goal> in m:ss"; the splits with their tim
   assert.match(endCardSvg({ game: 'g1', report: null }), /Game ended at 0:00/, 'a game without a report still gets a card');
 });
 
+test('live page: the poster with the lab\'s pixel logo (STREAM_LOGO on) as a data: image, none with it off', () => {
+  const embed = 'https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2F1%2Fvideos%2F2%2F&show_text=false';
+  const on = liveViewHtml({ state: 'live', game: 'gabc123', embedUrl: embed, logo: true });
+  assert.match(on, /<image href="data:image\/png;base64,[A-Za-z0-9+/=]{1000,}" [^>]*image-rendering:pixelated/);
+  assert.ok(Buffer.byteLength(on) < 60_000, `${Buffer.byteLength(on)} bytes`);
+  assert.doesNotMatch(liveViewHtml({ state: 'live', game: 'gabc123', embedUrl: embed }), /<image /);
+});
+
 test('live page: asks every 15 s whether its game has ended (an image from our server), then the end card in the player\'s place, the watchdog stopped', () => {
   const embed = 'https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2F1%2Fvideos%2F2%2F&show_text=false';
   const page = liveViewHtml({ state: 'live', game: 'gabc123', camera: 'gabc123', embedUrl: embed, fb: true, statusBase: 'https://play.picasso-lab.com' });
