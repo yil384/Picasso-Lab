@@ -2529,6 +2529,23 @@ once, the slow scripted player of `survive.mjs`, each game its whole 30-minute l
 
 **Against the gate (at most 1 death in 16): passed** (round 1: 1 in 8 and 3 in 8; the care off: 2 in 8).
 
+### A frame that waits for the server, the frame it stood beside, pools and hunts (2026-10-14, g2409ce)
+
+- **A placement the server did not confirm in time** ("Event blockUpdate ... did not fire within timeout of 5000ms")
+  is tried once more at once, at the same cells. A frame that stops on such a hiccup, or on a cell it could not
+  reach, is not a bad site: the next build continues it, whatever way the bot faces then.
+- **An unfinished frame of this game's within 12 blocks on a bad site:** its obsidian is taken back first and goes
+  into the new frame ("took back the obsidian of your unfinished frame at ... first"), never a second frame beside it.
+- **Obsidian:**
+  - The LAVA refusal and the stalled-collect advice name pools as their cast groups them, with how many sources each
+    has, one big enough for the collect first ("at x y z, 40 blocks away (5 sources; a nearer one ... has only 1)").
+  - An empty bucket is filled from the nearest water before collect obsidian.
+  - The limit is 2 minutes plus 30 s a block (11 took 340 s), and a collect whose time runs out as its last block
+    comes in is done.
+- **A hunt or a collect a fight cut short** goes on after the fight for what is still missing ("the hunt went on once
+  it let go"); one done in full before the fight is ok.
+- **A fight the body holds back** for want of a way to heal is said plainly, not as their `COMBAT_CONSTRAINED` text.
+
 ### The public server (2026-10-14)
 
 At launch `play.picasso-lab.com/mcp` opens to everyone (the promo asks "Can your agent beat 20:19?"). What keeps a

@@ -266,7 +266,9 @@ export function frameGuard(cells, ctx) {
 
 /** Collects that take longer than the skill's limit: a base and a time per block (ms). */
 export const SLOW_COLLECT = Object.freeze({
-  obsidian: { base: 120_000, each: 20_000 },
+  // about 30 s a block with the pours and the scoops (production game g2409ce, 2026-10-14: 11 obsidian in 340 s, the
+  // step's whole limit then, so it ended "timed out" with every one of them in)
+  obsidian: { base: 120_000, each: 30_000 },
   diamond_ore: { base: 240_000, each: 30_000 },
   deepslate_diamond_ore: { base: 240_000, each: 30_000 },
 });
@@ -316,7 +318,11 @@ export function toTheirs(skill, args, ctx) {
       // diamond pickaxe; diamonds lie deep: both get longer than a collect's 3 minutes (a local run, 2026-10-11: 12
       // obsidian stopped twice at 180 s with 1 and 7 mined)
       const slow = SLOW_COLLECT[block];
-      return { calls, ...(slow ? { timeoutMs: Math.min(900_000, slow.base + slow.each * args.n) } : {}) };
+      // obsidian is cast with water: an empty bucket is filled from the nearest water first (g2409ce: the last pour
+      // was not scooped back, and the bucket stayed empty for the next collect)
+      const refill = block === 'obsidian' && !((Number(inv.water_bucket) || 0) > 0) && (Number(inv.bucket) || 0) > 0;
+      if (refill) calls.unshift({ tool: 'use_bucket', args: { action: 'fill', liquid: 'water' }, refill: true });
+      return { calls, ...(slow ? { timeoutMs: Math.min(900_000, slow.base + slow.each * args.n + (refill ? 60_000 : 0)) } : {}), ...(refill ? { note: 'filled your empty bucket with water first' } : {}) };
     }
     case 'craft':
     case 'craft_batch': {
@@ -752,6 +758,10 @@ export function plainer(tool, text, call = null) {
   t = t.replace(/\.?,? while replanning after a movement failure: The planned bucket drop did not confirm landing and water recovery\.*/g, ', after a water-bucket drop on the way down did not land as planned.');
   t = t.replace(/\.?,? while replanning after a movement failure: ([^.]*)\.*/g, (m, why) => `, after a move on the way failed (${why.trim().replace(/^./, (c) => c.toLowerCase())}).`);
   t = t.replace(/(^|: )Pathfinder (?:stopped|could not reach the target): /g, '$1').replace(/\.\./g, '.');
+  // their fight held back for want of a way to heal (production game g2409ce: "recovery: [COMBAT_CONSTRAINED] Recovery
+  // is prohibited or no carried food, sufficient hunger or regeneration effect can restore health.")
+  t = t.replace(/(?:recovery: )?(?:\[COMBAT_CONSTRAINED\] )?Recovery is prohibited or no carried food, sufficient hunger or regeneration effect can restore health\.?/i,
+    'the body would not start the fight: its health is low and nothing can bring it back up (no food carried, and food under 18, where health comes back): eat or hunt first, or shelter');
   if (tool === 'collect_mob_drop') {
     // the mobs ran out near the bot (a big hunt goal): said plainly, with the way on (no skill breeds animals)
     const mob = String(call?.args?.mob_name ?? 'mob').replace(/_/g, ' ');
