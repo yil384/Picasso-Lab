@@ -12,7 +12,8 @@
   "K and V group along different axes (slide 32): one can be packed as each token arrives, the other needs a group of tokens first, so an extra quantization cache waits (line_kv_waiting_trolley). Which is which: check slide 32 (GEMM layout) and M-ANT (Hu et al. 2025; check authors before naming the lab).",
   "NVFP4 (slides 33-34): E2M1 with one scale per block of 16 plus one per tensor, done in Blackwell hardware: a small photo per small group, all pinned on one board; near-original accuracy at 2-3x speed (check) (line_outlier_photo_board).",
   "Vector quantization (slide 35): replace a whole group of numbers with the nearest entry of a small codebook learned by k-means, like printing a picture with a few stamps; mostly for audio and video tokens (line_vq_stamp_set).",
-  "Takeaway: the outliers set the scale; split them off (LLM.int8()), move them into the weights (SmoothQuant), or shrink the groups until they cannot hurt (NVFP4)."
+  "Takeaway: the outliers set the scale; split them off (LLM.int8()), move them into the weights (SmoothQuant), or shrink the groups until they cannot hurt (NVFP4).",
+  "Cover (line_cover_l12_04; for the X post and thumbnails, not a film beat): the group photo: one friend on stilts makes the photographer tilt the camera far back, and everyone else shrinks."
  ],
  "reuse": [
   "line_balance",
@@ -151,6 +152,26 @@
     "line_tiny_lab"
    ],
    "prompt": "A long strip of paper lies across a table, and a friendly hand holding a rubber stamp is printing a picture onto it. The whole picture on the strip (rolling hills, trees, clouds, waves at the shore, birds) is made only from repeated prints of the same five stamp shapes: a tree, a cloud, a wave, a hill and a bird. On the left, an open wooden tray holds exactly those five rubber stamps on wooden handles and an ink pad, drawn as outlines only. Landscape image 1536x1024; the strip, the tray and the hand fill about 92% of the width and about 60% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l12_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "refs_when_made": [
+    "line_outlier_group_photo",
+    "line_outlier_stilts_tall",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the photographer with a ponytail and a many-pocket vest, or the tall friend on stilts, draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The photographer (the same character in every picture): an invented adult with a simple round face, dot eyes, a short ponytail, a sleeveless vest with many small pockets over a long-sleeved shirt, working an old wooden box camera on a three-legged wooden tripod. The tall friend (the same character in every picture): an invented cheerful person standing on very tall wooden stilts hidden under extra-long trousers, about three times as tall as everyone else, simple round face, dot eyes, a striped scarf. A group photo on a lawn. On the right, a row of seven invented friends (simple round faces, dot eyes, different hairstyles: glasses, a ponytail, a cap, curls, a bob, a bun, short spiky hair) stand smiling, and in the middle of them stands the tall friend, waving. On the left, the photographer has tilted the camera far back on its tripod to fit the tall friend in, and leans back, mouth open, looking up. The tall friend's head is the highest point of the picture and still stays below the empty top third. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

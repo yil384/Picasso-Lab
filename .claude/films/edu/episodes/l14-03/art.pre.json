@@ -11,7 +11,8 @@
   "Balance (EPLB): copy the hot expert into a spare room (line_moe_twin_doctors), re-planned every few minutes from recent traffic, because people at the same hour ask similar things: at midnight the waiting room is all students with code due (line_moe_midnight_waiting_room; reuse line_clock_face, line_tally_pages).",
   "Fewer trips: each token may use experts on at most 4 nodes (draw the route over line_moe_campus_grid); the lab's own profiling (arXiv 2510.05497) saw this as square patterns.",
   "Two hops: one slow bus between buildings over InfiniBand (about 50 GB/s), then a fast walkway inside over NVLink (160 GB/s): 3.2x faster, so about 3.2 experts per node ride free, 3.2 x 4 = about 13 per token in theory (line_moe_bus_then_walkway).",
-  "Takeaway + cliffhanger: attention and experts share the same GPUs; is that wise? (tease L14-04 with line_moe_decode_cutaway from its plan)."
+  "Takeaway + cliffhanger: attention and experts share the same GPUs; is that wise? (tease L14-04 with line_moe_decode_cutaway from its plan).",
+  "Cover (line_cover_l14_03; for the X post and thumbnails, not a film beat): a dollhouse hospital with one doctor in every small room; one room has a queue out of the door."
  ],
  "reuse": [
   "line_servers",
@@ -157,6 +158,26 @@
    ],
    "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
    "prompt": "A corridor drawn as a side cutaway with six small consulting rooms in a row. In the first two rooms a doctor in a white coat sees a patient. The other four rooms are ready but empty: each has a small desk, a chair, a fresh white coat hanging on a stand, and the door wide open, waiting for whoever is needed. Landscape image 1536x1024; the rooms fill about 94% of the width and 70% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l14_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refs_when_made": [
+    "line_moe_room_grid",
+    "line_moe_books_split",
+    "line_building_h"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the doctors in plain white coats or a dollhouse cutaway building, draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A wide, low building drawn as a dollhouse cutaway with the whole front wall removed, seen straight on: a regular grid of identical small rooms, ten across and three floors up, separated by thin walls and floors. In every room sits exactly one doctor at a small desk. One room on the ground floor has a long queue of patients stretching out of its door along the pavement, while the rooms beside it are quiet. A plain flat roof. The doctors wear identical plain white coats with a stethoscope and are told apart only by face and hair: nothing hints at a medical specialty. No signs, no posters, no cross symbols, no writing on anything. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

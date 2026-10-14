@@ -13,7 +13,8 @@
   "In 4 bits there are only 16 codes: INT4 hangs its hooks evenly, FP4 (E2M1) crowds them near zero and spreads them out far away; the small formats spend few or no codes on specials: E4M3 drops infinity and keeps one NaN pattern (so its top is 1.75 x 2^8 = 448), E5M2 keeps IEEE-style inf/NaN (top 1.75 x 2^15 = 57,344), E2M1 has neither (check) (line_bits_hook_rails, slide 5).",
   "Hardware: exponents add, mantissas multiply, and the multiplier is the expensive part; TF32 keeps FP16's 10 mantissa bits so it reuses the same multiplier (line_float_mult_machine, slide 6).",
   "The family on slide 7: FP32, FP16 (V100), TF32 and BF16 (A100), FP8 E4M3 / E5M2 (H100), NVFP4 E2M1 with fine-grained groups (B200): each generation carries the number in a smaller bag (line_float_luggage_line, taped slide 7).",
-  "Takeaway / pitfall: fewer bits is a choice of what to keep, range or precision; forward passes like precision (E4M3), gradients need range (E5M2); next: rounding a whole model (back to line_bits_two_tapes)."
+  "Takeaway / pitfall: fewer bits is a choice of what to keep, range or precision; forward passes like precision (E4M3), gradients need range (E5M2); next: rounding a whole model (back to line_bits_two_tapes).",
+  "Cover (line_cover_l12_01; for the X post and thumbnails, not a film beat): twin tape measures: one pulled out short with fine marks, the other pulled the length of the table with coarse marks, the student holding its far end."
  ],
  "reuse": [
   "line_clock_face",
@@ -124,6 +125,26 @@
    ],
    "refnote": "The first two attached images show the recurring student (short messy hair, hoodie, simple round face with dot eyes): draw the same person in the new pose described. The last image is a style reference only (a line drawing made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
    "prompt": "The student (the same invented character as in the first two reference images, in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. Pieces of luggage stand in a row on the floor from left to right, getting smaller step by step: a huge old steamer trunk with corner caps and leather straps, a large suitcase, a medium suitcase, a small carry-on case with a handle, and a small satchel. At the right end stands the student, holding up the last and smallest one, a tiny coin purse, between finger and thumb with a delighted, surprised face. Landscape image 1536x1024; the row of luggage and the student fill about 92% of the width and about 70% of the height, the trunk being the tallest thing. No luggage tags, no stickers. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l12_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refs_when_made": [
+    "line_bits_two_tapes",
+    "line_ruler_curve",
+    "line_postal_scale"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the recurring student (short messy hair, hoodie) or the twin tape measures, draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (the same invented character in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. Two identical round pocket tape measures sit side by side at the left end of a long table, seen from the front and a little above, exactly the same size, like twins. From the first, a short length of tape is pulled out straight and taut, covered with many fine, closely spaced tick marks. From the second, the tape has been pulled out very far: it runs the whole length of the table to the right, where the student, kneeling at the far end, holds its end and looks back at it, amazed; it carries only a few widely spaced tick marks. The tapes carry tick marks only. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

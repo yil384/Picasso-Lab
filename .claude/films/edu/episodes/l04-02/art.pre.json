@@ -11,7 +11,8 @@
   "Leaving the node: InfiniBand ~50 GB/s per GPU, about 18x slower: a bike between kitchens (slide 18) (line_cluster_kitchen_street).",
   "The pod: an H100 SuperPOD links 32 nodes x 8 = 256 GPUs in one NVLink domain through switches (slide 19) (line_cluster_switchboard).",
   "Rack scale: GB200 NVL72, 72 GPUs as one big virtual GPU, ~5,000 copper cables (slide 20) (line_cluster_cable_weave).",
-  "Lesson + pitfall: the network is a ladder of speeds; keep the heavy talk on the fast rungs, or the slowest link sets the pace (line_cluster_stairs). Next: four ways to cut the job (L04-03)."
+  "Lesson + pitfall: the network is a ladder of speeds; keep the heavy talk on the fast rungs, or the slowest link sets the pace (line_cluster_stairs). Next: four ways to cut the job (L04-03).",
+  "Cover (line_cover_l04_02; for the X post and thumbnails, not a film beat): from one chip to a city: a graphics card, a server, a rack and a campus of buildings in a row, each step bigger."
  ],
  "reuse": [
   "line_gpu",
@@ -158,6 +159,20 @@
    ],
    "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
    "prompt": "A house cut open at the side like a doll's house, showing a kitchen upstairs and a cellar below, joined by one long narrow staircase. Upstairs: the chef with round glasses and curly hair (tall white chef hat, double-breasted chef jacket, apron) cooks very fast at a stove with both hands, short motion lines around the pans, and right behind the chef stands a tall pantry cupboard with its doors wide open, packed full to the top with jars, sacks and baskets, within arm's reach. Downstairs: a cellar crowded with more crates and sacks, and the old chef with a white beard (tall white chef hat, double-breasted chef jacket, apron) slowly carries one heavy crate up the long narrow staircase, panting. Portrait image 1024x1536; the house fills about 85% of the width and about 92% of the height. No labels on jars, sacks or crates. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l04_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "refs": [
+    "line_cluster_campus",
+    "line_d_servers",
+    "line_gpu"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows this episode's campus, the second a server and the third the graphics card as drawn for this series: draw these things in the same way, in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A row of four things standing on one ground line from left to right, each one much bigger than the last, like a staircase of scale: at the far left, one small graphics card standing on its long edge (a long box with three round fans); next, one flat server box with eight such cards visible through its open lid; next, one tall server rack, a cabinet of stacked servers; at the right, a wide campus of long low identical buildings stretching back towards the horizon, with a few round trees. The four steps are clearly separated by white space. No people. The cards, servers and buildings carry no brand names or writing. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

@@ -11,7 +11,8 @@
   "Latency-critical uses (slides 31-35, no screenshots): a chat app's first token in 200-500 ms, search answers, code completion (line_guess_chat_wait; reuse line_chat_first).",
   "Reasoning models (slide 36): very long outputs and long contexts force small batches, and their patterns are strong: a good fit (line_guess_long_thinking).",
   "When it does not pay (slide 37): big-batch serving for cheap tokens; the compute is already busy (line_guess_busy_kitchen).",
-  "Takeaway: guessing spends spare compute to buy speed, so first check that there is spare compute (reuse line_balance); closes the speculative-decoding lecture."
+  "Takeaway: guessing spends spare compute to buy speed, so first check that there is spare compute (reuse line_balance); closes the speculative-decoding lecture.",
+  "Cover (line_cover_l08_04; for the X post and thumbnails, not a film beat): the programmer has finished and folded their arms; the snail with the suggestion is only now crossing the desk."
  ],
  "reuse": [
   "line_card_catalog",
@@ -139,6 +140,21 @@
     "line_d_kitchen"
    ],
    "prompt": "A busy restaurant kitchen at peak time, seen from the front: every burner on a long stove has a pan on it, four invented chefs (simple round faces, dot eyes, tall chef's hats, aprons) rush between them carrying plates and stirring pots, a row of order tickets clipped on a rail. At the kitchen door on the right, the intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), holds up a notepad offering to help, but nobody has a free moment to look. Landscape image 1536x1024; the kitchen fills about 92% of the width and about 80% of the height. The tickets and the notepad are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_cover_l08_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_guess_snail_suggestion",
+    "line_coder_storyteller",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows this episode's programmer and snail: draw the same programmer and snail in the new cover composition described. The others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The programmer (the same invented character as in the first reference image: simple round face, dot eyes, short messy hair, round glasses, a sweater) sits on the left at a wide desk in front of an open laptop, leaning back with arms folded, finished and slightly impatient. Across the desk, from the right, a cheerful snail, drawn large, slowly arrives carrying a small blank card on its shell, with a few slow motion lines and a short trail behind it. The laptop screen and the card are blank; no logo on the laptop. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

@@ -12,7 +12,8 @@
   "Zero-overhead scheduler (slide 32): the tree matching runs on the CPU; it prepares the next batch while the GPU runs this one; the price: a finished request's memory is freed one iteration late (line_prefix_next_tray_ready).",
   "vLLM vs SGLang (slide 33): no new fragmentation, because tree nodes hold whole blocks (line_paged_crates_on_demand, planned for L13-03); vLLM now does automatic prefix caching by hashing blocks; both do chunked prefill and disaggregation.",
   "Mooncake (Qin et al., FAST 2025, Best Paper; slide 34): one big cluster shares a distributed KV pool, with CPU memory and SSDs behind the GPUs, so a hit can come from another machine (line_prefix_shared_warehouse).",
-  "Takeaway: compute a beginning once and keep it while it stays popular."
+  "Takeaway: compute a beginning once and keep it while it stays popular.",
+  "Cover (line_cover_l13_04; for the X post and thumbnails, not a film beat): the clerk lifts a ready-made bundle out of a drawer for a queue of guests who all hold the same scroll."
  ],
  "reuse": [
   "line_round_table",
@@ -140,6 +141,26 @@
    ],
    "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
    "prompt": "A bird's-eye view of a small square: in the centre, a big open-fronted warehouse with tall shelves full of identical small parcels with blank round name tags; around it, four small kitchen buildings with open fronts and one line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) visible inside each. Tiny invented porters (simple round faces, dot eyes, caps) push small hand carts of parcels along paths between the warehouse and the kitchens, in both directions; in one corner a short stairway leads down to a cellar door with more shelves behind it, the slow back store. Landscape image 1536x1024; everything fills about 92% of the width and about 85% of the height. No signs. No cakes, no pastries, no baked goods anywhere. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l13_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refs_when_made": [
+    "line_prefix_lookup_drawer",
+    "line_clerk_ladder",
+    "line_word_three_things"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the clerk (tousled hair, pencil behind the ear, bib apron) or the party guest (messy hair, sweater, round name tag), draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Behind a cloakroom counter on the left, the clerk (the same invented character as in the references: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) beams and lifts a ready-made bundle of small parcels with blank round name tags, tied together with string, out of a long open drawer, with small sparkle lines around it, handing it across the counter. In front of the counter a queue of five invented guests stretches to the right: first the party guest (the same invented character as in the references: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag on the chest), then four more (simple round faces, dot eyes; round glasses, a ponytail, a cap, curls); every one of them holds up the very same rolled blank scroll. The scrolls, tags and parcels are blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

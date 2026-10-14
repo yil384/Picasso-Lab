@@ -11,7 +11,8 @@
   "One H100 at 1,979 TFLOPS (FP8 peak): 1.84 x 10^10 s = 584 years (slide 12) (line_train_long_beard, line_train_calendar_flurry, line_gpu).",
   "A field of 16,000: ~13 days at 100% (slide 13) (line_train_kitchen_hall).",
   "Reality, ~54 days: ~40% utilisation from waiting and failures (line_train_waiting_chefs, line_train_blown_fuse) and 16-bit instead of FP8 (line_train_scoop_spoon) (slide 13).",
-  "Takeaway + next: training has to be distributed; first the hardware ladder (L04-02), then four ways to cut the job (L04-03)."
+  "Takeaway + next: training has to be distributed; first the hardware ladder (L04-02), then four ways to cut the job (L04-03).",
+  "Cover (line_cover_l04_01; for the X post and thumbnails, not a film beat): the manager hands the young chef an order ticket so long it loops across the whole kitchen floor."
  ],
  "reuse": [
   "line_manager_2",
@@ -163,6 +164,21 @@
    ],
    "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
    "prompt": "The young chef with short curly hair (tall white chef hat, double-breasted chef jacket, apron) sits at a small kitchen table with a cup of tea, the chef hat pushed back, holding a used envelope turned over and scribbling a quick sum on its back with a pencil (only loose wavy scribble lines, no digits), the tip of the tongue out in concentration. Beside the cup lies the end of a very long curled-up order ticket. Above the chef floats a round thought bubble holding a small mountain of flour sacks and crates. Square image 1024x1024; the chef, the table and the bubble fill about 85% of the width and about 88% of the height. The envelope and ticket are blank apart from the scribbles; no stamps. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l04_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_train_giant_order",
+    "line_manager_2",
+    "line_d_chefs"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows this episode's manager and young chef with the long ticket, the second the manager, the third the six recurring chefs: draw the same two characters (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "In a kitchen, the manager (the same invented character as in the references: a woman with her hair in a neat bun, a waistcoat over a shirt and a small bow tie) hands the young chef with short curly hair (one of the recurring chefs: tall white chef hat, double-breasted chef jacket, apron) an absurdly long order ticket. The chef holds the top end with both hands, eyes wide, mouth open; the ticket unrolls from there down to the floor and runs in big loose loops across the whole width of the floor in front of them. The two stand left and right of centre, full figure, and the loops of paper fill the lower part of the picture. The ticket is blank paper. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

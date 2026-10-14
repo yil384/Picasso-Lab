@@ -1,0 +1,41 @@
+{
+ "episode": "SERIES",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "X header (line_series_banner): drawn at 1536x1024 with everything inside the middle band; crop the band (about y 256-768) and scale it to 1500x500; the round profile picture covers the lower left of the header.",
+  "Series emblem (line_series_emblem): one motif for the profile picture, end cards and stickers; it survives a round crop."
+ ],
+ "drawings": [
+  {
+   "name": "line_series_banner",
+   "kind": "line",
+   "group": "SERIES",
+   "role": "x-header",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_spec_handoff",
+    "line_clerk_ladder",
+    "line_gpu"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows the six recurring chefs, the second the intern and the editor, the third the clerk, the fourth the graphics card as drawn for this series: draw these same characters (same faces, hair and clothes) and the same kind of card in the new parade described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A wide, cheerful parade of the recurring cast of an explainer series about how large language models are trained and served, walking from left to right across the picture in two loose staggered rows, all at the same scale, full figures on one shared ground line, with small gaps between the groups so every figure reads clearly. From left to right: three friendly graphics cards (long boxes with three big round fans on the side, like the card in the fourth reference image, each with two small dot eyes and a small smile on its front end and four stubby little legs) waddling in single file; the six chefs of the first reference image (tall pleated white chef hats, double-breasted jackets, aprons: the young chef with short curly hair, the woman with a low bun, the round chef with a curly moustache, the chef with round glasses and curly hair, the woman with a bob and a fringe, the old chef with a white beard), one carrying a big pot, one a whisk, one a stack of plates; two small identical line cooks in low folded paper caps and short aprons, marching in step with ladles upright; the clerk of the third reference image (short tousled hair, a pencil behind the ear, rolled-up sleeves, a bib apron) carrying a small parcel with a round name tag; three readers (one with round glasses, one with a ponytail, one with a cap) carrying one long blank paper scroll between them at waist height; the manager (a woman with her hair in a neat bun with a pencil in it, a waistcoat and a small bow tie) with a clipboard; a small friendly robot (round head, dot eyes, a short antenna with a ball, a rounded box body, tube arms with mitten hands); and leading the parade at the right, the intern and the editor of the second reference image: the intern (short spiky hair, hoodie, pencil behind the ear) dashing ahead with a strip of blank word cards, the editor (a big, calm, older man with a short bushy beard, half-moon glasses and a cardigan) striding behind with a fountain pen raised. Everyone looks cheerful and busy. Landscape image 1536x1024. The whole parade fits inside one wide horizontal band through the middle of the picture, from about 27% to about 73% of the height and from about 4% to about 96% of the width; the top quarter and the bottom quarter stay completely empty, plain white (the picture is cropped to a wide 3:1 strip). Keep the lower-left end of the band a little quieter (a round profile picture covers it there). Bold, clear outlines so the figures still read when the strip is shown small. The scroll, cards and parcel are blank. No text, no letters, no numbers, no symbols, no logos, no flags anywhere."
+  },
+  {
+   "name": "line_series_emblem",
+   "kind": "line",
+   "group": "SERIES",
+   "role": "emblem",
+   "sweep": "c",
+   "refs": [
+    "line_gpu",
+    "line_d_chefs",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows the graphics card and the second the chefs' tall pleated hats as drawn for this series: draw them in the same way, simplified, in the new motif described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "One single motif, centred: a friendly graphics card (a long rounded box with three big round fans across its face, like the card in the first reference image, simplified to bold clean shapes) standing upright on its short end like a little character, the three fans stacked one above the other, wearing a tall pleated white chef's hat tilted slightly to one side on its top end (like the hats in the second reference image). Two small dot eyes and a small content smile sit on a plain band of the casing between the top fan and the hat. Three short wavy steam curls rise beside the hat, as if something good is cooking. Nothing else: no table, no ground line, no background, no border, no circle drawn around it. Square image 1024x1024. The motif sits well inside an imaginary circle about 80% of the width across, centred, so it survives a round crop; bold, simple outlines that still read at 100 pixels wide. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

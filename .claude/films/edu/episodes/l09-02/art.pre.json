@@ -12,7 +12,8 @@
   "Halide's payoff: less code, faster, portable: the algorithm never mentions the hardware (line_sched_many_kitchens).",
   "To tensors: Tensor Comprehensions (2018) applies the idea to matrix math; TVM (OSDI 2018) adds graph-level moves (fusion, layout) and template-free tuning; one model, many chips (line_sched_many_kitchens).",
   "Fusion, the graph-level move: do not put the chopped onions back in the fridge (line_sched_onion_trips vs line_sched_onion_fused).",
-  "Takeaway: keep what and how apart; let a search find the how."
+  "Takeaway: keep what and how apart; let a search find the how.",
+  "Cover (line_cover_l09_02; for the X post and thumbnails, not a film beat): one recipe card, three very different kitchens, the same cake on every counter."
  ],
  "reuse": [
   "line_heap",
@@ -140,6 +141,21 @@
    "group": "B",
    "sweep": "x",
    "prompt": "Two identical picture frames hanging side by side on a plain wall, with space between them. Each frame shows the same simple scene: a small house with a pointed roof, a round tree beside it, a gentle hill behind and a round sun. In the left frame every line is single and crisp. In the right frame the same scene is drawn with every outline doubled and tripled by slightly offset thin lines, so it looks soft and blurred, like a photo out of focus. No people. Landscape image 1536x1024; the two frames fill about 85% of the width and about 65% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l09_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_sched_many_kitchens",
+    "line_sched_same_cake",
+    "line_gpu_station"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's kitchens, cooks and cake, the third a line cook (low folded paper cap, not a tall chef hat): draw the cooks and kitchens the same way in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, one small line cook (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) holds up a single large blank recipe card with a simple drawing of a round layer cake at its top. To the right, spread out in a row with wide white spaces between them, three very different kitchens: a tiny camping stove on a folding picnic table, an ordinary home stove with an oven, and a long restaurant cooking line with big pots and hanging ladles. A tiny identical cook stands at each, and on each counter sits the very same finished round layer cake. The card has no writing, only the cake drawing. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

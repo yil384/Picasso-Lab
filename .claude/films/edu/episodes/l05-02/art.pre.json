@@ -12,7 +12,8 @@
   "ZeRO-3 / FSDP: shard the weights too (daypacks); copy each layer's weights in just in time, use them, throw the copy away: about 1.5x the traffic, hidden by handing over the next card early (prefetch).",
   "Numbers: 70B on 16 GPUs: ~310, ~187, ~65 GiB per GPU under ZeRO-1, 2, 3 (one H100 has 80 GB): only the last fits the cabin-bag frame.",
   "Twist: the big pre-training runs mostly use ZeRO-1: pipelines add up gradients over many micro-batches (coins in the jar), and ZeRO-2/3 would have to reduce-scatter after every one (a bank run per coin).",
-  "Limit: past a point more DP means tiny work per GPU and talk that cannot hide; other parallelism takes over (L06)."
+  "Limit: past a point more DP means tiny work per GPU and talk that cannot hide; other parallelism takes over (L06).",
+  "Cover (line_cover_l05_02; for the X post and thumbnails, not a film beat): one traveller sits on an overstuffed suitcase while the other three walk off light, each with one coat."
  ],
  "reuse": [
   "line_gpu",
@@ -154,6 +155,21 @@
     "line_tiny_lab"
    ],
    "prompt": "A picture split into two halves side by side, with clear space between them. Left half: at a small market stall with an awning, the fourth traveller (a cap worn backwards, a padded vest over a T-shirt), an invented character with a simple round face and dot eyes, calmly drops one coin into a big glass jar under the counter; the jar is already half full of coins; relaxed. Right half: the same character runs hard along a long road away from an identical stall towards a small bank building far away on the horizon, holding up one single coin, sweating, a few speed lines. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no symbols on the coins, no signs on the stall or the bank."
+  },
+  {
+   "name": "line_cover_l05_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_zero_suitcase_sit",
+    "line_zero_coats_shared",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's four travellers: draw the same four (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the fourth traveller (a cap worn backwards, a padded vest over a T-shirt) sits on top of one enormous overstuffed suitcase, gritting their teeth and pulling the zip shut with both hands; sleeves, a scarf end and the corners of thick coats poke out of the gap. On the right, the other three travellers (the first tall with round glasses, short neat hair and a zip-up jacket; the second short with a high ponytail and a plain sweater; the third with curly hair and a hoodie) walk away in a row, relaxed and upright, each pulling one small identical wheeled suitcase and carrying exactly one big puffy winter coat over the free arm. All are invented characters with simple round faces and dot eyes, full figures on one short ground line. No tags or stickers on the suitcases. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

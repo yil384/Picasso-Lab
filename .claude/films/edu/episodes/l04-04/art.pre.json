@@ -11,7 +11,8 @@
   "Tree: pairs add and pass up, the top broadcasts down: 2 log N steps, but each moves the full M (slides 41-42) (line_allreduce_pyramid, line_allreduce_megaphone).",
   "Ring vs tree: bandwidth for big gradients vs latency for small control data (slide 43) (line_allreduce_postcard_train).",
   "Pitfall: one slow link sets the pace of every ring step (900 vs 50 GB/s) (line_cluster_kitchen_street, pre-drawn for L04-02).",
-  "Hierarchy: reduce-scatter inside the node on NVLink, cross nodes with quarter-size pieces, all-gather inside (slide 44; L05 4-5) (line_allreduce_two_rooms). Takeaway."
+  "Hierarchy: reduce-scatter inside the node on NVLink, cross nodes with quarter-size pieces, all-gather inside (slide 44; L05 4-5) (line_allreduce_two_rooms). Takeaway.",
+  "Cover (line_cover_l04_04; for the X post and thumbnails, not a film beat): six students at desks in a ring each pass one sheet to the right at the same moment."
  ],
  "reuse": [
   "line_dog_homework",
@@ -161,6 +162,21 @@
    ],
    "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
    "prompt": "Seen from a little above: the six recurring chefs of this series (all with tall white chef hats, double-breasted chef jackets and aprons, simple round faces with dot eyes): the young chef with short curly hair, the woman with a low hair bun, the round chef with a curly moustache, the chef with round glasses and curly hair, the woman with a bob and a fringe, and the old chef with a white beard stand evenly spaced around a round kitchen table, all facing the middle. At the same moment each chef hands a small blank recipe card to the chef on their right, so the six cards travel around the table in the same direction. Square image 1024x1024; the circle fills about 88% of the width and about 85% of the height. The cards are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l04_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_allreduce_desk_circle",
+    "line_allreduce_same_sheet",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's six students: draw the same six students (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Seen from a little above: six invented students (the same as in the references: a boy with short messy hair in a hoodie, a girl with a ponytail, a boy with round glasses, a girl with two hair buns, a boy in a baseball cap and a girl with a short bob; simple round faces, dot eyes) sit at six small school desks arranged evenly in a wide oval ring, all facing the middle. At the same moment each student hands one sheet of paper to the student on their right, so six sheets travel round the ring in the same direction, with small curved motion lines. The sheets are blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

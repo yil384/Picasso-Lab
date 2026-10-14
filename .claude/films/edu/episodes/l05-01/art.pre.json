@@ -12,7 +12,8 @@
   "Why DP can overlap: backward runs from the last layer; layer i's AllReduce needs only layer i's gradients, so it runs while layer i-1 is computed: communication is off the critical path (washing and drying).",
   "Numbers: overlap holds while bandwidth >= FLOPS x DP / (2 x tokens); bigger batches help, more DP hurts; TP and PP divide both sides, CP only the tokens.",
   "Pitfall: when the drying is slower than the washing, the wet pile grows: at large DP the talk can no longer hide.",
-  "Cliffhanger: \"any bugs in our analysis?\": every GPU still carries a full copy of everything (into L05-02)."
+  "Cliffhanger: \"any bugs in our analysis?\": every GPU still carries a full copy of everything (into L05-02).",
+  "Cover (line_cover_l05_01; for the X post and thumbnails, not a film beat): talking while working: two travellers chat as they wash and dry, plates flowing from the dirty stack to the clean rack."
  ],
  "reuse": [
   "line_gpu",
@@ -154,6 +155,21 @@
     "line_glue_tiles"
    ],
    "prompt": "A large round magnifying glass with a wooden handle, held by an invented person's hand coming in from the lower right, hovers over a sheet of blank paper lying flat on a table. Through the lens, a small cute round beetle with six little legs and two short feelers sits on the paper, magnified and looking up, surprised. Square image 1024x1024; the lens is centred and fills about 60% of the width; the paper fills about 85%. No text, no letters, no numbers, no logos, no writing on the paper."
+  },
+  {
+   "name": "line_cover_l05_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_overlap_wash_dry",
+    "line_overlap_wet_pile",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's two travellers at the sink: draw the same two (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Two invented characters at a kitchen sink, seen from the front, waist up (the same two as in the references): on the left the first traveller (tall, round glasses, short neat hair, a zip-up jacket), sleeves pushed up, washes a plate; on the right the second traveller (short, a high ponytail, a plain sweater) dries the plate before it with a tea towel. They chat happily as they work, turned a little towards each other, mouths open mid-sentence, hands never stopping. A short stack of dirty plates waits at the far left; a plate rack at the far right holds a neat row of clean dry plates. Simple round faces, dot eyes. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

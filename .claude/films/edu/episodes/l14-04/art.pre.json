@@ -11,7 +11,8 @@
   "Watching the habits (the lab's own paper, arXiv 2510.05497): profile which experts get picked (line_moe_habit_watcher; reuse line_tally_pages).",
   "Habits in time: layer to layer (Ob1: the top 20% of pairs make 40-80% of the counts), token to token (Ob2: neighbours pick the same expert, more so in higher layers), prefill predicts decode (Ob3: top-5 overlap above 60%): the worn shortcut across the lawn (line_moe_desire_path), patients following one another through one door (line_moe_follow_leader). Use: prefetch and cache, the specialist is ready before you arrive (line_moe_doctor_waiting_door).",
   "Habits in space: uneven (Ob4: the busiest experts get about 20x the average), shifting with the subject, yet a few stay busy for every subject (line_moe_topic_patients; show subjects only, no scripts or languages on screen; a statistical lean, not a department); some experts come in pairs (Ob5: line_moe_doctor_pair; reuse line_paired_cards), so put the two in different rooms to keep one GPU from being swamped (line_moe_pair_two_rooms).",
-  "Takeaways (slide 47): sparse activation scales capacity, not compute; balance (aux loss, then bias); EP + all-to-all, disaggregated attention and experts; habits for smarter systems. Season finale for the lab: the traces are open (reuse line_moe_all_doors_busy / line_moe_oncall_bunks from the L14-01/02 plans, line_block_towers)."
+  "Takeaways (slide 47): sparse activation scales capacity, not compute; balance (aux loss, then bias); EP + all-to-all, disaggregated attention and experts; habits for smarter systems. Season finale for the lab: the traces are open (reuse line_moe_all_doors_busy / line_moe_oncall_bunks from the L14-01/02 plans, line_block_towers).",
+  "Cover (line_cover_l14_04; for the X post and thumbnails, not a film beat): patients take the worn shortcut across the lawn, and the doctor at its end already holds the door open."
  ],
  "reuse": [
   "line_tally_pages",
@@ -154,6 +155,26 @@
    ],
    "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
    "prompt": "Two neighbouring consulting rooms drawn as a cutaway, separated by a wall with a small interior window between them. In the left room the moustached doctor (a round-faced bald man with a bushy moustache, in a plain white coat) treats one patient; in the right room the bearded doctor (an older man with a short beard, in a plain white coat) treats another. The two friends wave to each other through the little window while they work, each busy in their own room. Landscape image 1536x1024; the two rooms fill about 90% of the width and 72% of the height. None of the doctors carries any special instrument or object that hints at a medical specialty: identical white coats and stethoscopes only. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l14_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "refs_when_made": [
+    "line_moe_desire_path",
+    "line_moe_doctor_waiting_door",
+    "line_moe_books_split"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the doctors in plain white coats, draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A small park lawn seen from above at a slant. A neat paved path runs around two sides of the lawn and makes a sharp right-angle corner. Across the grass, a well-worn bare earth footpath cuts straight diagonally from the lower left to a small clinic door at the right, with footprints along it, and four invented patients (simple round faces, dot eyes, plain clothes) walk along this shortcut one after another; nobody uses the paved corner. In the open clinic door at the end of the shortcut, a doctor (a young man with short curly hair) already holds the door open with a welcoming smile. The lawn is drawn with a few small tufts, not shaded. The doctors wear identical plain white coats with a stethoscope and are told apart only by face and hair: nothing hints at a medical specialty. No signs, no posters, no cross symbols, no writing on anything. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

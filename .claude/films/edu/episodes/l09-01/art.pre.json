@@ -11,7 +11,8 @@
   "The memory ladder: in your hand (registers), the team's counter (shared memory), the pantry down the hall (global memory: HBM + L2), the warehouse across town (host memory): smaller but faster the closer it is (line_gpu_memory_reach).",
   "Pitfall: fetching one carrot per trip leaves the squad idle (line_gpu_pantry_trek); fast code brings a whole tray to the counter once (line_gpu_tray_fetch).",
   "Vector addition end to end: allocate, copy in by truck, launch, copy back (the manager waits at the dock: implicit sync), free (line_gpu_truck_dock); the kernel itself: every cook adds one small bowl into one big bowl at the same moment, y[i] += x[i] (line_gpu_bowl_row).",
-  "Cliffhanger: so many models times so many chips is too many kernels to write by hand (line_kernel_pile_coder from L09-02's plan, or line_heap)."
+  "Cliffhanger: so many models times so many chips is too many kernels to write by hand (line_kernel_pile_coder from L09-02's plan, or line_heap).",
+  "Cover (line_cover_l09_01; for the X post and thumbnails, not a film beat): thirty-two identical line cooks march in lockstep, four rows of eight."
  ],
  "reuse": [
   "line_gpu",
@@ -160,6 +161,21 @@
    ],
    "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
    "prompt": "A very long straight counter running from the left foreground into the distance on the right, in perspective. Behind it stands a long row of small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another), at least twelve visible, getting smaller into the distance so the row seems to go on and on. In front of every cook stand exactly two bowls, a small one and a large one, and every cook does exactly the same thing at the same moment: tipping the small bowl to pour its contents into the large bowl. Landscape image 1536x1024; the counter and the cooks fill about 95% of the width and about 60% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l09_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_gpu_squad_march",
+    "line_gpu_station",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's line cooks (low folded paper caps, not tall chef hats): draw them the same way in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Thirty-two small identical line cooks (the same as in the references: simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike) march to the right in one wide, low block of EXACTLY FOUR ROWS of EIGHT, seen from the front-left and well above so the rows step back in clear tiers. They are in perfect step: every cook raises the same knee at the same moment and holds a wooden ladle upright in front of the chest with the same hand. Cheerful, focused faces; a few short motion lines behind the block. No floor details, no flags, no instruments. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

@@ -11,7 +11,8 @@
   "Ulysses (slides 12-13): one all-to-all swap before attention turns \"some tokens of all heads\" into \"all tokens of some heads\", and one swap after turns it back (line_ulysses_card_swap, then line_ulysses_suit_piles).",
   "Numbers (slide 14): per-GPU traffic 4Sh/P against 4Sh for TP+SP, constant when length and GPUs grow together; Ulysses passes TP near 32K tokens (slide 15): taped slides and pen work.",
   "Pitfall (slide 15): heads must divide CP x TP; GQA has few KV heads, so they get copied (line_cp_pie_slices, line_cp_photocopier).",
-  "Takeaway: TP inside a node, CP across nodes (line_cp_two_houses); next episode: ring attention lifts the head limit."
+  "Takeaway: TP inside a node, CP across nodes (line_cp_two_houses); next episode: ring attention lifts the head limit.",
+  "Cover (line_cover_l07_01; for the X post and thumbnails, not a film beat): four readers each hold up one cut section of the same long scroll, the scissors in a gap."
  ],
  "reuse": [
   "line_scroll_reader",
@@ -152,6 +153,21 @@
     "line_round_table"
    ],
    "prompt": "Two small houses side by side with a road between them, seen from the front. Each house has one big front window; through each window we see four invented people (simple round faces, dot eyes) crowded around one table, chatting closely and passing papers hand to hand. On the road between the houses an invented cyclist (simple round face, dot eyes, a cap worn backwards, a hoodie) rides from the left house towards the right house with a rolled-up paper scroll strapped to the bike's rear rack. Landscape image 1536x1024; the two houses and the road fill about 92% of the width and about 75% of the height. No signs, no house numbers, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_cover_l07_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_cp_scroll_cut_four",
+    "line_cp_quiet_desks",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's four readers: draw the same four (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The four readers (the same as in the references; invented, simple round faces, dot eyes: one with short messy hair and round glasses in a sweater, one with a high ponytail and rolled-up sleeves, one with a cap worn backwards and a hoodie, one with short curly hair and a cardigan) stand side by side in one row, seen from the front, each holding up one equal section of the same long paper scroll at chest height, so the four sections line up into one long strip across the picture with small clean gaps where it was cut; a large pair of open scissors floats in one of the gaps. All four look pleased. The paper is blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }
