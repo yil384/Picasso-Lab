@@ -25,7 +25,7 @@ while IFS= read -r f; do [ -n "$f" ] && FILES+=("$f"); done < <(
   { git ls-files --others --exclude-standard -- "$@"; git diff --name-only HEAD -- "$@"; } | sort -u)
 for f in ${FILES[@]+"${FILES[@]}"}; do
   case "$f" in
-    */course/*|course/*) echo "refused: $f is course material (never committed)"; exit 4 ;;
+    */course/*|course/*|*/course-qc/*|course-qc/*) echo "refused: $f is course material (never committed)"; exit 4 ;;
     */slides/*|slides/*|*_panel*.png) echo "refused: $f is a slide image or crop (course material)"; exit 4 ;;
     *.mp4|*.mov|*.m4v|*.wav|*.mp3|*.m4a|*.aac|*.flac|*.ogg) echo "refused: $f is audio/video"; exit 4 ;;
     .claude/films/edu/art/src/*.png|.claude/films/edu/art/cut/*.png) ;;

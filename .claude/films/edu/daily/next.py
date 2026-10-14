@@ -1,18 +1,31 @@
 #!/usr/bin/env python3
-"""Pick tonight's episode and write its work order (the daily CSE 291P explainers).
+"""Pick tonight's episode and write its work order (the daily CSE 291P explainers, two series).
 
     ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py            # write the work order, print a summary
     ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py --shell    # KEY=value lines for run.sh
     ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py --dry      # decide and print, write nothing
-    ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py status     # the queue, the buffer, what was delivered
+    ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py plan [--nights 2] [--json]   # tonight and the next nights
+    ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py status     # the schedule, both queues, the buffer
     ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py mark L01-02 delivered --mp4 PATH [--morning 2026-10-07]
-    ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py mark L01-02 failed --note "why"
+    ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py mark QC01-01 failed --note "why"
     ~/miniforge3/bin/python3 .claude/films/edu/daily/next.py verify MP4 [--timeline EP/timeline.json]   # a finished film?
         [--now "2026-10-07 02:00"]   pretend it is that time (tests)
+        [--assume L03-03@2026-10-16]   (--dry, plan, status) pretend that episode was delivered for that morning;
+                                       repeatable, never written
         [--run ID]   mark: the run that marks (default $EDU_DAILY_RUN, set by run.sh): a failure is counted once per run
 
-Rules:
-- Episodes go in syllabus.json order. Taken: status "shipped" in the syllabus, or "delivered" in state.json.
+Two series share one channel, one state.json and one video a morning:
+- "llm": CSE 291P LLM System Optimization: syllabus.json, course files course/LNN.* (LNN = lecture, e.g. L03);
+- "qc":  CSE 291P Quantum Computing Systems: syllabus-qc.json, course files course-qc/QYY-NN.* (QYY-NN = her 20YY
+  lecture NN, e.g. Q25-04; 2025 primary, merged with 2024). Episode ids differ (L03-03 vs QC01-01).
+schedule.json says which series each morning gets: {"pattern": ["llm", "qc"], "start": "2026-10-16", "when_empty":
+"other"}: the pattern repeats one morning per entry from `start` (the default: alternate days, LLM first); mornings
+before `start` are LLM mornings. A morning's series is fixed by its date, so a failed night retries the same series.
+When that series has nothing left to make, "other" gives the morning to the next series in the pattern that has
+(then any other series); "none" leaves it without a video. A missing schedule.json means the default.
+
+Rules (per series):
+- Episodes go in syllabus order. Taken: status "shipped" in the syllabus, or "delivered" in state.json.
   Passed over (and listed in the work order): ids in state.skip; "blocked"; guest episodes ("needs-ok") unless the
   speaker said yes (state.speaker_ok[lecture]) or state.guest_policy is "narration-only" (then no clips, no slides);
   an episode that failed in two different runs (it needs a person; the report says why).
@@ -22,19 +35,24 @@ Rules:
   When that leaves under 4 h (the Mac slept through 02:00), the episode is delivered late: now + 6 h 45 min.
 - Work order: ~/picasso-work/daily/<id>/work_order.json (keyed by episode only, so a retry on a later night finds the
   earlier attempt's progress.md, TTS, previews and scripts). Delivery: ~/Downloads/picasso-daily/<morning>_<id>/.
+  It names the series, the syllabus entry (whole, in "syllabus_entry"), the course folder and its file naming.
 - When it is past 08:45 and today has no video, the order lists today under "missed" (run.sh says so).
 - When the episode folder holds art.pre.json (drawings planned and made ahead, kept in the library outside git), the
   order's "pre_drawn" names it and the library (PROMPT.md step 5; `art.py pre` counts what is made).
+EDU_DAILY_STATE, EDU_DAILY_SCHEDULE, EDU_DAILY_WORK, EDU_DAILY_DELIVER point the state, the schedule, the work
+folders and the delivery folders elsewhere (test_next.py does).
 """
-import argparse, datetime as dt, glob, json, os, re, shlex, subprocess, sys
+import argparse, copy, datetime as dt, glob, json, os, re, shlex, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EDU = os.path.abspath(os.path.join(HERE, '..'))
 COURSE = os.path.join(EDU, 'course')
+QC_COURSE = os.path.join(EDU, 'course-qc')
 SYLLABUS = os.path.join(HERE, 'syllabus.json')
-STATE = os.path.join(HERE, 'state.json')
-WORK = os.path.expanduser('~/picasso-work/daily')
-DELIVER = os.path.expanduser('~/Downloads/picasso-daily')
+STATE = os.path.expanduser(os.environ.get('EDU_DAILY_STATE') or os.path.join(HERE, 'state.json'))
+SCHEDULE = os.path.expanduser(os.environ.get('EDU_DAILY_SCHEDULE') or os.path.join(HERE, 'schedule.json'))
+WORK = os.path.expanduser(os.environ.get('EDU_DAILY_WORK') or '~/picasso-work/daily')
+DELIVER = os.path.expanduser(os.environ.get('EDU_DAILY_DELIVER') or '~/Downloads/picasso-daily')
 LIBRARY = os.path.expanduser(os.environ.get('EDU_ART_LIBRARY') or '~/picasso-assets/edu-art-library')
 CUTOFF = dt.time(8, 45)
 BUFFER_DAYS = 2
@@ -42,20 +60,79 @@ BUDGET = dt.timedelta(hours=6, minutes=45)
 MIN_BUDGET = dt.timedelta(hours=4)
 DONE = ('delivered',)
 
+SERIES = {
+    'llm': {
+        'name': 'CSE 291P: LLM System Optimization',
+        'syllabus': SYLLABUS, 'readable': os.path.join(HERE, 'SYLLABUS.md'), 'course': COURSE,
+        'naming': 'course/LNN.pdf (page = slide number), LNN.txt (pages split by form feeds), LNN.mp4, '
+                  'LNN.words.json, LNN.slides.json, LNN.transcript.md; LNN = the lecture (L03)',
+        'brief': 'PROMPT.md, every step as written',
+    },
+    'qc': {
+        'name': 'CSE 291P: Quantum Computing Systems',
+        'syllabus': os.path.join(HERE, 'syllabus-qc.json'), 'readable': os.path.join(HERE, 'SYLLABUS-QC.md'),
+        'course': QC_COURSE,
+        'naming': 'course-qc/QYY-NN.mp4, .transcript.md, .words.json, .slides.json, .sheet.png; .pdf (a deck: only '
+                  'some lectures), .notes.pdf (her typed notes: some); QYY-NN.slides/pNN.png (deck pages) and '
+                  'sNNN.png (slides cut from the recording); QYY-NN = her 20YY lecture NN (Q25-04); in the syllabus '
+                  '"p8" = deck page 8, "s12" = QYY-NN.slides/s012.png',
+        'brief': 'PROMPT.md, with its section "The quantum series (QC)" over the LLM-specific details',
+    },
+}
+DEFAULT_SCHEDULE = {'pattern': ['llm', 'qc'], 'start': '2026-10-16', 'when_empty': 'other'}
 
-def load():
-    """Returns ((syllabus list, state dict), None) or (None, 'error')."""
+
+def load_schedule():
+    """schedule.json (or the default). Returns ({'pattern', 'start' (date), 'when_empty'}, None) or (None, 'error')."""
+    sched = dict(DEFAULT_SCHEDULE)
+    if os.path.exists(SCHEDULE):
+        try:
+            sched.update({k: v for k, v in json.load(open(SCHEDULE)).items() if k in DEFAULT_SCHEDULE})
+        except (OSError, ValueError, AttributeError) as e:
+            return None, f'cannot read {SCHEDULE}: {e}'
+    pat = sched['pattern']
+    if not isinstance(pat, list) or not pat or any(p not in SERIES for p in pat):
+        return None, f'{SCHEDULE}: "pattern" must be a non-empty list of {", ".join(SERIES)}'
     try:
-        syl = json.load(open(SYLLABUS))
-    except (OSError, ValueError) as e:
-        return None, f'cannot read {SYLLABUS}: {e}'
+        sched['start'] = dt.date.fromisoformat(str(sched['start']))
+    except ValueError:
+        return None, f'{SCHEDULE}: "start" must be a date (YYYY-MM-DD), not {sched["start"]!r}'
+    if sched['when_empty'] not in ('other', 'none'):
+        return None, f'{SCHEDULE}: "when_empty" must be "other" or "none"'
+    return sched, None
+
+
+def load(assume=()):
+    """Both syllabi, the state and the schedule. `assume` = [(episode id, morning)] treated as delivered (in memory).
+    Returns (({series: syllabus list}, state dict, schedule dict), None) or (None, 'error')."""
+    books = {}
+    for key, s in SERIES.items():
+        try:
+            books[key] = json.load(open(s['syllabus']))
+        except (OSError, ValueError) as e:
+            return None, f'cannot read {s["syllabus"]}: {e}'
     state = {'guest_policy': 'skip', 'speaker_ok': {}, 'skip': [], 'episodes': {}}
     if os.path.exists(STATE):
         try:
             state.update(json.load(open(STATE)))
         except (OSError, ValueError) as e:
             return None, f'cannot read {STATE}: {e}'
-    return (syl, state), None
+    sched, err = load_schedule()
+    if err:
+        return None, err
+    for eid, morning in assume:
+        state['episodes'][eid] = {**state['episodes'].get(eid, {}), 'status': 'delivered', 'morning': morning,
+                                  'assumed': True}
+    return (books, state, sched), None
+
+
+def series_of(eid, books):
+    """The series key and syllabus entry of an episode id. Returns ((key, entry), None) or (None, 'error')."""
+    for key, syl in books.items():
+        ep = next((e for e in syl if e['id'] == eid), None)
+        if ep:
+            return (key, ep), None
+    return None, f'{eid} is not in {" or ".join(os.path.basename(s["syllabus"]) for s in SERIES.values())}'
 
 
 def save_state(state):
@@ -84,6 +161,17 @@ def slide_list(spec):
     return out, None
 
 
+def merge(spans, gap=60.0):
+    """Sorted [start, end] spans, joined when under `gap` s apart."""
+    out = []
+    for a, b in sorted([list(s) for s in spans]):
+        if out and a - out[-1][1] <= gap:
+            out[-1][1] = max(out[-1][1], b)
+        else:
+            out.append([a, b])
+    return out
+
+
 def windows(lecture, slides, gap=60.0):
     """When the slides were on screen in the recording (course/LNN.slides.json from tools/transcribe.py).
     Returns ({'windows': [[start, end], ...], 'span': [start, end], 'missing': [slides never matched]}, None)
@@ -95,13 +183,7 @@ def windows(lecture, slides, gap=60.0):
         data = json.load(open(path))
     except (OSError, ValueError) as e:
         return None, f'{path}: {e}'
-    segs = sorted([s['start'], s['end']] for s in data.get('segments', []) if s['slide'] in slides)
-    merged = []
-    for a, b in segs:
-        if merged and a - merged[-1][1] <= gap:
-            merged[-1][1] = max(merged[-1][1], b)
-        else:
-            merged.append([a, b])
+    merged = merge([[s['start'], s['end']] for s in data.get('segments', []) if s['slide'] in slides], gap)
     seen = {s['slide'] for s in data.get('segments', [])}
     if not merged:
         return None, f'none of slides {slides[0]}-{slides[-1]} matched in {lecture}.slides.json'
@@ -114,6 +196,18 @@ def mmss(t):
     return f'{int(t // 60):02d}:{int(t % 60):02d}'
 
 
+def secs(s):
+    """'65:00' or '1:05:00' -> seconds. Returns (float, None) or (None, 'error')."""
+    parts = str(s).strip().split(':')
+    try:
+        v = 0.0
+        for p in parts:
+            v = v * 60 + float(p)
+    except ValueError:
+        return None, f'not a time: {s!r}'
+    return v, None
+
+
 def lecture_files(lecture):
     """Paths and readiness of a lecture's course files (git-ignored)."""
     f = {k: os.path.join(COURSE, f'{lecture}.{k}') for k in ('pdf', 'txt', 'mp4', 'words.json', 'slides.json',
@@ -121,6 +215,117 @@ def lecture_files(lecture):
     return {'files': f, 'ready': {k: os.path.exists(v) for k, v in f.items()}}
 
 
+# ------------------------------------------------------------------ the quantum course (course-qc/)
+def qc_base(lecture):
+    """'Q24-03.notes' -> 'Q24-03'."""
+    return lecture.split('.')[0]
+
+
+def qc_lecture_files(lecture):
+    """Paths and readiness of a quantum lecture's files in course-qc/ (git-ignored; no fetch tool: made ahead)."""
+    b = os.path.join(QC_COURSE, qc_base(lecture))
+    f = {k: f'{b}.{k}' for k in ('mp4', 'transcript.md', 'words.json', 'slides.json', 'sheet.png', 'pdf',
+                                 'notes.pdf')}
+    f['slides'] = b + '.slides'
+    return {'files': f, 'ready': {k: os.path.exists(v) for k, v in f.items()}}
+
+
+def qc_labels(spec):
+    """'8', '9-10', 'p9-p10', 's3-s20', '33-35, 37' -> [('p', 8), ...] ('p' a deck page, 's' a slide cut from the
+    recording). Returns (list, None) or (None, 'error')."""
+    out = []
+    for part in re.split(r'[,\s]+', str(spec).strip()):
+        if not part:
+            continue
+        m = re.fullmatch(r'([ps]?)(\d+)(?:-([ps]?)(\d+))?', part)
+        if not m or (m.group(3) and m.group(3) != m.group(1)):
+            return None, f'not a slide range: {spec!r}'
+        a, b = int(m.group(2)), int(m.group(4) or m.group(2))
+        out += [('s' if m.group(1) == 's' else 'p', n) for n in range(a, b + 1)]
+    return out, None
+
+
+def qc_slides(lecture, spec, gap=60.0):
+    """The files of a quantum lecture's slides and when they were on screen (course-qc/QYY-NN.slides.json, from
+    tools/qc_slides.py). A cut frame that matches a deck page names it ("deck": tape the clean page). 'QYY-NN.notes'
+    = pages of her notes PDF. Returns ({'files': [...], 'windows': [[start, end], ...], 'missing': [...]}, None) or
+    (None, 'why not')."""
+    labels, err = qc_labels(spec)
+    if err:
+        return None, err
+    base = qc_base(lecture)
+    if lecture.endswith('.notes'):
+        pdf = os.path.join(QC_COURSE, f'{base}.notes.pdf')
+        return {'files': [{'label': f'notes p{n}', 'pdf': pdf, 'page': n} for _, n in labels],
+                'windows': [], 'missing': [] if os.path.exists(pdf) else [f'{base}.notes.pdf']}, None
+    path = os.path.join(QC_COURSE, f'{base}.slides.json')
+    if not os.path.exists(path):
+        return None, f'no course-qc/{base}.slides.json (tools/qc_slides.py {base})'
+    try:
+        data = json.load(open(path))
+    except (OSError, ValueError) as e:
+        return None, f'{path}: {e}'
+    deck = data.get('pdf')
+    frames = data.get('gaps', []) if deck else data.get('segments', [])
+    cut = (data.get('gap_slides') if deck else data.get('slides')) or {}
+    files, spans, missing = [], [], []
+    for kind, n in labels:
+        if kind == 'p':
+            if not deck:
+                missing.append(f'p{n} ({base} has no deck)')
+                continue
+            on = [[s['start'], s['end']] for s in data.get('segments', []) if s.get('slide') == n]
+            png = os.path.join(QC_COURSE, f'{base}.slides', f'p{n:02d}.png')
+            files.append({'label': f'p{n}', 'png': png, 'png_found': os.path.exists(png),
+                          'pdf': os.path.join(QC_COURSE, deck), 'page': n, 'on_screen': on})
+        else:
+            info = cut.get(str(n))
+            if not info or not info.get('png'):
+                missing.append(f's{n}')
+                continue
+            on = [[s['start'], s['end']] for s in frames if s.get('slide') == n and s.get('png')]
+            png = os.path.join(QC_COURSE, info['png'])
+            files.append({'label': f's{n}', 'png': png, 'png_found': os.path.exists(png), 'deck': info.get('deck'),
+                          'on_screen': on})
+        spans += on
+    return {'files': files, 'windows': merge(spans, gap), 'missing': missing}, None
+
+
+def qc_recording(ep):
+    """The recording block, extra slides and lecture files of a quantum episode. Windows come from the syllabus's
+    hand-picked `sources` (mm:ss of course-qc/QYY-NN.mp4); slide_windows from slides.json are a cross-check.
+    Returns ((recording, extra, lectures), None) or (None, 'error')."""
+    srcs, lecs = [], [ep['lecture']]
+    for s in ep.get('sources', []):
+        a, err = secs(s['start'])
+        b, err2 = secs(s['end'])
+        if err or err2:
+            return None, f'{ep["id"]} sources: {err or err2}'
+        srcs.append({**s, 'span': [a, b]})
+        lecs.append(s['lecture'])
+    prim = [s['span'] for s in srcs if s['lecture'] == ep['lecture']]
+    main = max(prim, key=lambda w: w[1] - w[0]) if prim else None
+    rec = {'lecture': ep['lecture'], 'slides': ep['slides'], 'sources': srcs, 'windows': prim, 'span': main}
+    if main:
+        rec['span_mmss'] = f'{mmss(main[0])}-{mmss(main[1])}'
+    else:
+        rec['why'] = f'no source window in {ep["lecture"]} (see "sources")'
+    sl, why = qc_slides(ep['lecture'], ep['slides'])
+    rec.update({'slide_files': sl['files'], 'slide_windows': sl['windows'], 'missing': sl['missing']} if sl else
+               {'slide_files': [], 'slide_windows': [], 'slides_why': why})
+    extra = []
+    for x in ep.get('extra_slides', []):
+        xs, why = qc_slides(x['lecture'], x['slides'])
+        extra.append({**x, **({'slide_files': xs['files'], 'windows': xs['windows'], 'missing': xs['missing']} if xs
+                              else {'slide_files': [], 'windows': [], 'why': why})})
+        lecs.append(x['lecture'])
+    lectures = {}
+    for lec in lecs:
+        lectures.setdefault(qc_base(lec), qc_lecture_files(lec))
+    return (rec, extra, lectures), None
+
+
+# ------------------------------------------------------------------ the choice
 def mornings(now, state):
     """Candidate delivery mornings and the ones already taken. Returns ((open list, taken dict), None)."""
     today = now.date()
@@ -137,7 +342,16 @@ def mornings(now, state):
     return ([d for d in days if d not in taken], taken), None
 
 
-def pick(syl, state):
+def series_for(morning, sched):
+    """The series a morning belongs to by the schedule (mornings before its start are LLM mornings)."""
+    d = dt.date.fromisoformat(morning)
+    if d < sched['start']:
+        return 'llm'
+    pat = sched['pattern']
+    return pat[(d - sched['start']).days % len(pat)]
+
+
+def pick(syl, state, src='syllabus.json'):
     """The next episode to make. Returns ((episode, permissions, mode, passed-over list), None) or (None, 'why')."""
     passed = []
     for ep in sorted(syl, key=lambda e: e['seq']):
@@ -170,25 +384,46 @@ def pick(syl, state):
                                                  '(state.json speaker_ok) or guest_policy "narration-only"'})
                 continue
         return (ep, perms, mode, passed), None
-    return None, 'every episode in syllabus.json is made, skipped or blocked'
+    return None, f'every episode in {os.path.basename(src)} is made, skipped or blocked'
 
 
-def work_order(now=None, write=True):
+def choose(morning, books, state, sched):
+    """The series and episode for a morning: the schedule's series, or (when_empty "other") the next series in the
+    pattern, then any other, that still has one. Returns ((series, (ep, perms, mode, passed), note or None), None) or
+    (None, 'why')."""
+    want = series_for(morning, sched)
+    res, err = pick(books[want], state, SERIES[want]['syllabus'])
+    if not err:
+        return (want, res, None), None
+    whys = [f'{want}: {err}']
+    if sched['when_empty'] == 'other':
+        for s in dict.fromkeys(sched['pattern'] + list(SERIES)):
+            if s == want:
+                continue
+            r2, e2 = pick(books[s], state, SERIES[s]['syllabus'])
+            if not e2:
+                return (s, r2, f'this is a {want} morning, but {err}: {s} takes it (schedule.json when_empty)'), None
+            whys.append(f'{s}: {e2}')
+    return None, '; '.join(whys)
+
+
+def work_order(now=None, write=True, assume=()):
     """Decide tonight's episode and write its work order.
     Returns (dict with 'id' (None when there is nothing to do) and the order, None) or (None, 'error')."""
     now = now or dt.datetime.now()
-    res, err = load()
+    res, err = load(assume)
     if err:
         return None, err
-    syl, state = res
+    books, state, sched = res
     (open_days, taken), _ = mornings(now, state)
     if not open_days:
         return {'id': None, 'why': f'buffer full: videos exist for {", ".join(sorted(taken))}'}, None
-    res, err = pick(syl, state)
-    if err:
-        return {'id': None, 'why': err}, None
-    ep, perms, mode, passed = res
     morning = open_days[0]
+    res, err = choose(morning, books, state, sched)
+    if err:
+        return {'id': None, 'why': err, 'morning': morning, 'series': series_for(morning, sched)}, None
+    series, (ep, perms, mode, passed), note = res
+    syl, info = books[series], SERIES[series]
     mday = dt.date.fromisoformat(morning)
     deadline = min(dt.datetime.combine(mday, CUTOFF), now + BUDGET)
     late = deadline - now < MIN_BUDGET           # a late start (the Mac slept through 02:00): deliver late, not half-made
@@ -196,25 +431,33 @@ def work_order(now=None, write=True):
         deadline = now + BUDGET
     work, deliver = os.path.join(WORK, ep['id']), os.path.join(DELIVER, f'{morning}_{ep["id"]}')
     missed = [now.date().isoformat()] if now.time() >= CUTOFF and now.date().isoformat() not in taken else []
-    slides, err = slide_list(ep['slides']) if ep['slides'][0].isdigit() else ([], None)
-    if err:
-        return None, err
-    lectures = {ep['lecture']: lecture_files(ep['lecture'])}
-    rec = {'lecture': ep['lecture'], 'slides': slides}
-    w, why = windows(ep['lecture'], slides) if slides else (None, 'no slides')
-    rec.update(w or {'windows': [], 'span': None, 'why': why})
-    if w:
-        rec['span_mmss'] = f'{mmss(w["span"][0])}-{mmss(w["span"][1])}'
-    extra = []
-    for x in ep.get('extra_slides', []):
-        xs, err = slide_list(x['slides'])
+    if series == 'qc':
+        res, err = qc_recording(ep)
         if err:
             return None, err
-        lectures.setdefault(x['lecture'], lecture_files(x['lecture']))
-        xw, why = windows(x['lecture'], xs)
-        extra.append({**x, 'slides_list': xs, **(xw or {'windows': [], 'span': None, 'why': why})})
+        rec, extra, lectures = res
+        slides = [f'{k}{n}' for k, n in qc_labels(ep['slides'])[0] or []]
+    else:
+        slides, err = slide_list(ep['slides']) if ep['slides'][0].isdigit() else ([], None)
+        if err:
+            return None, err
+        lectures = {ep['lecture']: lecture_files(ep['lecture'])}
+        rec = {'lecture': ep['lecture'], 'slides': slides}
+        w, why = windows(ep['lecture'], slides) if slides else (None, 'no slides')
+        rec.update(w or {'windows': [], 'span': None, 'why': why})
+        if w:
+            rec['span_mmss'] = f'{mmss(w["span"][0])}-{mmss(w["span"][1])}'
+        extra = []
+        for x in ep.get('extra_slides', []):
+            xs, err = slide_list(x['slides'])
+            if err:
+                return None, err
+            lectures.setdefault(x['lecture'], lecture_files(x['lecture']))
+            xw, why = windows(x['lecture'], xs)
+            extra.append({**x, 'slides_list': xs, **(xw or {'windows': [], 'span': None, 'why': why})})
+    ids = {e['id'] for e in syl}
     made = {e['id'] for e in syl if e['status'] == 'shipped'} | \
-        {k for k, e in state['episodes'].items() if e.get('status') in DONE}
+        {k for k, e in state['episodes'].items() if e.get('status') in DONE and k in ids}
     prev = next((e for e in reversed(sorted(syl, key=lambda e: e['seq']))
                  if e['seq'] < ep['seq'] and (e['status'] == 'shipped' or
                                               state['episodes'].get(e['id'], {}).get('status') in DONE)), None)
@@ -224,13 +467,20 @@ def work_order(now=None, write=True):
         if os.path.isdir(d):
             resume += sorted(os.path.relpath(p, EDU) if p.startswith(EDU) else p
                              for p in glob.glob(os.path.join(d, '**', '*'), recursive=True)
-                             if os.path.isfile(p) and os.path.basename(p) != 'work_order.json')[:200]
+                             if os.path.isfile(p) and os.path.basename(p) not in ('work_order.json', 'art.pre.json')
+                             )[:200]
     plan = os.path.join(EDU, ep['episode_dir'], 'art.pre.json')
     pre_drawn = None if not os.path.exists(plan) else {
         'plan': plan, 'library': LIBRARY, 'library_found': os.path.isdir(os.path.join(LIBRARY, 'src')),
         'how': 'PROMPT.md step 5 (pre-drawn art); daily/art.py pre EP counts what is made'}
     order = {
         'id': ep['id'], 'title': ep['title'], 'seq': ep['seq'], 'series_number': len(made) + 1,
+        'series': series, 'series_name': info['name'],
+        'series_info': {'key': series, 'name': info['name'], 'syllabus': info['syllabus'],
+                        'syllabus_readable': info['readable'], 'course_dir': info['course'],
+                        'file_naming': info['naming'], 'brief': info['brief'], 'episodes': len(syl)},
+        'schedule': {'pattern': sched['pattern'], 'start': sched['start'].isoformat(),
+                     'when_empty': sched['when_empty'], 'morning_series': series_for(morning, sched), 'note': note},
         'lecture': ep['lecture'], 'lecture_title': ep['lecture_title'], 'speaker': ep['speaker'], 'guest': ep['guest'],
         'mode': mode, 'permissions': perms,
         'morning': morning, 'deadline': deadline.strftime('%Y-%m-%d %H:%M'),
@@ -249,7 +499,8 @@ def work_order(now=None, write=True):
         'resume_files': resume, 'progress': os.path.join(work, 'progress.md'), 'missed': missed,
         'pre_drawn': pre_drawn,
         'passed_over': passed,
-        'reference': syl[0].get('shipped', {}),
+        'reference': books['llm'][0].get('shipped', {}),
+        'syllabus_entry': ep,
     }
     if write:
         os.makedirs(work, exist_ok=True)
@@ -259,6 +510,30 @@ def work_order(now=None, write=True):
     return order, None
 
 
+def first_night(now):
+    """The next 02:00 run from now (now itself when it is a night run between 02:00 and 08:45)."""
+    if dt.time(2, 0) <= now.time() < CUTOFF:
+        return now
+    day = now.date() if now.time() < dt.time(2, 0) else now.date() + dt.timedelta(days=1)
+    return dt.datetime.combine(day, dt.time(2, 0))
+
+
+def plan(now=None, nights=2, assume=()):
+    """The work orders of the next `nights` nightly runs (02:00), each assuming the nights before delivered on time.
+    Nothing is written. Returns (list of (night datetime, order), None) or (None, 'error')."""
+    t, acc, out = first_night(now or dt.datetime.now()), list(assume), []
+    for _ in range(nights):
+        order, err = work_order(t, write=False, assume=acc)
+        if err:
+            return None, err
+        out.append((t, order))
+        if order['id']:
+            acc.append((order['id'], order['morning']))
+        t += dt.timedelta(days=1)
+    return out, None
+
+
+# ------------------------------------------------------------------ outcomes
 def mark(eid, status, mp4=None, morning=None, note=None, now=None, run=None):
     """Record an episode's outcome in state.json. A failure counts once per run (`run`, default $EDU_DAILY_RUN): the
     producer and run.sh may both mark the same night failed. Returns (entry, None) or (None, 'error')."""
@@ -266,10 +541,11 @@ def mark(eid, status, mp4=None, morning=None, note=None, now=None, run=None):
     res, err = load()
     if err:
         return None, err
-    syl, state = res
-    ep = next((e for e in syl if e['id'] == eid), None)
-    if not ep:
-        return None, f'{eid} is not in syllabus.json'
+    books, state, _ = res
+    res, err = series_of(eid, books)
+    if err:
+        return None, err
+    _, ep = res
     if status not in ('delivered', 'failed', 'in-progress'):
         return None, 'status must be delivered, failed or in-progress'
     if status == 'delivered' and not (mp4 and os.path.exists(os.path.expanduser(mp4))):
@@ -336,23 +612,39 @@ def verify(mp4, timeline=None, tol=1.0):
     return out, None
 
 
-def status(now=None):
-    """The queue as text. Returns (text, None) or (None, 'error')."""
+# ------------------------------------------------------------------ text
+def status(now=None, assume=()):
+    """The schedule, both queues and the buffer as text. Returns (text, None) or (None, 'error')."""
     now = now or dt.datetime.now()
-    res, err = load()
+    res, err = load(assume)
     if err:
         return None, err
-    syl, state = res
+    books, state, sched = res
     (open_days, taken), _ = mornings(now, state)
-    lines = [f'now {now:%Y-%m-%d %H:%M}; open mornings: {", ".join(open_days) or "none (buffer full)"}']
+    lines = [f'now {now:%Y-%m-%d %H:%M}; open mornings: {", ".join(open_days) or "none (buffer full)"}',
+             f'schedule: {" / ".join(sched["pattern"])} from {sched["start"]} (mornings before it: llm); '
+             f'a series with nothing left: {sched["when_empty"]} ({SCHEDULE})']
     for m, eid in sorted(taken.items()):
         lines.append(f'  {m}  {eid}  {state["episodes"][eid].get("mp4", "")}')
-    res, err = pick(syl, state)
-    if err:
-        lines.append(err)
-    else:
+    sim = copy.deepcopy(state)          # the open mornings in turn, each assuming the one before is made
+    for m in open_days:
+        res, err = choose(m, books, sim, sched)
+        if err:
+            lines.append(f'  {m}  ({series_for(m, sched)}) nothing: {err}')
+            continue
+        s, (ep, _, mode, _), note = res
+        lines.append(f'  {m}  ({s}) would be {ep["id"]} "{ep["title"]}"' + (f'  [{note}]' if note else ''))
+        sim['episodes'][ep['id']] = {'status': 'delivered', 'morning': m}
+    for key, syl in books.items():
+        res, err = pick(syl, state, SERIES[key]['syllabus'])
+        made = sum(1 for e in syl if e['status'] == 'shipped' or state['episodes'].get(e['id'], {}).get('status') in DONE)
+        head = f'{key} ({SERIES[key]["name"]}, {made} of {len(syl)} made)'
+        if err:
+            lines.append(f'{head}: {err}')
+            continue
         ep, perms, mode, passed = res
-        lines.append(f'next: {ep["id"]} "{ep["title"]}" ({ep["lecture"]} slides {ep["slides"]}, {ep["target_min"]} min, {mode})')
+        lines.append(f'{head} next: {ep["id"]} "{ep["title"]}" ({ep["lecture"]} slides {ep["slides"]}, '
+                     f'{ep["target_min"]} min, {mode})')
         lines += [f'  passed over: {p["id"]}: {p["why"]}' for p in passed]
     for eid, e in state['episodes'].items():
         if e.get('status') not in DONE:
@@ -360,13 +652,57 @@ def status(now=None):
     return '\n'.join(lines), None
 
 
+def summary(order):
+    """The work order as a few lines of text."""
+    if not order['id']:
+        return [f'nothing to do: {order["why"]}']
+    r, sc = order['recording'], order['schedule']
+    out = [f'{order["id"]} "{order["title"]}" for the morning of {order["morning"]} (deadline {order["deadline"]})',
+           f'  series: {order["series"]} = {order["series_name"]} (part {order["seq"]} of '
+           f'{order["series_info"]["episodes"]}; schedule {"/".join(sc["pattern"])} from {sc["start"]})']
+    if sc['note']:
+        out.append(f'  schedule note: {sc["note"]}')
+    out.append(f'  syllabus entry: {order["series_info"]["syllabus"]} ({order["id"]}); course files: '
+               f'{order["series_info"]["course_dir"]}/')
+    out.append(f'  {order["lecture"]} slides {order["slides"]}; recording {r.get("span_mmss") or r.get("why")}; '
+               f'{order["target_min"]} min; {order["mode"]}')
+    for s in r.get('sources', []):
+        out.append(f'  source {s["lecture"]} {s["start"]}-{s["end"]} ({s.get("slides", "")}: {s.get("what", "")})')
+    if order['series'] == 'qc':
+        found = sum(1 for f in r['slide_files'] if f.get('png_found'))
+        out.append(f'  slide files: {found} of {len(r["slide_files"])} found'
+                   + (f'; missing {", ".join(r["missing"])}' if r.get('missing') else '')
+                   + (f'; {r["slides_why"]}' if r.get('slides_why') else ''))
+        ready = [k for k, v in order['lectures'].items() if v['ready']['transcript.md']]
+        out.append(f'  lectures: {" ".join(order["lectures"])} (transcripts: {" ".join(ready) or "none"})')
+    for x in order['extra_slides']:
+        out.append(f'  + {x["lecture"]} slides {x["slides"]} ({x["why"]})')
+    for p in order['passed_over']:
+        out.append(f'  passed over {p["id"]}: {p["why"]}')
+    if order['missed']:
+        out.append(f'  missed: {", ".join(order["missed"])} has no video')
+    if order['resume_files']:
+        out.append(f'  resume: {len(order["resume_files"])} files from an earlier attempt')
+    if order['pre_drawn']:
+        out.append(f'  pre-drawn art: {order["pre_drawn"]["plan"]} (library {order["pre_drawn"]["library"]}'
+                   f'{"" if order["pre_drawn"]["library_found"] else ": NOT FOUND"})')
+    if order['previous']:
+        out.append(f'  previous in this series: {order["previous"]["id"]} "{order["previous"]["title"]}"')
+    out.append('  work order: ' + order.get('work_order', '(dry run, not written)'))
+    out.append('  deliver to: ' + order['deliver_dir'])
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description='pick the next daily episode; see the module doc')
-    ap.add_argument('cmd', nargs='?', default='order', choices=['order', 'status', 'mark', 'verify'])
+    ap.add_argument('cmd', nargs='?', default='order', choices=['order', 'status', 'mark', 'verify', 'plan'])
     ap.add_argument('args', nargs='*')
     ap.add_argument('--now')
     ap.add_argument('--dry', action='store_true')
     ap.add_argument('--shell', action='store_true')
+    ap.add_argument('--json', action='store_true')
+    ap.add_argument('--nights', type=int, default=2)
+    ap.add_argument('--assume', action='append', default=[])
     ap.add_argument('--mp4')
     ap.add_argument('--morning')
     ap.add_argument('--note')
@@ -374,11 +710,32 @@ def main():
     ap.add_argument('--timeline')
     a = ap.parse_args()
     now = dt.datetime.strptime(a.now, '%Y-%m-%d %H:%M') if a.now else None
+    assume = []
+    for x in a.assume:
+        m = re.fullmatch(r'([A-Z]+\d\d-\d\d)@(\d{4}-\d\d-\d\d)', x.strip())
+        if not m:
+            sys.exit(f'--assume wants ID@YYYY-MM-DD (L03-03@2026-10-16), not {x!r}')
+        assume.append((m.group(1), m.group(2)))
+    if assume and a.cmd in ('mark', 'verify') or assume and a.cmd == 'order' and not a.dry:
+        sys.exit('--assume only goes with --dry, plan or status (it is never written)')
     if a.cmd == 'status':
-        text, err = status(now)
+        text, err = status(now, assume)
         if err:
             sys.exit(err)
         print(text)
+        return
+    if a.cmd == 'plan':
+        res, err = plan(now, a.nights, assume)
+        if err:
+            sys.exit(err)
+        if a.json:
+            print(json.dumps([{'night': t.strftime('%Y-%m-%d %H:%M'), 'order': o} for t, o in res], indent=1,
+                             ensure_ascii=False))
+            return
+        for i, (t, o) in enumerate(res):
+            print(f'=== night {i + 1}: the run at {t:%Y-%m-%d %H:%M}'
+                  + (' (assuming the nights before delivered on time)' if i else ''))
+            print('\n'.join(summary(o)))
         return
     if a.cmd == 'verify':
         if len(a.args) != 1:
@@ -396,7 +753,7 @@ def main():
             sys.exit(err)
         print(json.dumps({a.args[0]: e}, indent=1))
         return
-    order, err = work_order(now, write=not a.dry)
+    order, err = work_order(now, write=not a.dry, assume=assume)
     if err:
         sys.exit(err)
     if a.shell:
@@ -404,34 +761,22 @@ def main():
             print(f"EP_ID=''\nEP_WHY={shlex.quote(order['why'])}")
             return
         lecs = ' '.join(order['lectures'])
+        si = order['series_info']
         for k, v in (('EP_ID', order['id']), ('EP_TITLE', order['title']), ('EP_LECTURES', lecs),
                      ('EP_MORNING', order['morning']), ('EP_DEADLINE', order['deadline']),
                      ('EP_DEADLINE_EPOCH', order['deadline_epoch']), ('EP_WORK', order['work_dir']),
                      ('EP_DELIVER', order['deliver_dir']), ('EP_DIR', order['episode_dir_abs']),
                      ('EP_ORDER', order.get('work_order', '')), ('EP_MODE', order['mode']),
-                     ('EP_LATE', int(order['late'])), ('EP_MISSED', ' '.join(order['missed']))):
+                     ('EP_LATE', int(order['late'])), ('EP_MISSED', ' '.join(order['missed'])),
+                     ('EP_SERIES', order['series']), ('EP_SERIES_NAME', order['series_name']),
+                     ('EP_SYLLABUS', si['syllabus']), ('EP_COURSE', si['course_dir']), ('EP_NAMING', si['file_naming']),
+                     ('EP_BRIEF', si['brief']), ('EP_SCHEDULE_NOTE', order['schedule']['note'] or '')):
             print(f'{k}={shlex.quote(str(v))}')
         return
-    if not order['id']:
-        print('nothing to do:', order['why'])
+    if a.json:
+        print(json.dumps(order, indent=1, ensure_ascii=False))
         return
-    r = order['recording']
-    print(f'{order["id"]} "{order["title"]}" for the morning of {order["morning"]} (deadline {order["deadline"]})')
-    print(f'  {order["lecture"]} slides {order["slides"]}; recording {r.get("span_mmss") or r.get("why")}; '
-          f'{order["target_min"]} min; {order["mode"]}')
-    for x in order['extra_slides']:
-        print(f'  + {x["lecture"]} slides {x["slides"]} ({x["why"]})')
-    for p in order['passed_over']:
-        print(f'  passed over {p["id"]}: {p["why"]}')
-    if order['missed']:
-        print(f'  missed: {", ".join(order["missed"])} has no video')
-    if order['resume_files']:
-        print(f'  resume: {len(order["resume_files"])} files from an earlier attempt')
-    if order['pre_drawn']:
-        print(f'  pre-drawn art: {order["pre_drawn"]["plan"]} (library {order["pre_drawn"]["library"]}'
-              f'{"" if order["pre_drawn"]["library_found"] else ": NOT FOUND"})')
-    print('  work order:', order.get('work_order', '(dry run, not written)'))
-    print('  deliver to:', order['deliver_dir'])
+    print('\n'.join(summary(order)))
 
 
 if __name__ == '__main__':

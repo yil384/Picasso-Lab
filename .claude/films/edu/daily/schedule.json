@@ -1,0 +1,6 @@
+{
+ "pattern": ["llm", "qc"],
+ "start": "2026-10-16",
+ "when_empty": "other",
+ "about": "Which series each morning's video comes from (read by next.py). pattern: one morning per entry, repeating from start: [\"llm\", \"qc\"] = alternate days, LLM first; [\"qc\"] = only the quantum series; [\"llm\", \"llm\", \"qc\"] = two LLM mornings, then one QC. llm = CSE 291P LLM System Optimization (syllabus.json), qc = CSE 291P Quantum Computing Systems (syllabus-qc.json). Mornings before start are LLM mornings. when_empty: \"other\" = a morning whose series has nothing left to make goes to the other series; \"none\" = that morning gets no video."
+}

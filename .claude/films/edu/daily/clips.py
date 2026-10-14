@@ -4,18 +4,22 @@
     ~/miniforge3/bin/python3 .claude/films/edu/daily/clips.py cut   EPISODE_DIR/clips.json [--out DIR] [--lecture L01]
     ~/miniforge3/bin/python3 .claude/films/edu/daily/clips.py check EPISODE_DIR/clips.json [--out DIR]
     ~/miniforge3/bin/python3 .claude/films/edu/daily/clips.py words L01 1460 1475     # the words in a window (both recognizers)
+    ~/miniforge3/bin/python3 .claude/films/edu/daily/clips.py words Q25-04 1480 1500  # a quantum lecture (course-qc/)
 
 clips.json (committed with the episode; the audio is not): a list of
     {"id": "C1", "lecture": "L01", "rec_start": 1096.3, "rec_end": 1104.2, "dur": 7.9, "text": "her exact words"}
 "lecture" may be left out when --lecture is given. Ids are C1, C2, ...; the timeline's voice ids are c1, c2, ... (the
 mixer plays CLIPDIR/C1.wav for voice id c1 and puts the mic tag on it).
 
-cut: course/<lecture>.mp4 -> DIR/<ID>.wav, 48 kHz mono, the chain used for L01-01 (high-pass 90 Hz, low-pass 9 kHz,
+Lectures: LNN (CSE 291P LLM System Optimization) are in course/, QYY-NN (CSE 291P Quantum Computing Systems, her 20YY
+lecture NN) in course-qc/; a clip's "lecture" is that id.
+cut: <course>/<lecture>.mp4 -> DIR/<ID>.wav, 48 kHz mono, the chain used for L01-01 (high-pass 90 Hz, low-pass 9 kHz,
      FFT denoise, loudness -17 LUFS, 80 ms fade in, 150 ms fade out). DIR defaults to ~/picasso-work/clips/<episode dir
      name>; it is outside the repo on purpose: recordings and anything cut from them are never committed.
 check: transcribes each cut with two different recognizers and compares both, word for word (case and punctuation
      ignored), with "text". A quote may be shown when it is "exact", or "near": the only words either recognizer
-     missed are at most 2 terms printed in her deck (course/LNN.txt) or listed in the clip's "accept" list (e.g.
+     missed are at most 2 terms printed in her deck (course/LNN.txt; for QYY-NN the text of
+     its deck and notes PDFs) or listed in the clip's "accept" list (e.g.
      a product or method name printed on her slide that the recognizer misspells). "asr-agree": both recognizers hear the
      same words, "text" differs from them, and every differing word is a function word (the, a, of, so, ...) or a term
      printed in her deck: the text may be changed to what they heard (keep the old one in "text_was" and list the clip
@@ -27,9 +31,15 @@ import argparse, difflib, json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 COURSE = os.path.abspath(os.path.join(HERE, '..', 'course'))
+QC_COURSE = os.path.abspath(os.path.join(HERE, '..', 'course-qc'))
 MODELS = ['mlx-community/whisper-large-v3-turbo', 'mlx-community/whisper-medium.en-mlx']
 CHAIN = 'highpass=f=90,lowpass=f=9000,afftdn=nf=-38:nr=14,loudnorm=I=-17:TP=-2:LRA=7,afade=t=in:d=0.08,' \
         'afade=t=out:st={fo:.3f}:d=0.15'
+
+
+def course_dir(lecture):
+    """course-qc/ for a quantum lecture (Q25-04), course/ for an LLM one (L03)."""
+    return QC_COURSE if re.fullmatch(r'Q\d\d-\d\d', str(lecture)) else COURSE
 
 
 def load(path):
@@ -59,9 +69,9 @@ def cut(path, out=None, lecture=None):
         lec = c.get('lecture') or lecture
         if not lec:
             return None, f'{c["id"]}: no "lecture" in the clip and no --lecture'
-        mp4 = os.path.join(COURSE, f'{lec}.mp4')
+        mp4 = os.path.join(course_dir(lec), f'{lec}.mp4')
         if not os.path.exists(mp4):
-            return None, f'{c["id"]}: no {mp4} (tools/fetch_recordings.py {lec})'
+            return None, f'{c["id"]}: no {mp4}' + ('' if course_dir(lec) == QC_COURSE else f' (tools/fetch_recordings.py {lec})')
         d = round(c['rec_end'] - c['rec_start'], 3)
         if not 0.5 <= d <= 30:
             return None, f'{c["id"]}: {d} s is not a clip length (0.5-30 s)'
@@ -96,12 +106,32 @@ def hear(wav, model, start=None, end=None):
     return r.get('text', '').strip(), None
 
 
+def deck_text(lecture):
+    """The text of a lecture's deck: course/LNN.txt; for a quantum lecture the text of course-qc/QYY-NN.pdf and
+    .notes.pdf (pdftotext; there are no .txt files there). Returns (text, None) or (None, 'error')."""
+    if course_dir(lecture) == COURSE:
+        try:
+            return open(os.path.join(COURSE, f'{lecture}.txt')).read(), None
+        except (OSError, TypeError) as e:
+            return None, str(e)
+    out = []
+    for pdf in (os.path.join(QC_COURSE, f'{lecture}.{k}') for k in ('pdf', 'notes.pdf')):
+        if os.path.exists(pdf):
+            try:
+                r = subprocess.run(['pdftotext', '-q', pdf, '-'], capture_output=True, text=True, timeout=120)
+            except (OSError, subprocess.TimeoutExpired) as e:
+                return None, f'pdftotext {pdf}: {e}'
+            if r.returncode == 0:
+                out.append(r.stdout)
+    return ('\n'.join(out), None) if out else (None, f'{lecture}: no deck or notes text')
+
+
 def deck_words(lecture):
-    """Words of the lecture's deck text (course/LNN.txt), for terms a recognizer misspells."""
-    try:
-        return {w for w in norm(open(os.path.join(COURSE, f'{lecture}.txt')).read()) if len(w) >= 4 or re.search(r'\d', w)}
-    except (OSError, TypeError):
+    """Words of the lecture's deck text (course/LNN.txt, or a quantum lecture's PDFs), for terms a recognizer misspells."""
+    text, err = deck_text(lecture)
+    if err:
         return set()
+    return {w for w in norm(text) if len(w) >= 4 or re.search(r'\d', w)}
 
 
 FUNCTION = set('''a an the and or but so of to in on at by for with from as is are was were be been it its it's this that
@@ -126,9 +156,9 @@ def near(want, got, vocab, most=2):
 
 
 def window_words(lec, start, end):
-    """Both recognizers' words in [start, end] s of course/<lec>.mp4 (only that window is decoded).
+    """Both recognizers' words in [start, end] s of <course>/<lec>.mp4 (only that window is decoded).
     Returns ({model: [[start, end, word], ...]}, None) or (None, 'error')."""
-    mp4 = os.path.join(COURSE, f'{lec}.mp4')
+    mp4 = os.path.join(course_dir(lec), f'{lec}.mp4')
     if not os.path.exists(mp4):
         return None, f'no {mp4}'
     tmp = os.path.expanduser('~/picasso-work/cache/window.wav')
