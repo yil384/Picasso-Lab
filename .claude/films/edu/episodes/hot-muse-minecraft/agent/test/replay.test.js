@@ -29,7 +29,7 @@ import { createWeb } from '../src/web.js';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const { games } = JSON.parse(fs.readFileSync(path.join(HERE, 'fixtures', 'replay-prod.json'), 'utf8'));
 const config = loadConfig({ MODEL_API_KEY: '', LOG_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'replay-')) });
-const JARGON = /#\d{2,}|\d\.\d{5,}|capability_limit|build: true|engagement minimum|NO_LOADED_MATCHING_TARGETS|consumption of/;
+const JARGON = /repeated_movement_failure|#\d{2,}|\d\.\d{5,}|capability_limit|build: true|engagement minimum|NO_LOADED_MATCHING_TARGETS|consumption of/;
 
 /** What the fake runtime does before a step, to play the real game's incidents (by the step's index in the game). */
 const INCIDENTS = {
@@ -224,6 +224,25 @@ INCIDENTS.gd7540a = {
   35: ROCK_SITE_GD,
 };
 
+/** A frame's site in a birch: grass under, leaves at the ground row in front and above it (g0842ff's first frame). */
+const BIRCH_SITE = (w) => {
+  const feet = { x: Math.floor(w.position.x), y: Math.floor(w.position.y), z: Math.floor(w.position.z) };
+  w.grid = new Map();
+  w.boxAt = (x, y, z) => (y < feet.y - 1 ? 'dirt' : y === feet.y - 1 ? (x > feet.x ? 'birch_leaves' : 'grass_block') : y >= feet.y + 1 && x > feet.x ? 'birch_leaves' : 'air');
+};
+INCIDENTS.g0842ff = {
+  0: (w) => { w.position = { x: -228.5, y: 110, z: 199.5 }; },
+  // the shelter's dirt (production dug 8 for its walls within the step; the fake shelter does not)
+  6: (w) => { w.inventory.set('dirt', 13); },
+  24: (w) => { w.inventory.set('flint', 3); }, // the flint the gravel gave
+  27: LAVA_NEAR,
+  // facing east by the birch, as the first frame was built
+  29: (w) => { w.heading = 90; BIRCH_SITE(w); },
+  30: (w) => { w.grid = null; w.boxAt = null; },
+  // production's 14 obsidian at the second spot (its first frame had placed none)
+  32: (w) => { w.inventory.set('obsidian', 14); },
+};
+
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
   // 1: raw_chicken (refused before a hunt until 2026-10-12) is read as chicken now and hunted (src/tolerant.js); 18: production smelted the mutton again after its hitch, but here the
@@ -257,6 +276,9 @@ const EXPECTED = {
   // 13 to 16: the reflexes that hid from zombies; 19: the walk into the air over the pool; 21: the obsidian that did
   // not come there (here the pool beside gives it); 23: Muse's stop; 24: the height told right; 26: the lit frame,
   // nothing else near; 29: lava beside the site; 31, 33, 35: the frames in rock that placed nothing go up now
+  // 16, 17: the walks into the cavern's air; 20: no way to the water underground; 21, 30: a height told right; 22: the
+  // server's move checks timed out; 24: the gravel, 20 of 24 (flint among them); 29: the frame in the birch goes up now
+  g0842ff: { 16: null, 17: null, 20: null, 21: null, 22: null, 24: null, 30: null },
   gd7540a: { 9: null, 10: null, 13: null, 14: null, 15: null, 16: null, 19: null, 21: null, 23: null, 24: null, 26: 'LAVA', 29: 'LAVA' },
 };
 /** An advice kind a step's reply must carry (by index): g0a414c's third obsidian call that did not move is stuck. */
@@ -268,6 +290,7 @@ const EXPECTED_TEXT = {
   g4ac86b: { 20: /a lit portal at 49 93 161 \(\d+ blocks away\) is loaded: its frame was left alone, the obsidian comes from lava or other obsidian/, 28: /cleared \d+ cells of/, 33: /your own portal is at -?\d+ -?\d+ -?\d+, \d+ blocks away \(the Nether side led to an older portal/ },
   // 55, 57: the stone hillside and the birch leaves are cleared first now, and the frames go up (g809e1b's fix)
   ga13a88: { 1: /^go_to \{"x":-20,"y":78,"z":236\}: ok/, 55: /cleared \d+ cells of stone for it first/, 57: /cleared \d+ cells of birch_leaves for it first/ },
+  g0842ff: { 29: /\(built facing east; cleared \d+ cells of [a-z_ ]*birch_leaves[a-z_ ]* for it first\)/ },
   gd7540a: {
     7: /tried again once it let go/,
     26: /the obsidian at the lit portal at 396 92 -65 is its frame and is never taken; no lava pool within 16 blocks to make obsidian from\. The nearest lava pool loaded is at 449 71 -34/,
@@ -276,7 +299,7 @@ const EXPECTED_TEXT = {
 };
 
 /** The goal each game played for. */
-const GOALS = { gd7540a: 'nether_and_back', g0a414c: 'nether_and_back', g71c9f5: 'nether_and_back', g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
+const GOALS = { g0842ff: 'nether_and_back', gd7540a: 'nether_and_back', g0a414c: 'nether_and_back', g71c9f5: 'nether_and_back', g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
 /** A why for a step, as Muse writes them (the fixtures predate why in the log). */
 const whyOf = (i, st) => `Step ${i}: ${[st.tool, ...Object.values(st.args ?? {}).filter((v) => typeof v !== 'object')].join(' ')} for the goal`;
 

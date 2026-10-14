@@ -567,20 +567,37 @@ export function createMcp(hooks) {
     // queued, or cancelled before it ran) is no try.
     const counted = (s.stuckSeen ??= new WeakSet());
     const seen = new Set();
+    // where the bot is: a walk that ends closer to its target moved, though it did not get there
+    const pos = safely(() => s.body.bot?.entity?.position ?? null, null);
     for (const st of [...(steps ?? []), ...(safely(() => queueOf(s).finished(steps) ?? [], []) ?? [])]) {
       const k = stuckKey(st);
       if (!k) continue;
       if (st.status === 'confirmed') { book.delete(k.key); counted.add(st); continue; }
       if (!st.startedAt || counted.has(st)) continue;
+      // a walk still on its way is no failed try (production game g0842ff, 2026-10-14: "stuck" while a 3-minute climb
+      // out of a cave was going on, and it got there): it counts once it has ended
+      const walk = st.skill === 'go_to';
+      if (walk && !['failed', 'cancelled'].includes(st.status)) continue;
       counted.add(st);
       if (seen.has(k.key)) continue;
       seen.add(k.key);
       const e = book.get(k.key) ?? { ...k, calls: 0, firstAt: t, count: k.item ? (inv[k.item] ?? 0) : 0 };
+      // the distance left after a walk: 8 blocks or more less than after the walk before is progress, a fresh start
+      if (walk && pos && Number.isFinite(st.args?.x)) {
+        const left = Math.hypot(pos.x - st.args.x, pos.y - (st.args.y ?? pos.y), pos.z - st.args.z);
+        if (Number.isFinite(e.left) && left <= e.left - 8) { e.calls = 0; e.firstAt = t; }
+        e.left = Math.min(e.left ?? Infinity, left);
+      }
       e.calls += 1;
+      e.lastAt = t;
       e.last = { args: st.args ?? {}, result: st.result?.result ?? st.result ?? null };
       book.set(k.key, e);
     }
-    const worst = [...book.values()].filter((e) => e.calls >= 3 || (e.calls >= 2 && t - e.firstAt >= 4 * 60_000)).sort((a, b) => b.calls - a.calls)[0];
+    // a kind not tried for 5 minutes: Muse moved on (g0842ff: two walks into a cavern at 7 min said "stuck" from 11
+    // to 19 min, the game long past them)
+    for (const [k, e] of book) if (t - (e.lastAt ?? e.firstAt) > 5 * 60_000) book.delete(k);
+    // 3 tries without progress, or 2 over 4 minutes with the last of them recent
+    const worst = [...book.values()].filter((e) => e.calls >= 3 || (e.calls >= 2 && t - e.firstAt >= 4 * 60_000 && t - (e.lastAt ?? e.firstAt) <= 2 * 60_000)).sort((a, b) => b.calls - a.calls)[0];
     if (!worst) { s.stuck = null; }
     else if (!s.stuck || s.stuck.key !== worst.key || s.stuck.calls !== worst.calls || t - s.stuck.at > 120_000) {
       const why = await Promise.race([Promise.resolve(safely(() => s.body.stuckWhy?.(worst.key, worst.last) ?? null)).catch(() => null), new Promise((r) => { setTimeout(() => r(null), 5_000).unref?.(); })]);

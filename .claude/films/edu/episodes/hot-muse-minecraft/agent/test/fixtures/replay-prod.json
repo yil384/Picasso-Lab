@@ -1,5 +1,5 @@
 {
- "about": "Muse's real steps in production games gb1cfe3 (2026-10-11), g64e8c5, g0793f1 and ga13a88 (2026-10-12) g08370a, g809e1b, g4ac86b, g71c9f5 and g0a414c (2026-10-13), gd7540a (2026-10-14), from the agent's viewer_action rows: the skill, its arguments, whether it was ok and the first 120 characters of what production said (test/replay.test.js)",
+ "about": "Muse's real steps in production games gb1cfe3 (2026-10-11), g64e8c5, g0793f1 and ga13a88 (2026-10-12) g08370a, g809e1b, g4ac86b, g71c9f5 and g0a414c (2026-10-13), gd7540a and g0842ff (2026-10-14), from the agent's viewer_action rows: the skill, its arguments, whether it was ok and the first 120 characters of what production said (test/replay.test.js)",
  "games": {
   "gb1cfe3": [
    {
@@ -3594,6 +3594,338 @@
     },
     "ok": false,
     "result": "could not clear the cell at 490 77 10 (stone) where the portal frame goes: The requested cell at 490,77,10 is air, not stone. Broke 0 matching blocks; inventory"
+   }
+  ],
+  "g0842ff": [
+   {
+    "tool": "policy",
+    "args": {
+     "defend": "on",
+     "escape": "on",
+     "eat_below": 6
+    },
+    "ok": true,
+    "result": "your rules now: defend on (fight back, raise the shield, wall in when badly hurt); flee off (withdraw from a hostile mob); escape on (out of water for air, out "
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "oak_log",
+     "n": 8
+    },
+    "ok": true,
+    "result": "mined 8 oak_log and picked up 8 oak_log (8 of 8 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "oak_planks",
+     "n": 12
+    },
+    "ok": true,
+    "result": "crafted 12 oak_planks"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "crafting_table",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 crafting_table"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "wooden_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 wooden_pickaxe at a crafting table put down at -239 103 193 (the table was picked up again)"
+   },
+   {
+    "tool": "shelter",
+    "args": {},
+    "ok": true,
+    "result": "dug two blocks down; collected 8 dirt for walls; went back down into its hole; closed itself in at -239 101 194 (placed 7 blocks, 6 wall cells already solid); i"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "cobblestone",
+     "n": 11
+    },
+    "ok": true,
+    "result": "mined 11 stone (stone drops cobblestone) and picked up 11 cobblestone (11 of 11 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stone_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 stone_pickaxe at a crafting table put down at -239 99 197 (the table was picked up again)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "iron_ore",
+     "n": 16
+    },
+    "ok": true,
+    "result": "mined 16 iron_ore (iron_ore drops raw_iron) and picked up 16 raw_iron (16 of 16 wanted)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "coal_ore",
+     "n": 4
+    },
+    "ok": true,
+    "result": "mined 4 coal_ore (coal_ore drops coal) and picked up 4 coal (4 of 4 wanted)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "furnace",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 furnace at a crafting table put down at -229 90 191 (the table was picked up again)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 10
+    },
+    "ok": true,
+    "result": "smelted 10 iron_ingot from 10 raw_iron with coal in the furnace at -229 90 191 (the furnace was picked up again)"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "stick",
+     "n": 4
+    },
+    "ok": true,
+    "result": "crafted 4 stick"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "iron_pickaxe",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 iron_pickaxe at a crafting table put down at -229 90 191 (the table was picked up again)"
+   },
+   {
+    "tool": "shield",
+    "args": {},
+    "ok": true,
+    "result": "crafted a shield and put it in its off-hand (its fight reflex raises it against arrows)"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -228,
+     "y": -8,
+     "z": 191
+    },
+    "ok": false,
+    "result": "failed: nothing to stand on at -228 -8 191, and no ground within 64 blocks below it (open air or a deep drop): pick a point just above the ground (walked to -22"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -232,
+     "y": -8,
+     "z": 186
+    },
+    "ok": false,
+    "result": "failed: nothing to stand on at -232 -8 186, and no ground within 64 blocks below it (open air or a deep drop): pick a point just above the ground (walked to -22"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate_diamond_ore",
+     "n": 4
+    },
+    "ok": true,
+    "result": "mined 4 deepslate_diamond_ore (deepslate_diamond_ore drops diamond) and picked up 4 diamond (4 of 4 wanted) [meanwhile on its own: it fought a zombie]"
+   },
+   {
+    "tool": "craft_batch",
+    "args": {
+     "items": [
+      {
+       "item": "diamond_pickaxe",
+       "n": 1
+      },
+      {
+       "item": "bucket",
+       "n": 1
+      }
+     ]
+    },
+    "ok": true,
+    "result": "crafted 1 diamond_pickaxe; a reflex took the body over meanwhile (it fought a zombie); the crafting table put down for the craft was picked up again; crafted 1 "
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill"
+    },
+    "ok": false,
+    "result": "failed: no way there was found (the path search gave up); the nearest it got to a way there was -180 -33 216."
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -182,
+     "y": 110,
+     "z": 215
+    },
+    "ok": false,
+    "result": "failed: nothing to stand on at -182 110 215: y is the height of your feet, one above the ground, and the ground there is at y=107, so go_to -182 108 215 (walked"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -182,
+     "y": 108,
+     "z": 215
+    },
+    "ok": false,
+    "result": "failed: repeated_movement_failure: Server confirmation deadline elapsed. (walked to -183 34 213, 74 blocks short of -182 108 215); you are now at -183 34 213"
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill"
+    },
+    "ok": true,
+    "result": "filled a bucket with water"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "gravel",
+     "n": 24
+    },
+    "ok": false,
+    "result": "only partly done: Mined 28 blocks and collected 20 of the 24 requested; the rest were mined but never recovered, so collection stopped instead of mining indefin"
+   },
+   {
+    "tool": "craft",
+    "args": {
+     "item": "flint_and_steel",
+     "n": 1
+    },
+    "ok": true,
+    "result": "crafted 1 flint_and_steel"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -195,
+     "y": 20,
+     "z": 196
+    },
+    "ok": true,
+    "result": "walked to -194 20 196"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 14
+    },
+    "ok": true,
+    "result": "mined 14 obsidian and picked up 14 obsidian (14 of 14 wanted)"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -182,
+     "y": 108,
+     "z": 215
+    },
+    "ok": true,
+    "result": "walked to -182 107 215 [meanwhile on its own: it fought a skeleton, it fought a creeper]"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": false,
+    "result": "could not clear the cell at -181 106 214 (birch_leaves) where the portal frame goes: only partly done: Observed 0 loaded birch_leaves blocks. Broke 1 matching b"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -170,
+     "y": 108,
+     "z": 214
+    },
+    "ok": false,
+    "result": "failed: nothing to stand on at -170 108 214: y is the height of your feet, one above the ground, and the ground there is at y=100, so go_to -170 101 214 (walked"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": -170,
+     "y": 101,
+     "z": 214
+    },
+    "ok": true,
+    "result": "walked to -171 101 214"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": true,
+    "result": "placed 12 obsidian (18 of 18 cells as the blueprint; put 2 cobblestone under walls that had nothing to place against) (built facing east; cleared 1 cell of gras"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "light"
+    },
+    "ok": true,
+    "result": "lit the Nether portal (6 portal blocks)"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "enter"
+    },
+    "ok": true,
+    "result": "went through the portal; you came out in the Nether at -22 49 25"
+   },
+   {
+    "tool": "portal",
+    "args": {
+     "action": "enter"
+    },
+    "ok": true,
+    "result": "went through the portal; you came out in the overworld at -170 101 213 (stepped out of the portal first)"
    }
   ]
  }

@@ -2490,6 +2490,21 @@ once, the slow scripted player of `survive.mjs`, each game its whole 30-minute l
 
 **Against the gate (at most 1 death in 16): passed** (round 1: 1 in 8 and 3 in 8; the care off: 2 in 8).
 
+### Leaves on the site, walks and the stuck item, the pre-launch sweep (2026-10-14, g0842ff)
+
+- **Leaves on a frame's site:** a site cell that broke counts as cleared even when nothing dropped (leaves drop
+  nothing most of the time; g0842ff's first frame stopped there).
+- **The stuck item and walks:** a walk counts only once it has ended, and one that ends 8 or more blocks closer to
+  its target is progress. A kind not tried for 5 minutes is forgotten. Two tries over 4 minutes count only when the
+  last one is recent. g0842ff showed "stuck" from 11 to 19 minutes for two walks at 7 minutes, and during a climb that
+  got there.
+- **A walk into a cavern's air** names the nearest place to stand around the target, or says it is open as far as can
+  be seen.
+- **The sweep** (~/picasso-work/muse-prelaunch-open-items.md):
+  - a cancelled action that has not let go 30 s later ends the step, and is cancelled again before the next one (F8 of
+    2026-10-12);
+  - obsidian already formed beside the bot is mined at its cells when no lava pool is near.
+
 ### A frame in rock, a lit frame's corners, food when hurt, iron and flint (2026-10-14, gd7540a)
 
 - **A portal site in rock:** the frame's cells are dug out one by one before any obsidian is placed (g809e1b). A cell

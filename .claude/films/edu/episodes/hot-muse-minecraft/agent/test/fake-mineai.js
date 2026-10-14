@@ -159,6 +159,8 @@ export async function startFakeMineAi(opts = {}) {
           if (there !== a.block_name) return { collected: { requested: 1, gained: 0, gainedByItem: {}, blocksBroken: 0 }, status: 'failed', error: `[COLLECT_TARGET_MISMATCH] The requested cell at ${a.x},${a.y},${a.z} is ${there}, not ${a.block_name}. Broke 0 matching blocks; inventory gained 0/1 requested items.` };
           world.grid.set(key, 'air');
           for (const c of world.digAlso?.({ x: a.x, y: a.y, z: a.z }) ?? []) world.grid.set(`${c.x},${c.y},${c.z}`, 'air');
+          // leaves broken without shears drop nothing most of the time: their partial result (production game g0842ff)
+          if (/_leaves$/.test(a.block_name)) return { collected: { requested: 1, gained: 0, gainedByItem: {}, blocksBroken: 1 }, status: 'partial', error: `Observed 0 loaded ${a.block_name} blocks. Broke 1 matching block; inventory gained 0/1 requested items.` };
           add(drop, 1);
           return { collected: { requested: 1, gained: 1, gainedByItem: { [drop]: 1 }, blocksBroken: 1 }, status: 'succeeded' };
         }
