@@ -220,13 +220,15 @@ export function consoleCommand(file, line) {
  * tagged as the camera, night vision), then, once the client has the bot in its world, the bot tagged as the target.
  * The rest is the Paper datapack's (deploy/paper-datapack/muse_cam), every tick: in the third-person view (CAMERA_VIEW
  * third, the default) the camera rides an invisible display entity kept over the bot's right shoulder, pulled in when
- * a wall is in the way, and moved outside to look at the bot's shelter while it is enclosed; in first person it rides
+ * a wall is in the way, and moved outside to look at the bot's shelter while it is enclosed; where the only spot left is at
+ * or just ahead of the bot's eyes (inside its head), it rides the bot's head instead, its model not drawn, until another
+ * spot has held for a second (muse_cam_fp, muse_cam:shoulder); in first person it rides
  * the bot's head, except while the bot is enclosed. Night vision is given again whenever it is gone.
  */
 export const followCommands = (camera, player, view = 'third') => [
   [
     `gamemode spectator ${camera}`, `execute as ${camera} run spectate`, 'tag @a remove muse_cam_target', `tag ${camera} add muse_cam`,
-    `tag ${camera} ${view === 'first' ? 'remove' : 'add'} muse_cam_third`, `tag ${camera} remove muse_cam_ineye`, `tag ${camera} remove muse_cam_inhead`,
+    `tag ${camera} ${view === 'first' ? 'remove' : 'add'} muse_cam_third`, `tag ${camera} remove muse_cam_ineye`, `tag ${camera} remove muse_cam_inhead`, `tag ${camera} remove muse_cam_fp`,
     `effect give ${camera} minecraft:night_vision infinite 0 true`, `tp ${camera} ${player}`,
   ],
   // the datapack's counters for a new bot (its first spot into the evidence, seen until shown otherwise)
@@ -244,7 +246,7 @@ export const keepFollowingCommands = (camera, player) => [[
 /** Between games: no target, the eye removed, stop riding and float high above the spot looking at the sky (cheap). */
 export const parkCommands = (camera) => [
   'tag @a remove muse_cam_target', 'kill @e[type=minecraft:item_display,tag=muse_cam_eye]', 'kill @e[type=minecraft:marker,tag=muse_cam_yaw]', 'kill @e[type=minecraft:marker,tag=muse_cam_try]', `tag ${camera} remove muse_cam_ineye`,
-  `tag ${camera} remove muse_cam_inhead`, `execute as ${camera} run spectate`, `execute as ${camera} at @s run tp @s ~ 250 ~ ~ -90`,
+  `tag ${camera} remove muse_cam_inhead`, `tag ${camera} remove muse_cam_fp`, `execute as ${camera} run spectate`, `execute as ${camera} at @s run tp @s ~ 250 ~ ~ -90`,
 ];
 
 // ----- the account

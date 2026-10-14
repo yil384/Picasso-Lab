@@ -620,7 +620,11 @@ profile `camera`, `deploy/Dockerfile.camera`).
   right, to its left; 2 back and 5.5 up, 70 degrees; 2.5 in front, its face; 1.5 back and 2.5 up under a low canopy),
   else straight above its head looking down (only its hair: g942044 and g88e230 opened so, the body digs in before the
   first call), else just ahead of its face, else its eyes; seen again for a second, back behind it, so a moment's
-  step down changes nothing. The camera draws leaves opaque (fast graphics), so no line of sight anywhere passes
+  step down changes nothing. Just ahead of its face (12) or at its eyes (11) the camera would sit inside the bot's head
+  (g0842ff 6:31, smelting underground: the picture was the brown inside of it), so from the tick such a spot is taken
+  the camera rides the bot's head itself, true first person with the bot's model not drawn (`muse_cam_fp`), and goes
+  back over the shoulder once another spot has held for a second (`deploy/camera-test/headcam.cjs`: a pocket in rock,
+  a dead end, back out into the open; a tunnel, a shaft, a cave room and open ground stay over the shoulder). The camera draws leaves opaque (fast graphics), so no line of sight anywhere passes
   through leaves. Checked on a local Paper (`deploy/camera-test/leaves.cjs`, the replay): the hole two deep in a canopy top
   went from behind (a line to its eyes through the leaf wall) to 2.5 back and 4 up (58 degrees, 4.7 blocks) with both
   lines clear; the spawn dig-in beside a tree and a hole in open ground, the same; a hole under a canopy 4 up, 1.5 back
@@ -1202,7 +1206,10 @@ and Muse's panel under it:
   it: before the first call, a toast, a second call while one holds, a burst, three at once, 14 steps and a long why,
   STUCK and TIME, rules none and some, a rule firing, a split, a new goal, a death, the Nether, a refusal; no text
   leaves the frame or overlaps another. Back to the design before it: `STREAM_HUD=final` in deploy/camera.env, then
-  the camera again (while idle). Measured on the muse-camera-test stack (2026-10-13; `deploy/camera-test/camera-bench.sh`
+  the camera again (while idle). The lab's mark stands at the top right of the video (2026-10-14): the ivory PICASSO
+  wordmark (`assets/muse-ui/logo_word_iv.png`) 170 px wide with "LAB · UC SAN DIEGO" in the HUD's spaced capitals, a
+  hard 2 px shadow and a faint plate (no blur) for bright sky, at 85 %, clear of the toasts and of Facebook's LIVE badge;
+  in the stream and `stream-<n>.mp4`, never in the clean recording. Measured on the muse-camera-test stack (2026-10-13; `deploy/camera-test/camera-bench.sh`
   with `hud-storm.cjs` feeding a busy game: a call every 3 s, an item every 1.5 s, a rule every 10 s, banners; 6 CPUs as
   production, the clean recorder running): at a host load of 157 the client 25.4 frames a second (p10 21), the stream
   30 a second with no frame dropped or duplicated, speed 1.0x, the camera 5.17 cores; the HUD 26.8 frames written a

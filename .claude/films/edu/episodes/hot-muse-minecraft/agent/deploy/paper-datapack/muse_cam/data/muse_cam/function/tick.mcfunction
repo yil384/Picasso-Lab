@@ -19,6 +19,8 @@ execute if score #rr muse_cam_rr matches 100 run function muse_cam:reride
 execute unless entity @e[type=minecraft:item_display,tag=muse_cam_eye] at @a[tag=muse_cam_target,limit=1] run function muse_cam:new_eye
 function muse_cam:yaw
 execute if entity @a[tag=muse_cam_target,tag=muse_cam_shut] run function muse_cam:outside
+# enclosed: the views from outside, never first person over the shoulder
+execute if entity @a[tag=muse_cam_target,tag=muse_cam_shut] run tag @a[tag=muse_cam] remove muse_cam_fp
 execute unless entity @a[tag=muse_cam_target,tag=muse_cam_shut] run function muse_cam:shoulder
 # out of the shelter: the next one chooses its spot afresh
 execute unless entity @a[tag=muse_cam_target,tag=muse_cam_shut] run scoreboard players set #on muse_cam_y 0

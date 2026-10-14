@@ -632,9 +632,28 @@ function drawRaw(M) {
     }
   }
 }
+// the lab's mark at the top right of the video (the owner, 2026-10-14): the ivory PICASSO wordmark 170 px wide and
+// "LAB · UC SAN DIEGO" under it in the HUD's spaced capitals, a hard dark shadow 2 px down and a faint plate (no blur)
+// for bright sky, at 85 %; the mark 26 px in from the corner, above the toasts' band (from y 136) and away from
+// Facebook's LIVE badge (top left)
+export const LOGO = { w: 170, right: 1062, y: 16, alpha: 0.85, ivory: '#efe6cf' };
+function buildLogo(img) {
+  const w = LOGO.w, lh = Math.round((img.height * w) / img.width), pad = 10;
+  const c = mk(w + pad * 2, lh + 26 + pad * 2), x = c.getContext('2d');
+  // a faint plate: ivory on a bright sky needs it, on a cave it is barely there
+  fillRR(0, 0, c.width, c.height, 8, 'rgba(8,10,14,0.30)', x);
+  const sil = mk(w, lh), sx = sil.getContext('2d');
+  sx.drawImage(img, 0, 0, w, lh); sx.globalCompositeOperation = 'source-in'; sx.fillStyle = 'rgba(6,8,12,0.6)'; sx.fillRect(0, 0, w, lh);
+  x.drawImage(sil, pad + 1, pad + 2); x.drawImage(img, pad, pad, w, lh);
+  const line = 'Lab · UC San Diego';
+  CAPS(line, pad + w / 2 + 1, pad + lh + 19, 11, 'rgba(6,8,12,0.6)', 600, x, 'center');
+  CAPS(line, pad + w / 2, pad + lh + 17, 11, LOGO.ivory, 600, x, 'center');
+  return c;
+}
 /** The HUD layer: everything that stands still (pend: the homes still waiting for a toast's tile). */
-export function drawStatic(ctx, M, pend) {
+export function drawStatic(ctx, M, pend, logo = null) {
   g = ctx;
+  if (logo) { g.save(); g.globalAlpha = LOGO.alpha; g.drawImage(logo, LOGO.right - logo.width, LOGO.y); g.restore(); }
   rect(0, L.video.h, 1080, 1080 - L.video.h, C.hud);
   drawHotbar(M);
   drawTop(M);
@@ -777,6 +796,7 @@ export function createHudB(o) {
   let chipSince = null;
   const seen = { calls: new Set(), events: new Set(), splits: new Set(), goal: null, rules: null };
   let lastQa = [];
+  let logoImg = null; // the wordmark, drawn once
   const flashLT = () => (inst.flashLT ??= solid(1080 - L.lt.bar - 24, L.lt.h, C.muse));
   const flashRow = () => (inst.flashRow ??= solid(1032, L.feed.row, C.muse));
 
@@ -956,7 +976,8 @@ export function createHudB(o) {
       lx.setTransform(1, 0, 0, 1, 0, 0);
       lx.clearRect(0, 0, 1080, 1080);
       if (opt.qa) QA = [];
-      try { drawStatic(lx, M, p); } finally { lastQa = QA ?? []; QA = null; }
+      if (!logoImg && o.logo && o.logo.width) { try { logoImg = buildLogo(o.logo); } catch { logoImg = null; } }
+      try { drawStatic(lx, M, p, logoImg); } finally { lastQa = QA ?? []; QA = null; }
       drawnSig = sig;
       layerNew = true;
       return true;

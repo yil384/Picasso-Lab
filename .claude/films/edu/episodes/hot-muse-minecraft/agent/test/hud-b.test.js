@@ -258,6 +258,15 @@ test('HUD B: a refused command gets no toast (its row says why); a frame is writ
   assert.ok(g.model().feed.some((r) => r.code === 'NO' && r.result === 'NEED_LIVE_VIEW'));
 });
 
+test('HUD B: the lab\'s mark at the top right of the video, clear of the toasts\' band and the LIVE badge', () => {
+  const g = game();
+  g.run(1100);
+  const px = (x, y) => g.p.render(g.t).getContext('2d').getImageData(x, y, 1, 1).data[3];
+  assert.ok(px(1000, 40) > 0, 'the mark');
+  assert.equal(px(1000, 120), 0, 'nothing between it and the toasts');
+  assert.equal(px(60, 40), 0, 'nothing at the top left (Facebook\'s LIVE badge)');
+});
+
 test('HUD B: the model reads the state as the panel builds it (fixture: the long sample)', () => {
   const M = buildModel({ caller: 'MUSE', now: { gameS: 100 }, stats: { hp: 5, food: 20, dimension: 'overworld', ticks: 23_500, museShare: { muse: 3, rule: 1, body: 2 } }, raw: { total: 0, entries: [] }, inventory: [], goal: null, advice: { items: [] }, events: [] }, 100);
   assert.equal(M.phase.icon, 'sun', 'after 23000 the day has begun');

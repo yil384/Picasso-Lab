@@ -184,6 +184,9 @@ export function createUiPanel(o) {
   // icons, each scaled once to every size the HUD draws it at
   const images = {};
   try { for (const f of fs.readdirSync(path.join(assets, 'icons'))) if (f.endsWith('.png')) { const im = new Image(); im.src = fs.readFileSync(path.join(assets, 'icons', f)); images[f.slice(0, -4)] = im; } } catch { /* drawn without */ }
+  // the lab's wordmark for the top right of the video (concept B; the stream only, never the clean recording)
+  let logo = null;
+  try { logo = new Image(); logo.src = fs.readFileSync(path.join(assets, 'logo_word_iv.png')); } catch { logo = null; }
   const scaled = new Map();
   const iconAt = (n, size) => {
     const k = `${n}@${size}`;
@@ -245,7 +248,7 @@ export function createUiPanel(o) {
   // concept B: its own layers over the whole frame (the video's place see-through but for what moves over it)
   const design = o.design ?? 'b';
   const hb = design === 'b'
-    ? createHudB({ createCanvas, icon: iconAt, has: (n) => Boolean(images[n]), emit: (ev) => { try { o.onEvent?.({ ...ev, gs: gameS(ev.start ?? ev.at ?? now()) }); } catch { /* best effort */ } } })
+    ? createHudB({ createCanvas, icon: iconAt, has: (n) => Boolean(images[n]), logo, emit: (ev) => { try { o.onEvent?.({ ...ev, gs: gameS(ev.start ?? ev.at ?? now()) }); } catch { /* best effort */ } } })
     : null;
   let bSec = null;
   let bEpoch = '';
