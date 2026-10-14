@@ -13,7 +13,8 @@
   "The OS idea (slide 23): pages and a page table: logically in order, physically anywhere (line_paged_carpark_bays, line_card_catalog).",
   "PagedAttention (vLLM, SOSP 2023, slides 24-25): small fixed blocks (e.g. 16 tokens; the slide shows 4) allocated on demand; the block table maps logical to physical; at most one partly used block per sequence; any free block fits (line_paged_crates_on_demand, line_paged_ticket_crates).",
   "Sharing (slides 26-27): parallel samples and system prompts reuse the same prefix blocks; copy on write when they diverge (line_paged_shared_coat).",
-  "Pitfall (her words): kernels assumed one contiguous slab, so they must follow the block table; the change is 'not that hard'; GPU-friendly block sizes keep the reads coalesced. Next: keep the shared beginnings for later requests (L13-04)."
+  "Pitfall (her words): kernels assumed one contiguous slab, so they must follow the block table; the change is 'not that hard'; GPU-friendly block sizes keep the reads coalesced. Next: keep the shared beginnings for later requests (L13-04).",
+  "Cover (line_cover_l13_03; for the X post and thumbnails, not a film beat): a car park where cars take any free bay; the attendant hands out a ticket that points to one far away."
  ],
  "reuse": [
   "line_clerk_ladder",
@@ -146,6 +147,26 @@
    ],
    "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). The second image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, the cabinet, the ladder or the layout.",
    "prompt": "At a cloakroom counter, seen from the front, stand two invented twins side by side (identical simple round faces with dot eyes, identical short bobbed hair, identical striped scarves). Behind the counter, the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) hangs ONE big shared winter coat on a single hook in the middle; each twin holds a blank paper ticket on a long string, and both strings run up to that same single hook. Below it hang two separate small hooks, each with a different hat: a woolly bobble hat on the left one and a sun hat on the right one, one for each twin. Square image 1024x1024; everything fills about 88% of the width and about 85% of the height. The tickets are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l13_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "refs_when_made": [
+    "line_paged_carpark_bays",
+    "line_paged_carpark_gaps",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the car park attendant in a peaked cap and safety vest, draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A car park seen from high above and in front: a neat grid of identical bays, three rows of eight, drawn large. Cars are parked in scattered bays all over, with free bays here and there in between, not in one block. At a small booth at the bottom left, an invented attendant (simple round face, dot eyes, a peaked cap, a plain safety vest) hands a blank paper ticket out of the window to the driver of a small car; a thin dotted path leads from the booth to one free bay far away near the middle. Number plates are blank; no painted markings except plain bay lines. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

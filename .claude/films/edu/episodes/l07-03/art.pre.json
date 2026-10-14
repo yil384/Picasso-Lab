@@ -11,7 +11,8 @@
   "Llama 3 405B on 16,384 H100s (slide 33): pipeline-data co-design, and context parallelism switched on only for the long-context stage (line_dials_long_scroll_knob: the engineer turns the CP knob up as the scroll gets long).",
   "MegaScale 175B on 12,288 GPUs at 55.2% MFU (slides 34-36): talk while you work, fused AllGather+GEMM and decoupled send/receive (line_dials_cook_while_talking); at that scale machines fail, so cluster management matters (slide 37; line_dials_swap_broken_server).",
   "Coda (slides 38-42, self study): packing documents of different lengths makes the 4D work uneven again (WLB-LLM, OSDI 2025) (line_dials_packing_bins; line_ring_lopsided_work from L07-02 if it is in the library).",
-  "Takeaway: the same four dials, set by how much each one talks; closes the training season."
+  "Takeaway: the same four dials, set by how much each one talks; closes the training season.",
+  "Cover (line_cover_l07_03; for the X post and thumbnails, not a film beat): the engineer at a mixing desk with four big knobs turns one all the way down."
  ],
  "reuse": [
   "line_knob_board",
@@ -152,6 +153,21 @@
     "line_tiny_lab"
    ],
    "prompt": "An invented sound engineer (simple round face, dot eyes, a short bob haircut, big headphones around the neck, a plain t-shirt with rolled sleeves) stands at a vintage mixing desk with exactly four big round knobs in one row, seen from the front and slightly above. A very long blank paper scroll comes in over the top of the desk from the left, unrolling across it in loose loops and spilling down to the floor; the engineer glances at the growing scroll and, with one hand, turns the rightmost knob firmly up, a pleased, decisive look. Square image 1024x1024; the engineer, the desk and the scroll fill about 88% of the width and about 85% of the height, the four knobs large and clearly visible. The scroll is blank: no writing, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_cover_l07_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_dials_engineer",
+    "line_dials_four_knob_desk",
+    "line_knob_board"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows this episode's sound engineer, the second the four-knob desk: draw the same engineer (same face, hair and clothes) and the same kind of desk in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The sound engineer (the same invented character as in the references: simple round face, dot eyes, a short bob haircut, big headphones around the neck, a plain t-shirt with rolled sleeves) leans over a wide vintage mixing desk with exactly four big round knobs in a row, seen from the front and slightly above. One hand turns the leftmost knob all the way down; the other hand rests beside the second knob; a thoughtful, determined look; a mug at the edge of the desk. The four knobs are large and clearly visible, with only plain tick marks around them. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

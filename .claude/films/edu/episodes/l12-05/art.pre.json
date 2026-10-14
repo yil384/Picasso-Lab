@@ -12,7 +12,8 @@
   "QLoRA (slides 38-39): store the frozen base in 4 bits and keep the small adapters in 16 bits: a big model fine-tuned on one GPU (line_qlora_pocket_edition).",
   "NF4 (slide 39): weights are bell-shaped, so put the 16 levels where the weights are: umbrellas packed in the crowded middle of the beach, sparse at the ends (line_nf4_beach_umbrellas; vs INT4's even hooks, line_bits_hook_rails from L12-01's plan).",
   "The tour in one picture (slide 40): data types, rounding basics, the benefit check, GPTQ / AWQ / SmoothQuant, NVFP4, PTQ and QAT (line_quant_tour_shelf); callback to L10-02: FP8 rollouts in RL.",
-  "Takeaway: you can train through rounding if you are honest about where you lie (only in the backward pass, only inside the range)."
+  "Takeaway: you can train through rounding if you are honest about where you lie (only in the backward pass, only inside the range).",
+  "Cover (line_cover_l12_05; for the X post and thumbnails, not a film beat): the blindfolded student walks down a staircase of flat steps, guided by one smooth sloping handrail."
  ],
  "reuse": [
   "line_switch_dimmer",
@@ -128,6 +129,26 @@
     "line_tiny_lab"
    ],
    "prompt": "A long wooden shelf on a wall, seen straight from the front, displaying a row of souvenirs like a little museum of a trip: a row of small square wooden tiles, some with a carved dot; a metal measuring scoop; a tailor's round pincushion with pins; a glass vase wrapped in bubble wrap; a small old box camera; a flat vacuum-packed bag; a short piece of wooden handrail with a round end cap; and a tiny coin purse. Landscape image 1536x1024; the shelf fills about 94% of the width and the souvenirs about 45% of the height, centred. No labels. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l12_05",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refs_when_made": [
+    "line_ste_handrail",
+    "line_ruler_curve",
+    "line_postal_scale"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the recurring student (short messy hair, hoodie), draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (the same invented character in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. A wide outdoor stone staircase goes down to the right in long flat treads and sudden drops, seen from the side. A smooth wooden handrail on posts runs beside it in one straight, even slope from the top step to the bottom step, ending in a round cap at each end. The student, blindfolded with a cloth band, walks confidently down the steps, one hand gliding along the handrail, smiling. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

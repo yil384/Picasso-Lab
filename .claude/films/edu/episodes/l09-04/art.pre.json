@@ -10,7 +10,8 @@
   "What the compiler does inside the block: pipelining and prefetching, TMA brings whole tiles (line_tiles_prefetch_line).",
   "Who specifies what: CUDA: memory, threads, tensor cores, vectors all by hand; Triton: tiles by hand, the rest automatic; TVM: all automatic, fair speed (reuse the four cooking drawings as column heads).",
   "Today: lower than Triton for more control (Gluon, TileLang, TLX), higher for less code (Helion), distributed (Triton-Distributed, ParallelKitten) (line_tiles_staircase, line_knob_board).",
-  "Takeaway: the tile is the sweet spot between control and convenience; 'still a long way to go'; L15 continues the story."
+  "Takeaway: the tile is the sweet spot between control and convenience; 'still a long way to go'; L15 continues the story.",
+  "Cover (line_cover_l09_04; for the X post and thumbnails, not a film beat): a student programmer hands a team of line cooks one tray cut into equal squares instead of ordering each cook."
  ],
  "reuse": [
   "line_knob_board",
@@ -156,6 +157,26 @@
    ],
    "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
    "prompt": "A wide plain staircase of five broad steps rising from the lower left to the upper right, seen from the side, on white. On the middle step stands one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron), holding a square baking tray. One invented character (simple round face, dot eyes, short hair, overalls) walks DOWN the stairs at the lower left carrying a big heavy open toolbox full of tools, knobs and spanners; another invented character (simple round face, dot eyes, a ponytail, a light jacket) walks UP the stairs at the upper right carrying only a small blank menu card, light and relaxed. Landscape image 1536x1024; the stairs and figures fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l09_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_gpu_station",
+    "line_gpu_squad_march",
+    "line_tiny_lab"
+   ],
+   "refs_when_made": [
+    "line_tiles_tray_handoff",
+    "line_gpu_station",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the line cooks (low folded paper caps, not tall chef hats) or the student programmer in a hoodie, draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "An invented student programmer (simple round face, dot eyes, short messy hair, a plain hoodie, trousers, sneakers), relaxed and smiling, holds a coffee mug in one hand and with the other hands one big square baking tray to a small team of four identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike) gathered at a square counter island. The tray holds a neat block of food cut into a grid of equal squares, four by four, drawn large. The cooks reach for it happily, already organising themselves around the island. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

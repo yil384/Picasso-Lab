@@ -12,7 +12,8 @@
   "The fix: a decoupled RoPE key, a small separate tag (d_h/2) shared by all heads; content in the pouch, position on the tag (slide 19) (line_mla_luggage_tag).",
   "Size: (d_c + d_h^R) = 4.5 d_h per layer per token = GQA with 2.25 groups (slide 20); worksheet: 14x / 28x / 56x smaller than MHA (L04 3-5) (line_mla_slim_shelf, line_balance).",
   "Better perplexity, her guesses: like dropout (line_mla_hedge_trim), redundancy in MHA (line_mla_same_shirts), less interference between content and position (L04 3).",
-  "Pitfall: absorbed MLA adds compute on short contexts, so serving engines switch absorption off there (L04 6) (line_mla_one_sock). Takeaway."
+  "Pitfall: absorbed MLA adds compute on short contexts, so serving engines switch absorption off there (L04 6) (line_mla_one_sock). Takeaway.",
+  "Cover (line_cover_l03_03; for the X post and thumbnails, not a film beat): the clerk holds up one flat vacuum-packed pouch beside the bulky loose tags and parcels it replaced."
  ],
  "reuse": [
   "line_squeeze_strip",
@@ -160,6 +161,21 @@
     "line_tiny_lab"
    ],
    "prompt": "An open suitcase seen from a little above, packed with ten identical folded plain shirts in two neat stacks, every shirt exactly the same; a hand at the right lifts one shirt out, and it is just like all the others. Square image 1024x1024; the suitcase fills about 85% of the width, centred. No labels. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l03_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_mla_vacuum_pack",
+    "line_mla_slim_shelf",
+    "line_clerk_ladder"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's clerk and the vacuum-packed pouches, the third the clerk: draw the same clerk (same face, hair and clothes) and the same kind of pouches in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Before and after on one long table, seen from the front. At the left end of the table, a bulky, untidy heap of three round name tags on strings and three plump parcels tied with string. In the middle stands the clerk (the same invented character as in the references: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron), beaming, holding up in one hand one finished vacuum-packed pouch, flat and thin as an envelope, with the faint outlines of a round tag and a small parcel pressed inside it; the other hand rests on a small hand pump. At the right end, a short neat row of about eight identical flat pouches stands upright in a shallow crate like records, taking up very little room. The tags, parcels and pouches are blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

@@ -11,7 +11,8 @@
   "LeanAttention (2024) / stream-K (slide 39): add up all the work and deal every SM an equal share (line_decode_equal_piles).",
   "FlashInfer (Ye et al., MLSys 2025; slide 40): the attention engine behind many serving systems: reads paged KV in place, one format for many systems, JIT-compiles custom attention variants (line_decode_mixer_attachments, line_decode_key_cutter).",
   "POD-Attention (Kamath et al., ASPLOS 2025; slide 41): in a chunked-prefill batch, put compute-bound prefill and memory-bound decode work on the same SMs so burners and pantry door are both busy (line_decode_shared_station).",
-  "Takeaway (her summary): FlashAttention for prefill, FlashDecoding for generation, FlashInfer packages them for the serving engines; scheduling, KV management and kernels are the three layers of serving."
+  "Takeaway (her summary): FlashAttention for prefill, FlashDecoding for generation, FlashInfer packages them for the serving engines; scheduling, KV management and kernels are the three layers of serving.",
+  "Cover (line_cover_l13_05; for the X post and thumbnails, not a film beat): a hall of identical cooking stations where only three cooks work and everyone else idles."
  ],
  "reuse": [
   "line_gpu",
@@ -154,6 +155,26 @@
    ],
    "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
    "prompt": "One square cooking station seen from the front and a little above, shared by two line cooks (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) working at the same time: on the left half of the counter one cook chops a mountain of vegetables at full speed with a big knife, with small motion lines; on the right half the other cook hurries in and out of a pantry door just behind the station, carrying jars and trays. Both are busy and nobody waits. Landscape image 1536x1024; the station and the cooks fill about 85% of the width and about 80% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l13_05",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_gpu_kitchen_hall",
+    "line_gpu_station",
+    "line_tiny_lab"
+   ],
+   "refs_when_made": [
+    "line_decode_idle_hall",
+    "line_gpu_kitchen_hall",
+    "line_gpu_station"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the line cooks (low folded paper caps, not tall chef hats) or their kitchen hall, draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A kitchen hall seen from high above and in front, a steep bird's-eye view, drawn as a wide, low cut-away box floating in the white page: a regular grid of identical square cooking stations, six across and three rows deep (eighteen in all), with clear walkways between them; at each station stands one small identical line cook (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron). Only THREE stations in the front row are busy: their cooks chop and stir at full speed with small motion lines. At every other station the cook idles: leaning on the counter, yawning, asleep on folded arms, reading a small book, balancing a spoon on the nose. The floor is plain white, no tiles. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

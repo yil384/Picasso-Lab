@@ -11,7 +11,8 @@
   "Leftovers: LayerNorm and dropout run on full activations on every GPU; sequence parallelism splits them by token.",
   "Same price: AllReduce = AllGather + ReduceScatter, so TP + SP moves the same data.",
   "Critical path: the next layer waits for the talk; it can only be hidden block by block (fine-grained).",
-  "Numbers: over a 25 GB/s network the talk takes 4x the compute; over NVLink the compute is ~3x the talk: keep TP inside a node."
+  "Numbers: over a 25 GB/s network the talk takes 4x the compute; over NVLink the compute is ~3x the talk: keep TP inside a node.",
+  "Cover (line_cover_l06_03; for the X post and thumbnails, not a film beat): four bakers each hold one vertical strip of a grid-paper sheet; together the strips make the whole sheet."
  ],
  "reuse": [
   "line_scissors_strips",
@@ -152,6 +153,21 @@
     "line_round_table"
    ],
    "prompt": "Close-up at a bakery counter, seen from the front, both characters waist up: on the left, the first baker (tall and thin, round glasses, white apron, small flat paper cap) slices a long loaf of bread with a bread knife; on the right, the second baker (long ponytail, white apron, small flat paper cap) takes each slice as soon as it is cut and lays it on a plate, where a few slices already lie in a neat fan. Both are invented characters with simple round faces and dot eyes, working in an easy rhythm. Landscape image 1536x1024; the two characters, loaf and plate fill about 90% of the width and about 78% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_cover_l06_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tp_strips_join",
+    "line_pp_bakery_busy",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's four bakers: draw the same four (same faces, hair, caps and aprons) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The four bakers (the same as in the reference images; invented characters with simple round faces and dot eyes, plain white aprons over rolled-up sleeves and small flat paper baker's caps, not tall chef hats: the first tall and thin with round glasses, the second with a long ponytail, the third short and sturdy with curly hair, the fourth with a neat bob haircut and freckles) stand in a row facing us, shoulder to shoulder. Each holds up in front of their body one vertical strip of grid paper, two large squares wide and four tall, by its top corners; the four strips stand side by side to form one wide sheet of eight by four large squares, clearly made of four strips with three thin straight gaps between them. Each baker's head peeks over the top edge of their own strip and their feet show below. Pleased expressions. No marks inside the squares. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

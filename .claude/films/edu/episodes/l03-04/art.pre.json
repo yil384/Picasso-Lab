@@ -12,7 +12,8 @@
   "Hyper-connections: n learnable lanes with crossovers instead of one fixed lane (Zhu et al. 2025); y = 0.2 x1 + 0.8 x2 scales the gradients (slides 28-29) (line_res_four_lanes, line_knob_board).",
   "Pitfall: multiply mixing weights over many layers and the signal can blow up or die (line_res_snowball, line_whisper_line).",
   "mHC: keep the mixing doubly stochastic (rows and columns sum to 1, entries 0-1); closed under multiplication, so any depth stays stable (Xie et al. 2026) (slides 30-31) (line_res_jugs_glasses).",
-  "Her analogy (slide 31): attention = a person listening to others in a meeting (line_round_table); hyper-connections = one person's four clones talking among themselves (line_res_four_clones). Takeaway."
+  "Her analogy (slide 31): attention = a person listening to others in a meeting (line_round_table); hyper-connections = one person's four clones talking among themselves (line_res_four_clones). Takeaway.",
+  "Cover (line_cover_l03_04; for the X post and thumbnails, not a film beat): four parallel express lanes with crossover links run past a row of small towns."
  ],
  "reuse": [
   "line_whisper_line",
@@ -142,6 +143,20 @@
    ],
    "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
    "prompt": "A snowy hillside slope runs from the upper left down to the lower right. A snowball rolls down it and grows: a trail of snowballs along the slope shows it getting bigger and bigger, from a tiny ball at the top left to a huge boulder of snow at the bottom right that towers over a small invented skier (simple round face, dot eyes, a woolly hat) who flees in alarm. Landscape image 1536x1024; the scene fills about 92% of the width and about 80% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l03_04",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "refs": [
+    "line_res_four_lanes",
+    "line_res_bypass_road",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's roads, cars and towns: draw them in the same way, in the new cover composition described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Four wide express lanes run side by side across the picture from left to right, drawn as four clean parallel bands in gentle perspective, seen from a little above. At three evenly spaced places short diagonal crossover links join neighbouring lanes. Three small cars drive along with a few speed lines; one of them is crossing from one lane to the next at a link. Below the lanes, three small towns sit in a row, each a compact cluster of little three-dimensional houses, each joined to the lanes by one curved ramp. Drawn as a lively picture-book scene, never as a flat top-down plan. No people, no road signs, no markings on the road. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

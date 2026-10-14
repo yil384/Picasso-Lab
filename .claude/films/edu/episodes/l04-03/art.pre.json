@@ -11,7 +11,8 @@
   "Pipeline parallel: split the layers; an assembly line, one station per chef (slide 26) (line_split_assembly).",
   "Tensor parallel: split inside each layer; two chefs share one huge step (slide 27) (line_split_big_pizza).",
   "MoE aside (her question): expert parallelism cuts the model into experts and, as a result, cuts the data dynamically, unevenly; the four classic cuts are static (line_split_expert_stations).",
-  "Takeaway: 4D: every GPU is one coordinate (DP, CP, PP, TP) and holds one shard of data and one shard of model (slide 28) (line_split_kitchen_block, line_split_slices_plates); the map for the next episodes (line_course_map)."
+  "Takeaway: 4D: every GPU is one coordinate (DP, CP, PP, TP) and holds one shard of data and one shard of model (slide 28) (line_split_kitchen_block, line_split_slices_plates); the map for the next episodes (line_course_map).",
+  "Cover (line_cover_l04_03; for the X post and thumbnails, not a film beat): four chefs, four knives, one cake: each chef is sure their cut is the right one."
  ],
  "reuse": [
   "line_d_chefs",
@@ -147,6 +148,21 @@
    ],
    "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
    "prompt": "A restaurant kitchen seen from the front. In the middle stands the woman chef with a low hair bun (tall white chef hat, double-breasted chef jacket, apron), sorting a stream of small blank order tickets that flutter in from the left and sending each one to one of four specialist stations in a row behind her: a grill worked by the round chef with a curly moustache, a pastry table worked by the woman with a bob and a fringe, a salad board worked by the chef with round glasses and curly hair, and a big soup pot worked by the old chef with a white beard (all in tall white chef hats, double-breasted jackets and aprons). The tickets pile up unevenly: a tall pile on the grill rail, a small pile at the pastry table, only one ticket at the soup pot. Landscape image 1536x1024; the scene fills about 92% of the width and about 80% of the height. The tickets are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l04_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_split_cake_knives",
+    "line_d_chefs",
+    "line_split_one_chef_line"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows this episode's cake and knives, the second the six recurring chefs, the third one of them at work: draw the same chefs (same faces, hair, tall hats and jackets) and the same kind of cake in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A tall round cake with four clearly visible layers stands on a cake stand in the centre, seen from a little above and in front. Four of the recurring chefs (as in the references: tall white chef hats, double-breasted chef jackets, aprons, simple round faces with dot eyes; the young chef with short curly hair, the woman with a low hair bun, the round chef with a curly moustache and the woman with a bob and a fringe) stand around it, two on each side, each holding a different knife ready to cut the cake a different way: one holds a long bread knife level to slide between the layers, one holds a big chef's knife upright above the top, one holds a thin palette knife to take a thin slice off the edge, one holds a cake server under a wedge. They glance at each other, each sure their cut is the right one. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

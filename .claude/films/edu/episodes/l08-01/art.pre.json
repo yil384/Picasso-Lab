@@ -10,7 +10,8 @@
   "Keep the longest correct prefix; the first wrong guess is replaced by the editor's own word, so every pass gains at least one word (red pen ticks and a cross on line_spec_editor_checks).",
   "Sampling, not only greedy (slide 6): accept a draft word with probability min(1, target/draft), else resample from the leftover max(0, target - draft); the result is exactly the big model's own distribution (line_spec_play_or_study for \"I like playing / studying\"; reuse line_dice_hand; line_spec_twin_books for \"exactly the same output\").",
   "Speed-ups depend on the task (slide 7): predictable code vs free-form summaries (line_spec_fence_vs_book; reuse line_coder_storyteller).",
-  "Takeaway: the same answer with fewer slow passes; the serving season starts here."
+  "Takeaway: the same answer with fewer slow passes; the serving season starts here.",
+  "Cover (line_cover_l08_01; for the X post and thumbnails, not a film beat): the intern dashes in with five guessed word cards; the editor peers over his glasses, pen raised to check."
  ],
  "reuse": [
   "line_dice_hand",
@@ -150,6 +151,21 @@
     "line_chat_first"
    ],
    "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches) stands behind his large desk, seen from the front, holding up two identical closed hardback books side by side, one in each hand, comparing them with a satisfied little smile: same size, same thickness, same plain cover, the only difference a small blank bookmark ribbon hanging from the right-hand book. Beside the desk on the right, the intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), peeks over the desk edge with a hopeful thumbs-up. Landscape image 1536x1024; the editor, the books and the intern fill about 85% of the width and about 85% of the height; the two books are large and clearly identical. The covers are blank: no titles, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_cover_l08_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_spec_handoff",
+    "line_spec_editor_checks",
+    "line_spec_intern_drafts"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). They show this episode's intern (small, spiky hair, hoodie) and editor (big, older, bushy beard, half-moon glasses, cardigan): draw the same two characters in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the intern (the same invented character as in the references: small, quick and young, simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear) dashes in with a few speed lines behind, holding out a strip of five blank word cards joined edge to edge. On the right, the editor (the same invented character as in the references: a big, calm, older man, simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches) sits at a large plain desk and leans forward, peering over his glasses at the strip, a fountain pen raised, ready to check. The five cards are large and clearly separated. The cards are blank; no laptop and no clutter on the desk. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

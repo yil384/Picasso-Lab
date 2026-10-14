@@ -12,7 +12,8 @@
   "MHA: every reader (head) has a private rack (line_kv_private_racks).",
   "MQA: one rack for all readers: 32-128x smaller, quality drops (Shazeer 2019) (line_kv_one_rack_crowd).",
   "GQA: groups of readers share a rack: 8 KV heads; Llama 3 8B / 70B / 405B with 32 / 64 / 128 query heads: 4x / 8x / 16x (slides 13-14) (line_kv_group_racks).",
-  "Pitfall: GQA barely changes compute or training; it is an inference memory saving (slide 13). Takeaway + next: MLA zips the parcels instead of sharing them (L03-03)."
+  "Pitfall: GQA barely changes compute or training; it is an inference memory saving (slide 13). Takeaway + next: MLA zips the parcels instead of sharing them (L03-03).",
+  "Cover (line_cover_l03_02; for the X post and thumbnails, not a film beat): the clerk squeezes one more tag and parcel into a crammed cloakroom wall while the guest brings only a question card."
  ],
  "reuse": [
   "line_word_three_things",
@@ -151,6 +152,21 @@
    ],
    "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
    "prompt": "In the lower left of the picture an invented reader (simple round face, dot eyes, short hair, a sweater) sits at a small desk holding one short blank note card. Behind the reader and to the right, a long convoy of large removal lorries stretches away along a straight road into the distance, one behind another; the back doors of the nearest lorries are open and every one is packed to the roof with stacked cardboard parcels. The reader glances back over one shoulder at the convoy with a startled look. Landscape image 1536x1024; the scene fills about 95% of the width and about 70% of the height. Plain lorries with no writing and no number plates. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l03_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_kv_cloakroom_wall",
+    "line_clerk_ladder",
+    "line_word_three_things"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first shows this episode's cloakroom with the clerk and the party guest, the second the clerk, the third the party guest: draw the same two characters (same faces, hair and clothes) in the new, simpler cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The cloakroom of this episode, simplified for a cover. Right of centre, behind a long low wooden counter, the clerk (the same invented character as in the references: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) stands on tiptoe squeezing one more small parcel into a low, wide wall of large open square pigeonholes, exactly three rows of six. Every pigeonhole is already crammed with a blank round name tag on a string and a small parcel tied with string, and a few extra parcels have spilled into a small heap on the floor beside the counter. At the left, in front of the counter, stands the party guest (the same invented character as in the references: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag on the chest), holding up only one small blank question card and looking at the crammed wall with raised eyebrows. The tags, parcels and card are blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

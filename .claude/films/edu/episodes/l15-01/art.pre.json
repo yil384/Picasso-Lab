@@ -11,7 +11,8 @@
   "Gluon: one level below Triton; you choose the layouts and give each warp group one job (load, matrix math, epilogue, scheduler): warp specialization (line_gluon_brigade_roles); manual vs automatic (line_gluon_two_levers); near the vendor library's matmul speed with a single configuration.",
   "Which to use: Triton for most memory-bound kernels (softmax, layer norm); Gluon when the kernel has a dot product on the newest GPUs. The real question is who steers, the programmer or the compiler (line_gluon_dual_control_car).",
   "The future: one magic compiler that does it all was too optimistic (L09-04's line_tiles_bread_machine); lightweight languages built for each chip (line_gluon_multitool_vs_set); LLMs write kernels faster than people can review them (line_gluon_printer_flood).",
-  "Closing, the speaker's answer to \"which one wins\": none of them; the future will be invented by the students (line_gluon_students_blueprint)."
+  "Closing, the speaker's answer to \"which one wins\": none of them; the future will be invented by the students (line_gluon_students_blueprint).",
+  "Cover (line_cover_l15_01; for the X post and thumbnails, not a film beat): a driving-school car seen through the windscreen: the learner grips the wheel, the instructor's foot hovers over her own brake."
  ],
  "reuse": [
   "line_gpu",
@@ -153,6 +154,26 @@
     "line_whisper_line"
    ],
    "prompt": "Four students gather round a big table covered by one huge blank sheet of paper, sketching something new together with pencils and rulers; one kneels on a chair to reach the far corner, one points excitedly, one holds up a simple block model of a building. Coffee cups and pencils around the edges. The sheet stays blank. Square image 1024x1024; the table and the students fill about 90% of the width and 85% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l15_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "refs_when_made": [
+    "line_gluon_dual_control_car",
+    "line_gluon_students_blueprint",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the young learner with short curly hair or the instructor with glasses and a cardigan, draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Inside a driving-school car, seen through the windscreen from the front, the car body drawn as one simple wide outline. In the driver's seat a young learner (short curly hair, a hoodie) grips the steering wheel with both hands, concentrating. In the passenger seat an instructor (an older woman with glasses and a cardigan) sits calmly, one foot hovering over her own extra brake pedal on her side (shown in a small cutaway at the floor), one hand ready near the wheel. Both wear seatbelts and smile a little. Invented characters with simple round faces and dot eyes. A plain dashboard with no dials or markings. No signs, no writing on anything. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

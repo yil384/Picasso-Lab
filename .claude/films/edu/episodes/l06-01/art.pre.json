@@ -12,7 +12,8 @@
   "1F1B (PipeDream): start each backward as early as possible; stations only hold N, N-1, ..., 1 micro-batches in flight.",
   "The formula: bubble = (N-1)/M for both schedules; 1F1B wins on memory, which buys more micro-batches.",
   "Worked example: 3 stages, 3 micro-batches, a heavy first batch: 100% vs 83% bubble.",
-  "Takeaway: more stages means more bubble, and micro-batches cannot shrink below one sequence: you cannot cut a cupcake smaller (cliffhanger into L06-02)."
+  "Takeaway: more stages means more bubble, and micro-batches cannot shrink below one sequence: you cannot cut a cupcake smaller (cliffhanger into L06-02).",
+  "Cover (line_cover_l06_01; for the X post and thumbnails, not a film beat): four bakers on one conveyor line: one works flat out while three stand around."
  ],
  "reuse": [
   "line_gpu",
@@ -153,6 +154,21 @@
     "line_round_table"
    ],
    "prompt": "Close-up at a bakery counter, seen from the front, both characters waist up: the first baker (tall and thin, round glasses, white apron, small flat paper cap) holds a small plain kitchen knife, blade pointing down, directly above one single small cupcake on a cutting board, about to cut it in half to make it even smaller; the knife is drawn in outline only (blade and handle are both empty outlines, nothing filled in black). The second baker (long ponytail, white apron, small flat paper cap) gently holds the wrist of that same knife hand, stopping it in mid-air above the cupcake, and shakes her head, smiling, as if to say that is as small as it goes. Beside the board, a neat row of identical single cupcakes. Invented characters with simple round faces and dot eyes. Square image 1024x1024; the two bakers, board and cupcakes fill about 88% of the width, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_cover_l06_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_pp_bakery_idle",
+    "line_pp_bakery_busy",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's four bakers at their conveyor: draw the same four (same faces, hair, caps and aprons) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Seen from the front: a long plain counter with a flat conveyor belt running from left to right past four work stations: mixing (a big bowl and a whisk), oven (a small oven built into the counter), icing (a piping bag and a small cake turntable) and boxing (a few flat plain cake boxes). One single giant round cake sits on the belt at the mixing station. The four bakers (the same as in the reference images; invented characters with simple round faces and dot eyes, plain white aprons over rolled-up sleeves and small flat paper baker's caps, not tall chef hats: the first tall and thin with round glasses, the second with a long ponytail, the third short and sturdy with curly hair, the fourth with a neat bob haircut and freckles): the first whisks a huge bowl of batter flat out; the second leans on the oven, yawning; the third rests the chin on one hand; the fourth checks a wristwatch. The rest of the belt is empty. Nothing printed on the boxes. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

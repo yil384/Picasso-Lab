@@ -13,7 +13,8 @@
   "Pitfall, does it save compute? (slides 13-14): only if the GPU can multiply in the small format; otherwise every weight is unpacked back to FP16 first, and unpacking eight INT4 from one 32-bit word into half2 is fiddly (line_quant_vacuum_unpack).",
   "Benefits (slide 16): less memory, a big model on fewer GPUs (line_quant_van_fit); less traffic, faster small-batch decoding (line_tap_glass); simpler math.",
   "Slide 17: W4A16 vs W8A8 vs W4A4: memory and small batches favour 4-bit weights; at large batches the winner is whatever the GPU multiplies natively: A100 FP16, H100 FP8, B100 FP4 (line_quant_plug_adapter, taped slide 17).",
-  "Takeaway: quantization is three choices: the levels, who shares a scale, and whether the hardware speaks the format; next: making 4-bit weights accurate (GPTQ, AWQ)."
+  "Takeaway: quantization is three choices: the levels, who shares a scale, and whether the hardware speaks the format; next: making 4-bit weights accurate (GPTQ, AWQ).",
+  "Cover (line_cover_l12_02; for the X post and thumbnails, not a film beat): the cook holds one measuring scoop above four bowls of flour, from empty to a big heap."
  ],
  "reuse": [
   "line_switch_dimmer",
@@ -154,6 +155,26 @@
     "line_balance"
    ],
    "prompt": "A plain wall with two wall sockets side by side, seen straight from the front, a small desk lamp standing below each. At the left socket, a hand pushes in a plug that fits it directly, its pins sliding straight in, and the lamp below it lights at once (a few short ray lines). At the right socket, the plug's pins clearly do not match the socket's holes, so a big, chunky adapter block sits between plug and socket, a second hand fiddling with it, and the lamp below it is still dark. Sockets and plugs are simple invented shapes, not any real country's design. Landscape image 1536x1024; sockets, plugs, adapter, lamps and hands fill about 90% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l12_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chef",
+    "line_d_chefs",
+    "line_balance"
+   ],
+   "refs_when_made": [
+    "line_quant_scoop_bowls",
+    "line_chef",
+    "line_d_chefs"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the cook cast (tall pleated chef's hat, double-breasted jacket, apron), draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The cook (the same character in every picture): an invented cook with a simple round face, dot eyes, short hair under a tall pleated chef's hat, a double-breasted chef's jacket and a long apron tied at the waist. The cook stands behind a long kitchen counter, seen from the front, holding one small metal measuring scoop full of flour above the counter, very focused. On the counter, in one row from left to right, four identical wide mixing bowls, drawn large: the first is empty, the second holds a small heap of flour, the third a slightly bigger heap, the fourth a big tall heap. The bowls are plain. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

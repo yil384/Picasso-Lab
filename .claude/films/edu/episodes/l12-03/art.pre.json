@@ -13,7 +13,8 @@
   "AWQ (slide 24): only about 1% of the weights matter a lot: the ones that meet big activations, found by watching real inputs (line_awq_worn_path); scale those channels up before rounding and the activation down, so they round more precisely (line_awq_bubble_wrap).",
   "Results (slide 25): INT4 with groups of 128 matches FP16 on MBPP and GSM8K; about 3x faster than FP16 at batch 1 (check).",
   "llama.cpp (slide 26): plain C/C++, CPU and Apple silicon first: run the model at home, privately (line_local_laptop_elephant); GGUF uses small blocks (16-32) that a CPU can afford.",
-  "k-quants (slide 27): different layers get different bits, 2-6, like packing a suitcase item by item (line_kquant_suitcase_mix). Takeaway: careful rounding beats retraining: fix one and adjust the rest (GPTQ), or protect the few that matter (AWQ)."
+  "k-quants (slide 27): different layers get different bits, 2-6, like packing a suitcase item by item (line_kquant_suitcase_mix). Takeaway: careful rounding beats retraining: fix one and adjust the rest (GPTQ), or protect the few that matter (AWQ).",
+  "Cover (line_cover_l12_03; for the X post and thumbnails, not a film beat): the tailor pins a coat hem from left to right, smoothing the loose fabric ahead of each pin."
  ],
  "reuse": [
   "line_grow",
@@ -142,6 +143,26 @@
     "line_tiny_lab"
    ],
    "prompt": "Seen straight from above: a big open suitcase lying on a bed, packed in different ways in different sections: on the left, sweaters rolled up very tightly into small hard rolls; in the middle, T-shirts squeezed flat in a vacuum bag; at the top right, a camera nested in a thick padded case with soft foam all around it; at the bottom right, a pair of shoes stuffed with socks. Landscape image 1536x1024; the suitcase fills about 85% of the width and about 80% of the height. No labels, no logos on the camera. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l12_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "refs_when_made": [
+    "line_gptq_tailor_pin_hem",
+    "line_gptq_tailor_two_ways",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). If one of them shows the older tailor with round glasses, a tape measure round the neck and a wrist pincushion, draw the same character(s) (same faces, hair and clothes) in the new cover composition described; the others are style references only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The tailor (the same character in every picture): an invented older tailor with a simple round face, dot eyes, small round glasses, short curly hair, a cloth tape measure draped around the neck, a cardigan over a shirt with rolled-up sleeves, and a round pincushion strapped to the left wrist. A dress form wearing a long coat stands in the middle. The tailor kneels beside it, pinning up the hem from left to right: the left part of the hem is already folded up and held by a neat row of pins; the tailor's left hand pushes the newest pin in while the right hand gently smooths the still-loose fabric just to the right so it lies straight; further right the fabric still hangs loose. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

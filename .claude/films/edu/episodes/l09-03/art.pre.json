@@ -10,7 +10,8 @@
   "Mostly zeros, TACO: sparse formats and sparse loops, so you stop checking empty cups (line_sparse_muffin_tray).",
   "Fractal (ASPLOS 2024): group the zeros into blocks the hardware likes (line_sparse_trays_grouped); 'perforate' skips whole rows of the loop (line_sparse_perforate).",
   "Shapes that change, DietCode (MLSys 2022): one tuned kernel per shape does not scale (line_dyn_tin_shelf); tune small micro-kernels once and compose any size, a dispatcher picks the mix (line_dyn_push_tables).",
-  "Takeaway: same recipe, new primitives for each awkward case; the speaker's own favourites are Mercury and Fractal (check before saying)."
+  "Takeaway: same recipe, new primitives for each awkward case; the speaker's own favourites are Mercury and Fractal (check before saying).",
+  "Cover (line_cover_l09_03; for the X post and thumbnails, not a film beat): a huge muffin tray with only a few muffins; a cook peers into the empty cups through a magnifying glass."
  ],
  "reuse": [
   "line_round_table",
@@ -146,6 +147,21 @@
    ],
    "refnote": "The first attached image shows the manager character (hair in a neat bun with a pencil in it, waistcoat, small bow tie): draw that same character in a new pose. The other attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
    "prompt": "A restaurant dining room seen from the front and a little above, with identical small square tables, all exactly the same size. At the left, a pair of diners sits at one single square table. In the middle, a family of five sits at three identical square tables pushed together in a row. At the right, the manager (the same invented character as in the first reference image: hair in a neat bun with a pencil tucked in it, a waistcoat over a shirt with a small bow tie, trousers, simple round face with dot eyes) pushes one more identical square table to join a long row of five tables, where a big group of friends is sitting down. Invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the scene fills about 95% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l09_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_sparse_muffin_tray",
+    "line_gpu_station",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's muffin tray and the line cooks (low folded paper caps, not tall chef hats): draw them the same way in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A very large rectangular muffin tray seen from a little above, with a regular grid of round cups, four rows of ten. Only five cups, scattered, hold a muffin; all the others are empty. At the right, one small line cook (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) bends over the tray peering into an empty cup through a big magnifying glass, puzzled and weary, a few small sweat drops. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

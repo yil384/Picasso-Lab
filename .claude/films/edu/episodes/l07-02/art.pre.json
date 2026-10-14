@@ -12,7 +12,8 @@
   "Fix 1, striped (slide 24): deal the tokens out in turn like cards (line_ring_deal_cards): about 1.4x on 8 GPUs at 8k.",
   "Fix 2, zigzag (slide 25): cut into 2N chunks and fold, each GPU gets one early and one late chunk (line_zigzag_fold_strip), the work evens out (line_ring_even_work): about 1.7x, the usual default.",
   "Llama 3 CP (slides 26-27): documents packed into one long sequence make the masks messy, so each GPU all-gathers the small GQA keys/values at once (line_ring_packed_docs, line_ring_all_gather_pile).",
-  "Takeaway: communication grows with the length, compute with its square, so the talking hides behind the work (reuse line_balance)."
+  "Takeaway: communication grows with the length, compute with its square, so the talking hides behind the work (reuse line_balance).",
+  "Cover (line_cover_l07_02; for the X post and thumbnails, not a film beat): eight readers round one table pass their pages to the left like a wheel."
  ],
  "reuse": [
   "line_round_table",
@@ -152,6 +153,21 @@
     "line_reader_writer"
    ],
    "prompt": "Seen from above at a steep angle: the same four invented readers (simple round faces, dot eyes; one with short messy hair and round glasses in a sweater, one with a high ponytail and rolled-up sleeves, one with a cap worn backwards and a hoodie, one with short curly hair and a cardigan) sit around a small square table; all four reach into one shared tray in the middle at the same moment and each takes a complete, identical, thin stapled booklet; in front of each reader lies the booklet just taken. Square image 1024x1024; the table and readers fill about 90% of the width and of the height. The booklets are blank: no writing, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_cover_l07_02",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_ring_table_eight",
+    "line_ring_many_tables",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's readers round the table: draw the same readers (same faces and hairstyles) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Seen from above at a steep angle: one large round table drawn as a wide oval, with eight invented readers seated evenly around it (the same as in the references: simple round faces, dot eyes, eight different hairstyles: round glasses, a high ponytail, a cap worn backwards, short curls, a bun, a headband, long straight hair, a buzz cut). Each reader holds one sheet of paper and, all at the same moment, hands it to the neighbour on their left while receiving one from the right, so eight pages turn round the table like a wheel; small curved motion lines follow the pages round the ring. The pages are blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }

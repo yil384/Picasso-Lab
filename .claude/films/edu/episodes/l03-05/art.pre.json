@@ -11,7 +11,8 @@
   "FFN width: 4 x d_model for plain activations, about 8/3 for gated ones (slide 35; callback to L02-02) (line_tap_glass).",
   "Batch size: millions of tokens per step (Llama 3 4M-16M+); bigger batches mean fewer steps for the same compute and more machines at work (slide 36) (line_recipe_cookie_tray).",
   "Pitfall: past the critical batch size a bigger tray stops buying speed (line_recipe_tray_stuck); the good news (her words): it depends on the target loss, not the model size, so a small model can find it first (line_recipe_test_kitchen); in practice teams go past it anyway, paying overhead to cut months to days.",
-  "Takeaway: four ratios on one card; next lecture: how training is spread across thousands of GPUs (L04)."
+  "Takeaway: four ratios on one card; next lecture: how training is spread across thousands of GPUs (L04).",
+  "Cover (line_cover_l03_05; for the X post and thumbnails, not a film beat): a blank recipe card in its holder, measuring cups beside it, and a stack of books on the kitchen scale where the flour should be."
  ],
  "reuse": [
   "line_balance",
@@ -129,6 +130,20 @@
    ],
    "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
    "prompt": "Two kitchens side by side, seen from the front, joined by one open doorway. On the left, a tiny test kitchen corner with one small oven, its door open, and a small counter. On the right, a big bakery with one huge oven, many times larger, its wide door open and waiting. In the doorway between them walks the woman chef with a bob and a fringe (tall white chef hat, double-breasted chef jacket, apron), wearing oven gloves, carrying one baking tray of neat round cookies, the very same tray that just came out of the small oven, from the small kitchen towards the huge oven, with a confident smile. Landscape image 1536x1024; the two kitchens and the chef fill about 92% of the width and about 80% of the height. The oven knobs have no numbers. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l03_05",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "refs": [
+    "line_recipe_card_stand",
+    "line_recipe_chinchilla_books",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's recipe card stand and books: draw these props in the same way, in the new cover composition described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A kitchen counter seen from the front. In the middle, a large blank recipe card stands propped up in a little wooden card holder. On the left, four nested measuring cups in a row from big to small and a row of measuring spoons. On the right, a small kitchen scale with a round dial whose single needle has swung far round; on the scale's pan, where the flour should be, sits a neat stack of about twelve plain books, about as tall as the recipe card. A mixing bowl with a whisk in front. No people. The card is blank, the book spines are plain and the dial has only tick marks. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
   }
  ]
 }
