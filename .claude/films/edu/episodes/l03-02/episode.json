@@ -1,0 +1,2176 @@
+{
+ "id": "l03-02",
+ "lecture": "L03",
+ "facts": "FACTS.md",
+ "title": "L03-02 The KV Cache and Its Diet",
+ "langs": [
+  "en"
+ ],
+ "voice": {
+  "lines": "vo_lines.json",
+  "clips": "clips.json",
+  "clipDir": "~/picasso-work/clips/l03-02",
+  "rate": "+4%",
+  "slotPad": 0.4
+ },
+ "sound": {
+  "dir": "~/picasso-assets/snd"
+ },
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "slides",
+  "drawings": {
+   "lorry": {
+    "src": "line_kv_lorry_convoy",
+    "w": 1040
+   },
+   "remake": {
+    "src": "line_kv_remake_tags",
+    "w": 1040
+   },
+   "wall": {
+    "src": "line_kv_cloakroom_wall",
+    "w": 1000
+   },
+   "tower": {
+    "src": "line_kv_cloakroom_tower",
+    "w": 330
+   },
+   "trolley": {
+    "src": "line_kv_trolley_reload",
+    "w": 980
+   },
+   "flood": {
+    "src": "line_kv_parcel_flood",
+    "w": 800
+   },
+   "racks": {
+    "src": "line_kv_private_racks",
+    "w": 1040
+   },
+   "crowd": {
+    "src": "line_kv_one_rack_crowd",
+    "w": 980
+   },
+   "groups": {
+    "src": "line_kv_group_racks",
+    "w": 1040
+   },
+   "qkv": {
+    "src": "line_word_three_things",
+    "w": 560
+   },
+   "mic": {
+    "src": "line_mic",
+    "w": 240,
+    "boost": 0.3
+   }
+  },
+  "slides": {
+   "s11": {
+    "src": "p11.png"
+   },
+   "s12": {
+    "src": "p12.png"
+   },
+   "s13": {
+    "src": "p13.png"
+   },
+   "s14": {
+    "src": "p14.png"
+   }
+  }
+ },
+ "mic": {
+  "drawing": "mic"
+ },
+ "end": {
+  "at": "endCard"
+ },
+ "panels": [
+  {
+   "id": "p0",
+   "note": "cover: a million-token prompt (the note card) -> about 8 TB to remember (the lorries), textbook attention on 405B (F18, hypothetical MHA)",
+   "items": [
+    {
+     "id": "lorry",
+     "t": "draw",
+     "d": "lorry",
+     "xy": [
+      540,
+      1040
+     ],
+     "w": 1040
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "lorry",
+      0.807,
+      0.2903
+     ],
+     "w": 520,
+     "h": 380,
+     "a": 0.3,
+     "rot": 0.05
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "lorry",
+      0.1071,
+      0.5977
+     ],
+     "w": 200,
+     "h": 150,
+     "a": 0.55,
+     "rot": -0.1
+    },
+    {
+     "t": "label",
+     "text": "title.0",
+     "xy": [
+      66,
+      350
+     ],
+     "px": 132,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.1",
+     "xy": [
+      84,
+      452
+     ],
+     "px": 78,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "id": "title2"
+    },
+    {
+     "t": "underline",
+     "of": "title2",
+     "dx": 6,
+     "dy": 42,
+     "rise": -8,
+     "bend": 0.03,
+     "at": "title",
+     "dur": 0.6
+    },
+    {
+     "t": "sans",
+     "text": "strip",
+     "xy": [
+      86,
+      528
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left"
+    },
+    {
+     "t": "label",
+     "text": "hookP",
+     "xy": [
+      70,
+      612
+     ],
+     "px": 50,
+     "align": "left",
+     "font": "latin",
+     "rot": -0.02
+    },
+    {
+     "t": "arrow",
+     "from": [
+      64,
+      630
+     ],
+     "to": [
+      "lorry",
+      0.0778,
+      0.5538,
+      -6,
+      0
+     ],
+     "bend": 0.35,
+     "lw": 6,
+     "at": "title-9"
+    },
+    {
+     "t": "label",
+     "text": "hookT",
+     "xy": [
+      110,
+      680
+     ],
+     "px": 56,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "rot": -0.02
+    },
+    {
+     "t": "arrow",
+     "from": [
+      700,
+      668
+     ],
+     "to": [
+      "lorry",
+      0.7679,
+      0.1696
+     ],
+     "bend": -0.25,
+     "lw": 6,
+     "at": "title-9"
+    },
+    {
+     "t": "sans",
+     "text": "hookS",
+     "xy": [
+      114,
+      728
+     ],
+     "px": 26,
+     "a": 0.8,
+     "align": "left"
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "note": "callback to L03-01: query = question card, key = name tag, value = parcel (F1)",
+   "items": [
+    {
+     "t": "label",
+     "text": "qkvT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 58,
+     "align": "left",
+     "at": "p1+0.3",
+     "rot": -0.03,
+     "fit": 940
+    },
+    {
+     "id": "qkv",
+     "t": "draw",
+     "d": "qkv",
+     "xy": [
+      320,
+      880
+     ],
+     "w": 500,
+     "at": "p1+0.3",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "qkv",
+      0.22,
+      0.0803
+     ],
+     "w": 300,
+     "h": 200,
+     "a": 0.5,
+     "at": "n2@query"
+    },
+    {
+     "t": "label",
+     "text": "qL",
+     "xy": [
+      740,
+      480
+     ],
+     "px": 68,
+     "color": "red",
+     "font": "latin",
+     "at": "n2@query"
+    },
+    {
+     "t": "label",
+     "text": "qS",
+     "xy": [
+      740,
+      545
+     ],
+     "px": 38,
+     "at": "n2@query+0.4",
+     "fit": 280
+    },
+    {
+     "t": "arrow",
+     "from": [
+      650,
+      490
+     ],
+     "to": [
+      "qkv",
+      0.3891,
+      0.087,
+      10,
+      0
+     ],
+     "bend": 0.2,
+     "lw": 5,
+     "at": "n2@query+0.3",
+     "dur": 0.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "qkv",
+      0.5239,
+      0.4362
+     ],
+     "w": 220,
+     "h": 220,
+     "a": 0.45,
+     "at": "n2@key"
+    },
+    {
+     "t": "label",
+     "text": "kL",
+     "xy": [
+      740,
+      730
+     ],
+     "px": 68,
+     "color": "red",
+     "font": "latin",
+     "at": "n2@key"
+    },
+    {
+     "t": "label",
+     "text": "kS",
+     "xy": [
+      740,
+      795
+     ],
+     "px": 38,
+     "at": "n2@key+0.4",
+     "fit": 280
+    },
+    {
+     "t": "arrow",
+     "from": [
+      670,
+      740
+     ],
+     "to": [
+      "qkv",
+      0.6219,
+      0.4295,
+      10,
+      0
+     ],
+     "bend": -0.2,
+     "lw": 5,
+     "at": "n2@key+0.3",
+     "dur": 0.4
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "qkv",
+      0.7567,
+      0.5101
+     ],
+     "w": 260,
+     "h": 220,
+     "a": 0.5,
+     "at": "n2@value"
+    },
+    {
+     "t": "label",
+     "text": "vL",
+     "xy": [
+      740,
+      970
+     ],
+     "px": 68,
+     "color": "red",
+     "font": "latin",
+     "at": "n2@value"
+    },
+    {
+     "t": "label",
+     "text": "vS",
+     "xy": [
+      740,
+      1035
+     ],
+     "px": 38,
+     "at": "n2@value+0.4",
+     "fit": 280
+    },
+    {
+     "t": "arrow",
+     "from": [
+      670,
+      950
+     ],
+     "to": [
+      "qkv",
+      0.8303,
+      0.5437,
+      10,
+      0
+     ],
+     "bend": 0.2,
+     "lw": 5,
+     "at": "n2@value+0.3",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "pick",
+     "xy": [
+      70,
+      400
+     ],
+     "px": 36,
+     "align": "left",
+     "at": "n3@question",
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "note": "without a cache every earlier token remakes its key and value at every step (F2); her clip C1",
+   "items": [
+    {
+     "t": "label",
+     "text": "nvT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p2+0.3",
+     "rot": -0.03
+    },
+    {
+     "t": "sans",
+     "text": "nvS",
+     "xy": [
+      74,
+      395
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "n4@one"
+    },
+    {
+     "id": "remake",
+     "t": "draw",
+     "d": "remake",
+     "xy": [
+      540,
+      945
+     ],
+     "w": 1040,
+     "at": "p2+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "remake",
+      0.9169,
+      0.4937
+     ],
+     "r": [
+      70,
+      200
+     ],
+     "seed": 4,
+     "lw": 6,
+     "at": "n4@arrives",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "newT",
+     "xy": [
+      850,
+      668
+     ],
+     "px": 46,
+     "color": "red",
+     "font": "latin",
+     "at": "n4@arrives+0.2"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      930,
+      690
+     ],
+     "to": [
+      "remake",
+      0.9137,
+      0.1495,
+      0,
+      -12
+     ],
+     "bend": -0.25,
+     "lw": 5,
+     "at": "n4@arrives+0.4",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "again",
+     "xy": [
+      470,
+      1222
+     ],
+     "px": 50,
+     "color": "red",
+     "at": "n4@again",
+     "patch": 0.3,
+     "id": "againL"
+    },
+    {
+     "t": "label",
+     "text": "same",
+     "xy": [
+      70,
+      470
+     ],
+     "px": 42,
+     "align": "left",
+     "at": "n5@same",
+     "fit": 940
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       150,
+       1208
+      ],
+      [
+       860,
+       1202
+      ]
+     ],
+     "lw": 7,
+     "at": "n5@waste",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "waste",
+     "xy": [
+      70,
+      535
+     ],
+     "px": 54,
+     "color": "red",
+     "align": "left",
+     "at": "n5@waste+0.3"
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "note": "her slide 11, title + bullet only (the figure is not hers: cropped out), below the mic tag, fading at n7; the cloakroom drawn from the start: K and V kept, the newcomer brings only Q (F3, F4); her clip C2",
+   "items": [
+    {
+     "id": "wall",
+     "t": "draw",
+     "d": "wall",
+     "xy": [
+      540,
+      1040
+     ],
+     "w": 920,
+     "at": "p3+0.7",
+     "dur": 2.6
+    },
+    {
+     "t": "group",
+     "fadeOut": [
+      "n7-0.7",
+      "n7-0.2"
+     ],
+     "items": [
+      {
+       "t": "label",
+       "text": "hs11",
+       "xy": [
+        150,
+        540
+       ],
+       "px": 52,
+       "color": "red",
+       "at": "tape3+0.4",
+       "rot": -0.06
+      },
+      {
+       "id": "sl",
+       "t": "printout",
+       "slide": "s11",
+       "xy": [
+        540,
+        655
+       ],
+       "w": 1040,
+       "rot": -0.015,
+       "crop": [
+        0.015,
+        0.0267,
+        0.88,
+        0.1973
+       ],
+       "at": "p3+0.7"
+      },
+      {
+       "t": "tape",
+       "i": 0,
+       "xy": [
+        80,
+        583
+       ],
+       "w": 240,
+       "rot": -0.55,
+       "at": "tape3"
+      },
+      {
+       "t": "tape",
+       "i": 5,
+       "xy": [
+        1000,
+        579
+       ],
+       "w": 200,
+       "rot": 0.5,
+       "at": "tape3+0.15"
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sl:px",
+         97,
+         250
+        ],
+        [
+         "sl:px",
+         979,
+         248
+        ]
+       ],
+       "lw": 6,
+       "at": "n6@only",
+       "dur": 0.8
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sl:px",
+         749,
+         205
+        ],
+        [
+         "sl:px",
+         1454,
+         203
+        ]
+       ],
+       "lw": 5,
+       "at": "n6@keep",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "kvT",
+     "xy": [
+      540,
+      600
+     ],
+     "px": 64,
+     "color": "red",
+     "at": "n7@kv",
+     "out": "n9-0.3",
+     "id": "kvL"
+    },
+    {
+     "t": "label",
+     "text": "noQ",
+     "xy": [
+      540,
+      600
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "n9@q",
+     "fit": 960
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "wall",
+      0.751,
+      0.3197
+     ],
+     "w": 520,
+     "h": 300,
+     "a": 0.25,
+     "at": "n7@wall"
+    },
+    {
+     "t": "group",
+     "at": "n7@keys",
+     "fadeOut": [
+      "n8-0.5",
+      "n8-0.15"
+     ],
+     "items": [
+      {
+       "t": "label",
+       "text": "kKV",
+       "xy": [
+        540,
+        672
+       ],
+       "px": 42,
+       "font": "latin",
+       "at": "n7@keys",
+       "fit": 900
+      },
+      {
+       "t": "arrow",
+       "from": [
+        760,
+        690
+       ],
+       "to": [
+        "wall",
+        0.8491,
+        0.3197
+       ],
+       "bend": -0.2,
+       "lw": 5,
+       "at": "n7@keys+0.3",
+       "dur": 0.4
+      }
+     ]
+    },
+    {
+     "t": "label",
+     "text": "kQ",
+     "xy": [
+      540,
+      672
+     ],
+     "px": 42,
+     "font": "latin",
+     "at": "n8@newcomer",
+     "out": "n9-0.3",
+     "fit": 900
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "wall",
+      0.2929,
+      0.3197
+     ],
+     "r": [
+      50,
+      42
+     ],
+     "seed": 7,
+     "lw": 5,
+     "at": "n8@question",
+     "dur": 0.4
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "note": "the cache grows by one tag + parcel per token and is read again for every new token; the moving is the slow part (F5)",
+   "items": [
+    {
+     "t": "label",
+     "text": "ctT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "p4+0.3",
+     "rot": -0.03
+    },
+    {
+     "id": "trolley",
+     "t": "draw",
+     "d": "trolley",
+     "xy": [
+      540,
+      935
+     ],
+     "w": 980,
+     "at": "p4+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "haul",
+     "xy": [
+      70,
+      420
+     ],
+     "px": 44,
+     "color": "red",
+     "align": "left",
+     "at": "n10@hauled",
+     "fit": 940
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "trolley",
+      0.6966,
+      0.4209
+     ],
+     "r": [
+      190,
+      300
+     ],
+     "seed": 5,
+     "lw": 6,
+     "at": "n10@grows",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "slow",
+     "xy": [
+      70,
+      490
+     ],
+     "px": 38,
+     "align": "left",
+     "at": "n11@shazeer",
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "note": "the per-token formula letter by letter (F6): 2 = key + value (C4, F7), layers = floors of a stack (F8, F36), KV heads = a rack per head (F35), head size, 2 bytes",
+   "items": [
+    {
+     "t": "label",
+     "text": "fT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "p5+0.3",
+     "rot": -0.03
+    },
+    {
+     "id": "tower",
+     "t": "draw",
+     "d": "tower",
+     "xy": [
+      210,
+      880
+     ],
+     "w": 280,
+     "at": "p5+0.3",
+     "dur": 2.6
+    },
+    {
+     "t": "label",
+     "text": "f0",
+     "xy": [
+      420,
+      520
+     ],
+     "px": 76,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n12@two"
+    },
+    {
+     "t": "label",
+     "text": "f0n",
+     "xy": [
+      424,
+      576
+     ],
+     "px": 36,
+     "align": "left",
+     "at": "c4@45%"
+    },
+    {
+     "t": "label",
+     "text": "f1",
+     "xy": [
+      420,
+      670
+     ],
+     "px": 70,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n13@layers"
+    },
+    {
+     "t": "label",
+     "text": "f1n",
+     "xy": [
+      424,
+      724
+     ],
+     "px": 36,
+     "align": "left",
+     "at": "n13@floor",
+     "fit": 450
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "tower",
+      0.497,
+      0.22
+     ],
+     "r": [
+      150,
+      62
+     ],
+     "seed": 2,
+     "lw": 5,
+     "at": "n13@floor+0.3",
+     "dur": 0.4
+    },
+    {
+     "t": "arrow",
+     "from": [
+      408,
+      700
+     ],
+     "to": [
+      "tower",
+      0.88,
+      0.22,
+      10,
+      0
+     ],
+     "bend": 0.2,
+     "lw": 5,
+     "at": "n13@floor+0.5",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "f2",
+     "xy": [
+      420,
+      820
+     ],
+     "px": 70,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n13@kv"
+    },
+    {
+     "t": "label",
+     "text": "f2n",
+     "xy": [
+      424,
+      874
+     ],
+     "px": 36,
+     "align": "left",
+     "at": "n13@rack",
+     "fit": 450
+    },
+    {
+     "t": "label",
+     "text": "f3",
+     "xy": [
+      420,
+      970
+     ],
+     "px": 70,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n13@size"
+    },
+    {
+     "t": "label",
+     "text": "f3n",
+     "xy": [
+      424,
+      1024
+     ],
+     "px": 36,
+     "align": "left",
+     "at": "n13@numbers",
+     "fit": 450
+    },
+    {
+     "t": "label",
+     "text": "f4",
+     "xy": [
+      420,
+      1120
+     ],
+     "px": 70,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n13@bytes"
+    },
+    {
+     "t": "label",
+     "text": "f4n",
+     "xy": [
+      424,
+      1174
+     ],
+     "px": 36,
+     "align": "left",
+     "at": "n13@16bit",
+     "fit": 450
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "note": "her slide 12 below the mic tag: 8B row worked (F12, F13), batch 1 (C6, F20), 405B row (F16, F18), the 1M column struck (zoomed) and re-lettered in decimal (D1)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hyp",
+     "xy": [
+      70,
+      440
+     ],
+     "px": 44,
+     "align": "left",
+     "at": "n14@plain",
+     "out": "n17",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "hs12",
+     "xy": [
+      150,
+      572
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape6+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s12",
+     "xy": [
+      540,
+      815
+     ],
+     "w": 1040,
+     "rot": -0.015,
+     "crop": [
+      0.045,
+      0.2133,
+      0.95,
+      0.6667
+     ],
+     "at": "p6+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      80,
+      604
+     ],
+     "w": 240,
+     "rot": -0.55,
+     "at": "tape6"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      1000,
+      600
+     ],
+     "w": 200,
+     "rot": 0.5,
+     "at": "tape6+0.15"
+    },
+    {
+     "t": "box",
+     "on": "sl:px",
+     "rect": [
+      150,
+      622,
+      1980,
+      694
+     ],
+     "lw": 6,
+     "at": "n14@8billion",
+     "dur": 0.8
+    },
+    {
+     "t": "group",
+     "at": "n14@2",
+     "fadeOut": [
+      "n16-0.5",
+      "n16-0.1"
+     ],
+     "items": [
+      {
+       "t": "label",
+       "text": "a8",
+       "xy": [
+        470,
+        1080
+       ],
+       "px": 60,
+       "color": "red",
+       "font": "latin",
+       "at": "n14@2"
+      },
+      {
+       "t": "label",
+       "text": "b8",
+       "xy": [
+        470,
+        1146
+       ],
+       "px": 44,
+       "font": "latin",
+       "at": "n15@524288",
+       "fit": 780
+      },
+      {
+       "t": "label",
+       "text": "c8",
+       "xy": [
+        470,
+        1200
+       ],
+       "px": 44,
+       "font": "latin",
+       "at": "n15@4096token"
+      }
+     ]
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      495,
+      950
+     ],
+     "r": [
+      380,
+      40
+     ],
+     "seed": 4,
+     "lw": 6,
+     "at": "c6@35%",
+     "dur": 0.4
+    },
+    {
+     "t": "box",
+     "on": "sl:px",
+     "rect": [
+      150,
+      762,
+      1980,
+      866
+     ],
+     "lw": 6,
+     "at": "n16@405billion",
+     "dur": 0.8
+    },
+    {
+     "t": "group",
+     "at": "n16@126",
+     "fadeOut": [
+      "n17",
+      "n17+0.4"
+     ],
+     "items": [
+      {
+       "t": "label",
+       "text": "a405",
+       "xy": [
+        470,
+        1080
+       ],
+       "px": 60,
+       "color": "red",
+       "font": "latin",
+       "at": "n16@126"
+      },
+      {
+       "t": "label",
+       "text": "b405",
+       "xy": [
+        470,
+        1146
+       ],
+       "px": 44,
+       "font": "latin",
+       "at": "n16@83",
+       "fit": 780
+      },
+      {
+       "t": "label",
+       "text": "c405",
+       "xy": [
+        470,
+        1200
+       ],
+       "px": 44,
+       "font": "latin",
+       "at": "n16@million"
+      }
+     ]
+    },
+    {
+     "t": "group",
+     "at": "n17@decimal-0.3",
+     "fadeIn": [
+      "n17@decimal-0.3",
+      "n17@decimal+0.1"
+     ],
+     "items": [
+      {
+       "t": "label",
+       "text": "a405",
+       "xy": [
+        470,
+        1080
+       ],
+       "px": 60,
+       "color": "red",
+       "font": "latin",
+       "at": "n16@126"
+      },
+      {
+       "t": "label",
+       "text": "b405",
+       "xy": [
+        470,
+        1146
+       ],
+       "px": 44,
+       "font": "latin",
+       "at": "n16@83",
+       "fit": 780
+      },
+      {
+       "t": "label",
+       "text": "c405",
+       "xy": [
+        470,
+        1200
+       ],
+       "px": 44,
+       "font": "latin",
+       "at": "n16@million"
+      }
+     ]
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1640,
+       662
+      ],
+      [
+       "sl:px",
+       1805,
+       656
+      ]
+     ],
+     "lw": 5,
+     "at": "n17@units",
+     "dur": 0.3
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1640,
+       727
+      ],
+      [
+       "sl:px",
+       1795,
+       721
+      ]
+     ],
+     "lw": 5,
+     "at": "n17@units+0.15",
+     "dur": 0.3
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       1640,
+       817
+      ],
+      [
+       "sl:px",
+       1795,
+       811
+      ]
+     ],
+     "lw": 5,
+     "at": "n17@units+0.3",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "dec",
+     "xy": [
+      470,
+      1258
+     ],
+     "px": 44,
+     "color": "red",
+     "font": "latin",
+     "at": "n17@decimal",
+     "fit": 780,
+     "patch": 0.3
+    }
+   ],
+   "camera": [
+    {
+     "at": "n17-0.3",
+     "xy": [
+      540,
+      960
+     ],
+     "z": 1.0
+    },
+    {
+     "at": "n17+0.5",
+     "xy": [
+      790,
+      880
+     ],
+     "z": 1.8
+    },
+    {
+     "at": "n17@decimal-1.0",
+     "xy": [
+      790,
+      880
+     ],
+     "z": 1.8
+    },
+    {
+     "at": "n17@decimal-0.2",
+     "xy": [
+      540,
+      960
+     ],
+     "z": 1.0
+    }
+   ]
+  },
+  {
+   "id": "p7",
+   "note": "the cloakroom flooded; the 405B (Llama 3.1) stops at 128K, the million is hypothetical (F21); so is plain MHA: her clip C7 (F22)",
+   "items": [
+    {
+     "t": "label",
+     "text": "flT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "p7+0.3",
+     "rot": -0.03
+    },
+    {
+     "id": "flood",
+     "t": "draw",
+     "d": "flood",
+     "xy": [
+      540,
+      948
+     ],
+     "w": 760,
+     "at": "p7+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "ctx",
+     "xy": [
+      70,
+      425
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n18@128k"
+    },
+    {
+     "t": "label",
+     "text": "thx",
+     "xy": [
+      70,
+      492
+     ],
+     "px": 42,
+     "align": "left",
+     "at": "n18@thought",
+     "fit": 600
+    },
+    {
+     "t": "label",
+     "text": "mhc",
+     "xy": [
+      70,
+      548
+     ],
+     "px": 42,
+     "color": "red",
+     "align": "left",
+     "at": "c7",
+     "fit": 600
+    }
+   ]
+  },
+  {
+   "id": "p8",
+   "note": "the formula again, KV heads underlined; plain multi-head attention: a private rack per head (F9)",
+   "items": [
+    {
+     "t": "label",
+     "text": "g8a",
+     "xy": [
+      420,
+      440
+     ],
+     "px": 58,
+     "align": "right",
+     "font": "latin",
+     "at": "p8+0.4"
+    },
+    {
+     "t": "label",
+     "text": "g8b",
+     "xy": [
+      440,
+      440
+     ],
+     "px": 58,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "p8+0.6",
+     "id": "kvh"
+    },
+    {
+     "t": "label",
+     "text": "g8c",
+     "xy": [
+      540,
+      525
+     ],
+     "px": 50,
+     "font": "latin",
+     "at": "p8+0.8"
+    },
+    {
+     "t": "underline",
+     "of": "kvh",
+     "dx": 4,
+     "dy": 34,
+     "rise": -6,
+     "bend": 0.03,
+     "at": "n19@kv",
+     "dur": 0.6
+    },
+    {
+     "id": "racks",
+     "t": "draw",
+     "d": "racks",
+     "xy": [
+      540,
+      960
+     ],
+     "w": 1040,
+     "at": "n19@plain",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "mha",
+     "xy": [
+      500,
+      700
+     ],
+     "px": 48,
+     "color": "red",
+     "at": "n19@private",
+     "fit": 720
+    },
+    {
+     "t": "label",
+     "text": "n32",
+     "xy": [
+      500,
+      1230
+     ],
+     "px": 48,
+     "font": "latin",
+     "at": "n19@32",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p9",
+   "note": "multi-query: every head shares one rack (F23); 32-128x smaller (F24); her clip C12; the price: quality can drop (F25)",
+   "items": [
+    {
+     "t": "label",
+     "text": "mqT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "p9+0.3",
+     "rot": -0.03
+    },
+    {
+     "t": "sans",
+     "text": "mqS",
+     "xy": [
+      74,
+      395
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "p9+0.6"
+    },
+    {
+     "id": "crowd",
+     "t": "draw",
+     "d": "crowd",
+     "xy": [
+      540,
+      990
+     ],
+     "w": 960,
+     "at": "p9+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "one",
+     "xy": [
+      70,
+      470
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n20@share"
+    },
+    {
+     "t": "label",
+     "text": "mq",
+     "xy": [
+      70,
+      540
+     ],
+     "px": 48,
+     "align": "left",
+     "font": "latin",
+     "at": "n20@shrinks"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "crowd",
+      0.5541,
+      0.6878
+     ],
+     "r": [
+      150,
+      160
+     ],
+     "seed": 6,
+     "lw": 6,
+     "at": "n20@rack",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "sq",
+     "xy": [
+      70,
+      610
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "at": "n21@price"
+    }
+   ]
+  },
+  {
+   "id": "p10",
+   "note": "grouped-query: groups of heads share a rack (F26); quality near MHA, speed near MQA (F28)",
+   "items": [
+    {
+     "t": "label",
+     "text": "gqT",
+     "xy": [
+      70,
+      330
+     ],
+     "px": 60,
+     "align": "left",
+     "at": "p10+0.3",
+     "rot": -0.03,
+     "fit": 940
+    },
+    {
+     "t": "sans",
+     "text": "gqS",
+     "xy": [
+      74,
+      395
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "at": "p10+0.6"
+    },
+    {
+     "id": "groups",
+     "t": "draw",
+     "d": "groups",
+     "xy": [
+      540,
+      975
+     ],
+     "w": 1040,
+     "at": "p10+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "grp",
+     "xy": [
+      70,
+      470
+     ],
+     "px": 46,
+     "color": "red",
+     "align": "left",
+     "at": "n22@groups",
+     "fit": 940
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "groups",
+      0.204,
+      0.6424
+     ],
+     "r": [
+      100,
+      130
+     ],
+     "seed": 1,
+     "lw": 5,
+     "at": "n22@shares",
+     "dur": 0.4
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "groups",
+      0.4954,
+      0.6701
+     ],
+     "r": [
+      100,
+      130
+     ],
+     "seed": 2,
+     "lw": 5,
+     "at": "n22@shares+0.2",
+     "dur": 0.4
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "groups",
+      0.7934,
+      0.6701
+     ],
+     "r": [
+      100,
+      130
+     ],
+     "seed": 3,
+     "lw": 5,
+     "at": "n22@shares+0.4",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "res",
+     "xy": [
+      70,
+      545
+     ],
+     "px": 40,
+     "align": "left",
+     "at": "n23@quality",
+     "rows": {
+      "dy": 50,
+      "dt": 0.8
+     },
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p11",
+   "note": "her slide 14 cropped to the Llama rows (D4), zoomed while 4x / 8x / 16x are ringed (F27); the 405B million-token cache from 8.3 TB to 516 GB (F29)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs14",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape11+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s14",
+     "xy": [
+      540,
+      530
+     ],
+     "w": 1040,
+     "rot": -0.015,
+     "crop": [
+      0.05,
+      0.2933,
+      0.83,
+      0.2178
+     ],
+     "at": "p11+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      80,
+      447
+     ],
+     "w": 240,
+     "rot": -0.55,
+     "at": "tape11"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      1000,
+      443
+     ],
+     "w": 200,
+     "rot": 0.5,
+     "at": "tape11+0.15"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1471,
+      440
+     ],
+     "r": [
+      30,
+      17
+     ],
+     "seed": 2,
+     "lw": 6,
+     "at": "n24@4",
+     "dur": 0.4
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1471,
+      496
+     ],
+     "r": [
+      30,
+      17
+     ],
+     "seed": 5,
+     "lw": 6,
+     "at": "n24@64+0.5",
+     "dur": 0.4
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      1480,
+      551
+     ],
+     "r": [
+      36,
+      17
+     ],
+     "seed": 8,
+     "lw": 6,
+     "at": "n24@128+0.5",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "d4",
+     "xy": [
+      540,
+      740
+     ],
+     "px": 62,
+     "font": "latin",
+     "at": "n24.end-0.2"
+    },
+    {
+     "t": "label",
+     "text": "d8",
+     "xy": [
+      540,
+      822
+     ],
+     "px": 62,
+     "font": "latin",
+     "at": "n24.end+0.1"
+    },
+    {
+     "t": "label",
+     "text": "d16",
+     "xy": [
+      540,
+      904
+     ],
+     "px": 62,
+     "font": "latin",
+     "at": "n24.end+0.4"
+    },
+    {
+     "t": "label",
+     "text": "gi",
+     "xy": [
+      540,
+      1030
+     ],
+     "px": 44,
+     "at": "n25@giant",
+     "fit": 900
+    },
+    {
+     "t": "label",
+     "text": "drop",
+     "xy": [
+      540,
+      1135
+     ],
+     "px": 86,
+     "color": "red",
+     "font": "latin",
+     "at": "n25@down",
+     "id": "dropL"
+    },
+    {
+     "t": "underline",
+     "of": "dropL",
+     "dx": 4,
+     "dy": 46,
+     "rise": -6,
+     "bend": 0.03,
+     "at": "n25@516+0.4",
+     "dur": 0.6
+    }
+   ],
+   "camera": [
+    {
+     "at": "n24-0.2",
+     "xy": [
+      540,
+      960
+     ],
+     "z": 1.0
+    },
+    {
+     "at": "n24+0.6",
+     "xy": [
+      760,
+      560
+     ],
+     "z": 1.6
+    },
+    {
+     "at": "n24.end-1.0",
+     "xy": [
+      760,
+      560
+     ],
+     "z": 1.6
+    },
+    {
+     "at": "n24.end-0.2",
+     "xy": [
+      540,
+      960
+     ],
+     "z": 1.0
+    }
+   ]
+  },
+  {
+   "id": "p12",
+   "note": "her slide 13, text only (the figure is from the GQA paper: cropped out): mainly an inference saving (F31); her clip C13; the trolley again",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs13",
+     "xy": [
+      150,
+      612
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "tape12+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s13",
+     "xy": [
+      540,
+      740
+     ],
+     "w": 1040,
+     "rot": -0.015,
+     "crop": [
+      0.06,
+      0.7022,
+      0.86,
+      0.2187
+     ],
+     "at": "p12+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      80,
+      660
+     ],
+     "w": 240,
+     "rot": -0.55,
+     "at": "tape12"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      1000,
+      656
+     ],
+     "w": 200,
+     "rot": 0.5,
+     "at": "tape12+0.15"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       683,
+       1033
+      ],
+      [
+       "sl:px",
+       1381,
+       1031
+      ]
+     ],
+     "lw": 6,
+     "at": "n26@mainly",
+     "dur": 0.7
+    },
+    {
+     "t": "label",
+     "text": "ar",
+     "xy": [
+      490,
+      880
+     ],
+     "px": 54,
+     "at": "n26@arithmetic"
+    },
+    {
+     "t": "label",
+     "text": "mem",
+     "xy": [
+      490,
+      950
+     ],
+     "px": 58,
+     "color": "red",
+     "at": "c13@35%"
+    },
+    {
+     "id": "trolley2",
+     "t": "draw",
+     "d": "trolley",
+     "xy": [
+      540,
+      1195
+     ],
+     "w": 620,
+     "at": "n27-0.2",
+     "dur": 1.8
+    }
+   ]
+  },
+  {
+   "id": "p13",
+   "note": "takeaways (F3, F6, F27) over the shared racks; next: compress instead of share (F33)",
+   "items": [
+    {
+     "t": "label",
+     "text": "s1",
+     "xy": [
+      70,
+      340
+     ],
+     "px": 58,
+     "align": "left",
+     "at": "n28@keep"
+    },
+    {
+     "t": "label",
+     "text": "s2",
+     "xy": [
+      70,
+      420
+     ],
+     "px": 38,
+     "align": "left",
+     "font": "latin",
+     "at": "n28@size",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "s3",
+     "xy": [
+      70,
+      495
+     ],
+     "px": 52,
+     "color": "red",
+     "align": "left",
+     "at": "n28@shrink"
+    },
+    {
+     "id": "groups2",
+     "t": "draw",
+     "d": "groups",
+     "xy": [
+      540,
+      990
+     ],
+     "w": 960,
+     "at": "p13+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "next",
+     "xy": [
+      540,
+      640
+     ],
+     "px": 56,
+     "color": "red",
+     "at": "n29@zip",
+     "patch": 0.3
+    }
+   ]
+  }
+ ]
+}

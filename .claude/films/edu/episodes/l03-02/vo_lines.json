@@ -1,0 +1,152 @@
+[
+ {
+  "id": "n0",
+  "en": "A million-token prompt: about eight terabytes of memory, just to remember it.",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "That is with the textbook kind of attention, on Llama 3's biggest size, 405 billion parameters: about ten times the model's own weights. So where does that memory go, and how do real models put it on a diet? From Prof. Yufei Ding's CSE 291P, lecture 3.",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "Quick callback to the last episode. Every token at the attention party carries three things: a question card, its query; a name tag, its key; and a parcel, its value.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "To pick the next word, the newest token holds up its question, checks it against every name tag, and takes a share of every parcel.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "And a model writes one token at a time. Done the naive way, every time a new token arrives, every earlier token cuts its name tag and wraps its parcel all over again.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "But an old token's tag and parcel never change. Same words, same layer, same numbers. Making them again is pure waste.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "Her slide says the fix in one line: keep the old keys and values, and only compute attention for the new token.",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "That is the KV cache. K for keys, V for values. Picture a cloakroom: every guest who came before left a name tag and a parcel on the wall.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "The newcomer brings only a question card, reads the wall, and leaves its own tag and parcel for whoever comes next.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "Why is there no Q cache? Old questions are never asked again. Only the newest token asks.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "The catch: the wall only grows. One more tag and parcel per token, and for every new token, the whole wall is hauled out of memory and read again.",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "Noam Shazeer wrote in 2019 that this hauling, more than the arithmetic, is what makes generating slow.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "So how big does the wall get? Her slide gives the size for one token, as a product. It starts with a two.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "Then the number of layers. A model is a stack of layers, each running attention again, so every layer, every floor of the building, keeps its own cloakroom. Then the KV heads. Remember heads from last time: attention runs several copies side by side, and in plain attention each head keeps its own rack of tags and parcels. Then the head size: how many numbers sit on each tag. And 2 bytes per number, at 16-bit precision.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "Try Llama 3's 8-billion model, as if it used plain multi-head attention: 2, times 32 layers, times 32 heads, times 128, times 2 bytes.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "That is 524,288 bytes. About half a megabyte, for every single token. A 4,096-token prompt: about 2 gigabytes.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "Now the 405-billion model: 126 layers and 128 heads. About 8.3 megabytes per token. A million tokens: about 8.3 terabytes.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "One note on the slide: its last column mixes units counted in 1,024s with units counted in 1,000s. In plain decimal units it reads 524 gigabytes, 2.6 terabytes and 8.3 terabytes.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "That 405B model, released as Llama 3.1, stops at 128K tokens: the million is a thought experiment. So is the plain attention: Llama 3 itself does not use it.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "So the fix starts from the formula. Layers and head size come with the model's design. The KV heads are the factor to change. In plain multi-head attention, every head gets a private rack: 32 heads, 32 racks.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "Shazeer's idea was multi-query attention. Every head keeps its own question, but they all share one rack: one KV head. The cache shrinks 32 times on the 8-billion model, and 128 times on the 405-billion.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "Sharing has a price: quality can drop.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "In 2023, Joshua Ainslie and colleagues split the difference with grouped-query attention. Heads form groups, and each group shares one rack.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "In their paper, quality stayed close to full multi-head attention, with speed close to multi-query.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "Llama 3 keeps 8 KV heads in every size. 32 heads over 8 racks: 4 times smaller. 64 over 8: 8 times. 128 over 8: 16 times.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "Back to our giant and its million tokens: from 8.3 terabytes down to about 516 gigabytes.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "And one thing her slide stresses: grouping is mainly an inference saving. For the arithmetic, and for training, it changes little.",
+  "zh": ""
+ },
+ {
+  "id": "n27",
+  "en": "And memory is the hauling that every new token waits for.",
+  "zh": ""
+ },
+ {
+  "id": "n28",
+  "en": "So: keep the keys and values, never the questions. Size per token: two, times layers, times KV heads, times head size, times bytes. To shrink it, let heads share.",
+  "zh": ""
+ },
+ {
+  "id": "n29",
+  "en": "Next time: instead of sharing the parcels, what if we zip them?",
+  "zh": ""
+ }
+]

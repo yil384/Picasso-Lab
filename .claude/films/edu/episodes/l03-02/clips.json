@@ -1,0 +1,60 @@
+[
+ {
+  "id": "C1",
+  "lecture": "L03",
+  "rec_start": 1184.33,
+  "rec_end": 1186.15,
+  "dur": 1.82,
+  "text": "So we have to do it again and again.",
+  "text_was": "So you have to do it again and again."
+ },
+ {
+  "id": "C2",
+  "lecture": "L03",
+  "rec_start": 1194.7,
+  "rec_end": 1198.64,
+  "dur": 3.94,
+  "text": "so that you do not need to do the computation again, because they have computed already.",
+  "text_was": "so that you do not need to do the computation again, because you have computed already."
+ },
+ {
+  "id": "C4",
+  "lecture": "L03",
+  "rec_start": 1259.95,
+  "rec_end": 1265.41,
+  "dur": 5.46,
+  "text": "we want to have one copy for key and one copy for value. So that's why we have the first two."
+ },
+ {
+  "id": "C6",
+  "lecture": "L03",
+  "rec_start": 1333.57,
+  "rec_end": 1339.26,
+  "dur": 5.69,
+  "text": "And the result we want to show here is just thinking like you are serving just one user at one time."
+ },
+ {
+  "id": "C7",
+  "lecture": "L03",
+  "rec_start": 1359.71,
+  "rec_end": 1362.28,
+  "dur": 2.57,
+  "text": "They are not using it today because it's too costly."
+ },
+ {
+  "id": "C12",
+  "lecture": "L03",
+  "rec_start": 1463.3,
+  "rec_end": 1465.98,
+  "dur": 2.68,
+  "text": "But the result shows it's not very good"
+ },
+ {
+  "id": "C13",
+  "lecture": "L03",
+  "rec_start": 1521.23,
+  "rec_end": 1525.99,
+  "dur": 4.76,
+  "text": "Not a huge saving. But on the memory side, it's a huge saving"
+ }
+]
