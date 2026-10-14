@@ -2529,6 +2529,43 @@ once, the slow scripted player of `survive.mjs`, each game its whole 30-minute l
 
 **Against the gate (at most 1 death in 16): passed** (round 1: 1 in 8 and 3 in 8; the care off: 2 in 8).
 
+### The nightly soak (2026-10-14)
+
+`scripts/soak.mjs` plays whole Nether-and-back games on STAGING with no model, through the same MCP tools Muse uses.
+It never runs on production: it refuses the production host, and its client name starts with `e2e-`, a test caller's.
+
+- **How it plays:** stage by stage: wood, tools, iron, coal, the iron pickaxe and a shield, diamonds, a bucket of
+  water, flint, flint and steel, obsidian, the surface, the frame, light, the Nether and back.
+- **Waiting and retries:** it waits for steps that outlive their call and retries a stage up to its limit.
+- **Following the server's hints:** the pool a LAVA refusal names, the height a walk names, the stuck item's call, and
+  away from the world spawn for the frame.
+- **Upkeep:** between stages it eats, hunts or drops junk when the advice says so.
+- **What it records:** every failed step (its code and result), stuck items, deaths, and each milestone's time (from
+  end_game's report).
+- **The report:**
+  - one table of the games;
+  - one of the milestones;
+  - the top failure kinds across the games (the code and the first words, numbers taken out), with an example line;
+  - the stuck items;
+  - the stages not done.
+
+```sh
+node scripts/soak.mjs [url] [--games 3] [--minutes 29] [--out DIR]   # default: staging, 3 games, ~/picasso-work/soak
+```
+
+**The nightly run, on the Mac:**
+- **Job:** `deploy/soak/com.picassolab.muse-soak.plist` runs `scripts/soak-nightly.sh` at 04:00 local. That is 3
+  games, started 20 s apart, well below production's 8.
+- **Checkout:** the script brings its own checkout of main up to date first (`~/picasso-work/muse-soak-wt`, a git
+  worktree detached at origin/main, its node_modules linked to a working checkout's).
+- **Output:** the report goes to `~/picasso-work/soak/<date>.md` (and `.json`); the run's lines go to
+  `~/picasso-work/soak/soak.log`.
+- **Install:** copy the plist to `~/Library/LaunchAgents/` and run
+  `launchctl load ~/Library/LaunchAgents/com.picassolab.muse-soak.plist`.
+
+The first soak found that a LAVA refusal could name a pool by the world spawn, where the next collect was refused.
+The guard and the stall advice no longer name such pools.
+
 ### A frame that waits for the server, the frame it stood beside, pools and hunts (2026-10-14, g2409ce)
 
 - **A placement the server did not confirm in time** ("Event blockUpdate ... did not fire within timeout of 5000ms")
