@@ -1,0 +1,157 @@
+{
+ "episode": "L07-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook (slide 8): double the document and attention costs four times as much; at a million tokens one GPU cannot hold it (line_cp_handshake_party for the square law, line_cp_scroll_crush for the size; reuse line_scroll_reader).",
+  "Why: attention compute grows with the square of the length, activations with the length, so the sequence itself has to be split across GPUs; the old sequence parallelism still needs the whole sequence per head (slide 9).",
+  "The split: cut the long sequence into equal pieces, one per GPU (line_cp_scroll_cut_four, the cover; reuse line_scissors_strips).",
+  "The free part (slide 10): projections work token by token, so each GPU works alone on its piece and CP combines cleanly with TP (line_cp_quiet_desks).",
+  "The hard part: softmax(QK^T)V needs every token to see every other token, across the pieces (line_cp_peek_over; reuse line_three_readers).",
+  "Ulysses (slides 12-13): one all-to-all swap before attention turns \"some tokens of all heads\" into \"all tokens of some heads\", and one swap after turns it back (line_ulysses_card_swap, then line_ulysses_suit_piles).",
+  "Numbers (slide 14): per-GPU traffic 4Sh/P against 4Sh for TP+SP, constant when length and GPUs grow together; Ulysses passes TP near 32K tokens (slide 15): taped slides and pen work.",
+  "Pitfall (slide 15): heads must divide CP x TP; GQA has few KV heads, so they get copied (line_cp_pie_slices, line_cp_photocopier).",
+  "Takeaway: TP inside a node, CP across nodes (line_cp_two_houses); next episode: ring attention lifts the head limit."
+ ],
+ "reuse": [
+  "line_scroll_reader",
+  "line_scissors_strips",
+  "line_three_readers",
+  "line_scroll_ends",
+  "line_round_table",
+  "line_gpu",
+  "line_d_servers"
+ ],
+ "drawings": [
+  {
+   "name": "line_cp_handshake_party",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture in two halves side by side with a clear gap between them. Left half: a small calm party of three invented guests (simple round faces, dot eyes) standing in a triangle, each shaking hands or waving with the other two, relaxed and smiling. Right half: a crowded party of six invented guests standing in a circle, every one of them trying to shake hands with every other one at the same moment: a tangle of crossing outstretched arms in the middle, a few dizzy swirl lines above their heads, flustered faces. Landscape image 1536x1024; the two groups together fill about 90% of the width and about 75% of the height, the right group clearly bigger and busier. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_cp_scroll_crush",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_scroll_reader",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "One small plain office desk with one small computer on it, buried under an absurdly long paper scroll: the scroll pours down from the top of the picture in great loops and folds, piles high over the desk and the computer and spills onto the floor around it; the desk legs bow a little under the weight. An invented worried character (simple round face, dot eyes, short messy hair, round glasses, a sweater) stands beside the desk with both arms raised, trying to hold the pile up. Portrait image 1024x1536; the desk, scroll and character fill about 85% of the width and about 85% of the height. The scroll is blank paper: no writing, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_cp_scroll_cut_four",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "The same four invented readers (simple round faces, dot eyes; one with short messy hair and round glasses in a sweater, one with a high ponytail and rolled-up sleeves, one with a cap worn backwards and a hoodie, one with short curly hair and a cardigan) stand side by side in one row, seen from the front, each holding up one equal section of the same long paper scroll in both hands like a banner, so the four sections line up into one long strip across the picture with small clean gaps where it has been cut; a large pair of open scissors floats in one of the gaps. All four look pleased. Landscape image 1536x1024; the readers and the strip fill about 92% of the width and about 80% of the height. The paper is blank: no writing, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_cp_quiet_desks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "Four small identical desks in one row seen from the front, a little gap between them; at each desk sits one of the same four invented readers (simple round faces, dot eyes; one with short messy hair and round glasses in a sweater, one with a high ponytail and rolled-up sleeves, one with a cap worn backwards and a hoodie, one with short curly hair and a cardigan). Each wears big headphones and works alone on one short blank paper strip on their own desk with a pencil, calm and focused, nobody talking; a small mug on each desk. Landscape image 1536x1024; the desks and readers fill about 92% of the width and about 70% of the height. The strips are blank: no writing, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_cp_peek_over",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_three_readers",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two small desks side by side, seen from the front. At the left desk an invented reader (simple round face, dot eyes, short messy hair, round glasses, a sweater) leans far out of the chair, stretching neck and one arm with a big magnifying glass towards the paper strip on the right-hand desk; at the right desk a second reader (simple round face, dot eyes, a high ponytail, rolled-up sleeves) leans back with raised eyebrows, surprised. Each desk has one short paper strip on it. Square image 1024x1024; both desks and readers fill about 90% of the width and about 75% of the height. The papers are blank: no writing, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_ulysses_card_swap",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_paired_cards",
+    "line_tiny_lab"
+   ],
+   "prompt": "Seen from above at a steep angle: a square card table with one invented player at each of its four sides; the players are the same four invented readers (simple round faces, dot eyes; one with short messy hair and round glasses in a sweater, one with a high ponytail and rolled-up sleeves, one with a cap worn backwards and a hoodie, one with short curly hair and a cardigan). Every player passes plain cards to every other player at the same moment: hands reach across and diagonally over the table, and a flurry of plain rectangular cards flies in all directions between them, crossing in the middle. Square image 1024x1024; the table and players fill about 90% of the width and of the height, centred. The cards are blank on both sides: no pips, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_ulysses_suit_piles",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "The same four invented readers (simple round faces, dot eyes; one with short messy hair and round glasses in a sweater, one with a high ponytail and rolled-up sleeves, one with a cap worn backwards and a hoodie, one with short curly hair and a cardigan) stand side by side in a row, seen from the front, each proudly holding up one neat fan of cards towards the viewer. All the cards in one player's fan carry the same single simple outline shape: the first player's cards all show a circle, the second player's all a triangle, the third player's all a square, the fourth player's all a star. Smiling faces. Landscape image 1536x1024; the players fill about 90% of the width and about 80% of the height; the fans are large and clear. The shapes are plain outlines. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_cp_pie_slices",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "Seen from slightly above: a round table with eight invented guests around it (simple round faces, dot eyes, eight different hairstyles), each holding an empty plate and a fork and looking at one round pie in the middle of the table that is cut into only four slices; the guests look puzzled, one scratches their head. Square image 1024x1024; the table and guests fill about 90% of the width and about 85% of the height. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_cp_photocopier",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "An invented office worker (simple round face, dot eyes, short curly hair, a cardigan) stands at an old office photocopier, seen from the front and slightly to the side, one hand pressing the big start button, the other hand on the forehead in mild exasperation; out of the side tray comes a tall stack of identical copies of one page, more copies flying out, a few loose sheets on the floor. Portrait image 1024x1536; the copier and worker fill about 80% of the width and about 80% of the height. The pages are blank: no writing, no symbols on the buttons, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_cp_two_houses",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "Two small houses side by side with a road between them, seen from the front. Each house has one big front window; through each window we see four invented people (simple round faces, dot eyes) crowded around one table, chatting closely and passing papers hand to hand. On the road between the houses an invented cyclist (simple round face, dot eyes, a cap worn backwards, a hoodie) rides from the left house towards the right house with a rolled-up paper scroll strapped to the bike's rear rack. Landscape image 1536x1024; the two houses and the road fill about 92% of the width and about 75% of the height. No signs, no house numbers, no text, no letters, no numbers."
+  }
+ ]
+}

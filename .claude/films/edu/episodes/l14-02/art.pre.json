@@ -1,0 +1,143 @@
+{
+ "episode": "L14-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Cast rule (episodes/e01-moe/FACTS.md: an expert is not a topic specialist; never label one by subject): the receptionist plus eight doctors told apart only by face and hair, no specialty props; the film numbers the doors in code (#0-#255), never names a department.",
+  "Hook: if the router keeps picking the same few experts, the rest never learn anything: two doors with endless queues, six with cobwebs and bored doctors (line_moe_two_famous_doors).",
+  "Top-k is discontinuous: a tiny change in the input or the router weights flips the choice from one expert to another: a marble on a knife-edge ridge (line_moe_marble_ridge); a switch, not a dimmer (reuse line_switch_dimmer).",
+  "The training trick: pick normally going forward, and going backward simply ignore the experts that were not picked (their gradient is zero): only the doctors who saw the patient get a feedback letter (line_moe_feedback_slots).",
+  "Rich get richer: the early favourites get all the practice and get picked even more, most experts are never trained, and who wins depends on the starting values: watering only two plants (line_moe_watering_two; reuse line_wilted_plant, line_dice_hand for the starting roll).",
+  "Fix 1 (DeepSeek V1/V2): an auxiliary load-balance loss that grows when a few experts take every token: a marshal moves people out of the long queue (line_moe_queue_marshal). The cost, in Zhongkai's words: like making everyone see the dentist even when some need an eye doctor; drawn without specialties as a patient sent past her first-choice doctor to one who is keen but unsure (line_moe_wrong_doctor).",
+  "Fix 2 (DeepSeek-V3, auxiliary-loss-free balancing): a bias per expert that is used only to choose, never to weigh the answers, nudged during training from the recent traffic (line_moe_peg_board) and frozen at inference (line_moe_padlock laid over the board).",
+  "Result: every expert gets work and learns something different (line_moe_all_doors_busy).",
+  "Takeaway + cliffhanger: balance is not only a training problem; when serving, it decides how many GPUs sit idle (tease L14-03)."
+ ],
+ "reuse": [
+  "line_switch_dimmer",
+  "line_dice_hand",
+  "line_wilted_plant",
+  "line_ruler_curve",
+  "line_two_lanterns",
+  "line_balance"
+ ],
+ "drawings": [
+  {
+   "name": "line_moe_two_famous_doors",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A long hospital corridor wall with a straight row of eight plain consulting-room doors, each with a small blank rectangular plate and a round handle, seen from the front. The first two doors on the left stand open with a doctor in each doorway, and in front of them two very long queues of patients snake back and forth across the floor, patients holding small blank tickets, some sighing, some checking their watches. The other six doors are shut, with cobwebs in the upper corners of their frames; in front of three of them a doctor in a white coat sits on a chair, bored: one dozing with the head tipped back, one yawning, one twirling a pencil. At the far right the receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket) sits at a small desk and points every new patient towards the two busy doors. Landscape image 1536x1024; the scene fills about 94% of the width and 80% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_marble_ridge",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_paint_pour",
+    "line_switch_dimmer"
+   ],
+   "prompt": "On a plain table top, a small wooden ridge shaped like a steep tent roof (an upside-down V, about as wide as a hand), with a marble balanced exactly on its sharp peak. At the foot of each slope, left and right, stands a small open cup ready to catch the marble. From the top of the picture one fingertip of a hand comes down and just barely touches the marble. A few tiny motion ticks around the marble show it is about to tip. Landscape image 1536x1024; the ridge and cups fill about 75% of the width, centred, with the hand entering from the top. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_feedback_slots",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A hospital corridor with a straight row of eight closed doors, seen from the front, each door with a letter slot and a small square window. A cheerful mail carrier (a peaked cap and a satchel full of envelopes) pushes envelopes through the letter slots of only the first two doors, where happy doctors reach out to take them. Behind the small windows of the other six doors, doctors' faces peer out wistfully at the carrier; their letter slots stay empty. The envelopes are blank. Landscape image 1536x1024; the scene fills about 94% of the width and 75% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_watering_two",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A long low wooden bench with a row of eight identical flowerpots, seen from the front. the receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket), wearing gardening gloves, waters only the two pots at the left end with a watering can; those two plants have grown tall and bushy with big leaves and flowers. The other six pots hold small thin sprouts that droop and wilt, with a few fallen leaves on the bench. Landscape image 1536x1024; the bench and plants fill about 92% of the width and 70% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_wrong_doctor",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "Two consulting rooms across a corridor, drawn as a cutaway. In the near room, on the left, a patient (a woman in a cardigan holding a small blank ticket) sits on the chair, looking back over her shoulder through the open doorway; the doctor in the beanie (a young man in a knitted beanie, in a plain white coat) sits at his desk with a thick reference book open, scratching his head, keen but unsure. Across the corridor, on the right, the curly-haired doctor (a young man with short curly hair, in a plain white coat) stands in his own doorway behind a rope barrier on two little posts, giving her an apologetic shrug: he was her first choice. Square image 1024x1024; the scene fills about 90% of the width and 85% of the height. None of the doctors carries any special instrument or object that hints at a medical specialty: identical white coats and stethoscopes only. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_queue_marshal",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A hospital hall with a row of plain consulting-room doors, each with a small blank rectangular plate and a round handle along the back wall, seen from the front. One door in the middle has a long queue of patients bunched in front of it; the other doors stand open and empty. A stout marshal in a peaked cap and a vest, a whistle in his mouth, stands beside the queue and waves patients out of it with a long pointer towards the empty doors. Some patients go, grumbling with folded arms and looking back over their shoulders at the popular door. Landscape image 1536x1024; the scene fills about 92% of the width and 78% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_peg_board",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "the receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket) sits at her curved reception desk and turns to reach up to a wide wooden board mounted on the wall above her. The board has eight vertical slots side by side, and in each slot a round wooden peg that can slide up and down; the pegs sit at clearly different heights. With one finger she nudges one of the high pegs a little lower. To the right, behind the desk, a corridor of plain doors. The board has no markings at all. Portrait image 1024x1536; the board fills about 80% of the width in the upper part, the receptionist and desk the lower part, together about 88% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_padlock",
+   "kind": "line",
+   "group": "C",
+   "sweep": "c",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_paint_pour",
+    "line_switch_dimmer"
+   ],
+   "prompt": "A single sturdy closed padlock with a rounded body and a thick shackle, standing upright, with a small key lying on the ground beside it. A plain body with a simple keyhole, no engraving. Square image 1024x1024; the padlock fills about 50% of the width and 60% of the height, centred. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_all_doors_busy",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A straight row of eight open consulting-room doors along a corridor wall, seen from the front, with one specialist in every doorway, each busy with a different patient: the eight doctors, all in identical plain knee-length white coats with a stethoscope round the neck and no other props, each a different invented person told apart only by face, hair and build: the curly-haired doctor (a young man with short curly hair, in a plain white coat); the doctor with the bob (a tall woman with a short straight bob, in a plain white coat); the moustached doctor (a round-faced bald man with a bushy moustache, in a plain white coat); the ponytailed doctor (a woman with a long ponytail, in a plain white coat); the grey-haired doctor (an older woman with curly grey hair in a low bun and half-moon glasses, in a plain white coat); the doctor in the beanie (a young man in a knitted beanie, in a plain white coat); the bearded doctor (an older man with a short beard, in a plain white coat); the doctor with braids (a young woman with two braids, in a plain white coat). Every doctor is working and smiling, every patient is being helped, nobody waits. At the far left the receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket) waves the next patient in. Landscape image 1536x1024; the row fills about 95% of the width and 75% of the height. None of the doctors carries any special instrument or object that hints at a medical specialty: identical white coats and stethoscopes only. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

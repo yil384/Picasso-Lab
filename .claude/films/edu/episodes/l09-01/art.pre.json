@@ -1,0 +1,165 @@
+{
+ "episode": "L09-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: a GPU is thousands of workers who can only march in squads of 32 (line_gpu_squad_march).",
+  "CPU vs GPU: a few master chefs (line_d_chefs) vs a hall full of identical line cooks; the GPU is a kitchen inside the box (line_pc_kitchen, line_gpu).",
+  "Architecture: many SMs = identical cooking stations sharing one big pantry (DRAM) and one long shared counter (L2) (line_gpu_kitchen_hall); one station up close: own burners (functional units), own boards (registers), own small shelf (on-chip cache) (line_gpu_station).",
+  "Kernel, grid, block, thread: one recipe card for everyone, the order is a rail of tickets (the grid), each ticket (block) goes to one station (SM), the manager (host CPU) pins the recipe and walks off: launch is asynchronous (line_gpu_ticket_rail).",
+  "Warps: cooks move in squads of 32 in lockstep (SIMT); an if/else makes half the squad wait while the other half works, then swap (line_gpu_warp_branch).",
+  "The memory ladder: in your hand (registers), the team's counter (shared memory), the pantry down the hall (global memory: HBM + L2), the warehouse across town (host memory): smaller but faster the closer it is (line_gpu_memory_reach).",
+  "Pitfall: fetching one carrot per trip leaves the squad idle (line_gpu_pantry_trek); fast code brings a whole tray to the counter once (line_gpu_tray_fetch).",
+  "Vector addition end to end: allocate, copy in by truck, launch, copy back (the manager waits at the dock: implicit sync), free (line_gpu_truck_dock); the kernel itself: every cook adds one small bowl into one big bowl at the same moment, y[i] += x[i] (line_gpu_bowl_row).",
+  "Cliffhanger: so many models times so many chips is too many kernels to write by hand (line_kernel_pile_coder from L09-02's plan, or line_heap)."
+ ],
+ "reuse": [
+  "line_gpu",
+  "line_pc_kitchen",
+  "line_d_chefs",
+  "line_kitchen",
+  "line_manager",
+  "line_ticket",
+  "line_heap"
+ ],
+ "drawings": [
+  {
+   "name": "line_gpu_squad_march",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "Thirty-two small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another), marching to the right in one tight block formation of exactly four rows of eight, seen from the front-left and slightly from above so every cook is visible. They are in perfect step: every cook has the same knee raised at the same moment and holds a wooden ladle upright in front of the chest with the same hand, like a marching band. Cheerful, focused faces. A few short motion lines behind the block. Nothing else: no floor details, no flags, no banners, no instruments. Landscape image 1536x1024; the block fills about 85% of the width and about 70% of the height, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gpu_kitchen_hall",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_kitchen",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "A huge kitchen hall seen from high above and in front, a steep bird's-eye view. Along the far back wall (the top of the picture) runs one enormous walk-in pantry: a wide row of tall shelving full of plain jars, sacks and crates behind a wide open doorway; in front of it one long open serving counter runs the full width of the hall. The rest of the floor, towards the viewer, is filled with a regular grid of identical square cooking stations, three across and four deep (twelve in all); each station is a square counter island with two small burners, a small open shelf hanging above it, and three or four tiny identical cooks in low paper caps and aprons working around it. All stations look exactly the same, with clear walkways between them. Portrait image 1024x1536; the hall fills about 90% of the width and about 90% of the height. No signs, no labels on jars or crates. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gpu_station",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "Close-up of ONE square kitchen counter island, seen from the front and a little above. In the centre of the counter top, a shared area with a few mixing bowls and a short stack of plates that everyone can reach. Around the counter stand four small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another); each has their own small cutting board and knife right in front of them and a carrot in hand. At the right end of the counter, two gas burners with a pot on one. Above the counter hangs a small open shelf on two chains holding a few plain jars. Square image 1024x1024; the island, shelf and cooks fill about 85% of the width and of the height, centred. No labels on the jars. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gpu_ticket_rail",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_manager",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The first attached image shows the manager character (hair in a neat bun with a pencil in it, waistcoat, small bow tie): draw that same character in a new pose. The other attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A kitchen scene seen from the front. On the left, the manager (the same invented character as in the first reference image: hair in a neat bun with a pencil tucked in it, a waistcoat over a shirt with a small bow tie, trousers, simple round face with dot eyes) pins one large blank recipe card onto a small cork board on the wall, already half turned away to leave, a coffee mug in the other hand, relaxed. Across the top of the picture runs a long metal ticket rail holding a row of about twelve identical small blank order tickets. Below it, on the right half, three identical small square counter islands; one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) walks from the rail towards one island carrying a single ticket, and above two of the islands a ticket already hangs on a small hook, with more identical cooks starting to work there. Landscape image 1536x1024; everything fills about 90% of the width and about 80% of the height. The recipe card and the tickets are blank: no lines of writing. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gpu_warp_branch",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "Two rows of the same eight small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another), one row above the other with clear white space between the rows, each row standing behind its own long straight counter, all seen straight from the front. Top row: the four cooks on the left are busy chopping carrots on cutting boards, knives raised, while the four cooks on the right stand idle with arms folded and bored faces, an empty cutting board in front of each. Bottom row: the same eight cooks, but now the four on the left stand idle with arms folded and bored faces, while the four on the right stir small pots on little burners. Landscape image 1536x1024; the two rows together fill about 90% of the width and about 85% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gpu_memory_reach",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_kitchen",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "One deep kitchen picture, seen from the side and slightly above, that runs from near on the left to far on the right. At the far left, large in the foreground, one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) holds a carrot in one hand and a knife in the other. Right in front of the cook, on a small counter, a few shared bowls within arm's reach. Behind the counter, a long empty corridor leads away to the right, getting smaller in perspective, to the open door of a big walk-in pantry with tall shelves of plain jars and sacks, far away. At the far right end, seen through a large window, very small and very far away, a warehouse with a loading dock and a tiny delivery truck. Landscape image 1536x1024; the scene fills about 95% of the width and about 75% of the height. No signs, no labels. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gpu_pantry_trek",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A long kitchen corridor seen from the side, running across the whole picture. At the left end, a square counter island where three small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another) stand waiting with folded arms and bored faces, knives idle, nothing on their cutting boards. At the right end, the open door of a big walk-in pantry with tall shelves. Halfway along the corridor, a fourth identical cook trudges back towards the counter carrying just ONE single carrot in one hand, tired, a few sweat drops, with a long dotted trail of footprints behind going back and forth to the pantry. Landscape image 1536x1024; the scene fills about 95% of the width and about 60% of the height, centred vertically. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gpu_tray_fetch",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "One small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) walks happily towards a square counter island carrying a big flat tray piled high with many carrots, onions, peppers and potatoes. At the counter, three more identical cooks wait with knives and cutting boards ready, smiling, one of them waving. Seen from the front and a little above. Square image 1024x1024; the scene fills about 85% of the width and of the height, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gpu_truck_dock",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_manager",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The first attached image shows the manager character (hair in a neat bun with a pencil in it, waistcoat, small bow tie): draw that same character in a new pose. The other attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "The back loading dock of a restaurant kitchen, seen from the side. A small boxy delivery truck has backed up to the open back door, its rear doors open, stacked with plain wooden crates. One small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) wheels a hand trolley loaded with three crates through the door into the kitchen. The manager (the same invented character as in the first reference image: hair in a neat bun with a pencil tucked in it, a waistcoat over a shirt with a small bow tie, trousers, simple round face with dot eyes) stands on the dock beside the door, holding a clipboard in one hand and looking at a wristwatch on the other wrist, tapping one foot, waiting. Landscape image 1536x1024; the truck, the dock and the figures fill about 90% of the width and about 75% of the height. No writing or logos on the truck or the crates. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gpu_bowl_row",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A very long straight counter running from the left foreground into the distance on the right, in perspective. Behind it stands a long row of small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another), at least twelve visible, getting smaller into the distance so the row seems to go on and on. In front of every cook stand exactly two bowls, a small one and a large one, and every cook does exactly the same thing at the same moment: tipping the small bowl to pour its contents into the large bowl. Landscape image 1536x1024; the counter and the cooks fill about 95% of the width and about 60% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

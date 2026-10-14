@@ -1,0 +1,151 @@
+{
+ "episode": "L09-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: what if your tensor is mostly zeros (line_sparse_muffin_tray), or changes shape with every request (line_dyn_party_queue)?",
+  "The recipe so far: algorithm + schedule + tuner, one kitchen. Three awkward cases: many GPUs, mostly zeros, shapes that change.",
+  "Many GPUs, CoCoNet (ASPLOS 2022): communication goes into the language; data parallel (each kitchen cooks whole dishes for half the orders, line_multi_dp_plates) and tensor parallel (each kitchen makes half of every dish, line_multi_tp_halves) are two schedules of one program; overlap passing with cooking.",
+  "Mercury (SOSP 2025): lockstep collectives make everyone wait for the slowest (line_multi_wait_barrier); the 'shift' primitive starts each GPU on a different chunk and rotates, everyone busy on a different dish, then pass it on (line_multi_pass_dishes; line_whisper_line / line_round_table for ring vs all-at-once).",
+  "Mostly zeros, TACO: sparse formats and sparse loops, so you stop checking empty cups (line_sparse_muffin_tray).",
+  "Fractal (ASPLOS 2024): group the zeros into blocks the hardware likes (line_sparse_trays_grouped); 'perforate' skips whole rows of the loop (line_sparse_perforate).",
+  "Shapes that change, DietCode (MLSys 2022): one tuned kernel per shape does not scale (line_dyn_tin_shelf); tune small micro-kernels once and compose any size, a dispatcher picks the mix (line_dyn_push_tables).",
+  "Takeaway: same recipe, new primitives for each awkward case; the speaker's own favourites are Mercury and Fractal (check before saying)."
+ ],
+ "reuse": [
+  "line_round_table",
+  "line_whisper_line",
+  "line_d_servers",
+  "line_servers",
+  "line_manager",
+  "line_scissors_strips"
+ ],
+ "drawings": [
+  {
+   "name": "line_sparse_muffin_tray",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A very large rectangular muffin tray seen from a little above, with a regular grid of round cups, six rows of ten. Only six cups, scattered at random, hold a muffin; all the other cups are empty. At the right, one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) bends over the tray peering into an empty cup through a big magnifying glass, puzzled and weary, a few small sweat drops. Landscape image 1536x1024; the tray fills about 75% of the width, the tray and the cook together about 92% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_dyn_party_queue",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_manager",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The first attached image shows the manager character (hair in a neat bun with a pencil in it, waistcoat, small bow tie): draw that same character in a new pose. The other attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "The entrance of a small restaurant seen from the side. At the right, the manager (the same invented character as in the first reference image: hair in a neat bun with a pencil tucked in it, a waistcoat over a shirt with a small bow tie, trousers, simple round face with dot eyes) stands behind a small host podium with an open blank seating book, looking puzzled at the queue. To the left waits a queue of very different groups, each with a little space between: one single diner; a pair holding hands; a family of five with two small children; and at the far left a big group of about ten friends squeezed together. All invented characters with simple round faces and dot eyes, varied hairstyles. Landscape image 1536x1024; the queue and the podium fill about 95% of the width and about 70% of the height, everyone fully in frame. The book is blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_multi_dp_plates",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "Two identical small kitchens side by side, separated by a thin wall down the middle, seen from the front. In each kitchen, one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) at a counter makes complete plates of the same dish (pasta with sauce on top and one leaf); each cook has a short stack of finished identical plates beside them. Above, one long ticket rail spans both kitchens holding a row of blank tickets, with a small gap in the middle of the rail so that the left half of the tickets hangs over the left kitchen and the right half over the right kitchen. The two cooks are identical. Landscape image 1536x1024; everything fills about 90% of the width and about 80% of the height. Tickets blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_multi_tp_halves",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "Two small kitchens side by side, separated by a wall down the middle with an open serving hatch in it, seen from the front. In the left kitchen, one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) only boils pasta, with a pot and a row of plates of plain pasta. In the right kitchen, an identical cook only makes sauce in a big pot. At the hatch, the left cook pushes a plate of plain pasta through while the right cook spoons sauce onto it, so each finished plate needs both of them. Landscape image 1536x1024; everything fills about 90% of the width and about 80% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_multi_wait_barrier",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "Four small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another), at four small stations in one row, seen from the front. The three on the left have finished: their counters are clean, each has one finished plate in front of them, and they stand waiting with folded arms, one tapping a foot, one yawning, one looking at a wristwatch. The fourth cook at the far right is still frantically chopping a big pile of vegetables, sweat drops flying. Landscape image 1536x1024; the four stations fill about 92% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_multi_pass_dishes",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "Seen from the front and a little above: one square counter island with four small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another), one cook on each side of the island. In front of each cook sits a different dish on a plate: a round layer cake, a bowl of salad, a pie, and a bowl of pasta, so all four are busy at the same moment, each on their own dish, one adding a leaf, one slicing, one spooning sauce, one piping cream. At the same time every cook slides their plate a little towards the neighbour on their left, and a short curved motion line at each corner of the island shows the four plates moving round in the same direction. Calm, cheerful, nobody waits. Square image 1024x1024; the island and the cooks fill about 85% of the width and of the height, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sparse_trays_grouped",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "prompt": "Two identical large rectangular muffin trays side by side with space between them, seen from a little above, each with a grid of round cups, six rows of eight. Both trays hold the same number of muffins, sixteen. In the left tray the muffins are scattered at random among the empty cups. In the right tray the sixteen muffins sit together in two neat, completely full rectangular blocks of two rows by four, and the rest of the tray is completely empty. No people. Landscape image 1536x1024; the two trays fill about 92% of the width and about 60% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sparse_perforate",
+   "kind": "line",
+   "group": "C",
+   "sweep": "c",
+   "prompt": "Seen from straight above on a plain table: a large sheet of square paper tickets, all blank, joined along dotted perforation lines in a grid of six columns by six rows. A pair of hands (only the hands and forearms) neatly tears away the second column along its perforations as one long strip; the fourth and sixth columns have already been torn off and lie to the side, so the sheet looks like a comb with every other column missing. Square image 1024x1024; the sheet, the strips and the hands fill about 85% of the width and of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_dyn_tin_shelf",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A tall kitchen wall of open shelves crammed with baking tins of many different, odd sizes and shapes: tiny ones, wide ones, long thin ones, tall ones, round and square, every one a different size. In front of the shelves, one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) stands overwhelmed, holding up yet another odd-sized tin with a puzzled face, more tins stacked at their feet. Portrait image 1024x1536; the shelves and the cook fill about 85% of the width and about 90% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_dyn_push_tables",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_manager",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The first attached image shows the manager character (hair in a neat bun with a pencil in it, waistcoat, small bow tie): draw that same character in a new pose. The other attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A restaurant dining room seen from the front and a little above, with identical small square tables, all exactly the same size. At the left, a pair of diners sits at one single square table. In the middle, a family of five sits at three identical square tables pushed together in a row. At the right, the manager (the same invented character as in the first reference image: hair in a neat bun with a pencil tucked in it, a waistcoat over a shirt with a small bow tie, trousers, simple round face with dot eyes) pushes one more identical square table to join a long row of five tables, where a big group of friends is sitting down. Invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the scene fills about 95% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

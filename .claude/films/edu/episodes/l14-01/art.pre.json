@@ -1,0 +1,161 @@
+{
+ "episode": "L14-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Cast rule (episodes/e01-moe/FACTS.md: an expert is not a topic specialist; never label one by subject): the receptionist plus eight doctors told apart only by face and hair, no specialty props; the film numbers the doors in code (#0-#255), never names a department.",
+  "Hook (0-5 s): Qwen3-235B has 3.4x the parameters of Llama 3 70B, yet uses 22B per token, under a third of 70B: a small clinic with a doctor busy in every window next to a tower 3.4x bigger where only a few windows are at work (line_moe_two_buildings).",
+  "Cover / title \"A huge model that only wakes a few\": the receptionist rings the bell in the on-call room and only two of the sleeping doctors get up (line_moe_oncall_bunks).",
+  "What MoE is, in Zhongkai's own picture: a hospital. You do not see every doctor; a receptionist (the router) sends you to a few of the doctors (the lecture's word is \"specialist\"; the drawings never show a specialty) (line_moe_triage_desk). The dense way: every doctor on every patient (line_moe_everyone_consults).",
+  "Three milestones: 1991 (Jacobs, Jordan, Nowlan & Hinton), 2017 (Google brings MoE into deep networks), 2024 (DeepSeek's fine-grained experts, 256 per layer) (reuse line_grow). Per layer, not per model: every floor has its own receptionist and its own pair of open doors, and one always-open room every patient passes through (the shared expert) (line_moe_floor_triage).",
+  "Why the FFN: it holds most of the weights (79.8% of Llama 3 70B, 96.4% of Qwen3-235B): one generalist bent under a mountain of books (line_moe_generalist_books) becomes eight doctors with a small stack each (line_moe_books_split, which is also the cast line-up); line_balance for attention vs FFN.",
+  "The trend since 2025: more experts, more sparsity: DeepSeek-V3 opens 8 of 256 doors per layer plus one shared expert (37B per token), Kimi K2 8 of 384 (line_moe_door_wall).",
+  "The math in three moves: the router scores every expert (blank cards on every door, the film writes the scores: line_moe_door_score_cards), keeps the top k, and blends their answers by score (line_moe_three_notes, or reuse line_paint_pour for the weighted mix).",
+  "Pitfall / cliffhanger: top-k is the one jump in an otherwise smooth network; how do you train a receptionist who only ever picks? (tease L14-02 on line_moe_door_score_cards).",
+  "Takeaway: capacity scales, the cost per token barely moves (back to line_moe_oncall_bunks)."
+ ],
+ "reuse": [
+  "line_paint_pour",
+  "line_grow",
+  "line_balance",
+  "line_chat_first",
+  "line_heap",
+  "line_servers",
+  "line_gpu"
+ ],
+ "drawings": [
+  {
+   "name": "line_moe_oncall_bunks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A hospital on-call sleeping room at night, seen from just inside the door and a little from above, in gentle one-point perspective. Along the left and right walls stand two-tier bunk beds going back into the room, about ten bunks in all; in every bunk a doctor sleeps peacefully under a blanket (simple round faces, closed eyes), with a white coat hanging from a hook at the end of each bunk. At the back wall, a window with a crescent moon and three small stars. In the foreground at the bottom stands the receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket), ringing a small hand bell held up high. Only two doctors near the front have woken: one sits up stretching with a yawn, the other already stands and pulls on a white coat; everyone else keeps sleeping. Calm, funny, cosy. Portrait image 1024x1536; the room fills about 90% of the width and 85% of the height. No sleep symbols, no Z letters. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_two_buildings",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
+   "prompt": "Two hospital buildings side by side on one flat ground line, seen straight from the front as simple flat facades. On the left, a modest three-storey clinic with a grid of windows four across and three up; in EVERY window a small doctor in a white coat is visibly busy, leaning over a desk. On the right, a much bigger tower about three and a half times the size of the clinic (taller and wider), with a dense grid of small windows about ten across and nine up; almost every window has a plain roller blind pulled all the way down (a simple outline with a tiny pull cord), and only about eight scattered windows are open, each with one small doctor at work inside. A few tiny patients walk in at the doors. Landscape image 1536x1024; the two buildings together fill about 90% of the width, the tower about 85% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_triage_desk",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A hospital reception in one-point perspective. In the foreground the receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket) sits behind a curved reception desk with a small bell and a stack of blank tickets on it, and points with one arm down the corridor behind her. In front of the desk a patient (a young man in a hoodie holding a small blank paper ticket) looks where she points. Behind her a long corridor recedes into the distance, lined on both sides with plain consulting-room doors, each with a small blank rectangular plate and a round handle; from three of the doors a doctor leans out to look: the curly-haired doctor (a young man with short curly hair, in a plain white coat), the doctor with the bob (a tall woman with a short straight bob, in a plain white coat), the moustached doctor (a round-faced bald man with a bushy moustache, in a plain white coat). All the other doors are closed. Portrait image 1024x1536; the desk and people fill about 90% of the width, the whole scene about 90% of the height. None of the doctors carries any special instrument or object that hints at a medical specialty: identical white coats and stethoscopes only. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_everyone_consults",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "One patient (an older man in a cardigan and slippers) sits on a small round examination stool in the middle, looking overwhelmed and a little dizzy, while the eight doctors, all in identical plain knee-length white coats with a stethoscope round the neck and no other props, each a different invented person told apart only by face, hair and build: the curly-haired doctor (a young man with short curly hair, in a plain white coat); the doctor with the bob (a tall woman with a short straight bob, in a plain white coat); the moustached doctor (a round-faced bald man with a bushy moustache, in a plain white coat); the ponytailed doctor (a woman with a long ponytail, in a plain white coat); the grey-haired doctor (an older woman with curly grey hair in a low bun and half-moon glasses, in a plain white coat); the doctor in the beanie (a young man in a knitted beanie, in a plain white coat); the bearded doctor (an older man with a short beard, in a plain white coat); the doctor with braids (a young woman with two braids, in a plain white coat), crowd tightly around him and all examine him at the same time from every side with ordinary check-up tools: one listens at his chest with a stethoscope, one takes his pulse, one shines a small penlight, one taps his knee with a reflex hammer, one checks a thermometer, the others lean in writing on clipboards, all talking at once. Small motion lines show the bustle. Square image 1024x1024; the crowd fills about 90% of the width and 85% of the height, centred. None of the doctors carries any special instrument or object that hints at a medical specialty: identical white coats and stethoscopes only. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_floor_triage",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
+   "prompt": "A tall narrow hospital building drawn as a dollhouse cutaway with the front wall removed, four identical floors stacked one above the other, seen straight on, with a staircase running up the right-hand side through every floor. Every floor is laid out the same: at the stair landing a small reception desk with its own receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket; the same person drawn on every floor, like identical colleagues); next to the desk one consulting room with no door at all, where a friendly older doctor in a white coat greets everyone who passes; then a row of six plain closed doors. On each floor exactly two of the six doors stand open with a doctor waving from the doorway, and it is a DIFFERENT pair of doors on every floor. One patient (a young man in a hoodie holding a small blank paper ticket) is drawn climbing the stairs between the second and third floors, looking up. Portrait image 1024x1536; the building fills about 88% of the width and 92% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_generalist_books",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "One doctor (a middle-aged man with neat short hair, a white coat and a stethoscope round the neck) walks bent forward under an enormous tower of thick books strapped to his back with two belts; the tower is about four times his height and gently wobbles, with a couple of books slipping off the top. He sweats a little but keeps going, holding a small clipboard. The book spines are plain, with no titles. Portrait image 1024x1536; the doctor and the tower fill about 90% of the height and 60% of the width, centred. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_books_split",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A cheerful group line-up: the eight doctors, all in identical plain knee-length white coats with a stethoscope round the neck and no other props, each a different invented person told apart only by face, hair and build: the curly-haired doctor (a young man with short curly hair, in a plain white coat); the doctor with the bob (a tall woman with a short straight bob, in a plain white coat); the moustached doctor (a round-faced bald man with a bushy moustache, in a plain white coat); the ponytailed doctor (a woman with a long ponytail, in a plain white coat); the grey-haired doctor (an older woman with curly grey hair in a low bun and half-moon glasses, in a plain white coat); the doctor in the beanie (a young man in a knitted beanie, in a plain white coat); the bearded doctor (an older man with a short beard, in a plain white coat); the doctor with braids (a young woman with two braids, in a plain white coat). They stand in one row side by side, full figure, facing the viewer, evenly spaced; each carries a modest neat stack of five or six books in both arms, all the stacks about the same small size. The book spines are plain, with no titles. Landscape image 1536x1024; the row fills about 94% of the width and 75% of the height. None of the doctors carries any special instrument or object that hints at a medical specialty: identical white coats and stethoscopes only. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_door_wall",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
+   "prompt": "A gigantic wall made entirely of small identical doors in a dense regular grid, about twelve doors across and sixteen up, seen straight on, like a huge cabinet of tiny doors. Exactly eight doors scattered across the wall stand open, and in each open doorway a tiny doctor in a white coat leans out and waves. All the other doors are shut. At the bottom, standing small on the ground in front of the wall, the receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket) looks up at it holding a clipboard. Portrait image 1024x1536; the wall fills about 88% of the width and 85% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_door_score_cards",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A straight row of eight closed plain consulting-room doors, each with a small blank rectangular plate and a round handle, along a corridor wall, seen straight from the front. From each door handle hangs a small blank card on a string, one card per door. the receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket) walks along the row from left to right with a clipboard and a pencil, studying the cards as if grading them. At the right end a patient in a cap holds a small blank ticket and waits. Landscape image 1536x1024; the row of doors fills about 92% of the width and 75% of the height. The cards and the clipboard stay completely blank. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_three_notes",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A patient (a young woman in a plain jumper) sits on a chair with an open folder on her lap. Three doctors stand around her and each hands her a blank note: the doctor with the bob (a tall woman with a short straight bob, in a plain white coat) hands her a big sheet, the moustached doctor (a round-faced bald man with a bushy moustache, in a plain white coat) a medium-sized card, the curly-haired doctor (a young man with short curly hair, in a plain white coat) a small slip. The three notes are clearly different sizes, big, medium and small, and all blank. Square image 1024x1024; the group fills about 88% of the width and 80% of the height. None of the doctors carries any special instrument or object that hints at a medical specialty: identical white coats and stethoscopes only. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

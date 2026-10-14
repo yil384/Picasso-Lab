@@ -5,7 +5,8 @@
 # REFNOTE="..." overrides the sentence that tells the model what the reference images are (default: the felt cat).
 # The prompt goes in on stdin: `codex exec -i` swallows a positional prompt.
 # CODEX=... picks the CLI; default: PATH, else the copy installed in ~/.local/share/picasso-tools.
-cd "$(dirname "$0")"; mkdir -p src logs
+# ART_OUT=DIR writes DIR/src/NAME.png and DIR/logs instead (e.g. the pre-drawn library); give refs as absolute paths.
+cd "${ART_OUT:-$(dirname "$0")}" || exit 1; mkdir -p src logs
 CODEX=${CODEX:-$(command -v codex || echo "$HOME/.local/share/picasso-tools/node_modules/.bin/codex")}
 N=$1; S=$2; shift 2
 if [ "${SKIP_EXISTING:-0}" = 1 ] && [ -f "src/$N.png" ]; then echo "skip src/$N.png (exists)"; exit 0; fi

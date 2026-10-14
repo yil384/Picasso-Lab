@@ -1,0 +1,145 @@
+{
+ "episode": "L09-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: the same blur filter, two programs: a few lines on one card vs a fat hand-tuned binder that runs many times faster (line_sched_card_vs_binder, line_sched_blur_frames).",
+  "The kernel explosion: many models x many chips = too many kernels to hand-write; the 'black magic' in the middle (line_kernel_pile_coder, line_heap).",
+  "Image processing hit it first: many filters x many devices; Halide (PLDI 2013) splits the program in two (line_sched_blur_frames).",
+  "Algorithm vs schedule: the recipe says WHAT the dish is, the kitchen plan says HOW (split, order, parallel); any plan gives the same dish (line_sched_recipe_and_plan, line_sched_same_cake).",
+  "Schedule primitives: tile, vectorize, parallel: cut the sheet into squares and hand them out (line_sched_dough_tiles).",
+  "Autotuning: generate many plans, time each one, keep the fastest (line_sched_stopwatch_trials, line_knob_board for the search space, line_tally_pages).",
+  "Halide's payoff: less code, faster, portable: the algorithm never mentions the hardware (line_sched_many_kitchens).",
+  "To tensors: Tensor Comprehensions (2018) applies the idea to matrix math; TVM (OSDI 2018) adds graph-level moves (fusion, layout) and template-free tuning; one model, many chips (line_sched_many_kitchens).",
+  "Fusion, the graph-level move: do not put the chopped onions back in the fridge (line_sched_onion_trips vs line_sched_onion_fused).",
+  "Takeaway: keep what and how apart; let a search find the how."
+ ],
+ "reuse": [
+  "line_heap",
+  "line_ticket",
+  "line_knob_board",
+  "line_tally_pages",
+  "line_kitchen",
+  "line_pc_kitchen",
+  "line_d_chefs"
+ ],
+ "drawings": [
+  {
+   "name": "line_kernel_pile_coder",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_balance"
+   ],
+   "prompt": "An invented student programmer (simple round face, dot eyes, short messy hair, a plain hoodie, trousers, sneakers) sits at a small desk with a laptop, holding their head in both hands, overwhelmed. On both sides of the desk rise towering, teetering stacks of plain paper sheets and fat binders, taller than the student; at the right, a small wheeled trolley piled with even more stacks rolls in, a few loose blank sheets fluttering off the top. Portrait image 1024x1536; the desk, student and stacks fill about 85% of the width and about 90% of the height. Every page is blank: no writing. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sched_card_vs_binder",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_balance"
+   ],
+   "prompt": "Two invented characters side by side, split down the middle with clear space between them, both full figure, seen from the front. Left: an invented student programmer (simple round face, dot eyes, short messy hair, a plain hoodie, trousers, sneakers), relaxed and smiling, holds up a single small blank index card between two fingers. Right: an invented, exhausted expert programmer (simple round face, dot eyes, tousled hair, rolled-up sleeves, small tired bags under the eyes) hugs an enormous overstuffed ring binder, as thick as a suitcase, bursting with many sticky tabs and loose pages, struggling under its weight, a few pages sliding out. Landscape image 1536x1024; the two characters fill about 85% of the width and about 85% of the height. The card, the tabs and the pages are blank: no writing. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sched_recipe_and_plan",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "prompt": "Seen from straight above on a plain table: two sheets of paper lying side by side. On the left, a small recipe card with a simple drawing of a round layer cake at the top and a few short plain wavy lines in place of writing below it. On the right, a larger sheet, about twice the size, with a simple top-down floor plan of a kitchen: four square counter islands drawn as squares in a two-by-two grid, small plain circles standing for cooks around them, and a few dashed walking paths between the squares. A pencil lies beside the plan. No people. Landscape image 1536x1024; the two papers fill about 90% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sched_same_cake",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A picture split into two halves with clear space between them. Left half: one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) works alone at a counter doing every step of baking a cake: a bowl, eggs, a whisk, a cake tin and an oven all crowded around them, looking busy and slow, a finished round layer cake waiting at the end of the counter. Right half: four identical cooks stand in a line at a long counter, each doing one step at the same moment: one cracks eggs, one whisks, one pours batter into a tin, one slides a tin into an oven; at the end of their counter sits the very same finished round layer cake. The two cakes look exactly alike. Landscape image 1536x1024; the scene fills about 90% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sched_dough_tiles",
+   "kind": "line",
+   "group": "B",
+   "sweep": "c",
+   "prompt": "Seen from a little above on a plain table: a large flat rectangular sheet of rolled-out dough. A pair of hands (only the hands and forearms) rolls a pastry wheel along a straight cut, dividing the sheet into a neat grid of equal squares: half the grid is already cut, the other half is still whole. A rolling pin lies along the top edge, and on the right a baking tray holds a few square pieces already lifted off, set in neat rows. No flour dust, no texture. Square image 1024x1024; the dough and the tray fill about 85% of the width and of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sched_stopwatch_trials",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "At the left stands the planner (an invented tall, thin character: curly hair, round glasses, a pencil tucked behind one ear, a long cardigan, and a round stopwatch hanging from a cord around the neck; simple round face, dot eyes), holding the stopwatch up in one hand and watching intently. In the middle, at a small kitchen test station, one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) rushes to plate a dish, a few motion lines around the hands. On a long table at the right lies a row of many blank plan cards laid out one after another; at the far end a short pile of cards has been pushed aside, and one single card stands apart on a small easel stand as the winner. Landscape image 1536x1024; the scene fills about 90% of the width and about 80% of the height. The cards are blank: no writing, no ticks. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sched_many_kitchens",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "At the top centre, one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) holds up a single blank recipe card in one hand, smiling. Across the bottom of the picture, spread out with wide spaces between them, three very different kitchens: at the left, a tiny camping stove with one small pot on a folding picnic table; in the middle, an ordinary home kitchen stove with four burners and an oven; at the right, a large restaurant cooking line with a long row of burners, big pots and hanging ladles. A tiny identical cook stands ready at each kitchen. Leave clear white space between the card and the three kitchens. Landscape image 1536x1024; everything fills about 90% of the width and about 85% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sched_onion_trips",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A kitchen seen from the side. At the left, a cutting board on a counter; in the middle, a stove with a frying pan; at the far right, a tall fridge with its door open. One small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) walks from the board towards the fridge carrying a bowl of chopped onion, looking tired, and a long dotted path loops from the board all the way to the fridge and from the fridge back to the stove, showing the long detour. Landscape image 1536x1024; the scene fills about 95% of the width and about 65% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sched_onion_fused",
+   "kind": "line",
+   "group": "C",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "One small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) at a counter, seen from the front, has just chopped an onion on a cutting board and, with the flat of the knife, slides the chopped pieces straight into a frying pan that sits on a burner right next to the board, in one smooth motion; a few curls of steam rise from the pan. Happy and efficient. Square image 1024x1024; the cook, board and pan fill about 80% of the width and of the height, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_sched_blur_frames",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "prompt": "Two identical picture frames hanging side by side on a plain wall, with space between them. Each frame shows the same simple scene: a small house with a pointed roof, a round tree beside it, a gentle hill behind and a round sun. In the left frame every line is single and crisp. In the right frame the same scene is drawn with every outline doubled and tripled by slightly offset thin lines, so it looks soft and blurred, like a photo out of focus. No people. Landscape image 1536x1024; the two frames fill about 85% of the width and about 65% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

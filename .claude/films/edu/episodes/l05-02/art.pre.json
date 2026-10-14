@@ -1,0 +1,159 @@
+{
+ "episode": "L05-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: before a 70-billion-parameter model reads a single word, its training state already weighs about a terabyte.",
+  "The bill: FP16 weights 2 B + gradients 2 B + FP32 Adam state 12 B (two moments and a master copy) = 16 B per parameter; the optimizer state is the bulk (T-shirts vs winter coats).",
+  "The waste: plain data parallelism packs the same full suitcase onto every GPU.",
+  "Not tensor parallelism: ZeRO never splits the work (four people building one tent together is TP, L06-03); every GPU still cooks its own whole meal on its own data and only borrows the recipe pages it does not carry.",
+  "ZeRO-1: shard the optimizer state (one coat each); ReduceScatter + AllGather cost the same as one AllReduce: free.",
+  "ZeRO-2: also shard the gradients, dropping each layer's after it is reduced; strictly better?",
+  "ZeRO-3 / FSDP: shard the weights too (daypacks); copy each layer's weights in just in time, use them, throw the copy away: about 1.5x the traffic, hidden by handing over the next card early (prefetch).",
+  "Numbers: 70B on 16 GPUs: ~310, ~187, ~65 GiB per GPU under ZeRO-1, 2, 3 (one H100 has 80 GB): only the last fits the cabin-bag frame.",
+  "Twist: the big pre-training runs mostly use ZeRO-1: pipelines add up gradients over many micro-batches (coins in the jar), and ZeRO-2/3 would have to reduce-scatter after every one (a bank run per coin).",
+  "Limit: past a point more DP means tiny work per GPU and talk that cannot hide; other parallelism takes over (L06)."
+ ],
+ "reuse": [
+  "line_gpu",
+  "line_postal_scale",
+  "line_balance",
+  "line_heap",
+  "line_slip_boxes",
+  "line_press",
+  "line_cabinet_tower",
+  "line_d_servers",
+  "line_burst"
+ ],
+ "drawings": [
+  {
+   "name": "line_zero_suitcase_sit",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "The fourth traveller (a cap worn backwards, a padded vest over a T-shirt), an invented character with a simple round face and dot eyes, sits on top of an enormous overstuffed suitcase, gritting their teeth and pulling the zip shut with both hands; a sleeve, a scarf end and the corner of a thick coat poke out of the gap. The suitcase stands on a big platform luggage scale with a round dial, and the dial's single needle is pushed hard all the way to the end. Portrait image 1024x1536; the suitcase, scale and character fill about 80% of the width and about 85% of the height, centred. No text, no letters, no numbers, no logos, no numbers or tick marks on the dial, no tags or stickers on the suitcase."
+  },
+  {
+   "name": "line_zero_packing_floor",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_word_bag"
+   ],
+   "prompt": "Seen from straight above on a plain floor: on the left, one open, empty suitcase, its lid lying flat. On the right, laid out in a neat row as if about to be packed: first two thin, small, neatly folded T-shirts side by side; then three big, thick, puffy quilted winter coats, each folded into a fat bundle about twice the size of a folded T-shirt. The three coats clearly take up most of the floor space. Nothing else. Landscape image 1536x1024; the suitcase and the five items fill about 92% of the width and about 70% of the height, with clear space between the items so each can be labelled. No text, no letters, no numbers, no logos, no prints or labels on the clothes."
+  },
+  {
+   "name": "line_zero_four_full",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_tiny_lab"
+   ],
+   "prompt": "The four travellers are invented characters with simple round faces and dot eyes: the first is tall with round glasses, short neat hair and a zip-up jacket; the second is short with a high ponytail and a plain sweater; the third has curly hair and a hoodie; the fourth wears a cap backwards and a padded vest over a T-shirt. They walk in a single row from left to right along a path, each one dragging an enormous overstuffed wheeled suitcase behind them; the four suitcases are exactly the same, as if copies. All four are bent forward, sweating, tired. Full figures on a short ground line. Landscape image 1536x1024; the four travellers and suitcases fill about 94% of the width and about 70% of the height. No text, no letters, no numbers, no logos, no tags or stickers on the suitcases."
+  },
+  {
+   "name": "line_zero_coats_shared",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_tiny_lab"
+   ],
+   "prompt": "The four travellers are invented characters with simple round faces and dot eyes: the first is tall with round glasses, short neat hair and a zip-up jacket; the second is short with a high ponytail and a plain sweater; the third has curly hair and a hoodie; the fourth wears a cap backwards and a padded vest over a T-shirt. They walk in a single row from left to right along a path, each one pulling a medium-sized wheeled suitcase (the four suitcases are identical) and each carrying exactly ONE big puffy quilted winter coat folded over the free arm; the four coats are of four different styles (one with a hood, one long, one with big round buttons, one short). They look relieved, upright, walking easily. Full figures on a short ground line. Landscape image 1536x1024; they fill about 94% of the width and about 70% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_zero_daypacks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_tiny_lab"
+   ],
+   "prompt": "The four travellers are invented characters with simple round faces and dot eyes: the first is tall with round glasses, short neat hair and a zip-up jacket; the second is short with a high ponytail and a plain sweater; the third has curly hair and a hoodie; the fourth wears a cap backwards and a padded vest over a T-shirt. They stride along a path from left to right, light and cheerful, each one carrying only a small daypack on the back and nothing in the hands; one waves, one skips a little. Full figures on a short ground line. Landscape image 1536x1024; they fill about 94% of the width and about 70% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_zero_recipe_copies",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_tiny_lab"
+   ],
+   "prompt": "The four travellers are invented characters with simple round faces and dot eyes: the first is tall with round glasses, short neat hair and a zip-up jacket; the second is short with a high ponytail and a plain sweater; the third has curly hair and a hoodie; the fourth wears a cap backwards and a padded vest over a T-shirt. At a simple campsite on a grassy clearing, the four sit in a row from left to right, each on a small folding stool behind their own little camping stove with their own small frying pan, each cooking their own meal. The second traveller has just taken one blank recipe card out of her small daypack and passes identical blank copies of it along the row; each of the other three holds one copy in the free hand and glances at it while stirring their own pan. Four small daypacks lie on the grass beside the stools. Calm and cheerful, everyone busy with their own pan, nobody sharing a pan. Landscape image 1536x1024; the four travellers and their stoves fill about 94% of the width and about 72% of the height. No text, no letters, no numbers, no logos, no writing or pictures on the cards."
+  },
+  {
+   "name": "line_zero_tent_build",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_round_table",
+    "line_tiny_lab"
+   ],
+   "prompt": "The four travellers are invented characters with simple round faces and dot eyes: the first is tall with round glasses, short neat hair and a zip-up jacket; the second is short with a high ponytail and a plain sweater; the third has curly hair and a hoodie; the fourth wears a cap backwards and a padded vest over a T-shirt. At a simple campsite on a grassy clearing with a few round trees, the four travellers put up one dome tent together, each having brought one part of it: the first holds up the long bendy tent poles, the second spreads the tent fabric over them, the third kneels and taps a tent peg into the ground with a small mallet, the fourth pulls a guy rope tight. Their four small daypacks lie open on the grass in front, each now empty. All four work on the same single tent at once, close together. Landscape image 1536x1024; the tent and the four travellers fill about 90% of the width and about 75% of the height, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_zero_prefetch_handoff",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "At a small camping stove on a low folding table outdoors, the first traveller (tall, round glasses, short neat hair, a zip-up jacket), an invented character with a simple round face and dot eyes, stirs a pan with one hand and reads a blank recipe card held in the other; at the same moment, from the right, the second traveller (short, a high ponytail, a plain sweater) already holds out the next blank recipe card, ready before it is needed. On the table edge stands a small open paper bag holding a few used cards that have been thrown away. The cook glances at the new card and smiles. Waist up for both. Square image 1024x1024; the two characters, stove and cards fill about 88% of the width, centred. No text, no letters, no numbers, no logos, no writing or pictures on the cards."
+  },
+  {
+   "name": "line_zero_bag_sizer",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_postal_scale",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "At the right, an airport-style cabin-bag sizer: a simple open box frame made of metal bars standing on the floor. To its left, three wheeled suitcases stand in a row from left to right, getting smaller: the first about four times as tall as the frame, the second about two and a half times as tall, the third small. The third traveller (curly hair, a hoodie), an invented character with a simple round face and dot eyes, lowers the small suitcase into the frame, where it fits with a little room to spare, pleased. Landscape image 1536x1024; the suitcases, the frame and the character fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no signs, no tags on the suitcases, no measurements."
+  },
+  {
+   "name": "line_zero_bank_trips",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_banks",
+    "line_dog_chases_cat",
+    "line_tiny_lab"
+   ],
+   "prompt": "A picture split into two halves side by side, with clear space between them. Left half: at a small market stall with an awning, the fourth traveller (a cap worn backwards, a padded vest over a T-shirt), an invented character with a simple round face and dot eyes, calmly drops one coin into a big glass jar under the counter; the jar is already half full of coins; relaxed. Right half: the same character runs hard along a long road away from an identical stall towards a small bank building far away on the horizon, holding up one single coin, sweating, a few speed lines. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no symbols on the coins, no signs on the stall or the bank."
+  }
+ ]
+}

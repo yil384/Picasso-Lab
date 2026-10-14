@@ -1,0 +1,133 @@
+{
+ "episode": "L12-05",
+ "pre": true,
+ "made": "2026-10-14",
+ "note": "Sources: her quantization lecture is the recording transcribed in course/L13.transcript.md (it opens \"for this lecture, we will cover large language model quantizations\"); course/L12.transcript.md is the serving lecture, and the slide markers in both transcripts point at the other PDF. Slides: course/L12.txt / L12.pdf.",
+ "beats": [
+  "Hook: rounding has no slope, so gradients die on it; the fix is a polite lie: pretend the slope is 1 (line_ste_flat_step, then line_ste_handrail).",
+  "PTQ vs QAT (slide 36): post-training quantization trims the finished model to fit; quantization-aware training learns with the rounding in the loop from the start, like baking in the small tin (line_qat_cake_two_ways).",
+  "The gradient problem (slide 37): learning feels its way downhill; on a staircase every tread is flat (gradient 0) and every edge is a cliff (infinite) (line_ste_flat_step, line_ste_marble_plank left; line_switch_dimmer).",
+  "Straight-through estimator: walk on the steps (the forward pass uses the rounded value) but feel the handrail (the backward pass assumes slope 1) (line_ste_handrail, line_ste_marble_plank right). Clipped STE: the rail ends where the stairs end, so outside the range the gradient stops.",
+  "LoRA (slide 38): freeze the big W, train two thin matrices B and A whose product is the update (line_lora_glass_case).",
+  "QLoRA (slides 38-39): store the frozen base in 4 bits and keep the small adapters in 16 bits: a big model fine-tuned on one GPU (line_qlora_pocket_edition).",
+  "NF4 (slide 39): weights are bell-shaped, so put the 16 levels where the weights are: umbrellas packed in the crowded middle of the beach, sparse at the ends (line_nf4_beach_umbrellas; vs INT4's even hooks, line_bits_hook_rails from L12-01's plan).",
+  "The tour in one picture (slide 40): data types, rounding basics, the benefit check, GPTQ / AWQ / SmoothQuant, NVFP4, PTQ and QAT (line_quant_tour_shelf); callback to L10-02: FP8 rollouts in RL.",
+  "Takeaway: you can train through rounding if you are honest about where you lie (only in the backward pass, only inside the range)."
+ ],
+ "reuse": [
+  "line_switch_dimmer",
+  "line_ruler_curve",
+  "line_course_map",
+  "line_balance",
+  "line_grow"
+ ],
+ "drawings": [
+  {
+   "name": "line_ste_flat_step",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first two attached images show the recurring student (short messy hair, hoodie, simple round face with dot eyes): draw the same person in the new pose described. The last image is a style reference only (a line drawing made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (the same invented character as in the first two reference images, in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. The student, blindfolded with a soft cloth band over the eyes, stands on one long flat tread of a huge outdoor stone staircase that goes down to the right; every tread is long and perfectly flat, every riser a sudden drop. Arms out for balance, the student probes the flat stone with the tip of one foot, left and right, puzzled, with two small curved lines beside the head; the edge of the tread is just beyond the foot. Landscape image 1536x1024; the staircase and the student fill about 92% of the width and about 85% of the height. No railing. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_ste_handrail",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first two attached images show the recurring student (short messy hair, hoodie, simple round face with dot eyes): draw the same person in the new pose described. The last image is a style reference only (a line drawing made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (the same invented character as in the first two reference images, in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. The same kind of huge outdoor stone staircase going down to the right, with long flat treads and sudden drops, but now with a smooth wooden handrail on posts running beside it in one straight, even slope from the top step to the bottom step; at each end the handrail stops with a round cap, and past the bottom the ground is flat with no rail. The student, still blindfolded with a cloth band, walks confidently down the steps, one hand gliding along the sloping handrail, smiling. Landscape image 1536x1024; the staircase, rail and student fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_ste_marble_plank",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two identical small flights of five wooden stairs side by side, seen from the side, both going down to the right, with white space between them. On the left flight, a marble sits still in the middle of one flat stair tread, going nowhere. On the right flight, a straight wooden plank has been laid over the steps from the top edge to the bottom like a ramp, and a marble rolls down the plank with short motion lines behind it. Landscape image 1536x1024; the two flights fill about 90% of the width and about 60% of the height, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_qat_cake_two_ways",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chef",
+    "line_d_chefs",
+    "line_balance"
+   ],
+   "refnote": "The first two attached images show the cook cast of this series (tall pleated chef's hat, double-breasted jacket, apron, simple round face with dot eyes): draw the cook in the same look, in the new pose described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The cook (the same character in every picture): an invented cook with a simple round face, dot eyes, short hair under a tall pleated chef's hat, a double-breasted chef's jacket and a long apron tied at the waist, like the cooks in the first two reference images. One picture in two halves, the same cook in both, with clear white space between the halves and no dividing line. Left half: a big finished round layer cake sits on a board next to a small square cake box; the cook is cutting off its sides with a long knife to make it fit the box, crumbs and offcuts everywhere, looking unsure. Right half: the cook pours batter from a bowl into a small square tin exactly the size of the box, calm and smiling; the box waits beside the tin. Landscape image 1536x1024; the two scenes fill about 94% of the width and about 80% of the height. The box is plain. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_lora_glass_case",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first two attached images show the recurring student (short messy hair, hoodie, simple round face with dot eyes): draw the same person in the new pose described. The last image is a style reference only (a line drawing made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (the same invented character as in the first two reference images, in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. In a quiet museum room, a very large, thick book lies open on a stand inside a closed glass display case on a pedestal, untouchable. The student stands beside the case and clips two long, narrow, blank strips of paper to the edge of the case with clothes pegs: one strip is tall and very thin, hanging straight down; the other is wide and very thin, lying across the top of the case. Landscape image 1536x1024; the case, the strips and the student fill about 88% of the width and about 88% of the height. The book pages and the strips are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_qlora_pocket_edition",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first two attached images show the recurring student (short messy hair, hoodie, simple round face with dot eyes): draw the same person in the new pose described. The last image is a style reference only (a line drawing made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (the same invented character as in the first two reference images, in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. At a small desk at home, the student works on one laptop, pleased. Beside the laptop stands a small glass box no bigger than a shoebox, holding a tiny, thick, tightly bound pocket edition of a giant book, with two long, narrow, blank paper strips clipped to the box with clothes pegs: one tall and thin hanging down, one wide and thin lying across. Square image 1024x1024; desk, box and student fill about 85% of the width and of the height. Laptop screen blank, no logo; book and strips blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_nf4_beach_umbrellas",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "A long sandy beach seen from high above at a slant, running from left to right along the sea. The beach is packed with tiny invented people on towels in the middle, and the crowd thins out steadily towards both ends, where only a few people sit far apart. Along the beach stands one row of sixteen beach umbrellas: very close together in the crowded middle and spaced further and further apart towards the nearly empty ends, so each umbrella shades about the same number of people. Landscape image 1536x1024; the beach fills about 94% of the width and about 70% of the height. Plain umbrellas, no patterns. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_tour_shelf",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "A long wooden shelf on a wall, seen straight from the front, displaying a row of souvenirs like a little museum of a trip: a row of small square wooden tiles, some with a carved dot; a metal measuring scoop; a tailor's round pincushion with pins; a glass vase wrapped in bubble wrap; a small old box camera; a flat vacuum-packed bag; a short piece of wooden handrail with a round end cap; and a tiny coin purse. Landscape image 1536x1024; the shelf fills about 94% of the width and the souvenirs about 45% of the height, centred. No labels. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

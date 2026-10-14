@@ -1,0 +1,163 @@
+{
+ "episode": "L13-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: prefill is a sprint, decode is a marathon: why make them share one running track? (line_pd_runner_pair as the cover, line_pd_shared_track).",
+  "The stall (slide 10): prefill-first scheduling lets one long prompt freeze everyone's next token for up to seconds; her words: smooth at first, then 'it stopped responding' (line_chunk_order_stall, line_scroll_reader).",
+  "Profiling (slide 11): decode alone leaves the GPU underused, one prefill of a few hundred tokens already fills it; so mix them and decode rides along (line_serve_order_glance from L13-01).",
+  "Chunked prefill (Sarathi-Serve, OSDI 2024; DeepSpeed-FastGen at the same time; slides 11-12): cut the long prompt into chunks; each iteration = all decode steps + chunks up to a token budget (e.g. 512 on an A100) (line_scissors_strips, line_chunk_belt_even).",
+  "Even iterations help pipeline parallelism (slide 12): uneven batches leave the next stage idle (bubbles), equal ones keep both busy (line_chunk_belt_uneven vs line_chunk_belt_even).",
+  "The trade-off (slide 13): small chunks protect the time between tokens but stretch the first token; big chunks fall back to the old stall (line_balance).",
+  "Disaggregation (DistServe OSDI 2024, Splitwise ISCA 2024; slide 14): prefill and decode on different GPUs, no interference; the KV cache is handed over like a baton (line_pd_two_venues, line_pd_baton_parcels).",
+  "Each side wants its own setup (slide 15): prefill likes tensor parallelism, decode likes data and pipeline parallelism; even different GPU types (H100 for prefill, A100 for decode) (line_pd_two_shoes).",
+  "The worked example (slide 16, taped): TTFT 400 ms, TBT 40 ms: colocated 1.6 requests/s per GPU; 2 prefill + 1 decode GPUs: min(5.6 x 2, 10) / 3 = 3.3 requests/s per GPU (line_gpu).",
+  "Rate matching (slide 17): one prefill job per request, decode jobs = requests x output length; the workload's prompt/answer ratio sets the split.",
+  "Costs (slide 18): a fast network to move the KV cache; a long prompt with a very short answer moves a mountain for one note; per-layer transfer overlaps it (line_pd_big_move_small_note).",
+  "Takeaway (slide 18): one GPU or small scale: chunked prefill; strict SLOs and mixed hardware: disaggregation; vLLM and SGLang support both (line_pd_truck_vs_hall)."
+ ],
+ "reuse": [
+  "line_scissors_strips",
+  "line_scroll_reader",
+  "line_balance",
+  "line_gpu",
+  "line_servers",
+  "line_ticket",
+  "line_clock_face"
+ ],
+ "drawings": [
+  {
+   "name": "line_pd_runner_pair",
+   "kind": "line",
+   "group": "E",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "Two invented runners at the same start line on one running track, seen from the front and a little from the side, the lanes running away behind them towards the top of the picture. On the left, the sprinter (an invented runner: simple round face, dot eyes, short spiky hair, a sweatband on the forehead, a sleeveless running vest, short shorts, spiked sprint shoes) crouches in a sprinter's starting position with both hands on the line, eyes fierce, ready to explode. On the right, the marathoner (an invented runner: simple round face, dot eyes, a peaked running cap, a loose t-shirt, shorts, long socks, a small water bottle on a belt) stands relaxed and upright, stretching one arm across the chest, calm, pacing for a long day. Portrait image 1024x1536; the two runners fill about 85% of the width, and the runners and the track fill about 85% of the height. No race numbers or bibs on anyone. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_pd_shared_track",
+   "kind": "line",
+   "group": "E",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A running track seen from the side and a little above, its lanes running from left to right across the whole picture. A pack of four marathoners (invented runners: simple round faces, dot eyes, peaked running caps, loose t-shirts, long socks) jog steadily together in the middle. The sprinter (an invented runner: simple round face, dot eyes, short spiky hair, a sweatband on the forehead, a sleeveless running vest, short shorts, spiked sprint shoes) comes bursting from behind at full speed and weaves straight through the pack: one marathoner jumps aside, one stumbles, one drops a water bottle that flies up, one ducks. Short speed lines behind the sprinter. Landscape image 1536x1024; the runners fill about 85% of the width and about 70% of the height, the lanes run across the full width. No race numbers or bibs on anyone. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_chunk_order_stall",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A long diner counter seen from the front. On the left, five invented diners (simple round faces, dot eyes; different hairstyles: round glasses, a ponytail, a cap, curls, a bob, a bun) sit on stools with half-eaten meals in front of them, all frozen mid-bite, forks raised, staring to the right; one has a small cobweb between the fork and the plate, one has fallen asleep with the chin on the counter. On the right, behind the counter, one line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) is completely absorbed in reading an enormous blank paper order scroll that unrolls from the hands over the counter and across the floor in big loops. Landscape image 1536x1024; everything fills about 92% of the width and about 75% of the height. The scroll is blank paper. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_chunk_belt_even",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A kitchen conveyor belt runs horizontally across the whole picture from left to right, seen from the front and a little above. On it travels a row of six identical shallow trays, evenly spaced, and every tray is filled exactly to its rim in the same way: a row of several small identical cups plus one flat, cut piece of blank paper order strip filling the remaining space. Two line cooks (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) stand at two stations along the belt, one at the left third and one at the right third; both are busy with a tray at the same moment, calm and in rhythm. Landscape image 1536x1024; the belt fills about 95% of the width; the belt and the cooks fill about 70% of the height. The paper pieces are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_chunk_belt_uneven",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A kitchen conveyor belt runs horizontally across the whole picture from left to right, seen from the front and a little above, with two line cooks (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) at two stations along it, one at the left third and one at the right third. The trays on the belt are wildly uneven: at the left station sits one enormous tray piled high with a thick roll of blank paper order strip and several pots, so heavy that the first cook strains and sweats over it and the belt has stopped; the trays behind it hold only one small cup each. At the right station the second cook stands idle with nothing to do, leaning on the counter and yawning in front of an empty stretch of belt. Landscape image 1536x1024; the belt fills about 95% of the width; the belt and the cooks fill about 70% of the height. The paper is blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_pd_two_venues",
+   "kind": "line",
+   "group": "E",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "Two separate sports venues side by side with a narrow strip of grass between them, seen from high in front. On the left, a short straight sprint track with six lanes, and the sprinter (an invented runner: simple round face, dot eyes, short spiky hair, a sweatband on the forehead, a sleeveless running vest, short shorts, spiked sprint shoes) dashing down it. On the right, a long road winding away through gentle hills, and three marathoners (invented runners: simple round faces, dot eyes, peaked running caps, loose t-shirts, long socks) jogging along it at an easy pace. In the middle of the picture, where the end of the sprint track meets the start of the road, a small hand-over point: the sprinter at the finish holds out a bundle of small parcels tied together with string, and a marathoner reaches out to take it. Landscape image 1536x1024; everything fills about 92% of the width and about 80% of the height. No race numbers or bibs on anyone. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_pd_baton_parcels",
+   "kind": "line",
+   "group": "E",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A close-up of a relay hand-off seen from the side: the sprinter (an invented runner: simple round face, dot eyes, short spiky hair, a sweatband on the forehead, a sleeveless running vest, short shorts, spiked sprint shoes) on the left, still at speed, passes a bundle of small cardboard parcels tied together with string, a small blank round name tag hanging from each parcel, into the open hands of the marathoner (an invented runner: simple round face, dot eyes, a peaked running cap, a loose t-shirt, shorts, long socks, a small water bottle on a belt) on the right, who has just started jogging. Both look intently at the bundle. Square image 1024x1024; the two runners and the bundle fill about 90% of the width and about 80% of the height. The tags are blank. No race numbers or bibs on anyone. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_pd_two_shoes",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "refs": [
+    "line_tiny_lab",
+    "line_chat_first",
+    "line_balance"
+   ],
+   "prompt": "A still life seen from the side and a little above: on the left, a pair of light, low sprint spikes with thin soles and a row of short spikes under the front of each sole; on the right, a pair of chunky long-distance running shoes with thick cushioned soles. The two pairs stand side by side on a plain floor line with a small gap between them. Landscape image 1536x1024; the shoes fill about 85% of the width and about 55% of the height. Plain shoes: no brand marks, no decorative stripes, no logos. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_pd_big_move_small_note",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "On the left, four invented movers (simple round faces, dot eyes, overalls, work gloves) strain to carry an enormous, wobbling pile of cardboard parcels across a narrow footbridge, sweat drops flying. On the right, at the far end of the bridge, at a tiny desk, an invented writer (simple round face, dot eyes, round glasses, a cardigan) has already finished writing one short note on a small card and holds it up with a shrug, looking at the mountain of boxes arriving. Landscape image 1536x1024; everything fills about 92% of the width and about 75% of the height. The card and the boxes are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_pd_truck_vs_hall",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "Two kitchens side by side with a small gap between them, seen from the front and a little above. On the left, a small food truck with its side hatch open; inside, one single line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) does everything at once, chopping with one hand and passing a dish out of the hatch with the other. On the right, a big restaurant building cut open at the front like a doll's house: its left half is a prep kitchen where three line cooks chop and fire pans; its right half is a separate serving counter where two waiters in long white aprons carry plates out; a small pass-through window links the two halves, with a tray of parcels sliding through it. Landscape image 1536x1024; the truck and the building fill about 92% of the width and about 75% of the height. No signs, no lettering on the truck. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

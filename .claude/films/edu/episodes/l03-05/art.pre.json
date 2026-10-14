@@ -1,0 +1,134 @@
+{
+ "episode": "L03-05",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: GPT-3 read 2 tokens for every parameter; Llama 3 70B read 215. Why overfeed a model? (line_recipe_reading_stacks)",
+  "A model is a recipe of proportions, not only an architecture (line_recipe_card_stand, line_knob_board).",
+  "Chinchilla: ~20 tokens per parameter is compute-optimal for training (slide 33; callback to L01-01's 70B beats 280B) (line_recipe_chinchilla_books, line_balance).",
+  "But inference is the bill that keeps coming: pay up front in training for a smaller model that is cheaper to serve every day (her words, slide 33) (line_recipe_dogs_bowls, line_receipt).",
+  "Deep or wide: d_model / n_layer about 100-200; layers run one after another, width runs in parallel, so wider means lower latency (slide 34) (line_recipe_relay_vs_row).",
+  "FFN width: 4 x d_model for plain activations, about 8/3 for gated ones (slide 35; callback to L02-02) (line_tap_glass).",
+  "Batch size: millions of tokens per step (Llama 3 4M-16M+); bigger batches mean fewer steps for the same compute and more machines at work (slide 36) (line_recipe_cookie_tray).",
+  "Pitfall: past the critical batch size a bigger tray stops buying speed (line_recipe_tray_stuck); the good news (her words): it depends on the target loss, not the model size, so a small model can find it first (line_recipe_test_kitchen); in practice teams go past it anyway, paying overhead to cut months to days.",
+  "Takeaway: four ratios on one card; next lecture: how training is spread across thousands of GPUs (L04)."
+ ],
+ "reuse": [
+  "line_balance",
+  "line_receipt",
+  "line_knob_board",
+  "line_tap_glass",
+  "line_grow",
+  "line_dog_leash",
+  "line_heap",
+  "line_mic"
+ ],
+ "drawings": [
+  {
+   "name": "line_recipe_card_stand",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "A kitchen counter seen from the front: in the middle, a large blank recipe card stands propped up in a little wooden card holder; around it a set of nested measuring cups, a row of measuring spoons from large to small, a small kitchen scale with a round dial, a mixing bowl with a whisk, and one egg. Landscape image 1536x1024; the arrangement fills about 85% of the width and about 70% of the height. The card is blank and the dial has only tick marks. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_recipe_reading_stacks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "Two invented readers stand side by side, each holding up the same small trophy cup. On the left, a very large, tall reader (simple round face, dot eyes, a big build, a sweater) stands next to a short stack of only two books. On the right, a small reader (simple round face, dot eyes, a ponytail) stands next to an enormous, towering stack of books that rises far above the head, almost to the top of the picture. Landscape image 1536x1024; the scene fills about 85% of the width and about 90% of the height. Plain book spines. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_recipe_dogs_bowls",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_dog_chases_cat",
+    "line_dog_leash",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two dogs eat side by side, seen from the front. On the left, an enormous shaggy dog bends over an enormous food bowl heaped high with food. On the right, a small scruffy dog with floppy ears eats from a small bowl. Both dogs wear the same prize rosette on the collar, as if they won the same prize. Landscape image 1536x1024; the dogs and bowls fill about 85% of the width and about 75% of the height. Blank rosettes and bowls. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_recipe_chinchilla_books",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "A cute, round, fluffy chinchilla (the small animal: big round ears, long whiskers, a bushy tail) wearing small round glasses sits on top of a neat stack of books, reading an open book held in its tiny paws. Square image 1024x1024; the chinchilla and the books fill about 70% of the width and about 85% of the height, centred. Plain book covers. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_recipe_relay_vs_row",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "Two scenes side by side on one running track, with a gap between them. Left: four invented runners in single file, one behind the other in one lane; only the front runner is running, reaching back to take a baton from the next one, while the two at the back stand waiting with their hands on their hips. Right: four invented runners side by side in four lanes, all running at the same moment, each carrying their own baton. Everyone has a simple round face, dot eyes and plain sports clothes. Landscape image 1536x1024; the scene fills about 92% of the width and about 70% of the height. Plain shirts. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_recipe_cookie_tray",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "In a bakery kitchen, the woman chef with a bob and a fringe (tall white chef hat, double-breasted chef jacket, apron), wearing oven gloves, slides an extra-wide baking tray covered in many neat rows of identical small round cookies (about sixty cookies) into a wide open oven, smiling with effort. Landscape image 1536x1024; the chef, the tray and the oven fill about 88% of the width and about 75% of the height. The oven knobs have no numbers. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_recipe_tray_stuck",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_recipe_cookie_tray",
+    "line_d_chefs",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the same chef, the same kind of oven and the same small round cookies: keep the chef (bob with a fringe, tall white chef hat, double-breasted jacket, apron, oven gloves), the oven style and the plain round cookies exactly, in the new situation described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly.",
+   "prompt": "The woman chef with a bob and a fringe (tall white chef hat, double-breasted chef jacket, apron, oven gloves), seen from the front and a little to the side, tries to push an absurdly wide baking tray into an ordinary oven whose door is open: the tray is about three times wider than the oven opening, so it cannot go in at all; it is held level right at the mouth of the oven, its middle at the opening and both of its long ends jutting far out past the left and right sides of the oven, the front edge of the tray bumping against the oven's door frame on both sides. The tray is covered with many neat rows of identical small plain round cookies, all the same; at each far end two or three round cookies slide off and fall, with small motion lines. The chef pushes and strains with gritted teeth and a sweat drop. Nothing passes through the oven: the oven's back and sides are whole. Landscape image 1536x1024; the scene fills about 92% of the width and about 70% of the height. The oven knobs have no numbers. No hearts, no stars. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_recipe_test_kitchen",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "Two kitchens side by side, seen from the front, joined by one open doorway. On the left, a tiny test kitchen corner with one small oven, its door open, and a small counter. On the right, a big bakery with one huge oven, many times larger, its wide door open and waiting. In the doorway between them walks the woman chef with a bob and a fringe (tall white chef hat, double-breasted chef jacket, apron), wearing oven gloves, carrying one baking tray of neat round cookies, the very same tray that just came out of the small oven, from the small kitchen towards the huge oven, with a confident smile. Landscape image 1536x1024; the two kitchens and the chef fill about 92% of the width and about 80% of the height. The oven knobs have no numbers. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

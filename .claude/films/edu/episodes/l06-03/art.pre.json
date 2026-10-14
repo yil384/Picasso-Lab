@@ -1,0 +1,157 @@
+{
+ "episode": "L06-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: cut one matrix by columns and the next by rows, and a whole conversation between GPUs disappears.",
+  "Where the weight is: Q, K, V and output projections and the MLP up and down projections are all matrix multiplies (GEMMs).",
+  "Two cuts: by columns each GPU makes a slice of the output (AllGather to join); by rows each makes a partial sum (AllReduce to add).",
+  "The trick: column then row: each GPU's slice feeds straight into its own row piece; one AllReduce per block, two per layer.",
+  "Attention fits too: the column cut is a cut by heads.",
+  "Leftovers: LayerNorm and dropout run on full activations on every GPU; sequence parallelism splits them by token.",
+  "Same price: AllReduce = AllGather + ReduceScatter, so TP + SP moves the same data.",
+  "Critical path: the next layer waits for the talk; it can only be hidden block by block (fine-grained).",
+  "Numbers: over a 25 GB/s network the talk takes 4x the compute; over NVLink the compute is ~3x the talk: keep TP inside a node."
+ ],
+ "reuse": [
+  "line_scissors_strips",
+  "line_paint_pour",
+  "line_three_readers",
+  "line_glue_tiles",
+  "line_paired_cards",
+  "line_gpu",
+  "line_d_servers",
+  "line_balance",
+  "line_two_banks"
+ ],
+ "drawings": [
+  {
+   "name": "line_tp_sheet_columns",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_scissors_strips",
+    "line_paired_cards",
+    "line_glue_tiles"
+   ],
+   "prompt": "Seen from straight above on a plain table: one large square sheet of grid paper (eight by eight equal squares) has been cut into four equal tall vertical strips, and the strips lie slightly pulled apart from each other with clear even gaps between them, still in order. An open pair of scissors lies at the lower right corner. Square image 1024x1024; the four strips together fill about 80% of the width and about 78% of the height, centred. No text, no letters, no numbers, no logos, no marks inside the squares."
+  },
+  {
+   "name": "line_tp_sheet_rows",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "refs": [
+    "line_scissors_strips",
+    "line_paired_cards",
+    "line_glue_tiles"
+   ],
+   "prompt": "Seen from straight above on a plain table: one large square sheet of grid paper (eight by eight equal squares) has been cut into four equal wide horizontal strips, and the strips lie slightly pulled apart from each other with clear even gaps between them, still in order from top to bottom. An open pair of scissors lies at the lower right corner. Square image 1024x1024; the four strips together fill about 80% of the width and about 78% of the height, centred. No text, no letters, no numbers, no logos, no marks inside the squares."
+  },
+  {
+   "name": "line_tp_strips_join",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. The four bakers stand in a row facing us, shoulder to shoulder. Each one holds up in front of their body one tall vertical strip of grid paper, and the four strips meet edge to edge to form one big square sheet together; their heads peek over the top edge and their feet show below. Pleased expressions. Landscape image 1536x1024; the sheet and the bakers fill about 80% of the width and about 88% of the height, centred. No text, no letters, no numbers, no logos, no marks inside the squares."
+  },
+  {
+   "name": "line_tp_pots_pour",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_paint_pour",
+    "line_tap_two_people",
+    "line_round_table"
+   ],
+   "prompt": "The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. The four bakers stand around one big cooking pot on a low stool in the middle, two on each side, and all four pour their own small saucepan of soup into the big pot at the same moment, four thin streams meeting in the middle. Seen from the front and a little above. Landscape image 1536x1024; the pot and the bakers fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_tp_own_lanes",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_tap_two_people",
+    "line_whisper_line"
+   ],
+   "prompt": "Seen from behind and a little above: four straight, narrow, parallel garden paths run side by side away from the viewer, separated by low trimmed hedges. The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. On each path walks one of the four bakers, seen from behind, each alone in their own lane and carrying a small saucepan, not looking at the others. All four paths end together at the far end at one round table holding one big empty cooking pot, where the four will meet. Landscape image 1536x1024; the paths fill about 85% of the width at the bottom and lead to the table in the upper third. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_tp_same_chore",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. The four bakers crowd around one small round table and all wipe the very same tabletop with cloths at the same time, elbows bumping, one squeezed half out of the group, all a bit annoyed. Seen from the front and a little above. Square image 1024x1024; the table and the bakers fill about 88% of the width, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_sp_split_chore",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "One long table seen from the front and a little above, marked into four equal sections by three thin lines across it. The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. The four bakers each stand behind their own section and wipe only that section with a cloth, relaxed and spaced out, nobody in anyone's way. Landscape image 1536x1024; the table and the bakers fill about 94% of the width and about 70% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_tp_one_table",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_tap_two_people",
+    "line_paired_cards"
+   ],
+   "prompt": "The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. The four bakers sit close together around one small square table, seen from the front and a little above, quickly passing strips of paper hand to hand to each other, cheerful and fast, a few short motion lines. Square image 1024x1024; the table and the bakers fill about 88% of the width, centred. No text, no letters, no numbers, no logos, nothing written on the strips."
+  },
+  {
+   "name": "line_tp_far_bakeries",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "prompt": "A wide hilly landscape seen from a little above: four tiny bakery shops (small houses with a plain awning over the door) stand on four separate hills, far apart, joined by one long winding road. A postman on a bicycle pedals slowly along the road carrying one envelope. In each bakery doorway a small invented baker (white apron, small flat paper cap, simple round face, dot eyes) leans and waits, bored. Landscape image 1536x1024; the landscape fills about 95% of the width and about 80% of the height; the people are small. No text, no letters, no numbers, no logos, no signs on the shops, no writing on the envelope."
+  },
+  {
+   "name": "line_tp_slice_handoff",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Close-up at a bakery counter, seen from the front, both characters waist up: on the left, the first baker (tall and thin, round glasses, white apron, small flat paper cap) slices a long loaf of bread with a bread knife; on the right, the second baker (long ponytail, white apron, small flat paper cap) takes each slice as soon as it is cut and lays it on a plate, where a few slices already lie in a neat fan. Both are invented characters with simple round faces and dot eyes, working in an easy rhythm. Landscape image 1536x1024; the two characters, loaf and plate fill about 90% of the width and about 78% of the height. No text, no letters, no numbers, no logos."
+  }
+ ]
+}

@@ -1,0 +1,158 @@
+{
+ "episode": "L06-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: four workers on an assembly line, and for a big part of every shift most of them are standing around.",
+  "The cut: pipeline parallelism gives each GPU a run of layers; activations go forward, activation gradients come back, point to point.",
+  "Cheap talk: the work at a stage grows with h^2 but the handoff only with h: compute is 8x (forward) to 16x (backward) the communication on A100s.",
+  "The bubble: with one big batch only one station works at a time.",
+  "Micro-batches: split the batch into many small ones and the line fills up (all-forward-all-backward).",
+  "The catch: every station keeps each micro-batch's activations until its backward returns, so memory grows with M.",
+  "1F1B (PipeDream): start each backward as early as possible; stations only hold N, N-1, ..., 1 micro-batches in flight.",
+  "The formula: bubble = (N-1)/M for both schedules; 1F1B wins on memory, which buys more micro-batches.",
+  "Worked example: 3 stages, 3 micro-batches, a heavy first batch: 100% vs 83% bubble.",
+  "Takeaway: more stages means more bubble, and micro-batches cannot shrink below one sequence: you cannot cut a cupcake smaller (cliffhanger into L06-02)."
+ ],
+ "reuse": [
+  "line_gpu",
+  "line_d_servers",
+  "line_tired_dog_street",
+  "line_spike",
+  "line_clock_face",
+  "line_balance",
+  "line_burst"
+ ],
+ "drawings": [
+  {
+   "name": "line_pp_bakery_idle",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Seen from the front: a long plain counter with a flat conveyor belt running along it from left to right, past four work stations evenly spaced: a mixing station (a big bowl and a whisk), an oven station (a small oven built into the counter, door closed), an icing station (a piping bag and a small cake turntable) and a boxing station (a few flat, plain, unprinted cake boxes). One single giant round cake sits on the belt at the mixing station. The first baker (tall and thin, round glasses, white apron, small flat paper cap) works hard there, whisking a huge bowl of batter; the second baker (long ponytail, white apron, small flat paper cap) leans on the oven, yawning; the third baker (short and sturdy, curly hair, white apron, small flat paper cap) rests the chin on one hand, bored; the fourth baker (neat bob haircut, freckles, white apron, small flat paper cap) checks a wristwatch. The rest of the belt is empty. All are invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the counter and the four bakers fill about 95% of the width and about 75% of the height. No text, no letters, no numbers, no logos, nothing printed on the cake boxes."
+  },
+  {
+   "name": "line_pp_bakery_busy",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Seen from the front: a long plain counter with a flat conveyor belt running along it from left to right, past four work stations evenly spaced: a mixing station (a big bowl and a whisk), an oven station (a small oven built into the counter, door closed), an icing station (a piping bag and a small cake turntable) and a boxing station (a few flat, plain, unprinted cake boxes). Now small trays of cupcakes sit evenly spaced along the whole belt, one tray in front of every station. The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. All four bakers are busy and cheerful at the same moment: the first whisks, the second slides a tray into the oven, the third pipes icing, the fourth closes a box. Landscape image 1536x1024; the counter and the four bakers fill about 95% of the width and about 75% of the height. No text, no letters, no numbers, no logos, nothing printed on the cake boxes."
+  },
+  {
+   "name": "line_pp_hatch_handoff",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Two small rooms side by side, seen from the front, divided by a wall with one small square serving hatch in it. In the left room, the first baker (tall and thin, round glasses, white apron, small flat paper cap), an invented character with a simple round face and dot eyes, works hard at a big table on an enormous mound of dough, kneading with both arms, a puff of flour in the air. On the sill of the hatch sits one small finished cupcake on a little plate, being slid through to the right room, where the hand of the second baker (long ponytail, white apron, small flat paper cap) simply takes it. Landscape image 1536x1024; the left room is wider than the right; together they fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_pp_tray_and_note",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Close-up of two neighbouring stations on a bakery counter, seen from the front, both characters waist up: on the left, the second baker (long ponytail, white apron, small flat paper cap) slides a tray of cupcakes along the counter to the right; on the right, the third baker (short and sturdy, curly hair, white apron, small flat paper cap) receives it with one hand and with the other hand passes a small folded paper note back to the left. Both are invented characters with simple round faces and dot eyes, friendly and focused. Landscape image 1536x1024; the two characters and the counter fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no writing on the note."
+  },
+  {
+   "name": "line_pp_shelf_full",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "The first baker (tall and thin, round glasses, white apron, small flat paper cap), an invented character with a simple round face and dot eyes, stands at the mixing station, full figure, looking worried with both hands raised, because the tall rack of shelves right behind them is crammed full: eight shelves, each holding one waiting tray of cupcakes, the top tray sliding off the edge. Portrait image 1024x1536; the baker and the rack fill about 80% of the width and about 88% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_pp_shelf_short",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "The first baker (tall and thin, round glasses, white apron, small flat paper cap), an invented character with a simple round face and dot eyes, stands at the mixing station, full figure, relaxed and smiling, hands on hips, in front of the same tall rack of eight shelves: now only the four lowest shelves hold a tray of cupcakes each, and the upper four shelves are empty. Portrait image 1024x1536; the baker and the rack fill about 80% of the width and about 88% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_pp_warmup_racks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. Seen from the front, the four bakers stand in a row from left to right, each beside their own small rack of shelves. The racks hold waiting trays of cupcakes: the first baker's rack holds four trays, the second's three, the third's two and the fourth's one, so the stacks step down from left to right like a staircase. Landscape image 1536x1024; the bakers and racks fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_pp_soap_bubbles",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Seen from the front: a long plain counter with a flat conveyor belt running along it from left to right, past four work stations evenly spaced: a mixing station (a big bowl and a whisk), an oven station (a small oven built into the counter, door closed), an icing station (a piping bag and a small cake turntable) and a boxing station (a few flat, plain, unprinted cake boxes). Only the first baker (tall and thin, round glasses, white apron, small flat paper cap) is working, whisking at the mixing station. At the other three stations the belt is empty, and big round soap bubbles float lazily above the empty counters; the second baker (long ponytail, white apron, small flat paper cap) and the third baker (short and sturdy, curly hair, white apron, small flat paper cap) stand idle watching the bubbles, and the fourth baker (neat bob haircut, freckles, white apron, small flat paper cap) pokes one bubble with a fingertip. Invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the counter, bakers and bubbles fill about 95% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_pp_heavy_first",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Seen from the front: a bakery counter with a conveyor belt running from left to right past only three work stations (mixing, oven, icing). At the start of the belt three cakes wait in a queue: first a big two-tier cake, twice the size of the others, then two small single cakes. The first baker (tall and thin, round glasses, white apron, small flat paper cap) struggles to lift the big cake; the second baker (long ponytail, white apron, small flat paper cap) and the third baker (short and sturdy, curly hair, white apron, small flat paper cap) wait at their stations, one tapping the counter, one with arms folded. Invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the counter, cakes and three bakers fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_pp_crumb_limit",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Close-up at a bakery counter, seen from the front, both characters waist up: the first baker (tall and thin, round glasses, white apron, small flat paper cap) holds a big knife above one single small cupcake on a cutting board, about to cut it in half to make it even smaller; the second baker (long ponytail, white apron, small flat paper cap) gently catches the knife hand by the wrist and shakes her head, smiling, as if to say that is as small as it goes. Beside the board, a neat row of identical single cupcakes. Invented characters with simple round faces and dot eyes. Square image 1024x1024; the two bakers, board and cupcakes fill about 88% of the width, centred. No text, no letters, no numbers, no logos."
+  }
+ ]
+}

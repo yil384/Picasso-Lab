@@ -17,7 +17,8 @@ from PIL import Image
 from scipy import ndimage
 from skimage.graph import MCP_Geometric
 
-ART = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'art'))
+ART = os.path.abspath(os.path.expanduser(os.environ.get('EDU_ART_DIR') or        # EDU_ART_DIR: src/ and cut/ elsewhere
+                                          os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'art')))
 
 
 def pack(name, sweep='y', fill=True, spread=.55, margin=10):

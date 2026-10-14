@@ -149,7 +149,17 @@ mkdir -p "$EP_WORK/logs"
 EP_BASE=$(basename "$EP_DIR")
 
 if "$IMG_CLI" login status > /dev/null 2>&1; then IMG="logged in"; else IMG="NOT logged in: use the art fallback (art-prompts.html)"; fi
+# the image tool's account ends on IMG_UNTIL: after that day expect every job to fail, whatever login status says
+IMG_UNTIL="${IMG_UNTIL:-2026-10-16}"
+[[ "$(date +%F)" > "$IMG_UNTIL" ]] && IMG="${IMG}; its account ended on ${IMG_UNTIL}: expect it to be unavailable (build from the pre-drawn art and existing drawings; prompts page for the rest)"
 say "image tool: ${IMG}"
+# drawings made ahead for this episode (EP/art.pre.json + the library outside git; a missing library is only noted)
+if [ -f "$EP_DIR/art.pre.json" ]; then
+  PRE=$(python3 "$DAILY/art.py" pre "$EP_DIR/art.pre.json" --line 2>&1) || PRE="$EP_DIR/art.pre.json is unreadable: ${PRE}"
+else
+  PRE="none for this episode (no art.pre.json)"
+fi
+say "pre-drawn art: ${PRE}"
 
 left() { echo $(( EP_DEADLINE_EPOCH - $(date +%s) )); }
 SECS=$(left)
@@ -165,6 +175,7 @@ PROMPT_TEXT="$(cat "$DAILY/PROMPT.md")
 - Hard stop: $EP_DEADLINE (this session and everything it started are killed then; plan every checkpoint against it)
 - Power: $POWER
 - Image tool: $IMG
+- Pre-drawn art: $PRE
 - Branch: $BR
 - Run log: $LOG"
 PERM=(); [ -n "${PERMISSION_MODE:-}" ] && PERM=(--permission-mode "$PERMISSION_MODE")

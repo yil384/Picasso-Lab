@@ -1,0 +1,152 @@
+{
+ "episode": "L04-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: four knives, one cake: cut a training job by the batch, by the sentence, by the layers, or inside each layer (line_split_cake_knives).",
+  "Only two things to cut: the data and the model (her words, slide 22-23).",
+  "One GPU: a batch of sentences flows through layers 0-3, one chef runs every station (slide 23) (line_split_one_chef_line).",
+  "Data parallel: split the batch; copy the whole kitchen, each copy cooks part of the orders (slide 24) (line_split_twin_kitchens).",
+  "Context parallel: split each sequence along its length, for very long documents (slide 25) (line_split_long_roll, line_long_ribbon).",
+  "Pipeline parallel: split the layers; an assembly line, one station per chef (slide 26) (line_split_assembly).",
+  "Tensor parallel: split inside each layer; two chefs share one huge step (slide 27) (line_split_big_pizza).",
+  "MoE aside (her question): expert parallelism cuts the model into experts and, as a result, cuts the data dynamically, unevenly; the four classic cuts are static (line_split_expert_stations).",
+  "Takeaway: 4D: every GPU is one coordinate (DP, CP, PP, TP) and holds one shard of data and one shard of model (slide 28) (line_split_kitchen_block, line_split_slices_plates); the map for the next episodes (line_course_map)."
+ ],
+ "reuse": [
+  "line_d_chefs",
+  "line_d_chef_c1",
+  "line_d_chef_c2",
+  "line_d_chef_c3",
+  "line_d_chef_c4",
+  "line_long_ribbon",
+  "line_scissors_strips",
+  "line_course_map",
+  "line_building_h",
+  "line_mic"
+ ],
+ "drawings": [
+  {
+   "name": "line_split_cake_knives",
+   "kind": "line",
+   "group": "B",
+   "sweep": "c",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "A tall round cake with four clearly visible layers sits on a cake stand in the centre, seen from a little above and in front; around it, four different knives lie on the table pointing at the cake from four sides: a long bread knife, a big chef's knife, a cake server and a thin palette knife. Square image 1024x1024; the cake and the knives fill about 85% of the width, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_split_one_chef_line",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "The young chef with short curly hair (tall white chef hat, double-breasted chef jacket, apron) runs alone along a straight line of four kitchen stations in a row from left to right: a chopping board, a stove with a pan, an oven, and a plating counter. He carries a tall wobbly stack of plates and is out of breath, with small sweat drops. Landscape image 1536x1024; the stations and the chef fill about 92% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_split_twin_kitchens",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "Two identical small kitchens side by side, each with the same line of four stations (chopping board, stove, oven, plating counter) and one chef: on the left the woman chef with a low hair bun, on the right the chef with round glasses and curly hair (both in tall white chef hats, double-breasted jackets and aprons). In front, in the middle, a pile of blank order tickets has been split into two equal halves, and one half is pinned up in each kitchen. Landscape image 1536x1024; the scene fills about 92% of the width and about 75% of the height. The tickets are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_split_long_roll",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "An absurdly long sandwich loaf, one single baguette stretching across a long counter from the left edge to the right edge, cut into four equal pieces; four chefs of the recurring cast (tall white chef hats, double-breasted jackets, aprons) stand behind the counter, each one filling only their own piece. Landscape image 1536x1024; the loaf fills about 92% of the width; the chefs fill about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_split_assembly",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "Four chefs of the recurring cast (tall white chef hats, double-breasted jackets, aprons) stand in a row behind one long counter, each at their own station (chopping, frying, baking, plating), and one plate travels along the counter from left to right, handed from each chef to the next; the first chef chops, the last chef adds a garnish. Landscape image 1536x1024; the scene fills about 92% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_split_big_pizza",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "Two chefs of the recurring cast, the round chef with a curly moustache and the woman with a bob and a fringe (tall white chef hats, double-breasted jackets, aprons), stand facing each other on either side of a table holding one enormous round pizza, each cutting only their own half with a pizza wheel at the same moment, working in step. Seen from a little above. Landscape image 1536x1024; the table and the chefs fill about 85% of the width and about 80% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_split_kitchen_block",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "A tall building with its front wall removed like a doll's house, showing a neat grid of small identical kitchen rooms: four floors, and on each floor four rooms side by side; in every room one chef in a tall white chef hat works at a stove, each in a slightly different pose. Portrait image 1024x1536; the building fills about 80% of the width and about 90% of the height. No signs. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_split_slices_plates",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "A layer cake cut into eight neat equal slices, each slice on its own small plate with a small fork, the eight plates lined up in one row across a long table, seen from a little above. Landscape image 1536x1024; the plates fill about 92% of the width and about 50% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_split_expert_stations",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "A restaurant kitchen seen from the front. In the middle stands the woman chef with a low hair bun (tall white chef hat, double-breasted chef jacket, apron), sorting a stream of small blank order tickets that flutter in from the left and sending each one to one of four specialist stations in a row behind her: a grill worked by the round chef with a curly moustache, a pastry table worked by the woman with a bob and a fringe, a salad board worked by the chef with round glasses and curly hair, and a big soup pot worked by the old chef with a white beard (all in tall white chef hats, double-breasted jackets and aprons). The tickets pile up unevenly: a tall pile on the grill rail, a small pile at the pastry table, only one ticket at the soup pot. Landscape image 1536x1024; the scene fills about 92% of the width and about 80% of the height. The tickets are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

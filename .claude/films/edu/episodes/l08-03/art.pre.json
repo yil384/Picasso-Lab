@@ -1,0 +1,155 @@
+{
+ "episode": "L08-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: EAGLE does not guess the model's next word; it guesses what the model is thinking just before it speaks (line_eagle_thought_vs_word, the cover).",
+  "Three ways to draft (slide 14): a separate small model (the intern), parallel heads (Medusa's parrots), one autoregressive head on the features (the eagle) (line_eagle_three_helpers).",
+  "The trade-off (slide 15): speedup = alpha x T_verify(1) / (M x T_draft + T_verify(M)); a heavier drafter pays if more words are accepted per check; the drafter is one layer next to the whole model (line_eagle_one_layer_cake).",
+  "EAGLE-1 (slides 16-17): one decoder layer reads the big model's hidden feature plus the last word, predicts the next feature, and the big model's own frozen output head turns it into a word (line_eagle_reads_thought); a static tree.",
+  "EAGLE-2 (slides 18-20): a dynamic tree, wide where unsure (\"10+2\" may go on with + or =, line_eagle_chalkboard_pause with the sum written by pen), deep where sure (line_eagle_scout_paths); acceptance mostly 3-5 tokens.",
+  "Temperature (slide 20): low temperature is easier to guess (reuse line_temp_knob).",
+  "EAGLE-3 (slides 21-23): fuse features from low, middle and high layers (line_eagle_three_bubbles), drop the feature loss, and practise on its own drafts instead of always being handed the right answer (\"training-time test\": line_eagle_leash_practice vs line_eagle_solo_course).",
+  "It now keeps improving with more data, 1B to 50B training tokens (line_eagle_book_feast).",
+  "In practice (slides 24-25): a flag in vLLM / SGLang (reuse line_switch_dimmer); Yggdrasil makes dynamic trees hardware-friendly (line_draft_gardener from L08-02 if it is in the library)."
+ ],
+ "reuse": [
+  "line_temp_knob",
+  "line_two_lanterns",
+  "line_switch_dimmer",
+  "line_brain",
+  "line_dice_hand"
+ ],
+ "drawings": [
+  {
+   "name": "line_eagle_thought_vs_word",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_dog_chases_cat",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), stands about to speak: a small blank speech bubble is just leaving his mouth, and above his head floats a much larger thought bubble (a cloud outline with a trail of small circles) holding a few simple abstract shapes: a swirl, a small star, a little cloud and a loop. Perched on his shoulder, a small, round, friendly cartoon eagle (a fluffy young eagle with big dot eyes, a small hooked beak, a little tuft of feathers on its head; not a bald eagle, not heraldic, no emblem) leans eagerly towards the thought bubble, peering into it. Portrait image 1024x1536; the editor fills about 60% of the width, the thought bubble about 70% of the width at the top; everything fills about 85% of the height. The bubbles hold no words: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_eagle_three_helpers",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_dog_chases_cat",
+    "line_whisper_line",
+    "line_tiny_lab"
+   ],
+   "prompt": "Three helpers in a row, evenly spaced, seen from the front: on the left, the intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), holding a pencil and a blank card; in the middle, a wooden perch with four small round cartoon parrots, all alike (dot eyes, short curved beaks, tidy feathers), each with a blank card in its beak; on the right, a small, round, friendly cartoon eagle (a fluffy young eagle with big dot eyes, a small hooked beak, a little tuft of feathers on its head; not a bald eagle, not heraldic, no emblem), standing on a short wooden post, one wing raised as if to say hello. Landscape image 1536x1024; the three helpers fill about 92% of the width and about 75% of the height, each clearly separated. The cards are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_eagle_one_layer_cake",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_knob_board",
+    "line_clock_face"
+   ],
+   "prompt": "On a kitchen counter: on the left, an enormously tall layered cake made of very many thin, identical layers stacked high on a cake stand, almost reaching the top of the picture; on the right, a small plate holding one single thin layer of the same cake. A cake knife lies between them. Square image 1024x1024; the tall cake fills about 85% of the height; both together fill about 80% of the width. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_eagle_reads_thought",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_dog_chases_cat",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "Close view: the head and shoulders of the editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), in profile facing right, eyes half closed in thought; a large thought bubble rises from his head with a few simple abstract shapes inside (a swirl, a loop, a small star). A small, round, friendly cartoon eagle (a fluffy young eagle with big dot eyes, a small hooked beak, a little tuft of feathers on its head; not a bald eagle, not heraldic, no emblem) perches on the edge of the thought bubble, looking down into it with big curious eyes, and holds a small blank card in one talon, ready for the next word. Square image 1024x1024; the editor and the bubble fill about 85% of the width and of the height. The bubble and the card hold no words: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_eagle_chalkboard_pause",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_dog_chases_cat",
+    "line_chat_first"
+   ],
+   "prompt": "A young invented child (simple round face, dot eyes, short hair, a t-shirt) stands on a small step stool at a big chalkboard on an easel, chalk raised in one hand, pausing, the other hand on the chin, thinking about what comes next. A small, round, friendly cartoon eagle (a fluffy young eagle with big dot eyes, a small hooked beak, a little tuft of feathers on its head; not a bald eagle, not heraldic, no emblem) watches from the top edge of the board. Portrait image 1024x1536; the board fills about 80% of the width in the upper two thirds; child, board and eagle fill about 85% of the height. The chalkboard is completely blank: no symbols, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_eagle_scout_paths",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_two_lanterns",
+    "line_dog_chases_cat",
+    "line_balance"
+   ],
+   "prompt": "Seen from above at an angle: a gentle country landscape with a path coming in from the left; at one point the path splits into four short paths fanning out to nearby spots (a pond, a barn, a grove, a hill); one of them carries on as a single long straight road running far to the right. A small, round, friendly cartoon eagle (a fluffy young eagle with big dot eyes, a small hooked beak, a little tuft of feathers on its head; not a bald eagle, not heraldic, no emblem) flies over the landscape with wings spread, looking down. Landscape image 1536x1024; the landscape fills about 92% of the width and about 80% of the height. No signposts, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_eagle_three_bubbles",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_dog_chases_cat",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), sits in his armchair, thinking; from his head rise three thought bubbles stacked one above the other, a small one, a medium one and a large one, each with a different simple abstract shape inside (a dot, a swirl, a star). A small, round, friendly cartoon eagle (a fluffy young eagle with big dot eyes, a small hooked beak, a little tuft of feathers on its head; not a bald eagle, not heraldic, no emblem) hovers beside the stack with wings spread, holding three ribbons in its talons, one ribbon tied to each bubble. Portrait image 1024x1536; the editor, the bubbles and the eagle fill about 80% of the width and about 88% of the height. The bubbles hold no words: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_eagle_leash_practice",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_dog_leash",
+    "line_dog_chases_cat",
+    "line_tiny_lab"
+   ],
+   "prompt": "On a grassy field: a small, round, friendly cartoon eagle (a fluffy young eagle with big dot eyes, a small hooked beak, a little tuft of feathers on its head; not a bald eagle, not heraldic, no emblem) flies one short hop, held on a long soft training lead by the editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), who walks along beside it and gently steers it, pointing the way with his other hand; a small ring on the grass shows where to land. Square image 1024x1024; the editor and the eagle fill about 85% of the width and about 80% of the height. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_eagle_solo_course",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_dog_chases_cat",
+    "line_two_lanterns",
+    "line_tiny_lab"
+   ],
+   "prompt": "On a grassy field, a simple obstacle course of five hoops on poles in a row across the field; a small, round, friendly cartoon eagle (a fluffy young eagle with big dot eyes, a small hooked beak, a little tuft of feathers on its head; not a bald eagle, not heraldic, no emblem) flies alone through the course, wobbling a little at one hoop (a few short wobble lines), recovering and heading on to the next, determined; far in the background the editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), watches with arms folded and a small smile. Landscape image 1536x1024; the course fills about 92% of the width and about 75% of the height. No flags, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_eagle_book_feast",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": false,
+   "refs": [
+    "line_dog_homework",
+    "line_heap",
+    "line_balance"
+   ],
+   "prompt": "A small, round, friendly cartoon eagle (a fluffy young eagle with big dot eyes, a small hooked beak, a little tuft of feathers on its head; not a bald eagle, not heraldic, no emblem), now noticeably bigger and very content, sits on top of a huge pile of books stacked in a heap, one open book under its feet, many more books around the base, a few small sparkle lines. Square image 1024x1024; the pile and the eagle fill about 80% of the width and about 88% of the height. The books are blank: no titles, no text, no letters, no numbers."
+  }
+ ]
+}

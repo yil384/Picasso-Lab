@@ -1,0 +1,156 @@
+{
+ "episode": "L12-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "note": "Sources: her quantization lecture is the recording transcribed in course/L13.transcript.md (it opens \"for this lecture, we will cover large language model quantizations\"); course/L12.transcript.md is the serving lecture, and the slide markers in both transcripts point at the other PDF. Slides: course/L12.txt / L12.pdf.",
+ "beats": [
+  "Hook: a handful of giant numbers ruin 8-bit math for everyone else: in a group photo with one friend on stilts, the frame must fit the tallest, and everyone else shrinks to dots (line_outlier_group_photo, line_outlier_print_tiny; full-height vertical option: line_outlier_stilts_tall).",
+  "Weights are calm and fixed, so they are measured offline; activations change with every input and carry a few huge channels, the same channels token after token (slide 28; line_outlier_tower_streets).",
+  "SmoothQuant (slide 29): Y = (X diag(s)^-1)(diag(s) W): divide each big activation channel by s and multiply the matching weight row by s; the product is unchanged, and both now fit in 8 bits (W8A8) (line_smooth_share_load, line_balance).",
+  "LLM.int8() (slide 30): keep the outliers in FP16 and the rest in INT8: accurate, but the separate path is slow on GPUs, sometimes slower than plain FP16 (line_int8_oversize_door); SmoothQuant stays fast at large batches.",
+  "KV cache quantization (slide 31): the cloakroom from L03-02 holds activations that stay around; packing it smaller means longer contexts, bigger batches and less traffic per step (line_kv_pack_shrink).",
+  "K and V group along different axes (slide 32): one can be packed as each token arrives, the other needs a group of tokens first, so an extra quantization cache waits (line_kv_waiting_trolley). Which is which: check slide 32 (GEMM layout) and M-ANT (Hu et al. 2025; check authors before naming the lab).",
+  "NVFP4 (slides 33-34): E2M1 with one scale per block of 16 plus one per tensor, done in Blackwell hardware: a small photo per small group, all pinned on one board; near-original accuracy at 2-3x speed (check) (line_outlier_photo_board).",
+  "Vector quantization (slide 35): replace a whole group of numbers with the nearest entry of a small codebook learned by k-means, like printing a picture with a few stamps; mostly for audio and video tokens (line_vq_stamp_set).",
+  "Takeaway: the outliers set the scale; split them off (LLM.int8()), move them into the weights (SmoothQuant), or shrink the groups until they cannot hurt (NVFP4)."
+ ],
+ "reuse": [
+  "line_balance",
+  "line_clerk_ladder",
+  "line_scroll_reader",
+  "line_gpu",
+  "line_wave"
+ ],
+ "drawings": [
+  {
+   "name": "line_outlier_group_photo",
+   "kind": "line",
+   "group": "E",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The photographer (the same character in every picture): an invented adult with a simple round face, dot eyes, a short ponytail, a sleeveless vest with many small pockets over a long-sleeved shirt, working an old wooden box camera on a three-legged wooden tripod. The tall friend (the same character in every picture): an invented cheerful person standing on very tall wooden stilts hidden under extra-long trousers, about three times as tall as everyone else, simple round face, dot eyes, a striped scarf. A group photo outdoors on a lawn. On the right, a row of seven invented friends (simple round faces, dot eyes, different hairstyles: glasses, a ponytail, a cap, curls, a bob, a bun, short spiky hair) stand smiling, and in the middle of them stands the tall friend, whose head nearly reaches the top of the picture, waving. On the left, the photographer has tilted the camera far back on its tripod to fit the tall friend in, and leans back, mouth open, looking up and up. Landscape image 1536x1024; the scene fills about 94% of the width and about 92% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_outlier_print_tiny",
+   "kind": "line",
+   "group": "E",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The photographer (the same character in every picture): an invented adult with a simple round face, dot eyes, a short ponytail, a sleeveless vest with many small pockets over a long-sleeved shirt, working an old wooden box camera on a three-legged wooden tripod. The photographer, seen from the waist up, holds up a big freshly printed photo with both hands towards us, frowning at it. In the photo: the tall friend on stilts fills the whole height of the print, and all the other friends are tiny figures in a row along its bottom edge, so small that their faces are just dots. Square image 1024x1024; the photographer and the print fill about 80% of the width and of the height; the print is big, in front. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_outlier_stilts_tall",
+   "kind": "line",
+   "group": "E",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The tall friend (the same character in every picture): an invented cheerful person standing on very tall wooden stilts hidden under extra-long trousers, about three times as tall as everyone else, simple round face, dot eyes, a striped scarf. Seen straight from the front on a plain lawn: six invented friends (simple round faces, dot eyes, different hairstyles: glasses, a ponytail, a cap, curls, a bob, a bun) stand close together in one row, all of them in the lowest quarter of the picture, smiling and looking up. In the middle of the row stands the tall friend, the long trouser legs running all the way down to the grass, the body and waving hand rising high above everyone, the head near the top of the picture. Portrait image 1024x1536; the group fills about 80% of the width and about 92% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_outlier_tower_streets",
+   "kind": "line",
+   "group": "G",
+   "sweep": "y",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "A small town seen from high above at a slight angle: six parallel streets run left to right, each lined with a row of small identical houses with pitched roofs. But in every row, at exactly the same two places, stand tall narrow towers instead of houses, so the towers form two straight columns running through every street from the top of the picture to the bottom. Square image 1024x1024; the town fills about 92% of the width and of the height. No signs. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_smooth_share_load",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "Two invented hikers (simple round faces, dot eyes, sun hats, hiking boots) on a mountain trail. The one on the left is bent almost double under a gigantic, overstuffed backpack, sweating. The one on the right carries a small light daypack and is helping: lifting one heavy bundle out of the big pack and putting it into their own pack, smiling; a couple of things are already moved. Landscape image 1536x1024; both hikers and packs fill about 85% of the width and about 85% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_int8_oversize_door",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A post-room sorting hall seen from the front. On the right, a fast conveyor belt carries a stream of identical small parcels past two invented sorters (simple round faces, dot eyes, aprons) who flick them into chutes quickly, with motion lines. On the left, one invented worker struggles alone through a separate, wider side door, carrying one enormous, oddly shaped parcel by hand, slow and staggering, with three more giant parcels waiting behind. Landscape image 1536x1024; the hall fills about 94% of the width and about 85% of the height. Parcels blank, no labels. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_pack_shrink",
+   "kind": "line",
+   "group": "F",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The first attached image shows the recurring clerk (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron): draw the same person in the new pose described. The other attached images are style references only (line drawings made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The clerk (the same character as in L03-02 and in the first reference image): an invented cheerful clerk with a simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron. A cloakroom: behind a long wooden counter, a wall of open square pigeonholes, about 6 rows by 8 columns. The clerk squeezes the air out of a small parcel with a hand pump, turning it into a thin flat packet; the wall now holds three thin flat packets and their blank round name tags in every pigeonhole where one bulky parcel used to fit. In front of the counter, a long queue of invented guests (simple round faces, dot eyes, different hairstyles) waits happily, more than the old wall could have held. Landscape image 1536x1024; the wall, the counter, the clerk and the queue fill about 92% of the width and about 85% of the height. Tags and packets blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_waiting_trolley",
+   "kind": "line",
+   "group": "F",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The first attached image shows the recurring clerk (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron): draw the same person in the new pose described. The other attached images are style references only (line drawings made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The clerk (the same character as in L03-02 and in the first reference image): an invented cheerful clerk with a simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron. A cloakroom wall of open square pigeonholes, about 6 rows by 8 columns, each holding a blank round name tag and a parcel. The clerk slips a newly arrived round name tag straight into its pigeonhole at once with one hand. But the newly arrived parcels cannot go in one by one: they wait stacked on a small two-tier trolley beside the clerk until a full group has arrived; an invented guest (simple round face, dot eyes) adds one more parcel to the trolley. Landscape image 1536x1024; the wall, the clerk, the trolley and the guest fill about 92% of the width and about 85% of the height. Tags and parcels blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_outlier_photo_board",
+   "kind": "line",
+   "group": "E",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The photographer (the same character in every picture): an invented adult with a simple round face, dot eyes, a short ponytail, a sleeveless vest with many small pockets over a long-sleeved shirt, working an old wooden box camera on a three-legged wooden tripod. A big corkboard in a wide wooden frame hangs on a wall, covered in a neat grid of small photo prints, four rows of six. Each small print shows just two or three friends close up, filling its own frame; one print shows only the tall friend on stilts, also filling its frame. The photographer pins the last print into the bottom right corner, pleased. Landscape image 1536x1024; the board and the photographer fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_vq_stamp_set",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "A long strip of paper lies across a table, and a friendly hand holding a rubber stamp is printing a picture onto it. The whole picture on the strip (rolling hills, trees, clouds, waves at the shore, birds) is made only from repeated prints of the same five stamp shapes: a tree, a cloud, a wave, a hill and a bird. On the left, an open wooden tray holds exactly those five rubber stamps on wooden handles and an ink pad, drawn as outlines only. Landscape image 1536x1024; the strip, the tray and the hand fill about 92% of the width and about 60% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

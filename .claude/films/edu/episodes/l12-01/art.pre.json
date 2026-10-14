@@ -1,0 +1,129 @@
+{
+ "episode": "L12-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "note": "Sources: her quantization lecture is the recording transcribed in course/L13.transcript.md (it opens \"for this lecture, we will cover large language model quantizations\"); course/L12.transcript.md is the serving lecture, and the slide markers in both transcripts point at the other PDF. Slides: course/L12.txt / L12.pdf.",
+ "beats": [
+  "Hook: same eight tiles, two formats: E4M3 tops out at 448, E5M2 at 57,344 (check). Which would you train with? Two twin tape measures, one short with fine marks, one pulled out very far with coarse marks (line_bits_two_tapes).",
+  "A number in a model is a row of bits: small wooden tiles, plain (0) or dotted (1) (line_bits_tile_row; a bit is a switch, not a dimmer: line_switch_dimmer).",
+  "Unsigned integers: each tile is worth twice its right neighbour, like a set of doubling brass weights; 49 = 32 + 16 + 1 on the balance (line_bits_weight_set, slide 3).",
+  "Sign-magnitude spends one tile on the sign and gets two zeros: two doors into the same empty room, so every zero check has two cases (line_bits_two_zero_doors).",
+  "Two's complement: count backwards past zero and you wrap around like a clock; one zero, and the adder does subtraction too (invert, add 1) (line_clock_face).",
+  "FP32 (slide 4): sign + 8 exponent bits (which flight of stairs: range) + 23 fraction bits (which step on that flight: precision); each flight's steps are twice as big as the last; subnormals are the tiny steps that reach the floor (line_float_staircase).",
+  "In 4 bits there are only 16 codes: INT4 hangs its hooks evenly, FP4 (E2M1) crowds them near zero and spreads them out far away; the small formats spend few or no codes on specials: E4M3 drops infinity and keeps one NaN pattern (so its top is 1.75 x 2^8 = 448), E5M2 keeps IEEE-style inf/NaN (top 1.75 x 2^15 = 57,344), E2M1 has neither (check) (line_bits_hook_rails, slide 5).",
+  "Hardware: exponents add, mantissas multiply, and the multiplier is the expensive part; TF32 keeps FP16's 10 mantissa bits so it reuses the same multiplier (line_float_mult_machine, slide 6).",
+  "The family on slide 7: FP32, FP16 (V100), TF32 and BF16 (A100), FP8 E4M3 / E5M2 (H100), NVFP4 E2M1 with fine-grained groups (B200): each generation carries the number in a smaller bag (line_float_luggage_line, taped slide 7).",
+  "Takeaway / pitfall: fewer bits is a choice of what to keep, range or precision; forward passes like precision (E4M3), gradients need range (E5M2); next: rounding a whole model (back to line_bits_two_tapes)."
+ ],
+ "reuse": [
+  "line_clock_face",
+  "line_switch_dimmer",
+  "line_balance",
+  "line_gpu",
+  "line_heap"
+ ],
+ "drawings": [
+  {
+   "name": "line_bits_two_tapes",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two identical round pocket tape measures sit side by side on a table, seen from the front and a little above, exactly the same size, like twins. From the left one, a friendly hand pulls out only a short length of tape, straight and taut, covered with many fine, closely spaced tick marks. From the right one, the tape has been pulled out very far: it runs across the table and loops back in two big loose curves, and it carries only a few widely spaced tick marks; a second hand holds the far end of the long tape. Landscape image 1536x1024; the two tape measures and the tapes fill about 90% of the width and about 65% of the height, centred. The tapes carry tick marks only. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_bits_tile_row",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "A row of eight small square wooden tiles lying flat on a table in one straight line from left to right, seen from the front and a little above, with even small gaps between them, like game tiles. Every tile is a plain square with softly rounded corners and a visible thickness. Some tiles have one small round dot carved in the centre of the face; the others have a completely plain face. From left to right the first seven tiles go: dot, plain, dot, dot, plain, plain, dot. A friendly hand comes in from the upper right and is just setting the eighth tile, a plain one, down in its place at the right end of the row. Landscape image 1536x1024; the row of tiles fills about 88% of the width, each tile about a tenth of the width; tiles and hand fill about 55% of the height, centred. No other objects. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_bits_weight_set",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "An open wooden case lies on a table, seen from the front and a little above. Inside, in a row of eight fitted round hollows, stand brass cylinder weights with small round knobs on top, like an old set of laboratory weights. They grow steadily from right to left: the rightmost is a tiny pellet and each weight is clearly about twice as big as the one to its right, up to a big heavy one at the left end. Three hollows are empty: the third and fourth from the left and the rightmost one. Those three weights (two medium-large ones and the tiny one) sit on the right-hand pan of an old two-pan balance standing beside the case on the right; on its left-hand pan sits one round loaf of bread, and the beam is exactly level. Landscape image 1536x1024; the case and the balance together fill about 90% of the width and about 70% of the height. The weights are plain metal with no markings. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_bits_two_zero_doors",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first two attached images show the recurring student (short messy hair, hoodie, simple round face with dot eyes): draw the same person in the new pose described. The last image is a style reference only (a line drawing made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (the same invented character as in the first two reference images, in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. A hallway wall seen straight from the front with two identical wooden doors side by side, both wide open. Through both doorways we see into one and the same small room behind the wall: the room is completely empty, just a bare floor and one small window, and it is clearly the same room seen through two doors (the floor line and the back wall continue behind both doorways). The student stands in the hallway between the doors holding a clipboard, leaning to peer through the left doorway while pointing back at the right one with a pencil, puzzled, with two small curved lines beside the head. Landscape image 1536x1024; the two doors and the student fill about 85% of the width and about 85% of the height. The clipboard is blank; nothing on the doors. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_float_staircase",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A tall staircase drawn from the side like a cutaway, rising from the lower left to the upper right in four flights joined by small flat landings. Every flight has exactly six steps, but each flight's steps are twice as tall and twice as deep as those of the flight below it: the lowest flight has tiny steps like a doll's staircase, the next flight bigger, the next bigger again, and the top flight has huge steps, each about as tall as a person. At the bottom left, the tiny lowest flight runs down as a short gentle run of equally tiny steps all the way to the floor, with no gap at the bottom. Two small invented characters (simple round faces, dot eyes, plain clothes): one at the bottom trots up the tiny steps easily, one near the top hauls themself up onto a giant step with both arms, legs dangling. Plain stone blocks, a simple outline for each step, no railings. Landscape image 1536x1024; the staircase fills about 90% of the width and about 88% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_bits_hook_rails",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two long wooden coat rails are mounted on a plain wall, one above the other, both the same length and lined up at their left and right ends. Each rail carries exactly fifteen identical simple metal coat hooks, with one hook exactly at the centre. On the upper rail the fifteen hooks are evenly spaced along the whole rail. On the lower rail the hooks are crowded close together around the centre and spread further and further apart towards both ends, so the outermost hooks are far apart. A few hats, scarves and small bags hang on some of the hooks of both rails. Landscape image 1536x1024; the rails fill about 92% of the width; the two rails with the hanging things fill about 60% of the height, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_float_mult_machine",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clockwork",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "A workshop seen from the front. On the left, one relaxed invented worker (simple round face, dot eyes, overalls) sits on a stool at a tiny table and clicks a small hand-held tally counter (its little window blank) with one thumb, a cup of tea in the other hand, calm. On the right, an enormous clanking machine fills the space from floor to ceiling: many big interlocking gears, levers, cranks, pipes and a funnel on top with small puffs of steam; three invented workers (simple round faces, dot eyes, overalls) toil around it: one turns a big crank with both hands, one shovels small blocks into the funnel, one wipes the forehead while holding an oil can. Landscape image 1536x1024; the scene fills about 92% of the width and about 85% of the height; the machine takes the right two thirds. No dials. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_float_luggage_line",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first two attached images show the recurring student (short messy hair, hoodie, simple round face with dot eyes): draw the same person in the new pose described. The last image is a style reference only (a line drawing made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (the same invented character as in the first two reference images, in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. Pieces of luggage stand in a row on the floor from left to right, getting smaller step by step: a huge old steamer trunk with corner caps and leather straps, a large suitcase, a medium suitcase, a small carry-on case with a handle, and a small satchel. At the right end stands the student, holding up the last and smallest one, a tiny coin purse, between finger and thumb with a delighted, surprised face. Landscape image 1536x1024; the row of luggage and the student fill about 92% of the width and about 70% of the height, the trunk being the tallest thing. No luggage tags, no stickers. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}
