@@ -243,6 +243,21 @@ INCIDENTS.g0842ff = {
   32: (w) => { w.inventory.set('obsidian', 14); },
 };
 
+INCIDENTS.g2409ce = {
+  0: (w) => { w.position = { x: -100.5, y: 107, z: -183.5 }; },
+  // the sheep hunt a skeleton fight cut short: it goes on after the fight now
+  6: (w) => w.takeovers.push({ tool: 'collect_mob_drop', made: false, error: 'fight response for skeleton#7 at -97,99,-184 (3.5 blocks).' }),
+  8: (w) => { w.inventory.set('dirt', 13); },
+  14: (w) => { w.inventory.set('dark_oak_planks', 8); },
+  18: (w) => { w.inventory.set('flint', 3); }, // the flint the gravel gave
+  21: POOL_AWAY,
+  23: LAVA_NEAR,
+  25: LAVA_NEAR,
+  27: LAVA_NEAR,
+  // the placement the server did not confirm in time: tried once more now, and the frame stands
+  30: (w) => w.takeovers.push({ tool: 'build_structure', made: false, error: 'Event blockUpdate:(-100, 103, -183) did not fire within timeout of 5000ms; physical verification after 5 ticks' }),
+};
+
 /** The code a step that failed in production gets here (by index); every other step is ok. */
 const EXPECTED = {
   // 1: raw_chicken (refused before a hunt until 2026-10-12) is read as chicken now and hunted (src/tolerant.js); 18: production smelted the mutton again after its hitch, but here the
@@ -252,13 +267,14 @@ const EXPECTED = {
   // 22: a second fill without an empty bucket (production's first fill had timed out; here it worked): not checked;
   // 24, 34: no pool within 16 blocks (the reply names the nearest); 26: a reflex took the collect over; 29: the death;
   // 39: lava next to the frame's site
-  g0793f1: { 22: null, 24: 'LAVA', 26: 'INTERRUPTED', 29: 'DIED', 34: 'LAVA', 39: 'LAVA' },
+  // 26: the collect a reflex cut short goes on after it now (g2409ce's fix), as production's took a second call for
+  g0793f1: { 22: null, 24: 'LAVA', 29: 'DIED', 34: 'LAVA', 39: 'LAVA' },
   // 0: production's first collect found no path out of the 24-block shaft the pre-play dig made (fixed, and the fake
   // never dug it): ok here; 1: go_to {pos}, refused in production, runs; the bucket fills, walks and the frame that
   // failed for the world's reasons (a flowing cell, reflexes, paths, one stone cell kept): not checked; 46: stopped by
   // Muse; 55, 57: the stone hillside and the birch leaves are cleared first and built on; 58: not checked
   // 5: the zombie; 6: the death in the middle of the shelter (the fake's shelter is done); 23, 32: walks the world stopped
-  g08370a: { 5: 'INTERRUPTED', 6: null, 23: null, 32: null },
+  g08370a: { 6: null, 23: null, 32: null },
   // the walks the world stopped (16, 18), Muse's stop (17), the lit portal and the pools (23, 25: refused as in
   // production), the frames after the first two (36 to 45: built or not, the world's business here)
   // 23: refused when that frame is unknown, released when g0793f1's replay (earlier in this file) left it there, as it did
@@ -279,6 +295,9 @@ const EXPECTED = {
   // 16, 17: the walks into the cavern's air; 20: no way to the water underground; 21, 30: a height told right; 22: the
   // server's move checks timed out; 24: the gravel, 20 of 24 (flint among them); 29: the frame in the birch goes up now
   g0842ff: { 16: null, 17: null, 20: null, 21: null, 22: null, 24: null, 30: null },
+  // 7: the attack the body held back (no hostile near here); 21: no pool near; 23, 25, 27: the pools that gave little
+  // in production give here; 28: a height told right; 32: the first frame stands here, so a second build is a new one
+  g2409ce: { 7: null, 21: 'LAVA', 23: null, 25: null, 27: null, 28: null, 32: null },
   gd7540a: { 9: null, 10: null, 13: null, 14: null, 15: null, 16: null, 19: null, 21: null, 23: null, 24: null, 26: 'LAVA', 29: 'LAVA' },
 };
 /** An advice kind a step's reply must carry (by index): g0a414c's third obsidian call that did not move is stuck. */
@@ -290,6 +309,7 @@ const EXPECTED_TEXT = {
   g4ac86b: { 20: /a lit portal at 49 93 161 \(\d+ blocks away\) is loaded: its frame was left alone, the obsidian comes from lava or other obsidian/, 28: /cleared \d+ cells of/, 33: /your own portal is at -?\d+ -?\d+ -?\d+, \d+ blocks away \(the Nether side led to an older portal/ },
   // 55, 57: the stone hillside and the birch leaves are cleared first now, and the frames go up (g809e1b's fix)
   ga13a88: { 1: /^go_to \{"x":-20,"y":78,"z":236\}: ok/, 55: /cleared \d+ cells of stone for it first/, 57: /cleared \d+ cells of birch_leaves for it first/ },
+  g2409ce: { 6: /the hunt went on once it let go/, 30: /the server did not confirm one placement in time; the build went on at the same cells/ },
   g0842ff: { 29: /\(built facing east; cleared \d+ cells of [a-z_ ]*birch_leaves[a-z_ ]* for it first\)/ },
   gd7540a: {
     7: /tried again once it let go/,
@@ -299,7 +319,7 @@ const EXPECTED_TEXT = {
 };
 
 /** The goal each game played for. */
-const GOALS = { g0842ff: 'nether_and_back', gd7540a: 'nether_and_back', g0a414c: 'nether_and_back', g71c9f5: 'nether_and_back', g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
+const GOALS = { g2409ce: 'nether_and_back', g0842ff: 'nether_and_back', gd7540a: 'nether_and_back', g0a414c: 'nether_and_back', g71c9f5: 'nether_and_back', g809e1b: 'nether_and_back', g4ac86b: 'nether_and_back', gb1cfe3: 'iron_pickaxe', g64e8c5: 'nether_and_back', g0793f1: 'nether_and_back', ga13a88: 'nether_and_back' };
 /** A why for a step, as Muse writes them (the fixtures predate why in the log). */
 const whyOf = (i, st) => `Step ${i}: ${[st.tool, ...Object.values(st.args ?? {}).filter((v) => typeof v !== 'object')].join(' ')} for the goal`;
 

@@ -75,7 +75,7 @@ test('g0a414c: obsidian formed beside the bot is mined at its own cells first; a
     assert.ok(Date.now() - t0 < 4_000, 'fails fast, not after the step\'s whole time');
     assert.equal(r.ok, false);
     assert.equal(r.code, 'FAILED');
-    assert.match(r.result, /^no obsidian came in: the nearest formed obsidian is at -390 -54 62, \d+ blocks away, under or beside water \(the water poured did not all go back into the bucket\)\. Instead: scoop the water: bucket fill water at -390 -53 62, then collect obsidian again; or stand right beside it: go_to -?\d+ -54 -?\d+, then collect obsidian 1; or make more at the still lava pool at -394 -54 61, \d+ blocks away: go_to a spot a few blocks from it, then collect obsidian; or build nether_portal now: 12 obsidian is enough/);
+    assert.match(r.result, /^no obsidian came in: the nearest formed obsidian is at -390 -54 62, \d+ blocks away, under or beside water \(the water poured did not all go back into the bucket\); the still lava pool at -394 -54 61, \d+ blocks away \(1 source: 1 obsidian at most\) is here, but no obsidian came from it \(their pour could not reach it from where it stood\)\. Instead: scoop the water: bucket fill water at -390 -53 62, then collect obsidian again; or stand right beside it: go_to -?\d+ -54 -?\d+, then collect obsidian 1; or build nether_portal now: 12 obsidian is enough/);
   } finally {
     await body.close?.();
     await hosts.closeAll();

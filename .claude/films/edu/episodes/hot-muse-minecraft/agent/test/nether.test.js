@@ -148,7 +148,7 @@ test('nether: collect obsidian runs only near lava, in the Overworld, with no ot
     // a pool loaded farther away: the refusal says where (a staging bench, 2026-10-12)
     a.fake.world.blocks = [{ name: 'lava', found: 1, listed: [{ x: -150, y: 40, z: 175, level: 0 }] }];
     r = await a.body.run('collect', { block: 'obsidian', n: 4 });
-    assert.match(r.result, /The nearest lava pool loaded is at -150 40 175, 3\d blocks away: go_to a spot a few blocks from it first\.$/);
+    assert.match(r.result, /The nearest lava pool loaded is at -150 40 175, 3\d blocks away \(1 source: 1 obsidian at most\): go_to a spot a few blocks from it first\.$/);
     // F2 of the log hunt: flowing lava near by is not a pool to make obsidian from
     a.fake.world.blocks = [{ name: 'lava', found: 3, listed: [{ x: -148, y: 60, z: 150, level: 3 }, { x: -147, y: 60, z: 150, level: 5 }] }];
     r = await a.body.run('collect', { block: 'obsidian', n: 4 });
@@ -264,7 +264,12 @@ test('a reflex takes a craft over: made means ok (with a note), cut short means 
     r = await body.run('collect', { block: 'oak_log', n: 6 });
     assert.equal(r.ok, true, r.result);
     assert.match(r.result, /^mined 6 oak_log and picked up 6 oak_log .*; a reflex took the body over meanwhile \(it got out of the way of a zombie\)$/);
+    // cut short: it goes on after the reflex let go (production game g2409ce); cut short twice: INTERRUPTED
     fake.world.takeovers.push({ tool: 'collect_block', made: false, error: 'evade response for zombie#1 (hurt).' });
+    r = await body.run('collect', { block: 'oak_log', n: 6 });
+    assert.equal(r.ok, true, r.result);
+    assert.match(r.result, /^a reflex took the body over \(it got out of the way of a zombie\); the collect went on once it let go \(6 still to get\); mined 6 oak_log/);
+    fake.world.takeovers.push({ tool: 'collect_block', made: false, error: 'evade response for zombie#1 (hurt).' }, { tool: 'collect_block', made: false, error: 'evade response for zombie#1 (hurt).' });
     r = await body.run('collect', { block: 'oak_log', n: 6 });
     assert.equal(r.code, 'INTERRUPTED');
     assert.match(r.result, /a reflex took the body over \(it got out of the way of a zombie\) before collect block was done/);
