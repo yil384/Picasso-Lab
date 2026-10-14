@@ -158,10 +158,13 @@ export function lavaPools(listed, p) {
     .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y, a.z - p.z) - Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z));
   const pools = [];
   for (const s of sources) {
-    const pool = pools.find((q) => Math.hypot(q.x - s.x, q.y - s.y, q.z - s.z) <= 8);
-    if (pool) pool.sources += 1; else pools.push({ x: s.x, y: s.y, z: s.z, sources: 1 });
+    const pool = pools.find((q) => Math.hypot(q.x0 - s.x, q.y0 - s.y, q.z0 - s.z) <= 8);
+    if (pool) {
+      pool.sources += 1;
+      if (s.y > pool.y) Object.assign(pool, { x: s.x, y: s.y, z: s.z }); // its surface: where a pour lands
+    } else pools.push({ x: s.x, y: s.y, z: s.z, x0: s.x, y0: s.y, z0: s.z, sources: 1 });
   }
-  return pools.map((q) => ({ ...q, d: Math.round(Math.hypot(q.x - p.x, q.y - p.y, q.z - p.z)) }));
+  return pools.map(({ x0, y0, z0, ...q }) => ({ ...q, d: Math.round(Math.hypot(q.x - p.x, q.y - p.y, q.z - p.z)) }));
 }
 /** A pool in words: "the still lava pool at x y z (n sources), d blocks away". */
 const poolSize = (q) => (q.sources === 1 ? '1 source: 1 obsidian at most' : `${q.sources} sources`);
@@ -971,7 +974,9 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       const water = at(0, 1, 0) === 'water' || beside.some(([dx, dy, dz]) => at(dx, dy, dz) === 'water');
       const lava = beside.concat([[0, 1, 0], [0, -1, 0]]).some(([dx, dy, dz]) => at(dx, dy, dz) === 'lava');
       parts.push(`the nearest formed obsidian is at ${q.x} ${q.y} ${q.z}, ${Math.round(q.d)} blocks away${water ? ', under or beside water (the water poured did not all go back into the bucket)' : ''}${lava ? ', with lava beside it' : ''}`);
-      if (water) options.push({ text: `scoop the water: bucket fill water at ${q.x} ${q.y + 1} ${q.z}, then collect obsidian again`, hint: { skill: 'bucket', args: { action: 'fill', liquid: 'water', pos: { x: q.x, y: q.y + 1, z: q.z } } } });
+      // only with an empty bucket to scoop with (the soak: "Bot inventory holds no bucket" with the water bucket full)
+      const emptyBucket = (latest.inventory?.bucket ?? 0) > 0 && !((latest.inventory?.water_bucket ?? 0) > 0);
+      if (water && emptyBucket) options.push({ text: `scoop the water: bucket fill water at ${q.x} ${q.y + 1} ${q.z}, then collect obsidian again`, hint: { skill: 'bucket', args: { action: 'fill', liquid: 'water', pos: { x: q.x, y: q.y + 1, z: q.z } } } });
       const side = beside.map(([dx, , dz]) => ({ x: q.x + dx, y: q.y, z: q.z + dz })).find((c) => !['lava', 'water'].includes(at(c.x - q.x, 0, c.z - q.z)));
       if (side) options.push({ text: `stand right beside it: go_to ${side.x} ${side.y} ${side.z}, then collect obsidian 1`, hint: { skill: 'go_to', args: side } });
     } else parts.push('no formed obsidian is loaded within 12 blocks');
@@ -1221,7 +1226,8 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
           if (near.length) {
             const n = v.args.n;
             const exact = near.slice(0, n).map((c) => ({ tool: 'collect_block', args: { block_name: 'obsidian', x: c.x, y: c.y, z: c.z }, optional: true }));
-            plan.calls = [...exact, ...plan.calls.map((c, k) => (k === 0 ? { ...c, topUp: n } : { ...c, topUp: n, rest: true }))];
+            const firstSearch = plan.calls.findIndex((c) => c.tool === 'collect_block');
+            plan.calls = [...exact, ...plan.calls.map((c, k) => (c.tool !== 'collect_block' ? c : k === firstSearch ? { ...c, topUp: n } : { ...c, topUp: n, rest: true }))];
           } else {
             // the pool's shore first, above an open source, so the pour starts within reach (the soak, 2026-10-14: at
             // lakes their pour found no stance and nothing came in); a walk there that fails changes nothing

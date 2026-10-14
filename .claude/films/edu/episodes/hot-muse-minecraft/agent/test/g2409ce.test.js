@@ -168,3 +168,20 @@ test('a lake: collect obsidian stands on its shore first, above an open source (
     assert.ok(listed.some((l) => l.y === 40 && Math.max(Math.abs(l.x - walk.x), Math.abs(l.z - walk.z)) <= 2), 'within 2 of an open source');
   } finally { await body.close(); await hosts.closeAll(); }
 });
+
+test('an empty bucket refilled before obsidian formed beside the bot: the refill never takes the search\'s count (the soak: "use_bucket: Unrecognized key count")', async () => {
+  const { body, fake, hosts } = await bodyOf('g2409h', { bucket: 1, diamond_pickaxe: 1, cobblestone: 20 });
+  try {
+    fake.world.position = { x: 400.5, y: 30, z: 400.5 };
+    await body.refresh();
+    fake.world.blocks = [
+      { name: 'obsidian', found: 1, listed: [{ x: 402, y: 29, z: 400 }] },
+      { name: 'lava', found: 3, listed: [{ x: 404, y: 29, z: 400, level: 0 }, { x: 405, y: 29, z: 400, level: 0 }, { x: 406, y: 29, z: 400, level: 0 }] },
+    ];
+    const r = await body.run('collect', { block: 'obsidian', n: 3 });
+    assert.equal(r.ok, true, r.result);
+    const fill = fake.tools('use_bucket')[0]?.args;
+    assert.equal(fill?.action, 'fill', JSON.stringify(fill));
+    assert.equal(fill.count, undefined, 'no count on the refill');
+  } finally { await body.close(); await hosts.closeAll(); }
+});
