@@ -1,13 +1,17 @@
 #!/bin/bash
-# The nightly CSE 291P explainer. launchd (com.picassolab.edu-daily) starts this at 02:00:
+# The nightly CSE 291P explainer (two series: LLM System Optimization and Quantum Computing Systems; next.py and
+# schedule.json pick tonight's series). launchd (com.picassolab.edu-daily) starts this at 02:00:
 #   lock -> keep awake -> wait for the network -> git pull -> new decks -> next.py (tonight's episode) -> its recording
-#   + transcript -> the headless producer session with daily/PROMPT.md, in its own process group, killed at the work
-#   order's deadline (08:45); restarted (resumed) when it ends early without a film -> everything it started is killed
-#   at the end -> the mp4 is checked (ffprobe against timeline.json) before it counts as delivered -> a notification.
+#   + transcript (LLM; the quantum course's files in course-qc/ are made ahead and only checked) -> the headless
+#   producer session with daily/PROMPT.md, in its own process group, killed at the work order's deadline (08:45);
+#   restarted (resumed) when it ends early without a film -> everything it started is killed at the end -> the mp4
+#   is checked (ffprobe against timeline.json) before it counts as delivered -> a notification.
 #
 #   bash .claude/films/edu/daily/run.sh                 what launchd runs
 #   DRY_RUN=1 bash .claude/films/edu/daily/run.sh       everything except starting the producer (prints its command)
 #   NOW="2026-10-07 02:00" DRY_RUN=1 bash ...           pretend time for the episode choice (tests)
+#   NOW="2026-10-16 02:00" ASSUME="L03-03@2026-10-16" DRY_RUN=1 bash ...   and pretend an episode was delivered (the
+#                                                       night after tonight; next.py --assume, never written)
 #
 # Logs: ~/picasso-work/logs/daily/<date>_<time>.log (this script), .r<N>.jsonl (the producer's stream, one per round),
 # .r<N>.err. The producer inherits the permission mode of ~/.claude/settings.json (a headless run cannot answer prompts;
@@ -116,6 +120,10 @@ python3 "${EDU}/tools/fetch_course.py" > /dev/null && say "decks: ok" || say "WA
 
 # tonight's episode
 NEXT_ARGS=(); [ -n "${NOW:-}" ] && NEXT_ARGS=(--now "$NOW")
+if [ -n "${ASSUME:-}" ]; then
+  [ "$DRY" = 1 ] || { say "ASSUME only goes with DRY_RUN=1"; exit 1; }
+  for A in $ASSUME; do NEXT_ARGS+=(--assume "$A"); done
+fi
 OUT=$(python3 "${DAILY}/next.py" --dry --shell ${NEXT_ARGS[@]+"${NEXT_ARGS[@]}"}) || { say "next.py failed"; notify "每日视频：next.py 出错，见 ${LOG}"; exit 1; }
 eval "$OUT"
 if [ -n "${EP_MISSED:-}" ]; then
@@ -129,10 +137,17 @@ NOWH=$(date +%H); TOMORROW=$(date -v+1d +%Y-%m-%d)
 if [ "${FORCE:-0}" != 1 ] && [ -z "${NOW:-}" ] && [ "$NOWH" -ge 6 ] && [ "${EP_MORNING:-}" != "$TOMORROW" ]; then
   say "daytime catch-up: tomorrow (${TOMORROW}) already has its video; nothing to do"; exit 0
 fi
-say "tonight: ${EP_ID} \"${EP_TITLE}\" for ${EP_MORNING} (lectures: ${EP_LECTURES}; deadline ${EP_DEADLINE})"
+say "tonight: ${EP_ID} \"${EP_TITLE}\" for ${EP_MORNING} (series ${EP_SERIES:-llm}; lectures: ${EP_LECTURES}; deadline ${EP_DEADLINE})"
+[ -n "${EP_SCHEDULE_NOTE:-}" ] && say "schedule: ${EP_SCHEDULE_NOTE}"
 
 # its recordings and transcripts (normally already made by the background batch; a lock makes us wait for it)
 for L in $EP_LECTURES; do
+  if [ "${EP_SERIES:-llm}" = qc ]; then   # course-qc/ is made ahead (tools/qc_slides.py); no fetch tool: report gaps only
+    [ -d "$EDU/course-qc" ] || { say "WARNING: no course-qc/ on this Mac: the quantum lectures' files are missing"; break; }
+    if [ -f "$EDU/course-qc/$L.mp4" ] && [ ! -f "$EDU/course-qc/$L.transcript.md" ]; then say "WARNING: course-qc/$L.mp4 has no transcript"; fi
+    [ -f "$EDU/course-qc/$L.slides.json" ] || say "WARNING: no course-qc/$L.slides.json (tools/qc_slides.py $L)"
+    continue
+  fi
   python3 "${EDU}/tools/fetch_recordings.py" "${L}" || say "WARNING: recording ${L} not fetched"
   if [ -f "$EDU/course/$L.mp4" ]; then
     python3 "${EDU}/tools/transcribe.py" "${L}" || say "WARNING: transcript ${L} failed"
@@ -172,6 +187,9 @@ PROMPT_TEXT="$(cat "$DAILY/PROMPT.md")
 ## Tonight (written by run.sh at $(date '+%F %H:%M'))
 - Work order: ${EP_ORDER:-$EP_WORK/work_order.json}
 - Episode: $EP_ID \"$EP_TITLE\", for the morning of $EP_MORNING
+- Series: ${EP_SERIES_NAME:-CSE 291P: LLM System Optimization} (${EP_SERIES:-llm}); brief: ${EP_BRIEF:-PROMPT.md}
+- Syllabus entry: $EP_ID in ${EP_SYLLABUS:-$DAILY/syllabus.json} (whole, in the work order's syllabus_entry)
+- Course files: ${EP_COURSE:-$EDU/course} (${EP_NAMING:-LNN.*}); lectures: $EP_LECTURES
 - Hard stop: $EP_DEADLINE (this session and everything it started are killed then; plan every checkpoint against it)
 - Power: $POWER
 - Image tool: $IMG

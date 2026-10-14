@@ -175,6 +175,21 @@ async function art(name) {
 }
 function allText(v, out = []) { if (typeof v === 'string') out.push(v); else if (v && typeof v === 'object') Object.values(v).forEach((x) => allText(x, out)); return out; }
 
+// ------------------------------------------------------------------ the series tag (opt-in: episode.json "tag")
+// {"text": strings key, "xy": [x, y] (left end, middle of the letters), "px": 24}: small red capitals in a quick red-pen
+// box (bowed sides, the stroke runs on past where it began), added to the cover's items, so it is on frame 0 (the X
+// thumbnail) and under the lifting end card. A series sets it in every episode (the quantum series does); an episode
+// without "tag" is drawn exactly as before.
+const TAG = { xy: [78, 290], px: 24 };
+function seriesTag(tg) {
+  const s = text(tg.text), px = tg.px ?? TAG.px, [x, y] = tg.xy ?? TAG.xy, g = mk(4, 4).getContext('2d');
+  g.font = `${F.SW} ${px}px ${F.SANS}`;
+  const w = g.measureText(s).width, x0 = x - .62 * px, x1 = x + w + .62 * px, y0 = y - px, y1 = y + px, xm = (x0 + x1) / 2, ym = y;
+  const box = [[x0 + 7, y0 - 1], [xm, y0 - 2.2], [x1 + 1.5, y0 + 1], [x1 - 1, ym], [x1 + .5, y1 + 1.5], [xm, y1 + 2],
+    [x0 - 1.5, y1], [x0 + 1, ym], [x0, y0 + 2.5], [x0 + 22, y0 - 3]];
+  return [{ t: 'pen', pts: box, lw: 3.5 }, { t: 'sans', text: tg.text, xy: [x, y + .04 * px], px, color: 'red', align: 'left' }];
+}
+
 async function setup() {
   if (BOOT) throw BOOT;
   if (!(DUR > 0)) throw new Error('timeline.json has no dur');
@@ -198,7 +213,13 @@ async function setup() {
   Object.assign(A, { logo, wash: w, tape: tp, paper: K.grainTexture(paper) });
   // the panels: per-language values, kinds expanded, times compiled, references checked
   const time = makeTime(C, VO, TL.vo);
-  const [P, errs] = compilePanels(byLang(E.panels || [], LANG), R, time);
+  let panels = byLang(E.panels || [], LANG), tagErr = null;
+  if (E.tag && panels.length) {
+    await document.fonts.load(`${F.SW} ${byLang(E.tag, LANG).px ?? TAG.px}px ${F.SANS}`);   // measured for the box
+    try { panels = [{ ...panels[0], items: [...(panels[0].items || []), ...seriesTag(byLang(E.tag, LANG))] }, ...panels.slice(1)]; } catch (e) { tagErr = 'tag: ' + e.message; }
+  }
+  const [P, errs] = compilePanels(panels, R, time);
+  if (tagErr) errs.push(tagErr);
   try { END = time((E.end && E.end.at) || 'endCard'); } catch (e) { errs.push('end.at: ' + e.message); }
   for (const k of ['mic', 'end', 'fine']) if (T[k] == null) errs.push(`strings.${LANG}.${k} is missing (the kit's mic tag / end card)`);
   if (VO) for (const v of TL.vo) {

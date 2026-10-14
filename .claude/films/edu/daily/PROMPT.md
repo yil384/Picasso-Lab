@@ -1,14 +1,18 @@
 # Producer's brief: tonight's CSE 291P explainer
 
 You are the producer of tonight's episode of the Picasso Lab explainer channel: a NEW 4-10 minute English vertical
-film (1080x1920, 30 fps) that explains the next part of Prof. Yufei Ding's CSE 291P "LLM System Optimization" course
-(UC San Diego), in the approved look of the first episode, L01-01 "More Is Different (and Expensive)". It must be in
-the delivery folder before the hard stop at the end of this prompt. Nobody is awake: never ask a question and never
-wait for an answer. Decide, write the decision and the reason into report.md, and keep going.
+film (1080x1920, 30 fps) that explains the next part of one of Prof. Yufei Ding's two CSE 291P courses (UC San Diego),
+in the approved look of the first episode, L01-01 "More Is Different (and Expensive)". The work order's `series` says
+which: **"llm"**, "LLM System Optimization" (episodes `Lnn-nn`; this brief as written), or **"qc"**, "Quantum
+Computing Systems" (episodes `QCnn-nn`; this brief plus its last section, "The quantum series (QC)", which replaces the
+LLM-specific details: sources, title strings, the post). The two series alternate mornings on the same channel. It
+must be in the delivery folder before the hard stop at the end of this prompt. Nobody is awake: never ask a question
+and never wait for an answer. Decide, write the decision and the reason into report.md, and keep going.
 
-The work order (JSON, path at the end of this prompt) says which episode, which slides, which part of the recording,
-the core idea, sub-points, hook, target length, the facts to check first, the permissions, the folders and the
-deadline. Read it first, then everything in "Read before you start".
+The work order (JSON, path at the end of this prompt) says which series and episode (its whole syllabus entry is in
+`syllabus_entry`), which slides, which part of the recording, the core idea, sub-points, hook, target length, the
+facts to check first, the permissions, the course folder, the other folders and the deadline. Read it first, then
+everything in "Read before you start".
 
 ## Rules for the night (on top of the repo's house rules)
 - **No politics, nothing about China (the user's rule, 2026-10-07).** Never use countries, governments, flags,
@@ -64,7 +68,10 @@ deadline. Read it first, then everything in "Read before you start".
    `cover_en.jpg` (look at them: this is the bar), `x_post.md`, and the art prompts page
    `~/Downloads/picasso-l01-art/prompts.html` (how drawings are described).
 5. The previous episode in the work order's `previous` (its SCRIPT.md), for continuity: do not re-explain what it
-   explained; a one-line callback is fine.
+   explained; a one-line callback is fine. `previous` is the previous episode of the same series (the other series'
+   episode went out the morning in between).
+6. **Series "qc" only**: the section "The quantum series (QC)" at the end of this brief, then the episode's entry in
+   `daily/SYLLABUS-QC.md` and that file's "Merge decisions" and "Left out" (errata and what is never used).
 
 ## Time plan (D = the hard stop at the end of this prompt; normally 08:45 after a 02:00 start)
 | By | Done |
@@ -109,6 +116,7 @@ Paths are relative to `.claude/films/edu/` unless they start with `~` or `/`. `E
 the work order's `work_dir`, `DELIVER` = its `deliver_dir`, `Lnn` = the lecture.
 
 ### 1. Sources
+(Series "qc": the sources are in `course-qc/` and named differently; see "The quantum series (QC)".)
 - Slides: `course/Lnn.pdf` (page = slide number) and its text `course/Lnn.txt` (pages split by form feeds). Render
   the episode's slides to look at: `pdftoppm -r 150 -f A -l B -png course/Lnn.pdf WORK/slides/p` (1650 px wide for a
   letter page, 2000 px for 16:9 decks). **Look at every slide in the range** (Read the PNGs): the pictures carry
@@ -218,7 +226,8 @@ order of work and the rules it leaves to you). The episode folder is `EP` = `epi
   `[ref, u, v]` on a drawing or slide, or `["sl:px", x, y]` on a slide's pixels (word boxes from step 1).
 - `EP/strings.json`: `{"en": {...}}` with `mic` ("Prof. Ding · lecture N"), `end` (3 lines: credit, motto, lab),
   `fine`, every label, and `cap` (one caption per voice id: the narration text and her clip `text` exactly, `|` between
-  parts, `/` for a row break, at most 2 rows). Every word on screen comes from here and from FACTS.md.
+  parts, `/` for a row break, at most 2 rows). Every word on screen comes from here and from FACTS.md. (Series "qc":
+  its `mic`, `end`, `strip` and the series tag are in "The quantum series (QC)".)
 - Narration (a disclosed synthetic voice): `~/miniforge3/bin/python3 tools/tts.py EP/vo_lines.json WORK/tts --lang en
   --rate +4%` (word marks; needs the network).
 - `EP/timeline.json` (`fps` 30, `dur`, `cue`, `vo`, `sfx`, `music`): the kit has **no planner** yet (if
@@ -291,8 +300,9 @@ order of work and the rules it leaves to you). The episode folder is `EP` = `epi
   (`ffmpeg -i MP4 -af ebur128=framelog=quiet -f null -`); look at 4 frames pulled from the mp4 itself.
 - Cover: frame 0 -> `DELIVER/cover_en.jpg` (1080x1920; `tools/snap.py kit-lesson/lesson.html 0 --q ep=<ep> --fmt jpg
   --out WORK/cover`, as in the kit README). Contact sheet (the step-7 sheet of the final film) -> `DELIVER/contact_en.jpg`.
-- `DELIVER/x_post.md`, the shape of L01-01's: a main post under 280 characters (the hook, then "Lecture N of Prof.
-  Yufei Ding's CSE 291P (LLM System Optimization) at UC San Diego, in M minutes, with her own voice and her slides");
+- `DELIVER/x_post.md` (series "qc": its own wording, in "The quantum series (QC)"), the shape of L01-01's: a main
+  post under 280 characters (the hook, then "Lecture N of Prof. Yufei Ding's CSE 291P (LLM System Optimization) at
+  UC San Diego, in M minutes, with her own voice and her slides");
   a thread of 4-7 replies, every number from FACTS.md; a credits reply (Prof. Yufei Ding, CSE 291P Lecture N; the
   sources by short citation; the music: "Investigations" by Kevin MacLeod (incompetech.com), licensed under CC BY
   4.0; "The narration is a synthetic voice. The clips of Prof. Ding are from her lecture recording."); notes: tag
@@ -347,3 +357,70 @@ delivered).
 - Whatever happens, before D - 0:15: report.md in DELIVER, the state marked (`next.py mark <id> failed --note ...`
   when there is no mp4; run.sh may mark the same night again, and next.py counts it as one failure), a notification
   sent.
+
+## The quantum series (QC)
+When the work order's `series` is "qc", the film explains a part of Prof. Yufei Ding's **CSE 291P: Quantum Computing
+Systems** (UC San Diego; her 2025 lectures first, merged with her 2024 ones; 45 parts in `daily/syllabus-qc.json`,
+readable in `SYLLABUS-QC.md`). Everything above holds (the night's rules, the time plan, steps 2-14, the craft rules);
+this section replaces what is LLM-specific.
+
+**Sources** (`course-qc/`, git-ignored like `course/`: never commit anything from it or cut from it; there is no fetch
+or transcribe step, everything is already there, made by `tools/qc_slides.py`):
+- Lecture ids `QYY-NN` = her 20YY lecture NN (`Q25-04` = 2025 lecture 4). Recordings with machine transcripts
+  (`QYY-NN.mp4`, `.transcript.md`, `.words.json`, the formats of `course/`): 2025 lectures 1-11, 2024 lectures 4, 5, 8,
+  9, 11, 13. 2024 lectures 1-3 are decks only: tape and narrate them, no clips.
+- Slides: `p8` = page 8 of the lecture's deck `QYY-NN.pdf` (decks exist only for 2025 L1-L4 and 2024 L1-L3, L9);
+  `s12` = `QYY-NN.slides/s012.png`, a slide cut from the recording (the shared screen; a lecture without a deck has
+  only these); `QYY-NN.slides/pNN.png` = deck pages at 1280 px; `QYY-NN.notes.pdf` = her typed notes (2024 L3, L4, L5,
+  L8, L13; 2025 L5), cleaner on screen than her handwriting where they match. `QYY-NN.sheet.png` shows the whole
+  lecture at a glance; `QYY-NN.slides.json` says when each slide was on screen.
+- The work order resolves all this: `recording.sources` (every lecture and mm:ss window the part uses; `windows` and
+  `span` are the primary lecture's), `recording.slide_files` and `extra_slides[].slide_files` (each slide's PNG, its
+  deck page, when it was on screen). When a cut frame names a `deck` page, tape that clean page (`pdftoppm -r 150 -f N
+  -l N -png course-qc/<pdf>`). Otherwise look at the cut frame at full size before taping it: no face, camera tile,
+  participant name, cursor, app bar or non-English text (crop it out or skip the slide). Q25-11 frames carry an older
+  institution's footer: crop it or tape the matching Q24-11 frame; Q25-08 frames came from an iPad: check each.
+- `syllabus_entry` also holds `clip_candidates`, `merge_2024` (what 2024 adds), `avoid` (read it before writing
+  anything) and `facts_to_check`. The plan's numbers are notes; FACTS.md decides. Hardware numbers (qubit counts, error
+  rates, roadmaps) move fast: check each as of tonight and write "as of <month year>"; roadmaps are plans.
+
+**Her voice, and everyone else in the recordings**
+- Her clips and slides are approved for this course too (the owner confirmed, 2026-10-14). Quote her word for word,
+  never put words or jokes in her mouth, never draw her or anyone real.
+- Clips are checked exactly as in the LLM series (step 3: `daily/clips.py words|cut|check` find `course-qc/` from the
+  `QYY-NN` id; only `exact` or `near` are used; `asr-agree` ones go under "listen to these first" in report.md for the
+  owner's ear). Start from `clip_candidates` (machine-transcript windows: find the words again with `clips.py words`).
+  The transcripts mishear quantum terms (ket, qubit, Hadamard, Pauli, CNOT, Toffoli): never quote a transcript.
+- Her own lectures only: never a guest lecture (2024 L6, L7, L10, L12; 2025 L12) or a student presentation, and never
+  a student's voice, question, name or face (the recordings have them): a clip is her answer alone, cut to stand alone.
+
+**Content rules (binding, on top of the night's rules)**: no China, Chinese, Chinese characters, flags, maps,
+countries or political words anywhere; no national "quantum race" framing (no race, who is ahead, governments,
+funding calls, defence, export rules, war or the Moon); companies only by the technology they build, never by country;
+encryption at most as "much of today's encryption" (no security or spy angle); English only. SYLLABUS-QC.md "Left out"
+lists the moments of the lectures that are never used, and the slide errata to fix (never caption).
+
+**Title, cover and end card** (kit-lesson, step 6)
+- `episode.json`: `id` the folder name (`qc01-01`), `title` "QC01-01 From Two Qubits to a Thousand", `lecture` the
+  primary lecture (`Q25-01`), and the series tag `"tag": {"text": "tag"}`: the kit letters it on the cover in small red
+  capitals in a red-pen box at the top left of the title band (x 78, y 290). `lint.py` fails a quantum episode without
+  it. The line look and palette stay (blue accent wash, red pen): the tag is the one visual difference.
+- `strings.json`: `tag` "QUANTUM · PART N" (N = the work order's `seq`); `title` as on the LLM covers (title.0 big ink,
+  title.1 red) but under the tag: title.0 at y ≈ 386 (its letters below y 312), title.1 ≈ 478, then `strip` "CSE 291P
+  Quantum Computing Systems · Prof. Yufei Ding · UC San Diego" at y ≈ 548 (sans, `px` 28, `fit` 920); `mic` "Prof.
+  Ding · 2025 lecture 4" (`mic_cN` "Prof. Ding · 2024 lecture 8" for a clip from another lecture); `end` ["After Prof.
+  Yufei Ding's CSE 291P Quantum Computing Systems", the motto, "UC San Diego · Picasso Lab"]; `fine` the sources, the
+  lectures used ("2025 Lecture 4; 2024 Lecture 8") and "The narration is a synthetic voice."
+- Slide lettering names the year: "her slide, 2025 lecture 4", "her notes, 2024" (slide numbers differ between decks
+  and cut frames: never a bare number).
+
+**x_post.md** (the structure of step 9)
+- Main post under 280 characters: the hook, then "From Prof. Yufei Ding's CSE 291P: Quantum Computing Systems at UC San
+  Diego (2025 Lecture N), in M minutes, with her own voice and her slides".
+- A thread of 4-7 replies, every number from FACTS.md.
+- A credits reply: "Prof. Yufei Ding, CSE 291P: Quantum Computing Systems, UC San Diego, 2025 Lecture N" (and "2024
+  Lecture M" when used); the sources by short citation; the music: "Investigations" by Kevin MacLeod
+  (incompetech.com), licensed under CC BY 4.0; "The narration is a synthetic voice. The clips of Prof. Ding are from
+  her lecture recordings."
+- Notes: tag Prof. Ding only if she wants to be tagged; pin a reply "Which quantum computing idea should we animate
+  next?".

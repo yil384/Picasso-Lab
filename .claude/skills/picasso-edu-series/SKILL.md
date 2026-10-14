@@ -74,6 +74,10 @@ Every morning at 9:00 a new 4-10 min English explainer of the next part of CSE 2
 - The queue is `daily/syllabus.json` (53 episodes; `SYLLABUS.md` is the readable copy); `daily/state.json` records
   what was delivered (by morning), failures, the guest policy, speakers' OKs and skips. `daily/next.py` picks the
   episode and the morning (at most 2 days ahead) and writes the work order; `next.py status` shows the queue.
+- Second series (from 2026-10-16, alternate mornings, LLM first; `daily/schedule.json` sets the pattern): CSE 291P
+  Quantum Computing Systems, `daily/syllabus-qc.json` (45 parts, `SYLLABUS-QC.md`), course files in `course-qc/`
+  (`QYY-NN` = her 20YY lecture NN; made ahead by `tools/qc_slides.py`), episodes `QCnn-nn`. PROMPT.md's last section
+  covers it; its covers carry the kit's series tag (`episode.json` `tag`). `next.py plan` prints the next nights.
 - launchd (`com.picassolab.edu-daily`, 02:00) runs `daily/run.sh`: lock, caffeinate, `git pull --ff-only`, new decks,
   the episode's recording and transcript, then a headless agent session with `daily/PROMPT.md` (the whole per-episode
   pipeline and the user's rules) killed at 08:45; a notification if no mp4 arrived. `DRY_RUN=1` stops before the

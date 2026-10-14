@@ -99,6 +99,7 @@ starting with `_` and `note` fields are comments.
 | `assets` | lesson.js | Drawings, stamps and slides (below). |
 | `mic.drawing` | lesson.js | Drawing key used in the mic tag while a clip plays (default `"mic"`). |
 | `end.at` | lesson.js | When the end card lifts in (time expression, default the cue `endCard`). The film ends at `timeline.dur`. |
+| `tag` | lesson.js, lint.py | Optional series tag `{text, xy, px}`: the string `text` (e.g. `"tag"` = "QUANTUM · PART 1") in small red capitals in a red-pen box, added to the cover (panel 0) so frame 0 shows it; `xy` the left end, middle of the letters (default [78, 290]: the top of the title band, so the title starts lower, at y ≈ 386); `px` (24). The quantum series sets it in every episode (`lint.py` fails one without it); an episode without it is drawn exactly as before. Its string is a label, not a claim: the facts check skips it. |
 | `camera` | lesson.js | `{gap: 2000, pan: 1.0, dip: .86, push: 1.035, drift: 6}`: panel spacing (px), pan duration (s), zoom at mid-pan, zoom reached by the end of a held panel, how far (px) the camera drifts down while held. |
 | `panels` | lesson.js | The panels, top to bottom (below). Panel 0 is the cover. |
 

@@ -1,16 +1,20 @@
 # Daily CSE 291P explainers
 
-Every morning at 9:00 a new 4-10 minute English explainer of the next part of Prof. Yufei Ding's CSE 291P course,
-in the approved look of L01-01 (`episodes/l01-5min`). It is made unattended on this Mac (M1, 16 GB): launchd starts
+Every morning at 9:00 a new 4-10 minute English explainer of the next part of one of Prof. Yufei Ding's two CSE 291P
+courses, in the approved look of L01-01 (`episodes/l01-5min`): **LLM System Optimization** (`syllabus.json`, episodes
+`Lnn-nn`, course files in `course/`) and **Quantum Computing Systems** (`syllabus-qc.json`, episodes `QCnn-nn`, course
+files in `course-qc/`), on alternate mornings, LLM first (from 2026-10-16; `schedule.json`). It is made unattended on this Mac (M1, 16 GB): launchd starts
 `run.sh` at 02:00, `run.sh` prepares the night and starts a headless agent session with `PROMPT.md`, and the session
 delivers to `~/Downloads/picasso-daily/<YYYY-MM-DD>_<id>/` by 08:45 (it is killed then).
 
 ## Files
 | File | What it does |
 | --- | --- |
-| `syllabus.json`, `SYLLABUS.md` | The queue: 53 episodes in course order (slides, core idea, hook, facts to check, permissions) |
-| `state.json` | What was delivered (by morning), what failed, guest policy, speakers' OKs, skips. Written by `next.py mark` |
-| `next.py` | Picks tonight's episode and its delivery morning; writes the work order; `status`; `mark` |
+| `syllabus.json`, `SYLLABUS.md` | The LLM queue: 53 episodes in course order (slides, core idea, hook, facts to check, permissions) |
+| `syllabus-qc.json`, `SYLLABUS-QC.md` | The quantum queue: 45 parts (2025 lectures merged with 2024), the same shape plus `sources` (lecture + mm:ss windows), `clip_candidates`, `merge_2024`, `avoid`, `unit` |
+| `schedule.json` | Which series each morning gets: `pattern` (`["llm", "qc"]` = alternate days, LLM first), `start` (the first morning of the pattern; before it, LLM only), `when_empty` (`"other"`: a series with nothing left gives its morning to the other; `"none"`: no video that morning) |
+| `state.json` | What was delivered (by morning, both series), what failed, guest policy, speakers' OKs, skips. Written by `next.py mark` |
+| `next.py` | Picks tonight's series (schedule.json), episode and delivery morning; writes the work order; `plan` (the next nights), `status`, `mark`, `verify`; `test_next.py` checks the schedule in a scratch folder |
 | `run.sh` | The launchd entry (below) |
 | `PROMPT.md` | The producer's brief for the headless session: the whole per-episode pipeline, rules and time plan |
 | `art.py` | The episode's drawings: `gen` (image tool, 3 at a time, retries, checks), `pack`, `check`, `prompts` (fallback page), `pre` / `take` (the pre-drawn library below); `test_art_library.py` checks the library handling in a scratch folder |
@@ -46,16 +50,24 @@ Shared tools in `../tools/`: `fetch_recordings.py` (lecture videos from Drive in
    retried the next night from its work folder; after failures in two runs it is passed over and listed in the work
    order.
 
-Episode choice (`next.py`): the first episode in `syllabus.json` order that is not shipped/delivered, skipped,
-blocked or a guest lecture without an OK. The delivery morning is the first morning without a video, from today
-(before 08:45) or tomorrow, up to today + 2 (at most 2 days of buffer).
+Episode choice (`next.py`): the delivery morning is the first morning without a video, from today (before 08:45) or
+tomorrow, up to today + 2 (at most 2 days of buffer). Its date gives the series (`schedule.json`), so a failed night
+is retried in the same series; then the first episode in that series' syllabus order that is not shipped/delivered,
+skipped, blocked or a guest lecture without an OK. The work order names the series, its syllabus entry (whole, in
+`syllabus_entry`), the course folder and its file naming, and the pre-drawn art; run.sh's Tonight block repeats them.
+A quantum night skips the recording/transcript step (course-qc/ is made ahead by `tools/qc_slides.py`; run.sh only
+warns about a missing file), and `PROMPT.md`'s last section, "The quantum series (QC)", replaces the LLM-specific
+details (sources, title strings and the series tag on the cover, the post).
 
 ## Commands
 ```sh
 cd /Users/linyichen/UCSD/Picasso-Lab/.claude/films/edu
 ~/miniforge3/bin/python3 daily/next.py status                     # the queue and the buffer
 ~/miniforge3/bin/python3 daily/next.py --dry                       # what tonight would make
+~/miniforge3/bin/python3 daily/next.py plan --nights 4             # tonight and the next nights (each assumes the one before delivered)
 DRY_RUN=1 bash daily/run.sh                                        # the whole night except the producer
+NOW="2026-10-16 02:00" ASSUME="L03-03@2026-10-16" DRY_RUN=1 bash daily/run.sh   # tomorrow night, if tonight delivers
+~/miniforge3/bin/python3 daily/test_next.py                        # the two-series schedule, in a scratch folder
 bash daily/install.sh --check                                      # checks only
 bash daily/install.sh                                              # install + load the LaunchAgent
 launchctl kickstart gui/$(id -u)/com.picassolab.edu-daily          # run a night now (a daytime run gets 6 h 45 min)
@@ -70,7 +82,8 @@ cd /Users/linyichen/UCSD/Picasso-Lab/.claude/films/edu && HF_HUB_OFFLINE=1 nohup
   > ~/picasso-work/logs/transcribe-batch.log 2>&1 &
 ```
 
-Decisions live in `state.json`: `"guest_policy": "narration-only"` makes guest episodes without clips or taped slides;
+Which series runs when lives in `schedule.json` (e.g. `"pattern": ["qc"]` for quantum only, or a later `"start"` to
+postpone it). Decisions live in `state.json`: `"guest_policy": "narration-only"` makes guest episodes without clips or taped slides;
 `"speaker_ok": {"L09": {"voice_clips": true, "slides_on_screen": true, "date": "...", "note": "..."}}` when a speaker
 says yes; `"skip": ["L09-03"]` drops an episode.
 

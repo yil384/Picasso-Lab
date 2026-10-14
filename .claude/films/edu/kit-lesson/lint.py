@@ -20,7 +20,8 @@ Errors
   (with the page) an item that starts before its panel's camera arrives or after the next panel's;
 - frame: a drawing's ink outside x 15-1065, y 340-1530 (the extents L01-01 uses: its cover runs to y 1510, its wide
   drawings to x 25-1055); a label or sans line whose anchor is above y 260 or below y 1480 (the platform's bars);
-- length: runtime outside 4-10 min; narration over 160 words per minute; vo_<lang>.json stale against timeline.json.
+- length: runtime outside 4-10 min; narration over 160 words per minute; vo_<lang>.json stale against timeline.json;
+- series: a quantum-series episode (id QCnn-nn or a QYY-NN lecture) without the series tag (episode.json "tag").
 Warnings
 - text in the right rail (x 880-1080, y 700-1480: the like/comment buttons) or below y 1280 (the caption band), by
   an estimate of its width; panel 0 items with "at" (frame 0, the cover and the X thumbnail, will not show them);
@@ -228,7 +229,7 @@ def lint(ep, lang='en', post=None, checks=None, page=True):
     if ferr:
         E.append(ferr)
     else:
-        texts = [(f'strings.{k}', s) for k, s in strings_of(st) if not k.startswith(('fine', 'end'))]
+        texts = [(f'strings.{k}', s) for k, s in strings_of(st) if not k.startswith(('fine', 'end')) and k != 'tag']
         texts += [(f'vo_lines.{i}', vl[i]) for i in used if i in vl]
         if post and os.path.exists(post):
             body = '\n'.join(x for x in open(post).read().splitlines() if not x.lstrip().startswith('#'))  # not headings
@@ -238,6 +239,15 @@ def lint(ep, lang='en', post=None, checks=None, page=True):
             miss = sorted(n for n in ns if n not in fnums)
             if miss:
                 E.append(f'facts: {where} says {", ".join(f"{n:g}" for n in miss)}, not in {os.path.relpath(fpath, EDU)}: "{s[:80]}"')
+
+    # the series tag: every quantum-series episode carries it on its cover (lesson.js draws it)
+    if re.match(r'(?i)qc\d\d-\d\d', str(e.get('id', ''))) or re.match(r'Q\d\d-\d\d', str(e.get('lecture', ''))):
+        tg = e.get('tag')
+        if not (isinstance(tg, dict) and tg.get('text')):
+            E.append('series: a quantum-series episode needs the series tag: "tag": {"text": "tag"} in episode.json and '
+                     'strings.tag ("QUANTUM · PART N"); see daily/PROMPT.md, the quantum series')
+        elif lookup(st, tg['text']) is None:
+            E.append(f'series: strings.{lang}.{tg["text"]} (the series tag) is missing')
 
     # her quotes and the captions
     cap = st.get('cap') or {}
