@@ -54,11 +54,11 @@
    "sweep": "y",
    "people": false,
    "refs": [
-    "line_balance",
-    "line_knob_board",
-    "line_clock_face"
+    "line_spec_oven_one_cookie",
+    "line_balance"
    ],
-   "prompt": "A huge commercial bakery oven seen from the front with its big door wide open; inside, the enormous baking tray is completely full of neat rows of small round cookies, edge to edge. Square image 1024x1024; the oven fills about 85% of the width and about 80% of the height, framed so it pairs with a matching picture of the same oven holding one cookie. No dials with numerals. No text, no letters, no numbers."
+   "prompt": "The very same huge commercial bakery oven as in the first attached image, drawn again exactly the same way: same outline and proportions, the same control strip with two round knobs and three small round lights, the same side racks, the same big door wide open and the same framing, seen from the front. The only change: the enormous baking tray inside is now completely full of neat rows of small round cookies, about eight across and five deep, edge to edge, each cookie a simple circle with a few small dots, the same cookie as the single one in the first image. Square image 1024x1024; the oven fills about 85% of the width and about 80% of the height, centred, exactly like the first image. No dials with numerals. No text, no letters, no numbers.",
+   "refnote": "The first attached image is the matching picture of the same oven holding one cookie: copy that oven exactly (shape, controls, racks, open door, framing, line weight) and change only the tray contents. The second attached image is a style reference only (a line drawing made earlier for this series): match its line weight and pen feel, not its content."
   },
   {
    "name": "line_spec_handoff",
