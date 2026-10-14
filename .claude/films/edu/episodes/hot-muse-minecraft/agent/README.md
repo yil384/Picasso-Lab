@@ -1344,8 +1344,10 @@ live_view's page, for the square video and Facebook's player:
 - It starts by itself, muted (`autoplay=true&mute=true`: browsers allow autoplay only without sound; the owner's
   "frozen" player was Facebook's poster waiting for a click). "Tap the video for sound", small and see-through, at the
   top under Facebook's title bar and over the game (it had covered the panel's text), letting clicks through, until
-  the viewer taps the player (focus moves into its frame). "Reload video" sits beside the status line under the
-  player, over nothing.
+  the viewer taps the player (focus moves into its frame) or anything on the page, and for 10 s at most (2026-10-14:
+  it had stood over a whole game); then only a small speaker at the top left, which shows the hint again on hover or
+  tap. A fresh player from the watchdog does not bring it back; "Reload video" does (a fresh player starts muted).
+  "Reload video" sits beside the status line under the player, over nothing.
 - A watchdog: while the viewer has not touched the player, a fresh player of the same live video is loaded in the
   background every 5 minutes and cross-faded in once loaded; "Reload video" does it at once. At most two frames, no
   black flash, no request of its own (only iframes of the same Facebook URL). About 2.4 KB.

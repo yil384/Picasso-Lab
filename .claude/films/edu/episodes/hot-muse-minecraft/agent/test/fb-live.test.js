@@ -9,6 +9,7 @@
 // no command line, the live video ended with the game.
 
 import { test } from 'node:test';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { execFileSync } from 'node:child_process';
@@ -544,7 +545,7 @@ test('service and client: focus and /live over loopback; focus puts a game the c
 test('live page: small, no request of its own, only Facebook\'s player (autoplay, muted), the reload watchdog and the sound hint; joining, live, waiting, off', () => {
   const embed = facebookEmbedUrl(`https://www.facebook.com/${PAGE_ID}/videos/7100000000001/`);
   const live = liveViewHtml({ state: 'live', game: 'g1a2b3c', camera: 'g1a2b3c', embedUrl: embed, fb: true });
-  assert.ok(Buffer.byteLength(live) < 3072, `${Buffer.byteLength(live)} bytes`);
+  assert.ok(Buffer.byteLength(live) < 4096, `${Buffer.byteLength(live)} bytes`);
   assert.match(live, /^<!doctype html>/);
   for (const banned of ['fetch', 'WebSocket', 'XMLHttpRequest', 'sendBeacon', 'http-equiv', 'javascript:', 'eval(', 'import(']) assert.equal(live.toLowerCase().includes(banned.toLowerCase()), false, banned);
   assert.doesNotMatch(live, /\son\w+=/i, 'no event handler attributes');
@@ -552,7 +553,8 @@ test('live page: small, no request of its own, only Facebook\'s player (autoplay
   const urls = live.match(/https?:\/\/[^"\s<]+/g);
   assert.deepEqual([...new Set(urls.map((u) => u.replace(/&amp;/g, '&')))], [player], 'one URL: the player, starting by itself and muted');
   assert.ok(live.includes(`<iframe src="${player.replace(/&/g, '&amp;')}"`));
-  assert.match(live, /<b id="h">Tap the video for sound<\/b><\/div><div id="s"><p>Live: [^<]*<\/p><button id="r" type="button">Reload video<\/button><\/div>/, 'the hint over the game, the button under the player');
+  assert.match(live, /<b id="h">Tap the video for sound<\/b><i id="k" title="Tap the video for sound"><svg [^]*<\/svg><\/i><\/div><div id="s"><p>Live: [^<]*<\/p><button id="r" type="button">Reload video<\/button><\/div>/, 'the hint and the speaker over the game, the button under the player');
+  assert.match(live, /<div id="v" class="hint"/, 'the hint up from the start');
   assert.match(live, /#h\{position:absolute;left:50%;top:max\(52px,9%\)/, 'the hint at the top: never over the panel');
   const script = live.match(/<script>([\s\S]*)<\/script>/)[1];
   assert.match(script, /setInterval\(\(\)=>\{if\(!touched\)swap\(\);\},300000\)/, 'a fresh player every 5 min while untouched');
@@ -573,6 +575,45 @@ test('live page: small, no request of its own, only Facebook\'s player (autoplay
   assert.equal(liveViewHtml({ state: 'live', game: 'g1', embedUrl: 'https://evil.example/plugins/video.php?href=x' }).includes('<iframe'), false);
   assert.equal(isPlayerUrl('https://www.facebook.com/plugins/video.php?href=x#y'), false);
   assert.equal(liveViewHtml({ state: 'live', game: '<b>x</b>', embedUrl: embed }).includes('<b>'), false);
+});
+
+test('live page: the sound hint goes on a tap into the player or the page, and after 10 s anyway; the speaker shows it again; the watchdog as before', () => {
+  const embed = facebookEmbedUrl(`https://www.facebook.com/${PAGE_ID}/videos/7100000000001/`);
+  const script = liveViewHtml({ state: 'live', game: 'g1', camera: 'g1', embedUrl: embed, fb: true }).match(/<script>([\s\S]*)<\/script>/)[1];
+  // a small DOM and clock: enough for the page's script
+  const run = () => {
+    let now = 0; const timers = []; let seq = 0;
+    const later = (fn, ms, every = 0) => { const id = ++seq; timers.push({ id, at: now + ms, fn, every }); return id; };
+    const tick = (ms) => { const end = now + ms; for (;;) { timers.sort((a, b) => a.at - b.at); const x = timers[0]; if (!x || x.at > end) break; now = x.at; if (x.every) x.at += x.every; else timers.shift(); x.fn(); } now = end; };
+    const cls = new Set(['hint']);
+    const made = [];
+    const el = (tag) => ({ tagName: tag, style: {}, remove() { this.gone = true; } });
+    const cur = el('IFRAME');
+    const nodes = { v: { dataset: { src: 'x' }, classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c) }, querySelector: () => cur, insertBefore: (f) => made.push(f) }, h: {}, k: {}, r: {} };
+    const win = {};
+    const document = { activeElement: null, getElementById: (id) => nodes[id], createElement: (tag) => el(tag.toUpperCase()) };
+    vm.runInNewContext(script, { document, setTimeout: (fn, ms) => later(fn, ms), clearTimeout: (id) => { const i = timers.findIndex((x) => x.id === id); if (i >= 0) timers.splice(i, 1); }, setInterval: (fn, ms) => later(fn, ms, ms), addEventListener: (type, fn) => { win[type] = fn; } });
+    return { cls, made, nodes, win, document, tick, cur };
+  };
+  // nobody touches it: up 10 s, then only the speaker; a fresh player every 5 min, the hint not back
+  let p = run();
+  p.tick(9_000); assert.ok(p.cls.has('hint'));
+  p.tick(1_500); assert.equal(p.cls.has('hint'), false, 'gone after 10 s');
+  p.tick(300_000); assert.equal(p.made.length, 1, 'the watchdog: a fresh player at 5 min');
+  p.made[0].onload(); p.tick(3_000); assert.equal(p.cls.has('hint'), false, 'not back with a fresh player');
+  // the speaker: on hover or tap the hint again for 4 s; a tap on it is not a tap on the page
+  p.nodes.k.onpointerenter(); assert.ok(p.cls.has('hint')); p.tick(4_100); assert.equal(p.cls.has('hint'), false);
+  let stopped = false; p.nodes.k.onpointerdown({ stopPropagation: () => { stopped = true; } }); assert.ok(stopped && p.cls.has('hint'));
+  // "Reload video": a fresh player starts muted, so the hint again
+  p.tick(5_000); p.win.pointerdown(); p.nodes.r.onclick(); assert.ok(p.cls.has('hint')); assert.equal(p.made.length, 2);
+  // a tap into the player (focus moves into its frame): the hint goes at once and the watchdog stops
+  p = run();
+  p.document.activeElement = p.cur; p.win.blur(); p.tick(1);
+  assert.equal(p.cls.has('hint'), false, 'gone at the tap');
+  p.tick(900_000); assert.equal(p.made.length, 0, 'a player the viewer touched is never replaced');
+  // a tap anywhere on the page
+  p = run();
+  p.tick(2_000); p.win.pointerdown(); assert.equal(p.cls.has('hint'), false);
 });
 
 test('MCP live_view with the channel: called before the stream is up it waits for Facebook, then answers with the page and a plain link; the one camera is said plainly', async (t) => {
