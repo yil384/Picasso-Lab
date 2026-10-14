@@ -1206,10 +1206,12 @@ and Muse's panel under it:
   it: before the first call, a toast, a second call while one holds, a burst, three at once, 14 steps and a long why,
   STUCK and TIME, rules none and some, a rule firing, a split, a new goal, a death, the Nether, a refusal; no text
   leaves the frame or overlaps another. Back to the design before it: `STREAM_HUD=final` in deploy/camera.env, then
-  the camera again (while idle). The lab's logo stands at the top right of the video (2026-10-14): the official one as it is
-  (`home/static/PicassoLab-Logo.png`: the three rings and PICASSO), put on white at its full size and scaled to 152 px
-  with lanczos (`assets/muse-ui/lab-logo-152.png`), on a white card (radius 10, a 1 px dark edge, no blur) at 92 %,
-  clear of the toasts and of Facebook's LIVE badge; in the stream and `stream-<n>.mp4`, never in the clean recording.
+  the camera again (while idle). The lab's logo at the top right of the video (2026-10-14), off by default (`STREAM_LOGO=off`):
+  `card` puts a light logo on a white card (radius 10, a 1 px dark edge, no blur) at 92 %, by default the official one
+  (`home/static/PicassoLab-Logo.png`: put on white at its full size and scaled to 152 px with lanczos,
+  `assets/muse-ui/lab-logo-152.png`); `plain` draws a transparent light logo as it is, at most 160 x 100, with a hard
+  dark shadow 2 px down; `STREAM_LOGO_FILE` names its PNG (in `assets/muse-ui`, or an absolute path). Clear of the
+  toasts and of Facebook's LIVE badge; in the stream and `stream-<n>.mp4`, never in the clean recording.
   Measured on the muse-camera-test stack (2026-10-13; `deploy/camera-test/camera-bench.sh`
   with `hud-storm.cjs` feeding a busy game: a call every 3 s, an item every 1.5 s, a rule every 10 s, banners; 6 CPUs as
   production, the clean recorder running): at a host load of 157 the client 25.4 frames a second (p10 21), the stream
@@ -1519,6 +1521,7 @@ X display) and feeds the terminal a scripted session through the real formatter
 | `CAMERA_AUTH`, `CAMERA_AUTH_DIR`, `CAMERA_NAME` | `msa`, (none), (none) | the camera account: `msa` (the login in the auth folder) or `offline` (tests on our own server only, as `CAMERA_NAME`, default MuseCam) |
 | `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
 | `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `5`, `30`, `fast`, `0.75` | the client's video settings (the tuned ones); it draws at 1280x720 times the scale and ffmpeg scales up |
+| `STREAM_LOGO`, `STREAM_LOGO_FILE` | `off`, (the official logo) | the lab's logo at the top right of the video (B): `card` (a light logo on a white card), `plain` (a transparent light logo as it is, a hard shadow); its PNG in `assets/muse-ui` or an absolute path |
 | `STREAM_HUD` | `b` | the HUD in the `ui` layout: `b`, concept B "Speedrun broadcast" (src/hud-b.js, over the whole frame), or `final`, the design before it (src/hud.js) |
 | `CAMERA_FILM` | `off` | the promo film: the client drawn at 1920x1080 (not 1280x720 times `CAMERA_SCALE`) for the clean recording; the live is scaled down to its square as always. Costs client frames (section "The stream UI", the film) |
 | `STREAM_LAYOUT`, `STREAM_UI_SIZE`, `STREAM_TERMINAL_SIZE` | `ui`, `1080x1080`, `1080x1920` | the camera's video: `ui`, square (or `1080x1200`, `1080x1350`), the game over Muse's panel (section "The stream UI"); `terminal`, vertical with the terminal of Muse's calls (or `1080x1350`); `landscape`, the game alone at 1280x720 |

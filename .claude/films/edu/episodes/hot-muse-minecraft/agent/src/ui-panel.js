@@ -163,6 +163,7 @@ const resultWords = (t) => String(t ?? '').replace(/^ok\s+/, '').replace(/\s*\(\
  * @param {() => number} [o.now]
  * @param {boolean} [o.qa]            outline every text problem in red (the mock-up's ?qa=1)
  * @param {'b'|'final'} [o.design]    the HUD's design: B (the default; o.over must be the video's height, 608 at 1080)
+ * @param {{style: 'card'|'plain', file?: string}} [o.logo]  B: the lab's logo at the top right (none without it)
  * @param {(ev: object) => void} [o.onEvent]  B's toasts, banners, floaters, action-bar lines as scheduled (the recording)
  */
 export function createUiPanel(o) {
@@ -184,9 +185,13 @@ export function createUiPanel(o) {
   // icons, each scaled once to every size the HUD draws it at
   const images = {};
   try { for (const f of fs.readdirSync(path.join(assets, 'icons'))) if (f.endsWith('.png')) { const im = new Image(); im.src = fs.readFileSync(path.join(assets, 'icons', f)); images[f.slice(0, -4)] = im; } } catch { /* drawn without */ }
-  // the lab's logo for the top right of the video (concept B; the stream only, never the clean recording)
+  // the lab's logo for the top right of the video (concept B; the stream only, never the clean recording): o.logo
+  // {style: card | plain, file: a name in assets or an absolute path}; none without it
   let logo = null;
-  try { logo = new Image(); logo.src = fs.readFileSync(path.join(assets, 'lab-logo-152.png')); } catch { logo = null; }
+  if (o.logo && ['card', 'plain'].includes(o.logo.style)) {
+    const f = o.logo.file ? (path.isAbsolute(o.logo.file) ? o.logo.file : path.join(assets, path.basename(o.logo.file))) : path.join(assets, 'lab-logo-152.png');
+    try { const im = new Image(); im.src = fs.readFileSync(f); logo = { img: im, style: o.logo.style }; } catch { logo = null; }
+  }
   const scaled = new Map();
   const iconAt = (n, size) => {
     const k = `${n}@${size}`;

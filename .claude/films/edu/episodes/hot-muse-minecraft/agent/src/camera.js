@@ -794,7 +794,7 @@ export function createCameraStream(o) {
       const design = opt.hud === 'final' ? 'final' : 'b';
       try { shm = fs.mkdtempSync(path.join(opt.shmDir ?? '/dev/shm', 'muse-ui-')); } catch { shm = null; }
       panel = createUiPanel({
-        width: uw, height: ph, over: design === 'b' ? top : 72, design, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS, ...(opt.uiNow ? { now: opt.uiNow } : {}),
+        width: uw, height: ph, over: design === 'b' ? top : 72, design, logo: opt.logo && opt.logo !== 'off' ? { style: opt.logo, file: opt.logoFile || '' } : null, file: path.join(shm ?? work, 'panel.bmp'), fps: opt.fps, assets: opt.uiAssets ?? UI_ASSETS, ...(opt.uiNow ? { now: opt.uiNow } : {}),
         // what B put over the video, with its times: in the recording's hud.jsonl, so the film can draw it again
         onEvent: (ev) => { try { rec?.event(ev, ev.gs ?? null); } catch { /* best effort */ } },
       });
