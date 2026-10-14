@@ -206,7 +206,18 @@ export function loadConfig(env = process.env) {
     maxSessions,
     // live MCP games one address may hold: connector users arrive from their agent's cloud, so many people can share an
     // address (probe T8 measures how many); set it to WEB_MAX_SESSIONS to cap MCP games only by the global limit
-    mcpGamesPerAddress: r.int('WEB_MCP_GAMES_PER_ADDRESS', Math.max(2, Math.floor(maxSessions / 2)), 1, 64),
+    mcpGamesPerAddress: r.int('WEB_MCP_GAMES_PER_ADDRESS', 3, 1, 64),
+    // the public server's limits (the owner, 2026-10-14: play.picasso-lab.com/mcp opens to everyone at launch): new
+    // games one address may start in an hour, the requests one MCP session may send in a minute, and a game's idle end
+    mcpStartsPerHour: r.int('WEB_MCP_STARTS_PER_HOUR', 10, 1, 10_000),
+    mcpRequestsPerMinute: r.int('WEB_MCP_REQUESTS_PER_MINUTE', 120, 10, 100_000),
+    idleMs: r.int('WEB_IDLE_MS', 300_000, 30_000, 3_600_000),
+    // PUBLIC_PLAY=off closes the server to new games (start_game answers CLOSED) except for the owner's key; the
+    // operator's /admin/public does the same at once, without a restart. PUBLIC_CHAT=on lets every caller use say
+    publicPlay: r.bool('PUBLIC_PLAY', true),
+    publicChat: r.bool('PUBLIC_CHAT', false),
+    // address hashes that may not play (the operator's /admin/games shows them): comma separated
+    bannedIps: r.str('WEB_BANNED_IPS', '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean),
     askPerHour: r.int('WEB_ASK_PER_HOUR', 3, 1, 10_000),
     askMaxChars: r.int('WEB_ASK_MAX_CHARS', 300, 20, 4_000),
     askAllowContributor: r.bool('WEB_ASK_ALLOW_CONTRIBUTOR', false),
@@ -222,6 +233,14 @@ export function loadConfig(env = process.env) {
     problems.push('WEB_ADMIN_TOKEN must be at least 24 characters (make one with: openssl rand -base64 24)');
   }
   hidden(web, 'adminToken', adminToken);
+  // the owner's key: an MCP session that brings it (Authorization: Bearer, or ?key= on /mcp) plays when public play is
+  // off, goes first in the queue, may use say, and is not held to the per-address limits
+  const ownerKey = r.str('MCP_OWNER_KEY', '');
+  if (ownerKey && (ownerKey.length < 24 || !/^[\x21-\x7e]+$/.test(ownerKey))) problems.push('MCP_OWNER_KEY must be at least 24 printable characters without spaces (make one with: openssl rand -hex 24)');
+  hidden(web, 'ownerKey', ownerKey);
+  // the salt of the address hashes (logs and the operator see a hash, never an address); without it, one made from
+  // the admin token (stable across restarts), else a random one for this process
+  hidden(web, 'ipSalt', r.str('WEB_IP_SALT', ''));
   // A secret the proxy in front adds to every request it forwards (X-Muse-Proxy; Caddy: header_up). On picasso the
   // published port goes through docker-proxy, so every connection arrives from the bridge gateway, Caddy's and any
   // local user's alike: the address cannot tell them apart, the secret can.

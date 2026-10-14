@@ -83,7 +83,7 @@ function stubBody(id, { runMs = {}, state } = {}) {
 async function serve(t, { env = {}, bodyOpts, ...opts } = {}) {
   const config = loadConfig({
     WEB_HOST: '127.0.0.1', WEB_PORT: '0', WEB_MAX_SESSIONS: '2', WEB_ASK_PER_HOUR: '2', WEB_ASK_MAX_CHARS: '40',
-    WEB_MAX_BODY: '2048', WEB_ADMIN_TOKEN: ADMIN, ...env,
+    WEB_MAX_BODY: '2048', WEB_ADMIN_TOKEN: ADMIN, PUBLIC_CHAT: 'on', ...env,
   });
   const log = createLogger({ dir: null, config });
   const bodies = new Map();
@@ -225,6 +225,18 @@ test('play actions: valid form args reach the body as typed values, bad ones nev
   assert.equal((await fetch(`${url}/play/${'A'.repeat(32)}`)).status, 404);
   assert.equal((await fetch(`${url}/play/..%2F..%2Fetc`)).status, 404);
   assert.equal((await post(`${page}/collect`, { block: 'oak_log', n: '1' }, { 'content-type': 'text/plain' })).status, 415);
+});
+
+test('say on a public server (PUBLIC_CHAT off, the default): a guest\'s chat is not run', async (t) => {
+  const { url, bodies } = await serve(t, { env: { PUBLIC_CHAT: 'off' } });
+  const { page } = await guest(url);
+  const body = [...bodies.values()][0];
+  await post(`${page}/say`, { text: 'hello' });
+  assert.ok(!body.calls.some((c) => c.tool === 'say'), 'nothing said');
+  assert.match(await text(page), /say \(in-game chat\) is off on this public server/);
+  const r = await fetch(`${url}/api/${page.split('/').pop()}/say`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: 'hi' }) });
+  assert.equal(r.status, 403);
+  assert.equal((await r.json()).code, 'NOT_ALLOWED');
 });
 
 test('escaping: state, results, chat and notices are shown as text, never as markup', async (t) => {

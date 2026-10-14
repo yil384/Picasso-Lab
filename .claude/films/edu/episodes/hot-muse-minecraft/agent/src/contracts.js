@@ -309,6 +309,10 @@ export const RESULT_CODES = Object.freeze([
   'NOT_STARTED', // no game (start_game first), the game ended, or the bot is not in the world yet
   'NEED_LIVE_VIEW', // play / play_sequence before live_view in a game whose user watches (start_game live: false if not): nothing was run
   'SERVER_STARTING', // start_game: the Minecraft server is still starting (a restart a moment ago): call start_game again in a few seconds
+  'SERVER_FULL', // start_game: every game slot is in use: the reply has the queue place and when to try again (retryAfterS)
+  'RATE_LIMITED', // start_game: this address holds or started as many games as it may: try again after retryAfterS
+  'CLOSED', // start_game: the server is closed for new games right now (the operator's switch)
+  'NOT_ALLOWED', // a call this caller may not make here: start_game from a banned address, say (in-game chat) on a public game
   'DUPLICATE', // a re-sent play / play_sequence: the first call's result (none of its steps failed), nothing run again
   'NOT_HUNGRY', // eat at a full food bar (20/20): harmless, nothing was eaten or used, the steps after it still run
   'BODY_RESTARTED', // the bot's body stopped during the step and is being started again (BODY=mineai; once per game)

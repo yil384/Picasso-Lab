@@ -444,7 +444,7 @@ test('care in the body: the armor skill crafts and wears; policy knobs stay in t
 test('care through MCP: what the body did on its own is in the next reply, once', async () => {
   const hosts = fakeHosts(() => ({ inventory: { cobblestone: 15 } }));
   const web = createWeb({
-    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '' }), log, skills: MINEAI_SKILLS, careMode: 'full',
+    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '', PUBLIC_CHAT: 'on', WEB_MCP_REQUESTS_PER_MINUTE: '100000' }), log, skills: MINEAI_SKILLS, careMode: 'full',
     makeBody: (id, o) => createMineAiBody({ config, log, hosts, gameId: id, username: `Tst_rv_${id}`, viewId: o?.viewId, care: 'full', careTickMs: 30, careIdleMs: 50 }),
   });
   const { url } = await web.start();
@@ -559,7 +559,7 @@ test('advise loop: no plan carried out by itself, advice instead; a reflex with 
 test('advise in the body: the reflexes set as the knobs say (eat starving), attribution counted, Body advice in MCP replies', async () => {
   const hosts = fakeHosts(() => ({ inventory: { cobblestone: 15 } }));
   const web = createWeb({
-    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '' }), log, skills: MINEAI_SKILLS,
+    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '', PUBLIC_CHAT: 'on', WEB_MCP_REQUESTS_PER_MINUTE: '100000' }), log, skills: MINEAI_SKILLS,
     makeBody: (id, o) => createMineAiBody({ config, log, hosts, gameId: id, username: `Tst_rv_${id}`, viewId: o?.viewId, careTickMs: 30, careIdleMs: 50 }),
   });
   const { url } = await web.start();

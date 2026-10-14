@@ -22,6 +22,7 @@ import { TOOLS, TOOL_NAMES, SCHEMAS, validateArgs, coerceArgs } from './contract
 import { createLogger, scrub } from './log.js';
 import { reportedDone } from './brain.js';
 import { createMcp } from './mcp.js';
+import { moderator } from './moderation.js';
 import { endCardSvg } from './live-page.js';
 
 const HOUR = 3_600_000;
@@ -498,7 +499,43 @@ export function createWeb(opts = {}) {
   const askSteps = opts.askSteps ?? 40;
   const sessionsPerAddress = opts.sessionsPerAddress ?? 1;
   const sessionCooldownMs = opts.sessionCooldownMs ?? 60_000;
-  const mcpGamesPerAddress = opts.mcpGamesPerAddress ?? web.mcpGamesPerAddress ?? Math.max(2, Math.floor(web.maxSessions / 2));
+  const mcpGamesPerAddress = opts.mcpGamesPerAddress ?? web.mcpGamesPerAddress ?? 3;
+  // the public server (the owner, 2026-10-14): new games on or off at once (PUBLIC_PLAY, /admin/public), the owner's
+  // key, address hashes (never an address in a log or on a page) and the bans
+  let publicPlay = web.publicPlay !== false;
+  const ownerKey = web.ownerKey ?? '';
+  const ipSalt = web.ipSalt || (web.adminToken ? crypto.createHash('sha256').update(`ip-salt|${web.adminToken}`).digest('hex') : crypto.randomBytes(16).toString('hex'));
+  /** The hash an address shows as: 12 hex characters, the same for one address while the salt stays. */
+  const ipHash = (address) => crypto.createHash('sha256').update(`${ipSalt}|${address}`).digest('hex').slice(0, 12);
+  const bansFile = opts.bansFile !== undefined ? opts.bansFile : (cfg.mineai?.dataDir ? path.join(cfg.mineai.dataDir, 'bans.json') : null);
+  const bans = new Map((web.bannedIps ?? []).map((h) => [h, { until: null, via: 'env' }])); // hash -> {until (ms or null), via}
+  if (bansFile) {
+    try { for (const [h, b] of Object.entries(JSON.parse(fs.readFileSync(bansFile, 'utf8')))) if (!bans.has(h)) bans.set(h, b); } catch { /* none yet */ }
+  }
+  const saveBans = () => {
+    if (!bansFile) return;
+    try {
+      const own = Object.fromEntries([...bans].filter(([, b]) => b.via !== 'env'));
+      fs.writeFileSync(bansFile, JSON.stringify(own, null, 1), { mode: 0o600 });
+    } catch (err) { log.event('admin_error', { message: `bans not saved: ${String(err?.message ?? err).slice(0, 120)}` }); }
+  };
+  const banned = (address) => {
+    const b = bans.get(ipHash(address));
+    if (!b) return false;
+    if (b.until && b.until <= now()) { bans.delete(ipHash(address)); saveBans(); return false; }
+    return true;
+  };
+  /** Does this request carry the owner's key (Authorization: Bearer, or ?key= on /mcp)? */
+  const isOwner = (req) => {
+    if (!ownerKey) return false;
+    const header = String(req.headers.authorization ?? '').match(/^Bearer\s+(.+)$/i)?.[1];
+    let given = header ?? '';
+    if (!given) { try { given = new URL(req.url, 'http://x').searchParams.get('key') ?? ''; } catch { given = ''; } }
+    if (!given) return false;
+    const a = crypto.createHash('sha256').update(String(given)).digest();
+    const b = crypto.createHash('sha256').update(ownerKey).digest();
+    return crypto.timingSafeEqual(a, b);
+  };
   const askNotice = opts.askNotice ?? null;
   const adminToken = web.adminToken ?? '';
 
@@ -509,7 +546,7 @@ export function createWeb(opts = {}) {
   const sessionLimiter = createLimiter(opts.sessionsPerHour ?? 30, now);
   const askLimiter = createLimiter(web.askPerHour, now);
   const adminFails = createLimiter(5, now);
-  const mcpStartLimiter = createLimiter(opts.mcpStartsPerHour ?? 60, now);
+  const mcpStartLimiter = createLimiter(opts.mcpStartsPerHour ?? web.mcpStartsPerHour ?? 10, now);
   const mcpInitLimiter = createLimiter(opts.mcpInitsPerHour ?? 1_200, now);
   const viewLimiter = createLimiter(opts.viewsPerHour ?? 120, now);
   const viewMisses = createLimiter(opts.viewMissesPerHour ?? VIEW_MISSES_PER_HOUR, now);
@@ -652,7 +689,7 @@ export function createWeb(opts = {}) {
       offs: [],
     };
     sessions.set(s.token, s);
-    log.event('session_start', { session: s.id, leaseMs: web.leaseMs });
+    log.event('session_start', { session: s.id, leaseMs: web.leaseMs, ip: ipHash(address) });
     addLine(s, 'session started; the bot is joining the world');
     s.ready = (async () => {
       const body = await makeBody(s.id, { viewId: s.viewId });
@@ -1068,10 +1105,10 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
    * give it a place and refuse with the place and an estimate. The estimate is when enough leases end; games often end
    * sooner (end_game, 5 idle minutes).
    */
-  function queued(key, mcp, free) {
+  function queued(key, mcp, free, first = false) {
     const t = now();
     let at = waiting.findIndex((w) => w.key === key);
-    if (at < 0) { waiting.push({ key, since: t, seen: t }); at = waiting.length - 1; } else waiting[at].seen = t;
+    if (at < 0 && first) { waiting.unshift({ key, since: t, seen: t }); at = 0; } else if (at < 0) { waiting.push({ key, since: t, seen: t }); at = waiting.length - 1; } else waiting[at].seen = t;
     const place = at + 1;
     const ends = [...sessions.values()].map((x) => x.expiresAt).sort((a, b) => a - b);
     const k = Math.max(1, place - free); // the leases that must end before this caller's turn
@@ -1098,14 +1135,18 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     sweep();
     const address = mcp ? mcp.address : clientKey(req);
     const key = mcp ? mcp.key : address;
+    const owner = Boolean(mcp?.owner);
+    if (!publicPlay && !owner) throw new HttpError(503, 'this server is closed for new games right now; try again later', { 'retry-after': '600' }, { closed: true });
+    if (!owner && banned(address)) throw new HttpError(403, 'this address may not play on this server');
     const retry = (ms) => ({ 'retry-after': String(Math.max(1, Math.ceil(ms / 1000))) });
     const soonestOf = (list) => Math.min(...list.map((x) => x.expiresAt)) - now();
     const mine = [...sessions.values()].filter((x) => x.client === key);
     if (mine.length >= sessionsPerAddress) {
       throw new HttpError(429, `${mcp ? 'this connection' : 'your address'} already has a bot (one at a time); end that session or wait about ${duration(soonestOf(mine))}`, retry(soonestOf(mine)));
     }
-    if (mcp) {
-      const fromAddress = [...sessions.values()].filter((x) => x.address === address && x.client.startsWith('mcp:'));
+    if (mcp && !owner) {
+      // the owner's games do not count (the owner's agent may share its cloud's address with other players)
+      const fromAddress = [...sessions.values()].filter((x) => x.address === address && x.client.startsWith('mcp:') && !x.owner);
       if (fromAddress.length >= mcpGamesPerAddress) {
         throw new HttpError(429, `your connector's address already plays ${mcpGamesPerAddress} game${mcpGamesPerAddress === 1 ? '' : 's'}, the most one address may hold; the next one frees up in about ${duration(soonestOf(fromAddress))}`, retry(soonestOf(fromAddress)));
       }
@@ -1114,11 +1155,14 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (cool > 0) throw new HttpError(429, `your last session just ended; the next guest goes first, try again in about ${duration(cool)}`, retry(cool));
     const free = Math.max(0, web.maxSessions - sessions.size);
     const at = waiting.findIndex((w) => w.key === key);
-    if ((at < 0 ? waiting.length : at) >= free) queued(key, mcp, free);
-    const limit = mcp ? mcpStartLimiter.take(address) : sessionLimiter.take(key);
+    // the owner goes first: ahead of the queue, never behind it
+    if (owner ? free < 1 : (at < 0 ? waiting.length : at) >= free) queued(key, mcp, free, owner);
+    const limit = owner ? { ok: true } : mcp ? mcpStartLimiter.take(address) : sessionLimiter.take(key);
     if (!limit.ok) throw new HttpError(429, `too many sessions from your ${mcp ? "connector's " : ''}address; try again in ${duration(limit.retryMs)}`, retry(limit.retryMs));
     if (at >= 0) waiting.splice(at, 1);
-    return startSession(key, address);
+    const started = startSession(key, address);
+    if (owner) started.owner = true;
+    return started;
   }
 
   async function handleAsk(req, res) {
@@ -1127,7 +1171,10 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     const fail = (status, error, headers) => (asJson ? sendJson(res, status, { error }, headers) : sendHtml(res, status, errorPage(status, error), headers));
     if (typeof fields.text !== 'string') return fail(400, 'type an instruction');
     if (fields.text.length > web.askMaxChars * 4) return fail(413, `the instruction is longer than ${web.askMaxChars} characters`);
-    const text = cleanText(fields.text);
+    // a visitor's instruction for the house bot: cleaned as an agent's words are (src/moderation.js)
+    const asked = moderator().clean(cleanText(fields.text));
+    if (asked.removed) log.event('moderation', { tool: 'ask', removed: asked.removed, fields: ['text'] });
+    const text = asked.text;
     if (!text) return fail(400, 'type an instruction');
     if (text.length > web.askMaxChars) return fail(413, `the instruction is longer than ${web.askMaxChars} characters`);
     const closed = closing ? 'the server is shutting down' : askClosedReason();
@@ -1193,6 +1240,70 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (end) for (const s of live) endSession(s, 'ended by the operator');
     log.event('admin_stop', { stopped, cleared: cleared.length, ended: end ? live.length : 0 });
     return sendJson(res, 200, { stopped, cleared: cleared.length, ended: end ? live.length : 0 });
+  }
+
+  /** Who plays now (the operator's view): each game with its address hash, caller, goal, times; the queue; the bans. */
+  function adminGames() {
+    const t = now();
+    return {
+      publicPlay,
+      maxSessions: web.maxSessions,
+      games: [...sessions.values()].map((x) => ({
+        game: x.id,
+        ip: ipHash(x.address),
+        mcp: String(x.client ?? '').startsWith('mcp:'),
+        caller: x.caller ?? null,
+        goal: (() => { try { const g = x.tracker?.goal; return g ? (g.title ?? g.key) : null; } catch { return null; } })(),
+        status: x.status,
+        startedS: Math.round((t - x.created) / 1000),
+        leftS: Math.max(0, Math.round((x.expiresAt - t) / 1000)),
+      })),
+      queue: waiting.length,
+      bans: [...bans].map(([ip, b]) => ({ ip, until: b.until ? new Date(b.until).toISOString() : null, via: b.via ?? 'admin' })),
+    };
+  }
+
+  /**
+   * The operator's actions (Bearer WEB_ADMIN_TOKEN): end {game} ends one game; ban {ip, hours?} bans an address hash
+   * (and ends its games); unban {ip}; public {on} opens or closes the server to new games at once.
+   */
+  async function adminAct(what, req, res) {
+    adminGate(req);
+    const { fields } = await readFields(req, web.maxBodyBytes);
+    requireAdmin(req, fields);
+    const yes = (v) => v === true || v === 1 || /^(1|true|yes|on)$/i.test(String(v ?? ''));
+    if (what === 'end') {
+      const s = [...sessions.values()].find((x) => x.id === String(fields.game ?? ''));
+      if (!s) throw new HttpError(404, 'no running game with that id');
+      endSession(s, 'ended by the operator');
+      log.event('admin_end', { game: s.id });
+      return sendJson(res, 200, { ended: s.id });
+    }
+    if (what === 'ban' || what === 'unban') {
+      const ip = String(fields.ip ?? '').toLowerCase();
+      if (!/^[0-9a-f]{12}$/.test(ip)) throw new HttpError(400, 'ip must be a 12-character address hash (GET /admin/games shows them)');
+      if (what === 'unban') {
+        const had = bans.delete(ip);
+        saveBans();
+        log.event('admin_unban', { ip });
+        return sendJson(res, 200, { unbanned: had ? ip : null });
+      }
+      const hours = Number(fields.hours);
+      const until = Number.isFinite(hours) && hours > 0 ? now() + hours * 3_600_000 : null;
+      bans.set(ip, { until, via: 'admin' });
+      saveBans();
+      let endedN = 0;
+      // the owner's games stay (its agent may share a cloud's address with the banned one)
+      for (const s of [...sessions.values()]) if (ipHash(s.address) === ip && !s.owner) { endSession(s, 'ended by the operator'); endedN += 1; }
+      log.event('admin_ban', { ip, hours: until ? hours : null, ended: endedN });
+      return sendJson(res, 200, { banned: ip, until: until ? new Date(until).toISOString() : null, ended: endedN });
+    }
+    if (what === 'public') {
+      publicPlay = yes(fields.on);
+      log.event('admin_public', { on: publicPlay });
+      return sendJson(res, 200, { publicPlay });
+    }
+    throw new HttpError(404, 'not found');
   }
 
   /** The live session whose 3D views listen under this view id (128 random bits; not the game id, not the token). */
@@ -1351,7 +1462,8 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (p === '/mcp') {
       mcp ??= createMcp({
         newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log, now, clientKey, base,
-        leaseMs: web.leaseMs, testLives: Boolean(web.testLives), testRecord: Boolean(web.testRecord), posterLogo: (cfg.stream?.logo ?? 'off') !== 'off', initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs, skills: opts.skills, careMode: opts.careMode,
+        leaseMs: web.leaseMs, testLives: Boolean(web.testLives), testRecord: Boolean(web.testRecord), posterLogo: (cfg.stream?.logo ?? 'off') !== 'off', initLimiter: mcpInitLimiter, limits: { perMinute: web.mcpRequestsPerMinute ?? 120, ...(opts.mcpLimits ?? {}) }, callMs: opts.mcpCallMs, idleMs: opts.idleMs ?? web.idleMs,
+        isOwner, banned, publicChat: Boolean(web.publicChat), moderate: opts.moderate, skills: opts.skills, careMode: opts.careMode,
         links: (s, b) => ({ eyes: `${b}/eyes/${s.viewId}/`, watch: `${b}/watch/${s.viewId}/` }),
         liveVideo: (s) => { try { return opts.liveVideo?.(s.id) ?? null; } catch { return null; } },
         liveView: opts.liveView ? (s, o) => Promise.resolve(opts.liveView(s.id, o)).catch(() => null) : null,
@@ -1406,6 +1518,8 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       return sendHtml(res, 200, askPage(Number.isInteger(q) ? q : null, clientKey(req)));
     }
     if (p === '/admin/stop') { only('POST'); return adminStop(req, res); }
+    if (p === '/admin/games') { only('GET'); requireAdmin(req); req.resume(); return sendJson(res, 200, adminGames()); }
+    if (['/admin/end', '/admin/ban', '/admin/unban', '/admin/public'].includes(p)) { only('POST'); return adminAct(p.slice(7), req, res); }
 
     const w = p.match(/^\/(watch|eyes)\/([A-Za-z0-9_-]+)(\/.*)?$/);
     if (w) {
@@ -1450,6 +1564,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       const check = coerceArgs(action, fields);
       if (!check.ok) { s.notice = `Not run: ${check.error}`; return redirect(res, playPath(s)); }
       if (action === 'get_state') { s.notice = 'State read.'; return redirect(res, playPath(s)); }
+      if (action === 'say' && !web.publicChat && !s.owner) { s.notice = 'Not run: say (in-game chat) is off on this public server.'; return redirect(res, playPath(s)); }
       const started = startAction(s, action, check.args);
       if (!started.ok) { s.notice = `Not run: ${started.error}`; return redirect(res, playPath(s)); }
       await within(started.promise, formWaitMs);
@@ -1486,6 +1601,8 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
         const text = stateText(s);
         return sendJson(res, 200, { ok: s.status === 'ready', result: text, tool: action, args: {}, delta: {}, ms: 0, state: text }, PRIVATE);
       }
+      // in-game chat is the owner's on a public server (the web page's guests are outside players too)
+      if (action === 'say' && !web.publicChat && !s.owner) return sendJson(res, 403, { error: 'say (in-game chat) is off on this public server', code: 'NOT_ALLOWED' });
       const started = startAction(s, action, check.args);
       if (!started.ok) return sendJson(res, started.status, { error: started.error });
       const r = await within(started.promise, apiWaitMs);

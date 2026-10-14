@@ -175,15 +175,18 @@ second Ctrl-C exits at once.
 | `GET/POST /ask` | the queue for our own brain: `WEB_ASK_MAX_CHARS`, one waiting or running request and `WEB_ASK_PER_HOUR` per address, closed while the hourly $ cap is spent |
 | `GET /log?n=50` | the operator's JSONL tail, `Authorization: Bearer $WEB_ADMIN_TOKEN` (404 without one configured; wrong tokens count toward the lock-out); session tokens and the admin token scrubbed, no IP addresses |
 | `POST /admin/stop` | kill switch, `Authorization: Bearer $WEB_ADMIN_TOKEN`; stops every skill and clears the queue, `{"end":true}` also ends every session; 5 wrong tokens lock an address out for the hour |
+| `GET /admin/games` | who plays now (Bearer `WEB_ADMIN_TOKEN`): each game with its address hash, caller, goal and times; the queue; whether public play is on; the bans |
+| `POST /admin/end`, `/admin/ban`, `/admin/unban`, `/admin/public` | (Bearer `WEB_ADMIN_TOKEN`, JSON or form) `{game}` ends one game; `{ip, hours?}` bans an address hash and ends its games (the owner's stay); `{ip}` lifts a ban; `{on: false}` closes the server to new games at once (`start_game` answers `CLOSED`, the owner's key still plays), `{on: true}` opens it (section "The public server") |
 | `/mcp` | MCP (streamable HTTP) for a connector such as Muse: `start_game {goal?}`, `set_goal`, `play`, `play_sequence`, `get_state`, `stop`, `end_game`, `live_view {format: html \| link \| embed}` (src/mcp.js) |
 | `GET /watch/<view id>/`, `GET /eyes/<view id>/` | a guest bot's live 3D views under the game's view id (128 random bits, not the game id; never logged), prismarine-viewer, read-only: clicks from the page are ignored; with src/live-view-fx.js added (`muse-fx.js`): eased first-person turns (the bot is not slowed: the picture turns, at most 360 degrees a second), the game's crack textures on the block being broken (`muse-fx/events`, server-sent), no magenta boxes for dropped items. A view of a game that ended answers 410; an address that asks for 60 different views that never existed in an hour gets 429 for unknown views until the hour rolls on (the same unknown id again, a tab still reconnecting to a view from before an agent restart, counts once; the views of live games are always served) |
 
 MCP: one game per MCP session (connector users share the agent's egress addresses); per address at most
-`WEB_MCP_GAMES_PER_ADDRESS` live MCP games (default `max(2, WEB_MAX_SESSIONS / 2)`; set it from probe T8, up to
-`WEB_MAX_SESSIONS` if Muse users share a few addresses) and 60 MCP game starts an hour, no cooldown. When every bot is in
-use, start_game (and the web page and API) answers with the caller's place in a first-come queue, how many wait, and an
-estimate (when enough leases end; games often end sooner); asking again within 90 s keeps the place, and a bot that
-frees up goes to the first in line. Every reply comes within 45 s with the result and the state (with the time left);
+`WEB_MCP_GAMES_PER_ADDRESS` live MCP games (default 3; raise it if many players share one agent cloud's address) and
+`WEB_MCP_STARTS_PER_HOUR` starts an hour (default 10), no cooldown; past either, start_game answers `RATE_LIMITED` with
+`retryAfterS`. When every bot is in use, start_game answers `SERVER_FULL` (and the web page and API a 503) with the
+caller's place in a first-come queue, how many wait, and an estimate (when enough leases end; games often end sooner);
+asking again within 90 s keeps the place, and a bot that frees up goes to the first in line (the owner's key goes ahead
+of the queue). Section "The public server" has the rest: words cleaned, in-game chat, the operator's switches. Every reply comes within 45 s with the result and the state (with the time left);
 steps still running or queued then go on, and a later reply (get_state waits for them) reports their results once the
 client has received them (section "MCP calls"). start_game returns a resume handle (22 characters, 128 random bits,
 never the control token) that resumes the game, with its queue, from a new MCP session while the game lives; the game
@@ -1487,7 +1490,14 @@ X display) and feeds the terminal a scripted session through the real formatter
 | `WEB_TRUST_PROXY` | `off` | where the client address for the limits comes from: `off` (the socket), `cloudflare` (`CF-Connecting-IP`), or 1-5 proxies appending to `X-Forwarded-For` |
 | `WEB_PROXY_SECRET` | (none) | a secret of at least 24 characters the proxy sends in `X-Muse-Proxy` (Caddy: `header_up`; needs `WEB_TRUST_PROXY`): forwarded headers count only on requests that carry it, and any other non-loopback request is refused. Use it on picasso, where every peer is the Docker gateway. Never logged or printed |
 | `WEB_TRUSTED_PROXIES` | (none) | the proxy's addresses or ranges (`172.24.0.5`, `172.24.0.0/16`, comma-separated; needs `WEB_TRUST_PROXY`): forwarded headers count only on its connections, and any other non-loopback peer is refused. Only where the agent sees the proxy's own address (not behind a published Docker port). With neither set: believed from any peer (the agent prints a note) |
-| `WEB_MCP_GAMES_PER_ADDRESS` | `max(2, WEB_MAX_SESSIONS / 2)` | live MCP games one address may hold (probe T8 decides; `WEB_MAX_SESSIONS` caps MCP games only globally) |
+| `WEB_MCP_GAMES_PER_ADDRESS` | `3` | live MCP games one address may hold (`RATE_LIMITED` past it; the owner's games do not count) |
+| `WEB_MCP_STARTS_PER_HOUR` | `10` | new MCP games one address may start in an hour (`RATE_LIMITED` with `retryAfterS`) |
+| `WEB_MCP_REQUESTS_PER_MINUTE` | `120` | requests one MCP session may send in a minute (HTTP 429 with `retry-after`; the owner's are not counted) |
+| `WEB_IDLE_MS` | `300000` | a game with no call for this long (and nothing running) ends |
+| `PUBLIC_PLAY` | `on` | `off`: no new games (`start_game` answers `CLOSED`) except for the owner's key; `/admin/public` switches it at once without a restart |
+| `PUBLIC_CHAT` | `off` | `say` (in-game chat) for every caller; off, only the owner's key may use it (`NOT_ALLOWED`), web guests included |
+| `MCP_OWNER_KEY` | (none) | the owner's key, at least 24 characters (`openssl rand -hex 24`), sent as `Authorization: Bearer` or `?key=` on `/mcp`: plays while public play is off, goes first in the queue, may use `say`, is not held to the per-address limits or address bans. Never logged |
+| `WEB_IP_SALT`, `WEB_BANNED_IPS` | (from the admin token), (none) | the salt of the 12-character address hashes the operator and the log see (never an address); hashes that may not play, comma separated (`/admin/ban` adds more, kept in `MINEAI_DATA_DIR/bans.json`) |
 | `WEB_LEASE_MS`, `WEB_MAX_SESSIONS` | `600000`, `4` | one bot per guest for 10 minutes |
 | `WEB_ASK_PER_HOUR`, `WEB_ASK_MAX_CHARS`, `WEB_MAX_BODY` | `3`, `300`, `8192` | `/ask` limits per address, request body cap |
 | `WEB_ASK_ALLOW_CONTRIBUTOR` | `false` | the Ask queue stays closed on the Contributor tier (Meta may train on it) unless this is `true`; the page then says so |
@@ -2497,6 +2507,40 @@ once, the slow scripted player of `survive.mjs`, each game its whole 30-minute l
 | told in a reply / done before the game's last reply | 42 / 42 | 49 / 49 | 91 / 91 |
 
 **Against the gate (at most 1 death in 16): passed** (round 1: 1 in 8 and 3 in 8; the care off: 2 in 8).
+
+### The public server (2026-10-14)
+
+At launch `play.picasso-lab.com/mcp` opens to everyone (the promo asks "Can your agent beat 20:19?"). What keeps a
+stranger's agent from misusing it:
+
+- **Words:** every string an MCP call carries is cleaned before anything keeps or shows it: why and plan (the stream's
+  thinking band), the goal words of start_game and set_goal, the console's arguments, the report and the log. The
+  client's declared name (the HUD's caller) is cleaned too, and so is a visitor's Ask text.
+  - `src/moderation.js` replaces offensive words with `[removed]` and logs a `moderation` row: the tool, the fields and
+    how many, never the words.
+  - Words match whole ("assess", "Scunthorpe" and coordinates such as 455 pass). The usual disguises match too:
+    digits and symbols for letters, letters spaced or dotted apart, letters drawn out, masks such as `f*ck`, and the
+    strongest words inside longer ones.
+  - The list is the English list of "List of Dirty, Naughty, Obscene, and Otherwise Bad Words" (LDNOOBW,
+    <https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words>, CC BY 4.0), copied unchanged
+    into `src/moderation/` with its licence and credit (`NOTICE.md`).
+  - Lengths stay capped (why 140, plan 400 characters on the stream) and links and handles stripped, as before.
+- **In-game chat:** `say` is the owner's on a public server (`PUBLIC_CHAT=off`, the default): an outside agent (and a
+  web guest) gets `NOT_ALLOWED`, nothing said. No other skill writes text into the world (no signs, books or names).
+- **Limits:** these are all set in the environment (the table under "Configuration").
+  - A game per MCP session.
+  - `WEB_MCP_GAMES_PER_ADDRESS` (3) live games and `WEB_MCP_STARTS_PER_HOUR` (10) starts an address: `RATE_LIMITED`.
+  - `WEB_MCP_REQUESTS_PER_MINUTE` (120) requests a session: HTTP 429.
+  - `WEB_MAX_SESSIONS` (8 on production) games in all: `SERVER_FULL`, with the queue.
+  - `WEB_IDLE_MS` (5 min) without calls, and the lease `WEB_LEASE_MS` (30 min).
+  - Addresses are kept in memory only; logs and the operator see a 12-character hash (`ip` in `session_start`).
+- **The owner's key** (`MCP_OWNER_KEY`, as `Authorization: Bearer` or `?key=` on the connector's `/mcp` URL):
+  - plays when public play is off, and goes ahead of the queue;
+  - may use `say`;
+  - is held to none of the per-address limits, and an address ban does not reach it (Muse may share its cloud's address
+    with strangers).
+- **The operator** (Bearer `WEB_ADMIN_TOKEN`): `GET /admin/games`, `POST /admin/end`, `/admin/ban`, `/admin/unban` and
+  `/admin/public`. The runbook is in docs/SWITCH.md, section 10.
 
 ### Leaves on the site, walks and the stuck item, the pre-launch sweep (2026-10-14, g0842ff)
 
