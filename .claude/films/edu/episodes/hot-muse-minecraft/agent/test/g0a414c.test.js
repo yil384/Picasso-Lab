@@ -75,7 +75,7 @@ test('g0a414c: obsidian formed beside the bot is mined at its own cells first; a
     assert.ok(Date.now() - t0 < 4_000, 'fails fast, not after the step\'s whole time');
     assert.equal(r.ok, false);
     assert.equal(r.code, 'FAILED');
-    assert.match(r.result, /^no obsidian came in: the nearest formed obsidian is at -390 -54 62, \d+ blocks away, under or beside water \(the water poured did not all go back into the bucket\); the still lava pool at -394 -54 61, \d+ blocks away \(1 source: 1 obsidian at most\) is here, but no obsidian came from it \(their pour could not reach it from where it stood\)\. Instead: scoop the water: bucket fill water at -390 -53 62, then collect obsidian again; or stand right beside it: go_to -?\d+ -54 -?\d+, then collect obsidian 1; or build nether_portal now: 12 obsidian is enough/);
+    assert.match(r.result, /^no obsidian came in: the nearest formed obsidian is at -390 -54 62, \d+ blocks away, under or beside water \(the water poured did not all go back into the bucket\); the still lava pool at -394 -54 61, \d+ blocks away \(1 source: 1 obsidian at most\) is here, but no obsidian came from it\. Instead: stand right beside it: go_to -?\d+ -54 -?\d+, then collect obsidian 1; or build nether_portal now: 12 obsidian is enough/);
   } finally {
     await body.close?.();
     await hosts.closeAll();
@@ -115,7 +115,7 @@ test('g0a414c over /mcp: the stuck advice fires by the third obsidian call that 
     assert.equal(advice[1][0]?.kind === 'stuck', false);
     const stuck = advice[2][0];
     assert.equal(stuck?.kind, 'stuck', 'by the third call');
-    assert.match(stuck.text, /^stuck: collecting obsidian \(obsidian 11, none more for 3 calls \/ \d+ min\); no obsidian came in: the nearest formed obsidian is at -397 -53 63, \d+ blocks away, under or beside water [^.]*\. Try: scoop the water: bucket fill water at -397 -52 63/);
+    assert.match(stuck.text, /^stuck: collecting obsidian \(obsidian 11, none more for 3 calls \/ \d+ min\); no obsidian came in: the nearest formed obsidian is at -397 -53 63, \d+ blocks away, under or beside water [^.]*\. Try: stand right beside it: go_to /); // the bucket is full: no scoop to offer (the soak, 2026-10-14)
     assert.ok(MINEAI_SKILLS.validate(stuck.hint.skill, stuck.hint.args).ok, JSON.stringify(stuck.hint));
     // on every reply until it moves (get_state too), first in the text's Body advice
     const st = await c.callTool({ name: 'get_state', arguments: {} });

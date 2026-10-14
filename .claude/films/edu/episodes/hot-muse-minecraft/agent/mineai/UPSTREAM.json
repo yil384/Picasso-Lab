@@ -19,6 +19,7 @@
     "patches/0012-reflex-toggles.patch",
     "patches/0013-shield-waits-for-short-actions.patch",
     "patches/0014-collect-spares-lit-portal-frames.patch",
-    "patches/0015-collect-spares-lit-frame-corners.patch"
+    "patches/0015-collect-spares-lit-frame-corners.patch",
+    "patches/0016-cast-pools-from-their-shore.patch"
   ]
 }

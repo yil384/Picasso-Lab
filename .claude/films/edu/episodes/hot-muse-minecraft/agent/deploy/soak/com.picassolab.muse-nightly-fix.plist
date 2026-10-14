@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The nightly fix job (scripts/nightly-fix.sh): 05:30 local, after the 04:00 soak. A headless Claude Code run only
+     when the soak shows something new or worse (docs/NIGHTLY-FIX.md). Install: copy to ~/Library/LaunchAgents and
+     `launchctl load` it (README, "The nightly soak"). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.picassolab.muse-nightly-fix</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/linyichen/picasso-work/muse-nightly-wt/.claude/films/edu/episodes/hot-muse-minecraft/agent/scripts/nightly-fix.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/Users/linyichen/miniforge3/bin:/Users/linyichen/.local/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>5</integer><key>Minute</key><integer>30</integer></dict>
+  <key>ProcessType</key><string>Interactive</string>
+  <key>StandardOutPath</key><string>/Users/linyichen/picasso-work/soak/nightly-fix.launchd.out</string>
+  <key>StandardErrorPath</key><string>/Users/linyichen/picasso-work/soak/nightly-fix.launchd.err</string>
+</dict>
+</plist>

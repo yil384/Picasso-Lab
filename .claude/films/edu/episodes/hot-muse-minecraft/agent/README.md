@@ -2563,8 +2563,33 @@ node scripts/soak.mjs [url] [--games 3] [--minutes 29] [--out DIR]   # default: 
 - **Install:** copy the plist to `~/Library/LaunchAgents/` and run
   `launchctl load ~/Library/LaunchAgents/com.picassolab.muse-soak.plist`.
 
+**The nightly fix job, on the Mac:**
+- **Job:** `deploy/soak/com.picassolab.muse-nightly-fix.plist` runs `scripts/nightly-fix.sh` at 05:30 local, in its
+  own checkout of main (`~/picasso-work/muse-nightly-wt`).
+- **When it starts a model:** only when tonight's soak shows a failure kind that is new or worse than the night before
+  (`scripts/soak-compare.mjs`).
+  - Otherwise the morning report `~/picasso-work/soak/<date>-fixes.md` says "nothing new", and no model is started.
+  - No soak tonight: the night is skipped.
+- **The run:** a headless Claude Code run with `docs/NIGHTLY-FIX.md`, capped at 1.5 hours.
+  - It fixes the top 1 or 2 issues with tests and replay entries, merges and pushes.
+  - It deploys only when staging and production are both idle.
+  - It syncs the public repo only after a deploy (otherwise at most twice a week), after a scan of the diff and green
+    CI.
+  - It writes the morning report and one desktop notification.
+- **Dry run:** `NIGHTLY_DRY=1 bash scripts/nightly-fix.sh` runs the gate and the report, and prints the command and
+  prompt instead of starting the fix run.
+
 The first soak found that a LAVA refusal could name a pool by the world spawn, where the next collect was refused.
 The guard and the stall advice no longer name such pools.
+
+**Obsidian at lakes (the first soak's top failure).** "No obsidian came in" happened 3 times at pools of 23 to 64
+sources. Their pour's route aimed at the pool's nearest sources, which in a lake are often under more lava or out in
+the middle, with no stance within reach. Fixes:
+
+- **Runtime patch 0016:** the cast takes a pool's sources open and beside the shore first, then open, then under
+  lava; a pour that formed nothing gives up its stance, and the pool only after 3 such pours.
+- **The body:** collect obsidian first stands on the pool's shore, one above an open source and within 2 blocks of it
+  (read in small boxes around the pool's nearest sources). The stall advice names that stance as a `go_to`.
 
 ### A frame that waits for the server, the frame it stood beside, pools and hunts (2026-10-14, g2409ce)
 
