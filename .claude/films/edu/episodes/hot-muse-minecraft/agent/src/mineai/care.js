@@ -21,7 +21,7 @@
 import { createPlanner } from '../plan.js';
 import { registryFor } from '../mc.js';
 import { fuelPlan } from '../game.js';
-import { bestFood, CARE_DEFAULTS, CARE_KNOBS, junkOf, reflexWords, EMERGENCY_FOOD } from './skills.js';
+import { bestFood, CARE_DEFAULTS, CARE_KNOBS, junkOf, reflexWords, EMERGENCY_FOOD, EMERGENCY_AT, emergencyEats } from './skills.js';
 import { facingOf } from '../state.js';
 
 const reg = registryFor('1.21.4');
@@ -518,11 +518,15 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
   if (food <= EAT_AT || hurt) {
     const meal = bestFood(inventory);
     const why = `food ${food}/20${hurt ? `, health ${round(health)}/20 (it heals only at food 18 or more)` : ''}`;
+    // only food that may give Hunger (rotten flesh): eaten now when eat takes it, else said, never "no food carried"
+    const last = meal ? null : EMERGENCY_FOOD.find((f) => (inventory[f] ?? 0) > 0) ?? null;
     if (meal) say('eat', `${why}; you carry ${inventory[meal]} ${meal}`, { skill: 'eat', args: {} });
+    else if (last && emergencyEats(food, health)) say('eat', `${why}; you carry ${inventory[last]} ${last}: it adds 4 food (its Hunger costs about 1)${hurt ? `; ${((k) => (k === 1 ? 'one brings' : `${k} bring`))(Math.max(1, Math.ceil((18 - food) / 3)))} food to 18, where health comes back` : ''}`, { skill: 'eat', args: {} });
     else {
       const prey = preyNear(s, { cook: furnace });
-      if (prey) say('hunt', `${why}; no food carried; a ${prey.name} ${Math.round(prey.nearest.distance)} blocks away`, { skill: 'hunt', args: { mob: prey.name, drop: PREY[prey.name], n: 3 } });
-      else say('food', `${why}; no food carried and no animal in sight`);
+      const none = last ? `no safe food carried (${inventory[last]} ${last}: eat takes it at food ${EMERGENCY_AT} or less)` : 'no food carried';
+      if (prey) say('hunt', `${why}; ${none}; a ${prey.name} ${Math.round(prey.nearest.distance)} blocks away`, { skill: 'hunt', args: { mob: prey.name, drop: PREY[prey.name], n: 3 } });
+      else say('food', `${why}; ${none} and no animal in sight`);
     }
   }
   // very low health: stay enclosed until healed (a production game, 2026-10-12, g0793f1: at 3.4 health and dawn the
@@ -606,14 +610,30 @@ export function advise(situation, { inventory = {}, stacks = [], memory = {}, no
   if (pieces.length) say('armor', `you could craft ${pieces.map((p) => p.item).join(', ')} from what you carry`, { skill: 'armor', args: {} });
   // on the way to the Nether (ROADMAP M8): what the frame still needs, once it carries obsidian
   const obsidian = inventory.obsidian ?? 0;
+  // the iron the way still takes, said early (production game gd7540a, 2026-10-14: the bucket took its last 3 iron
+  // ingots, and with 14 obsidian there was none left for flint_and_steel): once it has diamonds, before the frame
+  const diamonds = (inventory.diamond ?? 0) > 0 || stacks.some((x) => x?.name === 'diamond_pickaxe');
+  const bucketHeld = ['bucket', 'water_bucket', 'lava_bucket'].some((b) => (inventory[b] ?? 0) > 0);
+  const iron = (inventory.iron_ingot ?? 0) + (inventory.raw_iron ?? 0);
+  const ironNeed = (inventory.flint_and_steel ?? 0) > 0 ? 0 : 1 + (bucketHeld ? 0 : 3);
+  if (overworld && diamonds && !memory.portalBuilt && obsidian < PORTAL_OBSIDIAN && iron < ironNeed) {
+    say('iron', `you carry ${iron} iron (ingots and raw iron); ${bucketHeld ? '' : 'a bucket (water, to make obsidian) takes 3 and '}flint_and_steel (to light the portal) takes 1: mine ${ironNeed - iron} more iron ore and smelt it, and keep one ingot for flint_and_steel`, { skill: 'collect', args: { block: 'iron_ore', n: ironNeed - iron } });
+  }
   if (overworld && obsidian > 0 && !memory.portalBuilt) {
     const diamondPick = stacks.some((x) => x?.name === 'diamond_pickaxe' || x?.name === 'netherite_pickaxe');
     if (obsidian < PORTAL_OBSIDIAN) {
       const lacks = [diamondPick ? null : 'a diamond pickaxe', (inventory.water_bucket ?? 0) > 0 ? null : 'a water bucket (bucket fill water)', (inventory.cobblestone ?? 0) + (inventory.cobbled_deepslate ?? 0) >= 8 ? null : 'cobblestone to close off lava'].filter(Boolean);
       say('portal', `you carry ${obsidian} obsidian; a portal frame (build nether_portal) takes 12, and up to 2 more on uneven ground${lacks.length ? `; collecting more needs ${lacks.join(', ')}` : ''}`, lacks.length ? null : { skill: 'collect', args: { block: 'obsidian', n: PORTAL_OBSIDIAN - obsidian } });
     } else if (!(inventory.flint_and_steel > 0)) {
-      say('portal', (inventory.flint ?? 0) > 0 && (inventory.iron_ingot ?? 0) > 0 ? `${obsidian} obsidian for the frame; flint_and_steel lights it` : `${obsidian} obsidian for the frame; flint_and_steel lights it: 1 iron_ingot and 1 flint (gravel drops flint now and then)`,
-        (inventory.flint ?? 0) > 0 && (inventory.iron_ingot ?? 0) > 0 ? { skill: 'craft', args: { item: 'flint_and_steel', n: 1 } } : (inventory.flint ?? 0) > 0 ? null : { skill: 'collect', args: { block: 'gravel', n: 10 } });
+      // flint: 1 in 10 a gravel mined (9 gravel gave none in gd7540a, as 4 tries in 10 do); the iron, said when gone
+      const flint = (inventory.flint ?? 0) > 0;
+      const ingot = (inventory.iron_ingot ?? 0) > 0;
+      const needs = [
+        ingot ? null : (inventory.raw_iron ?? 0) > 0 ? '1 iron_ingot (smelt the raw iron you carry)' : '1 iron_ingot (none left: mine 1 iron ore and smelt it)',
+        flint ? null : `1 flint (a gravel mined drops flint 1 time in 10: about 10 gravel a flint, 22 for 9 chances in 10${(inventory.gravel ?? 0) > 0 ? `; the ${inventory.gravel} gravel you carry can be placed and mined again` : ''})`,
+      ].filter(Boolean);
+      say('portal', !needs.length ? `${obsidian} obsidian for the frame; flint_and_steel lights it` : `${obsidian} obsidian for the frame; flint_and_steel lights it: ${needs.join(' and ')}`,
+        !needs.length ? { skill: 'craft', args: { item: 'flint_and_steel', n: 1 } } : flint ? ((inventory.raw_iron ?? 0) > 0 ? { skill: 'smelt', args: { item: 'raw_iron', n: 1 } } : { skill: 'collect', args: { block: 'iron_ore', n: 1 } }) : { skill: 'collect', args: { block: 'gravel', n: 22 } });
     } else say('portal', `${obsidian} obsidian and flint_and_steel: everything for a Nether portal (build it on open, dry ground)`, { skill: 'build', args: { blueprint: 'nether_portal', material: 'obsidian' } });
   }
   // in the Nether: what differs, and the way back
@@ -1299,7 +1319,9 @@ export function createCare(deps) {
   function ruleAction(situation) {
     const food = situation?.vitals?.food;
     if (!(rules.eat_below > 0) || !Number.isFinite(food) || food > rules.eat_below || food >= 20 || cool('eat', 30_000)) return null;
-    const meal = bestFood(deps.latest().inventory ?? {});
+    const inv = deps.latest().inventory ?? {};
+    // nothing safe: what eat takes at that level (rotten flesh at food 6 or less, as the eat skill does)
+    const meal = bestFood(inv) ?? (emergencyEats(food, situation?.vitals?.health) ? EMERGENCY_FOOD.find((f) => (inv[f] ?? 0) > 0) ?? null : null);
     return meal ? { kind: 'eat', why: `rule eat_below ${rules.eat_below}`, food: meal, rule: 'eat_below' } : null;
   }
 

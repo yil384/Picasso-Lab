@@ -207,7 +207,7 @@ export function renderState(s) {
     lines.push(`wearing: ${armor.length ? armor.join(', ') : 'no armor'}${off ? `; off-hand: ${off}` : ''}`);
   }
   lines.push(`nearby blocks (within ${RADIUS}): ${s.nearbyBlocks.length
-    ? s.nearbyBlocks.map((b) => `${b.name} ${b.count}${b.capped ? '+' : ''} (nearest ${b.distance} away at ${xyz(b.nearest)})`).join('; ')
+    ? s.nearbyBlocks.map((b) => `${b.name} ${b.count}${b.capped ? '+' : ''} (nearest ${b.distance} away at ${xyz(b.nearest)}${b.note ? `; ${b.note}` : ''})`).join('; ')
     : 'nothing notable'}`);
   lines.push(`nearby mobs: ${s.mobs.length
     ? s.mobs.map((m) => `${m.name}${m.hostile ? ' (hostile)' : ''} ${m.distance} away at ${xyz(m.position)}`).join('; ')

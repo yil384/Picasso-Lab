@@ -279,6 +279,11 @@ export async function startFakeMineAi(opts = {}) {
       const done = !t || t.made ? perform(tool, a, () => act.cancel) : null;
       // the guard reflex's way with a fresh shield: into the off-hand; the temporary table left standing
       if (t?.offHand && have(t.offHand) > 0) { add(t.offHand, -1); world.equipment.set('off-hand', { name: t.offHand, count: 1 }); }
+      // a smelt's temporary furnace left standing (production game gd7540a)
+      if (t?.furnaceLeft && have('furnace') > 0) {
+        add('furnace', -1);
+        world.blocks = [...world.blocks.filter((b) => b.name !== 'furnace'), { name: 'furnace', found: 1, listed: [{ x: Math.floor(world.position.x), y: Math.floor(world.position.y), z: Math.floor(world.position.z) + 1 }] }];
+      }
       if (t?.tableLeft && have('crafting_table') > 0) {
         add('crafting_table', -1);
         world.blocks = [...world.blocks.filter((b) => b.name !== 'crafting_table'), { name: 'crafting_table', found: 1, listed: [{ x: Math.floor(world.position.x) + 1, y: Math.floor(world.position.y), z: Math.floor(world.position.z) }] }];

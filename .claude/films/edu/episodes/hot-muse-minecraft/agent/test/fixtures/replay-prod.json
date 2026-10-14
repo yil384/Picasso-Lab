@@ -1,5 +1,5 @@
 {
- "about": "Muse's real steps in production games gb1cfe3 (2026-10-11), g64e8c5, g0793f1 and ga13a88 (2026-10-12) g08370a, g809e1b, g4ac86b, g71c9f5 and g0a414c (2026-10-13), from the agent's viewer_action rows: the skill, its arguments, whether it was ok and the first 120 characters of what production said (test/replay.test.js)",
+ "about": "Muse's real steps in production games gb1cfe3 (2026-10-11), g64e8c5, g0793f1 and ga13a88 (2026-10-12) g08370a, g809e1b, g4ac86b, g71c9f5 and g0a414c (2026-10-13), gd7540a (2026-10-14), from the agent's viewer_action rows: the skill, its arguments, whether it was ok and the first 120 characters of what production said (test/replay.test.js)",
  "games": {
   "gb1cfe3": [
    {
@@ -3223,6 +3223,377 @@
     },
     "ok": false,
     "result": "failed: 5 routes in a row stopped without breaking or gaining anything; the last: the walk there got stuck (no way forward for 20 s). Broke 0 matching blocks; i"
+   }
+  ],
+  "gd7540a": [
+   {
+    "tool": "policy",
+    "args": {
+     "defend": "on",
+     "escape": "on",
+     "eat_below": 6
+    },
+    "ok": true,
+    "result": "your rules now: defend on (fight back, raise the shield, wall in when badly hurt); flee off (withdraw from a hostile mob); escape on (out of water for air, out "
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "birch_log",
+     "n": 8
+    },
+    "ok": true,
+    "result": "mined 8 birch_log and picked up 8 birch_log (8 of 8 wanted)"
+   },
+   {
+    "tool": "craft_batch",
+    "args": {
+     "items": [
+      {
+       "item": "birch_planks",
+       "n": 12
+      },
+      {
+       "item": "crafting_table",
+       "n": 1
+      },
+      {
+       "item": "stick",
+       "n": 4
+      },
+      {
+       "item": "wooden_pickaxe",
+       "n": 1
+      }
+     ]
+    },
+    "ok": true,
+    "result": "crafted 12 birch_planks; crafted 1 crafting_table; crafted 4 stick; crafted 1 wooden_pickaxe at a crafting table put down at 365 79 -70 (the table was picked up"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "stone",
+     "n": 11
+    },
+    "ok": true,
+    "result": "mined 11 stone (stone drops cobblestone) and picked up 11 cobblestone (11 of 11 wanted)"
+   },
+   {
+    "tool": "craft_batch",
+    "args": {
+     "items": [
+      {
+       "item": "stone_pickaxe",
+       "n": 1
+      },
+      {
+       "item": "furnace",
+       "n": 1
+      }
+     ]
+    },
+    "ok": true,
+    "result": "crafted 1 stone_pickaxe at a crafting table put down at 368 71 -68 (the table was picked up again); crafted 1 furnace at a crafting table put down at 368 71 -68"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "coal_ore",
+     "n": 4
+    },
+    "ok": true,
+    "result": "mined 4 coal_ore (coal_ore drops coal) and picked up 4 coal (4 of 4 wanted)"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "iron_ore",
+     "n": 6
+    },
+    "ok": true,
+    "result": "mined 6 iron_ore (iron_ore drops raw_iron) and picked up 6 raw_iron (6 of 6 wanted)"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 6
+    },
+    "ok": false,
+    "result": "a reflex took the body over (it fought a zombie); tried again once it let go; failed: No furnace is carried for temporary use. (nothing was put into a furnace; "
+   },
+   {
+    "tool": "shelter",
+    "args": {},
+    "ok": true,
+    "result": "closed itself in at 404 68 -84 (placed 1 block, 12 wall cells already solid); it stays inside until your next call"
+   },
+   {
+    "tool": "hunt",
+    "args": {
+     "mob": "pig",
+     "drop": "porkchop",
+     "n": 3
+    },
+    "ok": false,
+    "result": "failed: Could not complete an engagement with the selected pig: no way there from where you stand; the nearest it got to a way there was 404 68 -84.; the target"
+   },
+   {
+    "tool": "smelt",
+    "args": {
+     "item": "raw_iron",
+     "n": 5
+    },
+    "ok": true,
+    "result": "smelted 5 iron_ingot from 5 raw_iron with coal in the furnace at 404 68 -83"
+   },
+   {
+    "tool": "craft_batch",
+    "args": {
+     "items": [
+      {
+       "item": "stick",
+       "n": 4
+      },
+      {
+       "item": "iron_pickaxe",
+       "n": 1
+      }
+     ]
+    },
+    "ok": true,
+    "result": "crafted 4 stick; crafted 1 iron_pickaxe at a crafting table put down at 403 68 -84 (the table was picked up again)"
+   },
+   {
+    "tool": "shield",
+    "args": {},
+    "ok": true,
+    "result": "mined 1 iron ore, smelted it, crafted a shield and put it in its off-hand (its fight reflex raises it against arrows)"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 404,
+     "y": -30,
+     "z": -84
+    },
+    "ok": false,
+    "result": "a reflex took the body over (it hid from a zombie); tried again once it let go; a reflex took the body over (it hid from a zombie) before navigate was done; not"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate_diamond_ore",
+     "n": 4
+    },
+    "ok": false,
+    "result": "a reflex took the body over (it hid from a zombie) before collect block was done; nothing is wrong with the step: send it again once the mobs are dealt with"
+   },
+   {
+    "tool": "attack",
+    "args": {
+     "target": "nearest_hostile"
+    },
+    "ok": false,
+    "result": "hunted zombie: 0 killed, 0 rotten_flesh picked up (1 wanted); a reflex took the body over (it hid from a zombie) before collect mob drop was done; nothing is wr"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "deepslate_diamond_ore",
+     "n": 4
+    },
+    "ok": false,
+    "result": "a reflex took the body over (it hid from a zombie) before collect block was done; nothing is wrong with the step: send it again once the mobs are dealt with"
+   },
+   {
+    "tool": "craft_batch",
+    "args": {
+     "items": [
+      {
+       "item": "diamond_pickaxe",
+       "n": 1
+      },
+      {
+       "item": "bucket",
+       "n": 1
+      }
+     ]
+    },
+    "ok": true,
+    "result": "crafted 1 diamond_pickaxe; a reflex took the body over meanwhile (it fought a zombie); the crafting table put down for the craft was picked up again; crafted 1 "
+   },
+   {
+    "tool": "bucket",
+    "args": {
+     "action": "fill",
+     "liquid": "water"
+    },
+    "ok": true,
+    "result": "filled a bucket with water"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 390,
+     "y": 12,
+     "z": -112
+    },
+    "ok": false,
+    "result": "failed: nothing to stand on at 390 12 -112, and no ground within 64 blocks below it (open air or a deep drop): pick a point just above the ground (walked to 400"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 386,
+     "y": 16,
+     "z": -110
+    },
+    "ok": true,
+    "result": "walked to 387 16 -110"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 14
+    },
+    "ok": false,
+    "result": "no obsidian came in: no formed obsidian is loaded within 12 blocks. Instead: make more at the still lava pool at 360 34 -78, 50 blocks away: go_to a spot a few "
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 360,
+     "y": 35,
+     "z": -78
+    },
+    "ok": true,
+    "result": "walked to 360 35 -77"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 14
+    },
+    "ok": false,
+    "result": "stopped: stopped through MCP (a lit portal at 396 92 -65 (37 blocks away) is loaded: its frame was left alone, the obsidian comes from lava or other obsidian)"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 398,
+     "y": 95,
+     "z": -62
+    },
+    "ok": false,
+    "result": "failed: nothing to stand on at 398 95 -62: y is the height of your feet, one above the ground, and the ground there is at y=92, so go_to 398 93 -62 (walked to 3"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 398,
+     "y": 93,
+     "z": -62
+    },
+    "ok": true,
+    "result": "walked to 397 93 -62 [meanwhile on its own: it fought a zombie]"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 10
+    },
+    "ok": false,
+    "result": "no lava pool within 16 blocks to make obsidian from. The nearest lava pool loaded is at 449 71 -34, 62 blocks away: go_to a spot a few blocks from it first."
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 447,
+     "y": 72,
+     "z": -36
+    },
+    "ok": true,
+    "result": "walked to 446 72 -36"
+   },
+   {
+    "tool": "collect",
+    "args": {
+     "block": "obsidian",
+     "n": 10
+    },
+    "ok": true,
+    "result": "mined 10 obsidian and picked up 10 obsidian (10 of 10 wanted) (a lit portal at 397 92 -65 (58 blocks away) is loaded: its frame was left alone, the obsidian com"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": false,
+    "result": "lava at 448 71 -30 is next to where the portal frame would stand: build it on dry ground away from lava and water (go_to a spot with flat ground and open sky fi"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 465,
+     "y": 75,
+     "z": -15
+    },
+    "ok": true,
+    "result": "walked to 465 75 -16"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": false,
+    "result": "could not clear the cell at 466 75 -17 (stone) where the portal frame goes: The requested cell at 466,75,-17 is air, not stone. Broke 0 matching blocks; invento"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 478,
+     "y": 76,
+     "z": -8
+    },
+    "ok": true,
+    "result": "walked to 477 76 -8"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": false,
+    "result": "could not clear the cell at 477 75 -7 (stone) where the portal frame goes: The requested cell at 477,75,-7 is air, not stone. Broke 0 matching blocks; inventory"
+   },
+   {
+    "tool": "go_to",
+    "args": {
+     "x": 490,
+     "y": 78,
+     "z": 10
+    },
+    "ok": true,
+    "result": "walked to 489 78 10"
+   },
+   {
+    "tool": "build",
+    "args": {
+     "blueprint": "nether_portal",
+     "material": "obsidian"
+    },
+    "ok": false,
+    "result": "could not clear the cell at 490 77 10 (stone) where the portal frame goes: The requested cell at 490,77,10 is air, not stone. Broke 0 matching blocks; inventory"
    }
   ]
  }

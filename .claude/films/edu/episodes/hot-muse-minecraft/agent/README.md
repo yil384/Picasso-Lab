@@ -2479,6 +2479,25 @@ once, the slow scripted player of `survive.mjs`, each game its whole 30-minute l
 
 **Against the gate (at most 1 death in 16): passed** (round 1: 1 in 8 and 3 in 8; the care off: 2 in 8).
 
+### A frame in rock, a lit frame's corners, food when hurt, iron and flint (2026-10-14, gd7540a)
+
+- **A portal site in rock:** the frame's cells are dug out one by one before any obsidian is placed (g809e1b). A cell
+  that is already clear when its turn comes (the first dig's drop recovery went through it) counts as cleared; a block
+  fallen into a cell (gravel, sand) is dug as that block, once. gd7540a's three frames each stopped at "is air, not
+  stone" with 14 obsidian carried; they go up now.
+- **A lit portal's frame, its corners too:** runtime patch 0015 has their search spare obsidian with a portal block on
+  any of the 26 cells around it (0014 spared only the faces, and gd7540a took another player's 4 corners); the body's
+  formed-obsidian search does the same. The state marks that obsidian ("a lit portal's frame: never taken"), and a LAVA
+  refusal by a lit frame says so before naming the nearest pool.
+- **Food when hurt:** below food 18 with health 14 or less, eat takes rotten flesh (it adds 4 food; healing starts at
+  18). The advice offers it instead of "no food carried", and the eat_below rule eats it at food 6 or less.
+- **Iron and flint:** with diamonds and no flint_and_steel, the advice says how much iron the bucket and flint_and_steel
+  still take; the flint advice gives the odds (1 in 10 a gravel: about 10 a flint, 22 for 9 chances in 10).
+- **A smelt a reflex cut short** tries again at the furnace it left standing, not with a temporary one it no longer
+  carries.
+- **Stuck on a frame:** the stuck item names the frame's failure and what else to do (away from the lava with a go_to,
+  open ground, portal dismantle, placing the frame by hand).
+
 ### Stuck and time advice; obsidian that does not come (2026-10-13, g0a414c)
 
 - **The stuck detector** (src/mcp.js `stuckCheck`, the body's `stuckWhy`):
