@@ -1089,7 +1089,7 @@ export function createMcp(hooks) {
       // at the cap: until when, in UTC (the game is not affected)
       const capUntil = v.state === 'capped' && Number.isFinite(v.retryInS) ? new Date(Date.now() + v.retryInS * 1000).toISOString().slice(11, 16) : null;
       const daily = /24 hours|day/.test(String(v.error ?? ''));
-      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb, ownerOnly: Boolean(v.warning), aspect: v.aspect, until: capUntil, daily });
+      const html = liveViewHtml({ state: v.state, game: s.id, camera, embedUrl, fb: v.fb, ownerOnly: Boolean(v.warning), aspect: v.aspect, until: capUntil, daily, statusBase: entry.base });
       const lines = [];
       const since = v.liveSince ? ` since ${String(v.liveSince).slice(11, 19)} UTC` : '';
       if (live) lines.push(`Live view of game ${s.id}: live on Facebook${since}.`);

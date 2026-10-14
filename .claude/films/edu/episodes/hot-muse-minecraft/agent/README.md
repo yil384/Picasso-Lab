@@ -1345,6 +1345,14 @@ live_view's page, for the square video and Facebook's player:
   "frozen" player was Facebook's poster waiting for a click). Nothing of ours over it: the "Tap the video for sound" hint is gone (the owner,
   2026-10-14: it stayed up even after a tap).
   "Reload video" sits beside the status line under the player, over nothing.
+- The game's end (2026-10-14: after gd7540a ended, a fresh player started Facebook's replay from 0:00 and the game
+  looked alive again): every 15 s the page asks our server whether its game has ended, with an image, since the panel
+  allows no fetch (`/live/<game>/state.svg`, 1 px wide while it runs or is unknown, 2 px once ended; `no-store`).
+  Then the player goes, the watchdog stops, and the game's end card takes its place (`/live/<game>/end.svg`, 1080x1080
+  like the stream: "Game ended at 21:40" and "Nether and back: goal not reached", or "Nether and back in 15:47"; the
+  splits with their times, the ones not reached dim; "Decided by Muse: 97%" with the actions by its calls, its rules
+  and the bot on its own). The server keeps the last 200 ended games in memory (a restart forgets them: the page then
+  stays as before). If the panel blocks images from our server, nothing changes either.
 - A watchdog: while the viewer has not touched the player, a fresh player of the same live video is loaded in the
   background every 5 minutes and cross-faded in once loaded; "Reload video" does it at once. At most two frames, no
   black flash, no request of its own (only iframes of the same Facebook URL). About 2.4 KB.
