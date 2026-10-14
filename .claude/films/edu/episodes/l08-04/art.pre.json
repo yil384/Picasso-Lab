@@ -1,0 +1,144 @@
+{
+ "episode": "L08-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: a code suggestion that arrives after you have typed the line is useless; when does guessing ahead pay? (line_guess_snail_suggestion, the cover).",
+  "Drafts without a draft model (slides 26-27): REST looks continuations up in a datastore of past text (line_guess_phrasebook; reuse line_card_catalog); lookahead decoding keeps a pool of n-grams it collects as it goes (line_guess_snippet_jar).",
+  "Built in from the start (slide 28): multi-token prediction trains extra heads with the backbone from scratch, and the model itself gets better (Meta, ICML 2024) (line_guess_sight_reading).",
+  "DeepSeek-V3 (slide 29): chained MTP modules, each building on the one before; the second token is accepted 85-90% of the time (line_guess_relay_runners).",
+  "When it pays (slide 30): small batches (under 4-32), where the GPU is idle anyway (line_guess_taxi_vs_bus; line_spec_oven_one_cookie from L08-01 if it is in the library).",
+  "Latency-critical uses (slides 31-35, no screenshots): a chat app's first token in 200-500 ms, search answers, code completion (line_guess_chat_wait; reuse line_chat_first).",
+  "Reasoning models (slide 36): very long outputs and long contexts force small batches, and their patterns are strong: a good fit (line_guess_long_thinking).",
+  "When it does not pay (slide 37): big-batch serving for cheap tokens; the compute is already busy (line_guess_busy_kitchen).",
+  "Takeaway: guessing spends spare compute to buy speed, so first check that there is spare compute (reuse line_balance); closes the speculative-decoding lecture."
+ ],
+ "reuse": [
+  "line_card_catalog",
+  "line_coder_storyteller",
+  "line_chat_first",
+  "line_balance",
+  "line_d_kitchen",
+  "line_switch_dimmer",
+  "line_scroll_reader"
+ ],
+ "drawings": [
+  {
+   "name": "line_guess_snail_suggestion",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_chat_first",
+    "line_coder_storyteller",
+    "line_tiny_lab"
+   ],
+   "prompt": "An invented programmer (simple round face, dot eyes, short messy hair, round glasses, a sweater) sits at a desk in front of an open laptop, already leaning back with arms folded, finished and slightly impatient; across the desk a tiny cheerful snail is slowly arriving, carrying a small blank card on its shell, a few slow motion lines behind it. Square image 1024x1024; the programmer, the desk and the snail fill about 85% of the width and about 85% of the height; the snail is large enough to read clearly. The laptop screen and the card are blank: no logos, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_guess_phrasebook",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_scroll_reader",
+    "line_lost_word",
+    "line_tiny_lab"
+   ],
+   "prompt": "The intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), sits cross-legged on the floor flipping quickly through a fat, well-worn notebook stuffed with loose slips and bookmarks, running a finger down a page to look something up instead of thinking it up, with a pleased \"found it\" face. Portrait image 1024x1536; the intern and the notebook fill about 80% of the width and about 80% of the height. The pages and slips are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_guess_snippet_jar",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_word_bag",
+    "line_chat_first",
+    "line_tiny_lab"
+   ],
+   "prompt": "The intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), drops one small folded paper slip into a big glass jar that is already half full of many small folded paper slips; more slips stick out of the hoodie pocket. The jar stands on a table and is drawn with clean outlines and a few short glint lines. Square image 1024x1024; the intern and the jar fill about 85% of the width and about 85% of the height. The slips are blank, the jar has no label: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_guess_sight_reading",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "An invented pianist (simple round face, dot eyes, short curly hair, a waistcoat) plays an upright piano, seen from the side and slightly behind, hands on the keys, while the eyes look ahead along the open sheet of music on the stand, well ahead of the hands; the sheet shows only empty staff lines. Square image 1024x1024; the pianist and the piano fill about 85% of the width and about 80% of the height. No musical notes, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_guess_relay_runners",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_whisper_line",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "Three invented relay runners (simple round faces, dot eyes, different hairstyles, plain running vests) on a running track, seen from the side: the first runner hands a baton to the second, who has already started running, and the third waits a little further on, looking back with one hand held out, ready; lane lines run across the picture. Landscape image 1536x1024; the runners fill about 90% of the width and about 75% of the height. No numbers on the vests or the track, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_guess_taxi_vs_bus",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "A picture in two halves side by side on one road line. Left: a small taxi with one invented passenger (simple round face, dot eyes) zooming along, speed lines behind it. Right: a big city bus driving steadily, packed full with many invented passengers (simple round faces, dot eyes) in every window. Landscape image 1536x1024; the taxi and the bus fill about 92% of the width and about 60% of the height. No signs, no route numbers, no writing on the taxi roof sign, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_guess_chat_wait",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "An invented person (simple round face, dot eyes, a beanie, a big scarf) sits on a park bench holding a phone up in front of the face, tapping one foot, waiting; floating just above the phone is one chat bubble containing only three round dots (the \"typing\" sign), and a few small impatient tick lines around the person's head. Portrait image 1024x1536; the person and the bench fill about 80% of the width and about 80% of the height. No logos; the only marks in the bubble are three round dots. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_guess_long_thinking",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_writer_cover",
+    "line_tiny_lab",
+    "line_scroll_reader"
+   ],
+   "prompt": "An invented student (simple round face, dot eyes, short hair, a hoodie) sits at a desk on the left, deep in thought, writing on a very long continuous sheet of scratch paper that runs off the desk and across the floor to the right in loose loops, covered in faint wavy lines that only suggest working; a few small doodled lightbulbs and arrows along it. Landscape image 1536x1024; the desk, the student and the paper fill about 92% of the width and about 80% of the height. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_guess_busy_kitchen",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_d_kitchen"
+   ],
+   "prompt": "A busy restaurant kitchen at peak time, seen from the front: every burner on a long stove has a pan on it, four invented chefs (simple round faces, dot eyes, tall chef's hats, aprons) rush between them carrying plates and stirring pots, a row of order tickets clipped on a rail. At the kitchen door on the right, the intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), holds up a notepad offering to help, but nobody has a free moment to look. Landscape image 1536x1024; the kitchen fills about 92% of the width and about 80% of the height. The tickets and the notepad are blank: no text, no letters, no numbers."
+  }
+ ]
+}

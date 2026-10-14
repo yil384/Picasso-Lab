@@ -1,0 +1,163 @@
+{
+ "episode": "L04-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: one NVL72 rack weighs about as much as a car (~1.36 t) on a footprint smaller than a desk (0.6 x 1.2 m); office floors are not built for it (slide 20) (line_cluster_rack_balance, line_cluster_rack_floor).",
+  "Scale: clusters of 100,000 GPUs (Colossus, 2024); later numbers only if verified (slide 16) (line_cluster_campus).",
+  "The chip: H100 -> B200 -> Rubin: more FP8/FP4 FLOPs, memory and bandwidth; Rubin numbers are announcements (slide 17) (line_cluster_chip_trio, line_gpu).",
+  "Inside the chip (her words, slide 17): FLOPs come first, memory bandwidth must keep them fed, and HBM capacity decides whether the data sits in the fast pantry or must come from slower storage (line_cluster_pantry_cellar).",
+  "The node: 8 GPUs on NVLink, ~900 GB/s each (18 links x 50 GB/s): eight chefs passing bowls across one island (slide 18) (line_cluster_kitchen_island).",
+  "Leaving the node: InfiniBand ~50 GB/s per GPU, about 18x slower: a bike between kitchens (slide 18) (line_cluster_kitchen_street).",
+  "The pod: an H100 SuperPOD links 32 nodes x 8 = 256 GPUs in one NVLink domain through switches (slide 19) (line_cluster_switchboard).",
+  "Rack scale: GB200 NVL72, 72 GPUs as one big virtual GPU, ~5,000 copper cables (slide 20) (line_cluster_cable_weave).",
+  "Lesson + pitfall: the network is a ladder of speeds; keep the heavy talk on the fast rungs, or the slowest link sets the pace (line_cluster_stairs). Next: four ways to cut the job (L04-03)."
+ ],
+ "reuse": [
+  "line_gpu",
+  "line_servers",
+  "line_d_servers",
+  "line_d_servers2",
+  "line_d_kitchen",
+  "line_d_chefs",
+  "line_building_h",
+  "line_balance",
+  "line_mic"
+ ],
+ "drawings": [
+  {
+   "name": "line_cluster_rack_balance",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_d_servers",
+    "line_tiny_lab"
+   ],
+   "prompt": "A giant old-fashioned two-pan balance scale, like the classic scales of justice but enormous, standing on the floor. On the left pan stands a tall plain server rack: a tall narrow metal cabinet with a perforated front door and rows of identical flat server units inside, a few cables at the side. On the right pan sits a small ordinary family car. The beam is perfectly level: they weigh the same. Landscape image 1536x1024; the scale, rack and car fill about 90% of the width and about 85% of the height. No brand marks, no number plate. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cluster_rack_floor",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_servers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A tall plain server rack (a tall narrow cabinet with rows of identical flat server units) stands in an ordinary office with wooden floorboards; the floorboards under it bow down slightly in a gentle curve. An invented engineer (simple round face, dot eyes, a hard hat, a clipboard) kneels beside it, laying a spirit level on the floor and looking worried, one eyebrow raised. Portrait image 1024x1536; the rack and the engineer fill about 75% of the width and about 85% of the height. No brand marks. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cluster_kitchen_island",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "Seen from a little above: eight chefs stand around one big square kitchen island, two on each side: the six recurring chefs of this series (all with tall white chef hats, double-breasted chef jackets and aprons, simple round faces with dot eyes): the young chef with short curly hair, the woman with a low hair bun, the round chef with a curly moustache, the chef with round glasses and curly hair, the woman with a bob and a fringe, and the old chef with a white beard, plus two more chefs in the same style. All are busy, quickly passing bowls, plates and ingredients to each other directly across the island by hand, with short motion lines. Square image 1024x1024; the island and the chefs fill about 90% of the width and about 85% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cluster_kitchen_street",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "A street of four identical small restaurant kitchens side by side, seen from across the road, each with a large open front window showing chefs in tall white chef hats at work inside. In the street in front, a delivery rider on a bicycle with a front basket holding one covered bowl pedals along the long road from the first kitchen towards the last, small dust puffs behind the wheels. Landscape image 1536x1024; the street fills about 95% of the width and about 70% of the height. No shop signs. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cluster_stairs",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A giant staircase of four broad steps rising from left to right, seen from the side and a little in front. On the lowest step lies one single computer chip on a small board; on the second step stands a small house; on the third, a short row of several identical houses joined together; on the top step, a big cluster of long warehouse halls. A small invented climber (simple round face, dot eyes, a backpack) walks up the steps near the second step. Landscape image 1536x1024; the staircase fills about 92% of the width and about 85% of the height. No brand marks. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cluster_cable_weave",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_servers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "The open back of a tall server rack seen straight on: a dense but orderly weave of thousands of thin cables running in tidy vertical bundles and gentle horizontal loops across the whole back, like the threads on a loom. An invented technician (simple round face, dot eyes, a head torch) peeks around the side of the rack with wide eyes, holding one cable end. Portrait image 1024x1536; the rack fills about 70% of the width and about 92% of the height. No labels. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cluster_campus",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "A large data-centre campus seen from high above at an angle: rows of long, identical, flat-roofed warehouse halls lined up in parallel, rows of round cooling fans on their roofs, a few small trucks on the service roads between them, a ring of round trees around the edge, and a small electricity substation with pylons at one corner. Landscape image 1536x1024; the campus fills about 95% of the width and about 80% of the height. No signs. Drawn as a lively picture-book scene in gentle perspective with little three-dimensional buildings, never as a flat top-down plan. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cluster_chip_trio",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "Three computer chip packages lie in a row on a plain table top, seen from the front and a little above in gentle three-quarter perspective, so the thickness of each board shows, growing clearly in size from left to right like a family photo (small, medium, large). Each package is a flat square green-board-like circuit board (drawn as outlines only) with a big rectangular silicon die in the middle, slightly raised, and small raised rectangular memory stacks standing around it, each stack drawn as a little block of thin layered slices: the first (small) package has one die with four memory stacks around it; the second (medium) has two dies joined side by side with eight stacks around them; the third (large) has four dies in a two-by-two block with twelve stacks around them. A row of tiny round pads or small components along the board edges, a few faint trace lines on the boards. Hand-drawn with the same slightly hand-made, confident pen line and level of detail as the reference images, not a ruler-straight technical diagram. Landscape image 1536x1024; the three packages fill about 90% of the width and about 60% of the height. No markings on the chips. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cluster_switchboard",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "An old-fashioned telephone switchboard with a big upright panel of many round jack sockets in neat rows; an invented operator (simple round face, dot eyes, a headset, a cardigan) sits at it, briskly plugging patch cords, so that many cords cross the panel in smooth curves, connecting every socket with many others in a tidy tangle. Landscape image 1536x1024; the switchboard and the operator fill about 85% of the width and about 85% of the height. No labels on the panel. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cluster_pantry_cellar",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "A house cut open at the side like a doll's house, showing a kitchen upstairs and a cellar below, joined by one long narrow staircase. Upstairs: the chef with round glasses and curly hair (tall white chef hat, double-breasted chef jacket, apron) cooks very fast at a stove with both hands, short motion lines around the pans, and right behind the chef stands a tall pantry cupboard with its doors wide open, packed full to the top with jars, sacks and baskets, within arm's reach. Downstairs: a cellar crowded with more crates and sacks, and the old chef with a white beard (tall white chef hat, double-breasted chef jacket, apron) slowly carries one heavy crate up the long narrow staircase, panting. Portrait image 1024x1536; the house fills about 85% of the width and about 92% of the height. No labels on jars, sacks or crates. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

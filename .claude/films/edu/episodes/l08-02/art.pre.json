@@ -1,0 +1,140 @@
+{
+ "episode": "L08-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: if guessing is cheap, why guess one sentence? Guess a whole tree of them and check them all at once (line_draft_card_tree, the cover; line_draft_tree_present).",
+  "SpecInfer (slide 8): a static draft tree such as <2,2,1>; the editor keeps the longest prefix that matches any branch (red pen along the accepted path on line_draft_card_tree); LLaMA-7B target with a 68M draft.",
+  "One pass for the whole tree (slide 9): load the weights once (line_draft_heavy_dictionary), share the prefix, and a tree-shaped mask lets each word see only its own ancestors (line_draft_family_wall).",
+  "Medusa (slide 10): no separate intern; extra heads on the big model guess words +1 to +4 at once (line_medusa_parrots): the 2018 blockwise idea revived, with tree attention and speculative sampling.",
+  "Which tree? (slides 11-12) a static 64-node sparse tree grown greedily on calibration data (line_draft_gardener); broad for 7B, deep and narrow for 33B (line_draft_broad_vs_deep).",
+  "Medusa-1 freezes the big model and trains only the heads (line_medusa_ice_block); Medusa-2 trains them together and does better (line_medusa_train_together) (slide 13).",
+  "Numbers (slide 13): checking 64 tokens costs about one step at batch 1 (line_spec_oven_full_tray from L08-01 if it is in the library).",
+  "Takeaway: self-drafting works once the model is big enough; next episode: EAGLE."
+ ],
+ "reuse": [
+  "line_two_lanterns",
+  "line_dice_hand",
+  "line_gpu",
+  "line_long_ribbon"
+ ],
+ "drawings": [
+  {
+   "name": "line_draft_card_tree",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_knob_board",
+    "line_clock_face"
+   ],
+   "prompt": "A small tree growing in a round clay pot, drawn like a clean diagram-tree: one short trunk splits into two branches, each of those splits into two more, and each of those four continues as one last short twig, so the tree has three levels; at the end of every branch and every twig hangs one small blank rectangular paper tag on a string, like a gift tag (ten tags in all). The branches are clean and well separated so a path can be traced along them later. Square image 1024x1024; the tree and pot fill about 80% of the width and about 85% of the height, centred. The tags are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_draft_tree_present",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_chat_first",
+    "line_tiny_lab",
+    "line_reader_writer"
+   ],
+   "prompt": "The intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), proudly holds up a small potted tree with both hands, presenting it like a trophy; small blank paper tags hang from the tips of its branches; a few sparkle lines around it. Portrait image 1024x1536; the intern and the tree fill about 75% of the width and about 85% of the height. The tags are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_draft_heavy_dictionary",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_lost_word",
+    "line_reader_writer"
+   ],
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), carries an enormous, heavy, thick dictionary up a short flight of stairs with both arms, puffing, a few sweat drops; on the landing at the top a small table holds several blank cards spread out, waiting to be checked. Square image 1024x1024; the editor, the book and the stairs fill about 85% of the width and about 85% of the height. The book cover and the cards are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_draft_family_wall",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_card_catalog",
+    "line_balance"
+   ],
+   "prompt": "A wall of small oval framed portraits arranged as a family tree, seen straight from the front: one portrait at the left, joined by drawn lines to two portraits, each of those joined to two more, and each of those to one more, spreading towards the right; each portrait shows a simple round face with dot eyes and a different hairstyle; the frames hang on short strings from little nails. Landscape image 1536x1024; the tree of frames fills about 90% of the width and about 75% of the height. No name plates, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_medusa_parrots",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_dog_chases_cat",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), sits at his large desk writing with a fountain pen; on a wooden perch fixed to the back of his chair sit four small round cartoon parrots, all alike (dot eyes, short curved beaks, tidy feathers) in a row, each holding one small blank card in its beak, the cards held at slightly increasing heights from left to right, as if each parrot guesses one word further ahead. Square image 1024x1024; the editor, the perch and the parrots fill about 85% of the width and about 85% of the height. The cards are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_draft_gardener",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "An invented gardener (simple round face, dot eyes, a wide-brimmed straw hat, dungarees, gardening gloves) stands beside a young potted tree on a workbench, checking a small open notebook in one hand and, with pruning shears in the other, trimming away a thin side branch; a few clipped twigs lie on the bench; one long branch is left to grow on. Portrait image 1024x1536; the gardener and the tree fill about 80% of the width and about 85% of the height. The notebook pages are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_draft_broad_vs_deep",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_knob_board",
+    "line_clock_face"
+   ],
+   "prompt": "Two potted trees side by side in matching pots. Left: a short, broad, bushy shrub whose many branches spread wide sideways close to the pot, only two levels high. Right: a tall, narrow tree like a slim cypress with one main stem and only short side twigs, reaching high, many levels deep. Landscape image 1536x1024; the two trees fill about 80% of the width and about 85% of the height, the right one clearly taller and the left one clearly wider. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_medusa_ice_block",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_dog_chases_cat",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), sits perfectly still in his armchair inside a big clear block of ice, drawn with clean outlines and a few short glint lines, eyes open and calm; on top of the ice block four small round cartoon parrots, all alike (dot eyes, short curved beaks, tidy feathers) practise busily, holding up small blank cards to each other. Square image 1024x1024; the ice block, the editor and the parrots fill about 80% of the width and about 85% of the height. The cards are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_medusa_train_together",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_dog_chases_cat",
+    "line_reader_writer",
+    "line_tiny_lab"
+   ],
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), sits at his desk leaning towards a wooden perch where four small round cartoon parrots, all alike (dot eyes, short curved beaks, tidy feathers) sit in a row; he holds up a small blank flash card and they all study it together, one parrot nodding, the editor smiling encouragingly; a small open book on the desk. Landscape image 1536x1024; the editor, the desk and the perch fill about 85% of the width and about 80% of the height. The card and the book are blank: no text, no letters, no numbers."
+  }
+ ]
+}

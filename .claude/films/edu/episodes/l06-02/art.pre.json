@@ -1,0 +1,141 @@
+{
+ "episode": "L06-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: DeepSeek runs its training pipeline in both directions at once, like two trains crossing without colliding.",
+  "Recap: the bubble is (N-1)/M, and micro-batches cannot get smaller than one sequence.",
+  "Interleaving (Megatron-LM 2021): each GPU holds two or more non-adjacent chunks of layers, so a micro-batch goes round the line twice; bubble = (N-1)/(M x L).",
+  "The cost: L times more messages, and with layers mixed in time the DP side keeps whole gradients (ZeRO-1).",
+  "In practice: interleaved 1F1B with L = 2-4 is the Megatron-Core default.",
+  "Zero Bubble (ICLR 2024): backward = input gradient (urgent: the stage before is waiting) + weight gradient (can wait); slide the weight work into the gaps.",
+  "Scheduling is a packing puzzle: an exact solver at small scale, heuristics at large; fewer messages than interleaving for similar bubbles.",
+  "DualPipe (DeepSeek-V3): two pipelines run in opposite directions and fill each other's gaps, paid for with two copies of the parameters.",
+  "Takeaway: every schedule trades bubbles against memory or messages: a baker juggling a soap bubble, a binder and a note."
+ ],
+ "reuse": [
+  "line_clockwork",
+  "line_glue_tiles",
+  "line_balance",
+  "line_clock_face",
+  "line_spike",
+  "line_burst"
+ ],
+ "drawings": [
+  {
+   "name": "line_pp_trains_cross",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_two_lanterns",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "prompt": "A gentle hilly landscape with a railway flyover: one short simple train (a rounded locomotive and two wagons) runs from left to right along a lower track, while another short simple train runs from right to left along an upper track carried on a stone arch bridge that crosses over the lower track at an angle, so the two tracks make an X seen from the side and a little above. Both trains are in motion with a few short speed lines, about to pass each other at the crossing. A few round trees. Landscape image 1536x1024; the tracks, bridge and trains fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no signals, no signs, no numbers on the trains."
+  },
+  {
+   "name": "line_pp_carousel_belt",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Seen from slightly above and in front: a round carousel conveyor, a ring-shaped counter with a moving belt on top, with small cupcakes in little trays spaced evenly all the way round it. The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. The four bakers stand around the outside of the ring at four evenly spaced points (front left, back left, back right, front right), each working on the cupcake in front of them. Some cupcakes on the belt are plain, some have icing, some have icing and a cherry on top, showing that they go round more than once. Square image 1024x1024; the ring and the bakers fill about 90% of the width, centred. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_pp_handoff_rush",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. Seen from the front, the four bakers stand in a row along a counter and pass many small trays of cupcakes hand to hand to the right in a great hurry; three trays are in the air between neighbours at once, a few short speed lines, small sweat drops, slightly frantic but funny. Landscape image 1536x1024; the bakers and trays fill about 94% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_zb_urgent_note",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Seen from the front at a bakery counter: the third baker (short and sturdy, curly hair, white apron, small flat paper cap) turns quickly to the left and hands a small folded paper note to the second baker (long ponytail, white apron, small flat paper cap), who waits with an open hand, eager. Behind the third baker, a deep sink is piled high with dirty mixing bowls and whisks, waiting untouched. Invented characters with simple round faces and dot eyes. Landscape image 1536x1024; the two bakers and the sink fill about 90% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no writing on the note."
+  },
+  {
+   "name": "line_zb_wash_gap",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "The third baker (short and sturdy, curly hair, white apron, small flat paper cap), an invented character with a simple round face and dot eyes, stands calmly at a deep sink, full figure, washing a mixing bowl with a brush and smiling; a neat stack of clean bowls grows on the draining board. Beside the sink, the end of an empty conveyor belt: nothing is waiting on it right now. Portrait image 1024x1536; the baker, sink and belt end fill about 82% of the width and about 88% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_zb_block_tray",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_word_bag"
+   ],
+   "prompt": "Seen from above and a little in front: a shallow rectangular wooden tray on a table, into which plain wooden blocks of different lengths (short, medium, long; all the same width and height) have been packed in four neat rows so that almost no gaps remain. One hand coming in from the right slots the last short block into the last small gap; three spare blocks lie beside the tray. Square image 1024x1024; the tray fills about 75% of the width, centred. No text, no letters, no numbers, no logos, no marks on the blocks."
+  },
+  {
+   "name": "line_dualpipe_two_belts",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "Seen from the front: a two-level conveyor counter with two belts, one above the other: the upper belt runs from left to right and the lower belt from right to left, both carrying small trays of cupcakes. The four bakers are invented characters with simple round faces and dot eyes, all in plain white aprons over rolled-up sleeves and small flat paper baker's caps (not tall chef hats): the first is tall and thin with round glasses; the second has a long ponytail; the third is short and sturdy with curly hair; the fourth has a neat bob haircut and freckles. The four bakers stand in a row along it, each working with one hand on the upper belt and the other hand on the lower belt, busy and pleased; no station is empty. Landscape image 1536x1024; the two belts and the bakers fill about 95% of the width and about 75% of the height. No text, no letters, no numbers, no logos, no arrows."
+  },
+  {
+   "name": "line_dualpipe_two_binders",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "The fourth baker (neat bob haircut, freckles, white apron, small flat paper cap), an invented character with a simple round face and dot eyes, walks forward, full figure, carrying two identical thick ring binders, one under each arm, a little weighed down but smiling. Portrait image 1024x1536; the baker and binders fill about 70% of the width and about 85% of the height, centred on a short ground line. No text, no letters, no numbers, no logos, no labels on the binders."
+  },
+  {
+   "name": "line_pp_juggle_three",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_squeeze_strip",
+    "line_round_table"
+   ],
+   "prompt": "The fourth baker (neat bob haircut, freckles, white apron, small flat paper cap), an invented character with a simple round face and dot eyes, stands on a short ground line, full figure, juggling three very different things in a high arc above the head: one big round soap bubble, one thick ring binder and one small folded paper note. Concentrating hard, tongue out a little, one foot lifted, balanced but only just. Portrait image 1024x1536; the baker and the arc of three objects fill about 75% of the width and about 88% of the height, centred. No text, no letters, no numbers, no logos, no labels on the binder, no writing on the note."
+  }
+ ]
+}

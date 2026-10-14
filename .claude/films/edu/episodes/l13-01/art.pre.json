@@ -1,0 +1,150 @@
+{
+ "episode": "L13-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: every chatbot races two clocks: how long until the first word (TTFT) and how long between words (TBT, a.k.a. TPOT) (line_serve_two_stopwatches; line_clock_face for code-drawn hands).",
+  "Prefill: the whole prompt is read in one pass, every burner on at once: compute-bound; its clock is time to first token (slide 2) (line_serve_order_glance, line_ticket).",
+  "Decode: one token per step; each step walks to the cloakroom (KV cache) for one small dish: memory-bound, the trip not the cooking is the cost (slide 2) (line_serve_one_plate_trips; callback to L03-02's cloakroom, line_kv_cloakroom_wall in the library).",
+  "Targets differ by use (slide 3, rules of thumb): chat < 1 s first word then reading speed (~100 ms), search ~200 ms, code ~200 ms / ~50 ms, summaries can wait 2-5 s for the first word (line_serve_four_customers).",
+  "A serving system (slide 4): request queue at the door, the scheduler (the host), the model executor on the GPUs (the kitchen), the KV cache (the cloakroom); SLOs: latency, requests and tokens per second (line_serve_restaurant_cutaway).",
+  "Why batch decode (slide 6): the same walk carries one plate or a full tray: batching raises arithmetic intensity; one long prefill already fills the kitchen on its own (line_serve_tray_vs_plate, line_serve_order_glance).",
+  "Static batching (slide 7, FasterTransformer era): the whole table is served until the slowest eater finishes; finished guests cannot leave, newcomers wait behind the rope: long TTFT (line_batch_static_table).",
+  "Continuous batching (ORCA, OSDI 2022, slide 8): the host reseats a freed chair at every course (every iteration): higher utilisation, shorter TTFT (line_batch_continuous_table).",
+  "Selective batching (slide 9): the shared steps (the matmuls) cook in one big pot, attention runs per request in its own small pan (line_batch_big_pot_small_pans).",
+  "Pitfall and cliffhanger (her words): a newcomer with a very long prompt makes everyone's next word late; 'it stopped responding' -> L13-02 (line_chunk_order_stall, planned for L13-02)."
+ ],
+ "reuse": [
+  "line_clock_face",
+  "line_ticket",
+  "line_manager",
+  "line_kitchen",
+  "line_gpu",
+  "line_chat_first",
+  "line_balance",
+  "line_d_chefs"
+ ],
+ "drawings": [
+  {
+   "name": "line_serve_two_stopwatches",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "One invented diner (simple round face, dot eyes, short wavy hair, a plain sweater, a napkin tucked into the collar) sits at a small round cafe table, seen from the front, and holds up one large old-fashioned stopwatch in each raised hand, eyes turned towards the left watch, mouth in a small impatient pout. On the table in front: one empty plate with a knife and fork laid ready and a glass of water. The two stopwatches are big and clearly apart from each other (so each can be labelled later): round faces with a crown button on top, one single hand each, and NO numerals or markings on the dials. Portrait image 1024x1536; the diner, the table and the watches fill about 80% of the width and about 85% of the height, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_serve_order_glance",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A busy kitchen line seen from the front. In the middle stands one line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) holding up a very long blank paper order strip with both hands, stretched wide across the chest, eyes wide, taking the whole order in at one glance. Behind the cook runs one long range with eight burners, and EVERY burner is working at the same moment: pans with small flames under them, pots with curls of steam, a pan mid-toss, all clearly busy at once. Landscape image 1536x1024; the cook and the range fill about 90% of the width and about 80% of the height. The order strip is blank paper: no lines of writing. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_serve_one_plate_trips",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "Seen from the side and a little above: on the right, a kitchen pass-through hatch in a wall; on the left, a small table where an invented diner (simple round face, dot eyes, a ponytail) sits with a fork raised, waiting. Between them the waiter (an invented lanky waiter: simple round face, dot eyes, neat short hair parted on one side, a plain shirt with a narrow tie, a long white bistro apron down to the shins, a folded cloth over one forearm) walks briskly towards the table carrying a large round tray with only ONE tiny dish on it. On the floor between the hatch and the table, many overlapping dotted trails of footprints loop back and forth, showing he has walked this same path many, many times. Landscape image 1536x1024; everything fills about 90% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_serve_four_customers",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "Four invented customers sit side by side on stools at one long counter, seen from the front, each showing a different kind of patience, well apart so each can be labelled later: first, a relaxed person leaning back with a cup of coffee, reading slowly from a phone with a gentle smile; second, a person leaning far forward over the counter, drumming the fingers and staring at a wristwatch; third, a person hunched over an open laptop, typing very fast with both hands, small motion lines around the fingers; fourth, a calm person sitting behind a tall stack of papers and folders, hands folded, ready to wait. Simple round faces with dot eyes; different hairstyles (curls, a cap, round glasses, a bun). Landscape image 1536x1024; the four fill about 92% of the width and about 75% of the height. The phone and laptop screens are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_serve_restaurant_cutaway",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_manager",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image shows the recurring host (hair in a neat bun with a pencil in it, waistcoat, small bow tie) and the second the recurring clerk (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron): draw those same two characters, small, in the scene described. The third is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy poses or layouts.",
+   "prompt": "A cut-away restaurant seen from high in front, like a doll's house with the front wall removed, all in one wide view. On the far left, an entrance door with a short queue of five invented guests (simple round faces, dot eyes; different hairstyles: round glasses, a ponytail, a cap, curls, a bob, a bun) waiting behind a rope on two posts. Next to it, at a small podium, the host (the same invented character as in the first reference image: hair in a neat bun with a pencil tucked in it, a waistcoat over a shirt with a small bow tie, trousers, simple round face with dot eyes) checks a clipboard and points one guest towards the tables. In the middle, a dining room with four small tables and seated guests. At the back right, behind a long pass-through counter, an open kitchen with four identical cooking stations and one line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) at each. On the far right, a cloakroom: a counter with a big wall of open square pigeonholes holding small parcels, and the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) behind it. The four areas (queue, host, kitchen, cloakroom) are clearly separate so each can be labelled later. Landscape image 1536x1024; the restaurant fills about 95% of the width and about 85% of the height. No signs, no menus with writing. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_serve_tray_vs_plate",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "Two lanes, one above the other, separated by a thin horizontal floor line, both seen from the side. In both lanes the same waiter (an invented lanky waiter: simple round face, dot eyes, neat short hair parted on one side, a plain shirt with a narrow tie, a long white bistro apron down to the shins, a folded cloth over one forearm) strides from left to right with exactly the same step. In the upper lane he carries a big round tray with only one small plate on it. In the lower lane he carries the same big tray loaded with eight full plates in a neat circle, balanced on one raised hand just as easily, with the same calm face. Portrait image 1024x1536; each waiter fills about 70% of the width, and the two lanes together fill about 90% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_batch_static_table",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A long dining table seen from the front with four chairs on the far side, all taken. Three of the four invented diners (simple round faces, dot eyes; a cap, curls, a bob) have finished: empty plates pushed away, one yawning, one with arms crossed, one resting the chin on a hand and drumming the fingers. The fourth diner, at the right end, is still slowly eating from an enormous heaped plate of spaghetti. On the far right, outside a velvet rope on two posts, three new guests stand waiting in a queue, one checking a wristwatch, one sitting on a suitcase. Landscape image 1536x1024; the table, the diners and the queue fill about 92% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_batch_continuous_table",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_manager",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The first attached image shows the recurring host character (hair in a neat bun with a pencil in it, waistcoat, small bow tie): draw that same character in the new pose described. The other attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long dining table seen from the front with four chairs on the far side. One diner at the left end has just finished and stands up, coat on, waving goodbye on the way out; in the same moment the host (the same invented character as in the first reference image: hair in a neat bun with a pencil tucked in it, a waistcoat over a shirt with a small bow tie, trousers, simple round face with dot eyes) is already guiding a new guest into that freed chair with an open hand. Two other invented diners (simple round faces, dot eyes; curls, a bob) eat happily at different stages of their meals: one has just started a full plate, one is halfway. At the right end, the waiter (an invented lanky waiter: simple round face, dot eyes, neat short hair parted on one side, a plain shirt with a narrow tie, a long white bistro apron down to the shins, a folded cloth over one forearm) lifts away an empty plate with one hand and sets down a fresh plate with the other. No queue outside. Landscape image 1536x1024; everything fills about 92% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_batch_big_pot_small_pans",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A kitchen range seen from the front. On the left, on one big burner, an enormous stockpot wide enough to feed everyone is stirred with a long wooden paddle by a line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron). On the right, on a row of four small burners, four small separate saucepans each simmer on their own, each with a small blank paper tag clipped to its handle, and a second, identical line cook tends them one by one with a small spoon. Landscape image 1536x1024; the range and both cooks fill about 90% of the width and about 75% of the height. The tags are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

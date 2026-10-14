@@ -5,7 +5,7 @@ import os, sys, glob
 import numpy as np, cv2
 from PIL import Image
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.abspath(os.path.expanduser(os.environ.get('EDU_ART_DIR') or os.path.dirname(os.path.abspath(__file__))))
 
 
 def key(name, src='src', out='cut', margin=16, spill=0.0):

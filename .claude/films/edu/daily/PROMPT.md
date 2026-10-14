@@ -168,6 +168,18 @@ the work order's `work_dir`, `DELIVER` = its `deliver_dir`, `Lnn` = the lecture.
   cover with the title (it is also the X thumbnail).
 
 ### 5. Drawings (`EP/art.json`, files in `art/src/`)
+- **Pre-drawn art**: if `EP/art.pre.json` exists, its drawings are already made in
+  `~/picasso-assets/edu-art-library/src` (cut in `~/picasso-assets/edu-art-library/cut`). Build the film from them and
+  the reused set first; copy each drawing you actually use into `art/src` (and cut) before pack, list it in
+  `EP/art.json`; make new drawings only if a beat truly needs one, and after 2026-10-16 expect the image tool to be
+  unavailable (use the prompts page fallback). How: `art.pre.json` has the art.json schema plus `beats` (the beat
+  each drawing was planned for: a suggestion, not the script) and `reuse` (existing drawings it pairs with); the
+  Tonight block counts what the library holds (`daily/art.py pre EP`). Look at each one at full size before you
+  pick it. Copy its entry from `art.pre.json` into `EP/art.json` unchanged (name, kind, sweep, prompt, refs); then
+  `daily/art.py take EP/art.json` copies the library files into `art/src` and `art/cut` (gen and pack also do it
+  first, and never make a library drawing again). Those files are new in `art/src`: they go into step 13's commit
+  like drawings made tonight. A planned drawing the library does not have is made like any new one. If the library
+  folder is missing (the Tonight block says so), take, gen and pack carry on without it.
 - Reuse first: the L01-01 drawings (`line_chat_first`, `line_lab_2017`, `line_grow`, `line_chicken_egg`, `line_wave`,
   `line_receipt`, `line_tiny_lab`, `line_two_teams`, `line_balance`, `line_course_map`, `line_mic`), the earlier line
   set (`line_gpu`, `line_servers`, `line_brain`, `line_paper`, `line_heap`, `line_geisel`, the chef cast
@@ -302,7 +314,7 @@ any reviewer item left open), every fallback taken (art, kit, shorter cut) and w
 ### 13. Git
 Commit the episode's sources only, on the current branch, merged into main with --no-ff, both pushed:
 `bash daily/ship_git.sh "<id> <title>: facts, script, clips list, drawings, film data" .claude/films/edu/episodes/<ep>
-.claude/films/edu/art/src/<each new drawing>.png .claude/films/edu/daily/state.json` (plus any tool or kit change
+.claude/films/edu/art/src/<each new or library drawing in EP/art.json>.png .claude/films/edu/daily/state.json` (plus any tool or kit change
 you had to make; `EP/slides/` stays out through the .gitignore). It refuses course files, slide images and crops,
 media, git-ignored files and guandan-kit, and merges in a temporary worktree (no branch is checked out); if it fails, say so in
 report.md and leave the commit for the morning. The commit message names no AI model or assistant and has no

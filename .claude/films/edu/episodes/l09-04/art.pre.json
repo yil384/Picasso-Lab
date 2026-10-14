@@ -1,0 +1,161 @@
+{
+ "episode": "L09-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: why did GPU programmers stop thinking about threads and start thinking about tiles? Shouting orders at every single cook (line_tiles_megaphone) vs handing a team one tray (line_tiles_tray_handoff).",
+  "The curse of specialization: tensor cores, TMA, warp specialization and new tricks like software pipelining arrive faster than automatic compilers grow primitives (line_tiles_gadget_pile).",
+  "The performance-productivity map: PTX/CUDA = cooking everything from scratch (line_tiles_scratch_cook), TVM = an automatic bread machine (line_tiles_bread_machine), PyTorch = press one button (line_tiles_microwave), and the gap DSLs fill: the meal kit (line_tiles_meal_kit).",
+  "Triton (Tillet et al. 2019): program the block, not the thread; each block takes one tile of the output (line_tiles_sheet_cake).",
+  "What the compiler does inside the block: pipelining and prefetching, TMA brings whole tiles (line_tiles_prefetch_line).",
+  "Who specifies what: CUDA: memory, threads, tensor cores, vectors all by hand; Triton: tiles by hand, the rest automatic; TVM: all automatic, fair speed (reuse the four cooking drawings as column heads).",
+  "Today: lower than Triton for more control (Gluon, TileLang, TLX), higher for less code (Helion), distributed (Triton-Distributed, ParallelKitten) (line_tiles_staircase, line_knob_board).",
+  "Takeaway: the tile is the sweet spot between control and convenience; 'still a long way to go'; L15 continues the story."
+ ],
+ "reuse": [
+  "line_knob_board",
+  "line_switch_dimmer",
+  "line_pc_kitchen",
+  "line_d_chefs",
+  "line_heap",
+  "line_gpu"
+ ],
+ "drawings": [
+  {
+   "name": "line_tiles_megaphone",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "An invented student programmer (simple round face, dot eyes, short messy hair, a plain hoodie, trousers, sneakers) stands at the left on a small step stool, shouting into a megaphone, frazzled, a few sweat drops, short sound lines coming out of the megaphone, the free hand pointing at one particular cook in a long row of sixteen small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another) standing shoulder to shoulder to the right; every cook stands stiffly, looking up and waiting for their own individual order. Landscape image 1536x1024; the student and the row fill about 92% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_tiles_tray_handoff",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "An invented student programmer (simple round face, dot eyes, short messy hair, a plain hoodie, trousers, sneakers), relaxed and smiling, holds a coffee mug in one hand and with the other hands one big square baking tray to a small team of four small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another) gathered at a square counter island; the tray holds a neat block of food cut into a grid of equal squares. The cooks reach for it happily, already organising themselves around the island. Landscape image 1536x1024; the scene fills about 90% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_tiles_gadget_pile",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_balance"
+   ],
+   "prompt": "At the open back door of a kitchen, a tall teetering stack of new appliance boxes, each a different shape and size (a tall one, a flat one, a long one, a round-ended one), a few already opened to show strange new kitchen machines with dials, fans and levers. A hand trolley with even more boxes waits in the doorway. In front of the stack, the planner (an invented tall, thin character: curly hair, round glasses, a pencil tucked behind one ear, a long cardigan, and a round stopwatch hanging from a cord around the neck; simple round face, dot eyes) sits on an upturned crate reading a very thick open instruction manual, sweating, with a few more fat manuals piled at their feet. Portrait image 1024x1536; the stack, the trolley and the planner fill about 85% of the width and about 92% of the height. Boxes and manual pages are blank: no writing, no logos. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_tiles_scratch_cook",
+   "kind": "line",
+   "group": "C",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "One small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) at a big stove does everything at once: every burner has a pan or pot on it, one hand flips food in a pan, the other whisks a bowl held against the hip, a knife and a ladle wait within reach, and a few motion lines show the speed. Focused and skilled, but very busy. Square image 1024x1024; the cook and the stove fill about 85% of the width and of the height, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_tiles_meal_kit",
+   "kind": "line",
+   "group": "D",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_balance"
+   ],
+   "prompt": "An invented student programmer (simple round face, dot eyes, short messy hair, a plain hoodie, trousers, sneakers) stands at a tidy counter, opening a meal-kit box: inside, neatly pre-portioned square trays and little containers of ingredients sit in a grid; one tray has already been tipped into a pan on a burner next to the box. Calm and pleased. Square image 1024x1024; the student, the box and the pan fill about 85% of the width and of the height, centred. The box is plain: no writing, no logo. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_tiles_bread_machine",
+   "kind": "line",
+   "group": "D",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_balance"
+   ],
+   "prompt": "An invented student programmer (simple round face, dot eyes, short messy hair, a plain hoodie, trousers, sneakers) pours a cup of flour into the open lid of a boxy countertop bread machine that has one single big round button and a small window in which a loaf is rising. A bag of flour and a jug of water stand beside it on the counter. Relaxed, nothing else to do. Square image 1024x1024; the student and the machine fill about 85% of the width and of the height, centred. No display, no writing on the machine or the bag. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_tiles_microwave",
+   "kind": "line",
+   "group": "D",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_balance"
+   ],
+   "prompt": "An invented student programmer (simple round face, dot eyes, short messy hair, a plain hoodie, trousers, sneakers) presses the one big round button of a microwave oven with one finger, holding a ready-meal tray in the other hand, relaxed, a slightly bored face. The microwave has a plain door and that single big button, no display. Square image 1024x1024; the student and the microwave fill about 85% of the width and of the height, centred. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_tiles_sheet_cake",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A big rectangular sheet cake on a table, seen from a little above, cut into a neat grid of equal square pieces, four rows of six. Four small identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike, like copies of one another) stand around the table, each lifting one square piece out with a cake server onto their own plate, leaving four clean square gaps in the grid. Landscape image 1536x1024; the cake fills about 60% of the width, the cake and the cooks together about 92% of the width and about 80% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_tiles_prefetch_line",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A kitchen station seen from the side. At the right, one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) works on a tray of food at the counter. Just behind, a second identical cook is already sliding the next loaded tray onto the edge of the counter. Further left, a third loaded tray rolls along a short roller conveyor that comes out of a small dumbwaiter lift in the wall, its little door open. Everyone is busy, nobody waits. Landscape image 1536x1024; the scene fills about 92% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_tiles_staircase",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A wide plain staircase of five broad steps rising from the lower left to the upper right, seen from the side, on white. On the middle step stands one small line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron), holding a square baking tray. One invented character (simple round face, dot eyes, short hair, overalls) walks DOWN the stairs at the lower left carrying a big heavy open toolbox full of tools, knobs and spanners; another invented character (simple round face, dot eyes, a ponytail, a light jacket) walks UP the stairs at the upper right carrying only a small blank menu card, light and relaxed. Landscape image 1536x1024; the stairs and figures fill about 92% of the width and about 85% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,151 @@
+{
+ "episode": "L13-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: servers used to waste more than half of their most precious memory (the KV cache); the fix came from operating systems (line_paged_turned_away).",
+  "Callback: the KV cache is L03-02's cloakroom: each token leaves a name tag (key) and a parcel (value) with the clerk (line_clerk_ladder; line_kv_cloakroom_wall in the library).",
+  "The cause (slide 20): nobody knows how long an answer will be, so the old servers reserved one contiguous slab for the maximum length per request (line_paged_reserved_row; car-park version line_paged_carpark_cones).",
+  "Waste 1, reservation (slide 20): slots held for future tokens, empty at this step (line_paged_reserved_row).",
+  "Waste 2, internal fragmentation (slide 20): the answer ends early, the rest of the slab is never used; her example: reserve 1,000, stop at 100, 900 wasted (line_paged_early_leaver).",
+  "Waste 3, external fragmentation (slide 21): gaps between slabs too small for the next request (line_paged_carpark_gaps).",
+  "The number (slide 22, taped): more than 50% of allocated KV memory wasted (Orca max / pow2 / oracle), so fewer requests fit at once and decode, being memory-bound, starves (line_paged_turned_away).",
+  "The OS idea (slide 23): pages and a page table: logically in order, physically anywhere (line_paged_carpark_bays, line_card_catalog).",
+  "PagedAttention (vLLM, SOSP 2023, slides 24-25): small fixed blocks (e.g. 16 tokens; the slide shows 4) allocated on demand; the block table maps logical to physical; at most one partly used block per sequence; any free block fits (line_paged_crates_on_demand, line_paged_ticket_crates).",
+  "Sharing (slides 26-27): parallel samples and system prompts reuse the same prefix blocks; copy on write when they diverge (line_paged_shared_coat).",
+  "Pitfall (her words): kernels assumed one contiguous slab, so they must follow the block table; the change is 'not that hard'; GPU-friendly block sizes keep the reads coalesced. Next: keep the shared beginnings for later requests (L13-04)."
+ ],
+ "reuse": [
+  "line_clerk_ladder",
+  "line_card_catalog",
+  "line_slip_boxes",
+  "line_word_three_things",
+  "line_ticket",
+  "line_heap"
+ ],
+ "drawings": [
+  {
+   "name": "line_paged_turned_away",
+   "kind": "line",
+   "group": "D",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). The second image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, the cabinet, the ladder or the layout.",
+   "prompt": "A cloakroom seen from the front. Behind a long wooden counter, the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) holds up one open hand apologetically and shakes the head, turning people away. Behind the clerk, a big wall of open square pigeonholes, about 6 rows by 8 columns: only about one pigeonhole in three holds anything (a small parcel with a blank round name tag); in most of the others stands just a small blank folded card, like a reserved card on a restaurant table, guarding an empty hole. In front of the counter, a queue of four invented guests (simple round faces, dot eyes; different hairstyles: round glasses, a ponytail, a cap, curls, a bob, a bun) with coats over their arms and parcels in their hands look disappointed. Landscape image 1536x1024; the wall and the counter fill about 90% of the width and about 85% of the height. The cards, tags and parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_paged_reserved_row",
+   "kind": "line",
+   "group": "D",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). The second image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, the cabinet, the ladder or the layout.",
+   "prompt": "One very long, low shelf of sixteen open cubbies in a single row runs across the whole picture, seen from the front. The whole row is roped off for one guest with a velvet rope on small posts. Only the first three cubbies on the left hold anything: one small parcel with a blank round name tag in each; the other thirteen are empty. At the left end, the party guest (an invented young person: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag hanging on the chest) proudly slides a fourth parcel into the fourth cubby, while the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) stands at the right end of the row, guarding all the empty cubbies with both arms spread wide. Landscape image 1536x1024; the shelf runs across about 95% of the width; the shelf and the two people fill about 70% of the height. The tags and parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_paged_early_leaver",
+   "kind": "line",
+   "group": "D",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). The second image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, the cabinet, the ladder or the layout.",
+   "prompt": "One very long, low shelf of sixteen open cubbies in a single row runs across the whole picture, seen from the front, roped off with a velvet rope on small posts. Only the first five cubbies on the left hold a parcel each; the other eleven are empty and dusty, with small cobwebs in two of them. On the far left, the party guest (an invented young person: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag hanging on the chest) is leaving through a door, coat on, cheerfully waving goodbye, finished. In front of the empty part of the row, the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) scratches the head, puzzled, holding a feather duster. Landscape image 1536x1024; the shelf runs across about 95% of the width; the shelf and the people fill about 70% of the height. The parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_paged_carpark_cones",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A row of eight marked parking bays side by side along a kerb, seen from high in front. One small car is parked in the first bay on the left. The other seven bays are empty but closed off with a line of traffic cones and a rope, held for a long coach that has not come. An invented parking attendant (simple round face, dot eyes, a peaked cap, a plain safety vest) stands guard beside the cones with arms folded, while a second small car circles at the right looking for a space, its invented driver frowning out of the window. Landscape image 1536x1024; the bays and the cars fill about 92% of the width and about 70% of the height. Number plates are blank; no road markings except plain bay lines. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_paged_carpark_gaps",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A long kerb with parallel parking, seen from high in front: eight small cars of different sizes are parked unevenly along it, leaving short gaps between them, every gap a little shorter than a car. At the right end of the street a long camper van waits, and its invented driver (simple round face, dot eyes) leans out of the window looking at the gaps in despair: added together the gaps would be long enough, but no single gap fits. Landscape image 1536x1024; the street and the vehicles fill about 95% of the width and about 60% of the height. Number plates are blank; no road markings except the kerb. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_paged_carpark_bays",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A car park seen from high above and in front: a neat grid of identical marked bays, five rows of eight. Cars are parked in scattered bays all over, with free bays here and there in between, not in one block. At a small booth at the bottom left, an invented attendant (simple round face, dot eyes, a peaked cap, a plain safety vest) hands a blank paper ticket out of the window to the driver of a small car; a thin dotted path leads from the booth to one free bay far away in the middle of the car park. Landscape image 1536x1024; the car park fills about 92% of the width and about 85% of the height. Number plates are blank; no painted markings except plain bay lines. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_paged_ticket_crates",
+   "kind": "line",
+   "group": "D",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). The second image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, the cabinet, the ladder or the layout.",
+   "prompt": "A cloakroom seen from the front. In the foreground on the left, the party guest (an invented young person: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag hanging on the chest) holds up a large blank cloakroom ticket card divided into four empty boxes in one row. Behind the counter is a wall of open square pigeonholes, about 6 rows by 8 columns: most holes hold other people's parcels, and four holes far apart from each other, in different rows and columns, each hold one identical small crate with a ribbon tied to its handle, clearly all the guest's. The clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) stands at the side, pointing at one of the four crates with a pencil. Landscape image 1536x1024; everything fills about 92% of the width and about 85% of the height. The ticket, the crates and the parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_paged_crates_on_demand",
+   "kind": "line",
+   "group": "D",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). The second image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, the cabinet, the ladder or the layout.",
+   "prompt": "The clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) stands at a counter beside a hand cart that holds a neat stack of identical small empty crates; every crate has exactly four compartments in a row. On the counter stand two crates whose four compartments are all full (one small parcel in each), and a third crate whose last compartment the clerk is just filling with one hand; with the other hand the clerk is already reaching to the cart for one fresh empty crate. Square image 1024x1024; the clerk, the cart and the crates fill about 88% of the width and about 85% of the height. The parcels and crates are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_paged_shared_coat",
+   "kind": "line",
+   "group": "D",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). The second image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, the cabinet, the ladder or the layout.",
+   "prompt": "At a cloakroom counter, seen from the front, stand two invented twins side by side (identical simple round faces with dot eyes, identical short bobbed hair, identical striped scarves). Behind the counter, the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) hangs ONE big shared winter coat on a single hook in the middle; each twin holds a blank paper ticket on a long string, and both strings run up to that same single hook. Below it hang two separate small hooks, each with a different hat: a woolly bobble hat on the left one and a sun hat on the right one, one for each twin. Square image 1024x1024; everything fills about 88% of the width and about 85% of the height. The tickets are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

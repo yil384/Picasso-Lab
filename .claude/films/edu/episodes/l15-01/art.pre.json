@@ -1,0 +1,158 @@
+{
+ "episode": "L15-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Status: blocked in the syllabus (no deck; the speaker's OK is pending). Planned from the recording (course/L15.transcript.md) so a narration-only cut with our own drawings is ready if the user approves; no voice clips, no slides.",
+  "Hook: the CUDA programming guide grew from about 100 pages (CUDA 2.2, when the speaker learned it) to over 600 (line_gluon_manual_tower).",
+  "Threads vs tiles: a warp moves in lockstep anyway, so program the group, not each thread (L09-04's line_tiles_megaphone / line_tiles_tray_handoff and L09-01's line_gpu_squad_march from the library); a tile is one piece of the puzzle (line_gluon_jigsaw_hands; Triton Puzzles is the beginner's way in).",
+  "What Triton hides inside the block: memory coalescing, bank conflicts, tensor-core layouts, caching, pipelining (L09-04's line_tiles_meal_kit); JIT: compile on first use, then load the cached binary (reuse line_card_catalog).",
+  "Layout, the key idea of Gluon: the mapping from a tile's elements to threads, warps and memory, a seating plan (line_gluon_seating_plan); swizzling staggers the rows so neighbours do not collide in one memory bank (line_gluon_brick_stagger); linear layouts replace tens of hand-written layouts and about 100 conversion functions with one rule.",
+  "Gluon: one level below Triton; you choose the layouts and give each warp group one job (load, matrix math, epilogue, scheduler): warp specialization (line_gluon_brigade_roles); manual vs automatic (line_gluon_two_levers); near the vendor library's matmul speed with a single configuration.",
+  "Which to use: Triton for most memory-bound kernels (softmax, layer norm); Gluon when the kernel has a dot product on the newest GPUs. The real question is who steers, the programmer or the compiler (line_gluon_dual_control_car).",
+  "The future: one magic compiler that does it all was too optimistic (L09-04's line_tiles_bread_machine); lightweight languages built for each chip (line_gluon_multitool_vs_set); LLMs write kernels faster than people can review them (line_gluon_printer_flood).",
+  "Closing, the speaker's answer to \"which one wins\": none of them; the future will be invented by the students (line_gluon_students_blueprint)."
+ ],
+ "reuse": [
+  "line_gpu",
+  "line_card_catalog",
+  "line_knob_board",
+  "line_switch_dimmer",
+  "line_heap",
+  "line_coders",
+  "line_d_chefs"
+ ],
+ "drawings": [
+  {
+   "name": "line_gluon_manual_tower",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A student (a young woman with a ponytail, a hoodie and sneakers) stands on tiptoe beside a towering stack of thick manuals that rises far above her head, almost to the top of the picture; she has pulled one fat manual half out and peers at it. On a small stool beside her lies one thin booklet. All covers and spines are plain, with no titles. Portrait image 1024x1536; the stack and the student fill about 70% of the width and 90% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gluon_jigsaw_hands",
+   "kind": "line",
+   "group": "C",
+   "sweep": "c",
+   "people": false,
+   "refs": [
+    "line_glue_tiles",
+    "line_paint_pour",
+    "line_balance"
+   ],
+   "prompt": "Two hands fit one square jigsaw piece into the last gap of a nearly finished rectangular jigsaw lying flat on a table, seen from above at a slant. The puzzle is a regular grid of plain interlocking pieces, about eight across and six down, with no picture printed on them; two loose pieces lie beside it. Square image 1024x1024; the puzzle and the hands fill about 85% of the width, centred. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gluon_seating_plan",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "Inside a small theatre, seen from the stage towards the audience: rows of identical seats rising in tiers, about six rows of eight. In the foreground an usher (a young man in a waistcoat and a bow tie) holds up a large board with a blank seating chart drawn as a neat grid of empty boxes, and with his other hand points a small torch at the seats, matching the board to the hall. About half the seats are filled with small, identical audience members in a regular chequered pattern, row after row. The chart stays blank. Portrait image 1024x1536; the scene fills about 90% of the width and 88% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gluon_brick_stagger",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_paint_pour",
+    "line_switch_dimmer"
+   ],
+   "prompt": "Two short brick walls stand side by side on a ground line, the same height and built from the same bricks. The left wall is stacked in straight columns, every vertical joint lined up from top to bottom, and a crack runs down one of those long joints. The right wall is laid in a staggered running-bond pattern, each row shifted by half a brick, solid and neat; a bricklayer's trowel leans against it. The bricks are clean outlines only, no texture. Landscape image 1536x1024; the two walls fill about 85% of the width and 55% of the height, with a clear gap between them. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gluon_brigade_roles",
+   "kind": "line",
+   "group": "K",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "One busy restaurant kitchen seen from the front, with four small teams of identical line cooks (simple round faces, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron; all drawn exactly alike), each team doing only its own job at the same time: at the far left two cooks carry crates of vegetables in through a pantry door; centre-left three cooks stir big pots at a long stove; centre-right two cooks plate dishes at a pass counter; at the far right a single cook stands at a ticket rail, pointing and calling out the next order. The tickets are blank. Landscape image 1536x1024; the kitchen fills about 94% of the width and 78% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gluon_two_levers",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_paint_pour",
+    "line_switch_dimmer"
+   ],
+   "prompt": "Close-up of a car's centre console seen from above at a slant, with two gear levers side by side for comparison. Left: a simple automatic lever with a smooth knob in one straight slot. Right: a manual gear stick with a round knob in an H-shaped gate, and a driver's hand gripping it in mid-shift. Plain knobs and gates with no markings. Landscape image 1536x1024; the two levers fill about 75% of the width and 75% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gluon_dual_control_car",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "Inside a driving-school car, seen through the windscreen from the front. In the driver's seat a young learner (short curly hair, a hoodie) grips the steering wheel with both hands, concentrating. In the passenger seat an instructor (an older woman with glasses and a cardigan) sits calmly, one foot hovering over her own extra brake pedal on her side (shown in a small cutaway at the floor), one hand ready near the wheel. Both wear seatbelts and smile a little. A plain dashboard with no dials or markings. Landscape image 1536x1024; the two people and the dashboard fill about 90% of the width and 80% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gluon_multitool_vs_set",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_paint_pour",
+    "line_switch_dimmer"
+   ],
+   "prompt": "Two things side by side. Left: one huge, bulky folding pocket multi-tool with a dozen blades, files, saws and hooks all opened out at awkward angles, clumsy. Right: a neat wall pegboard with five small simple tools hanging in a row, each with its outline drawn behind it: a small screwdriver, a small wrench, pliers, a little saw and a hammer. Landscape image 1536x1024; both fill about 90% of the width and 70% of the height, with a clear gap between them. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gluon_printer_flood",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A student (short messy hair, round glasses, a hoodie) sits at a desk reading one page carefully through a magnifying glass, while beside the desk a small office printer pours out an endless stream of paper that cascades over the desk, piles up in tall drifts on the floor and rises around the student. The pages show only a few plain wavy lines, no writing. Funny and overwhelmed, but still reading. Portrait image 1024x1536; the scene fills about 90% of the width and 90% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gluon_students_blueprint",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "Four students gather round a big table covered by one huge blank sheet of paper, sketching something new together with pencils and rulers; one kneels on a chair to reach the far corner, one points excitedly, one holds up a simple block model of a building. Coffee cups and pencils around the edges. The sheet stays blank. Square image 1024x1024; the table and the students fill about 90% of the width and 85% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

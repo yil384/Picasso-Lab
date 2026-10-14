@@ -1,0 +1,159 @@
+{
+ "episode": "L05-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: one line of Python, backend=\"nccl\", and a library sets off to survey the whole cluster before any data moves.",
+  "Survey: NCCL probes NVLink, PCIe and InfiniBand: wide fast roads inside a node, one narrow bridge between nodes.",
+  "Choice: a cost model picks ring or tree and a protocol from the layout and the message size; the data is cut into chunks streamed over several channels at once.",
+  "Toolbox: collectives (AllReduce, AllGather, ReduceScatter) for DP and TP, point-to-point Send/Recv for pipelines and MoE, group calls that bundle many operations into one launch.",
+  "Scale: at about 96k GPUs plain start-up takes ~265 s and failures force restarts; Meta's NCCLX starts in ~24 s.",
+  "Overlap idea: two jobs take max(t1, t2) instead of t1 + t2 when one runs during the other.",
+  "Why DP can overlap: backward runs from the last layer; layer i's AllReduce needs only layer i's gradients, so it runs while layer i-1 is computed: communication is off the critical path (washing and drying).",
+  "Numbers: overlap holds while bandwidth >= FLOPS x DP / (2 x tokens); bigger batches help, more DP hurts; TP and PP divide both sides, CP only the tokens.",
+  "Pitfall: when the drying is slower than the washing, the wet pile grows: at large DP the talk can no longer hide.",
+  "Cliffhanger: \"any bugs in our analysis?\": every GPU still carries a full copy of everything (into L05-02)."
+ ],
+ "reuse": [
+  "line_gpu",
+  "line_d_servers",
+  "line_servers",
+  "line_whisper_line",
+  "line_round_table",
+  "line_slip_boxes",
+  "line_receipt",
+  "line_clock_face",
+  "line_balance",
+  "line_burst"
+ ],
+ "drawings": [
+  {
+   "name": "line_nccl_switch_surveyor",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_tiny_lab",
+    "line_switch_dimmer"
+   ],
+   "prompt": "In the upper left quarter, a plain square wall plate with one small up-down toggle switch is mounted on an otherwise empty wall; an invented person's hand (only the hand and wrist, coming in from the left edge) has just flipped the switch. In the lower two thirds, slightly right of centre, the surveyor, an invented cheerful character (simple round face, dot eyes, round glasses, a soft bucket hat, a plain vest with several pockets over a long-sleeved shirt, sturdy boots) is already striding off eagerly to the right, full figure, a folded surveying tripod over one shoulder and pushing a small measuring wheel along the floor with the other hand, a short floor line under the feet. Bright, keen expression, as if one flick of the switch sent them off on a big job. Portrait image 1024x1536; the surveyor fills about 55% of the width and about 60% of the height, the switch plate is small but clear. No text, no letters, no numbers, no logos, no marks on the switch plate."
+  },
+  {
+   "name": "line_nccl_survey_village",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "prompt": "At the lower left, the surveyor, an invented cheerful character (simple round face, dot eyes, round glasses, a soft bucket hat, a plain vest with several pockets over a long-sleeved shirt, sturdy boots) stands on a small grassy rise and looks through a surveying instrument on a three-legged tripod across a gentle valley. In the valley, two neat groups of four identical small cottages each: one group on the left bank and one on the right bank of a calm river that runs from the top of the picture to the bottom. Inside each group the four cottages are joined to each other by short, wide paved roads drawn as clean double lines. The two groups are joined only by one long, very narrow wooden footbridge across the river. A few simple round trees, nobody in the valley, no cars. Landscape image 1536x1024; the whole scene fills about 92% of the width and about 75% of the height; the two cottage groups and the footbridge are large and clear. No text, no letters, no numbers, no logos, no signs, no house numbers."
+  },
+  {
+   "name": "line_nccl_fork_choice",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_two_banks",
+    "line_tiny_lab"
+   ],
+   "prompt": "In the lower centre, the surveyor, an invented cheerful character (simple round face, dot eyes, round glasses, a soft bucket hat, a plain vest with several pockets over a long-sleeved shirt, sturdy boots) stands at a fork in a footpath, one hand on the chin, thinking, and in the other hand holds up a small wrapped parcel as if judging its weight. The left branch of the path makes one big round loop around a small pond, passing six small identical cottages spaced evenly along the loop. The right branch climbs a gentle hill and splits like the branches of a tree: into two paths, then into four, each ending at one small cottage, with a single cottage at the top of the hill where the branches meet. Landscape image 1536x1024; the surveyor is in the lower middle, the loop on the left half and the branching paths on the right half; together they fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos, no signposts, no arrows."
+  },
+  {
+   "name": "line_nccl_lanes",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_two_lanterns",
+    "line_slip_boxes",
+    "line_balance"
+   ],
+   "prompt": "A wide, straight, empty road seen from behind and a little above, running away from the viewer to the horizon in simple perspective, divided into four parallel lanes by thin dashed lines. In each lane there is a short neat row of small four-wheeled hand carts (no people), each cart carrying one identical plain cardboard box; the carts of the four lanes move side by side, level with each other, all away from the viewer. Flat empty land on both sides, a few small round trees near the horizon. Landscape image 1536x1024; the road fills about 90% of the width at the bottom and narrows to the horizon in the upper third. No text, no letters, no numbers, no logos, no road signs, no lane arrows, no labels on the boxes."
+  },
+  {
+   "name": "line_nccl_bundle_post",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "In a small post room, an invented cheerful but tired clerk (simple round face, dot eyes, short hair, sleeves rolled up, a pencil behind the ear) stands behind a plain wooden sorting counter, seen from the front and waist up, tying a thick stack of many plain envelopes together with string into one neat bundle with a bow, looking pleased. On the counter in front sits one open canvas mail sack, ready to take the single bundle. Behind the clerk, a wall of small empty pigeonhole shelves. Square image 1024x1024; the clerk, counter and sack fill about 85% of the width, centred. No text, no letters, no numbers, no logos, no stamps, no addresses on the envelopes, no labels on the shelves or the sack."
+  },
+  {
+   "name": "line_nccl_roll_call",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_round_table",
+    "line_card_catalog"
+   ],
+   "prompt": "A vast lecture hall seen from the front corner: rows and rows of identical small desks stretch far back into the distance, getting smaller and smaller, each with one small simple seated student figure (just a round head and shoulders). In the lower left foreground, an invented cheerful but tired clerk (simple round face, dot eyes, short hair, sleeves rolled up, a pencil behind the ear) stands at a plain lectern, ticking off a very long paper list with a pencil; the list hangs from the lectern, spills to the floor and runs on across the floor in loose loops. The clerk looks tired but determined. Landscape image 1536x1024; the clerk is about 45% of the height; the hall fills about 95% of the width. No text, no letters, no numbers, no logos, no writing on the list (just blank paper), no board, no screen."
+  },
+  {
+   "name": "line_overlap_phone_stir",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_whisper_line",
+    "line_tiny_lab"
+   ],
+   "prompt": "The third traveller (curly hair, a hoodie), an invented character with a simple round face and dot eyes, stands at a kitchen stove, full figure, stirring a pot of soup with a wooden spoon in one hand, while an old-style telephone handset is pinched between ear and shoulder, its coiled cord running to a plain wall telephone; the character is chatting happily and does not stop stirring. A little steam curls up from the pot. Portrait image 1024x1536; the character fills about 60% of the width and about 85% of the height, the stove and the wall telephone beside them. No text, no letters, no numbers, no logos, no buttons with numbers on the telephone."
+  },
+  {
+   "name": "line_overlap_wash_dry",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_tap_glass",
+    "line_reader_writer"
+   ],
+   "prompt": "Two invented characters side by side at a kitchen sink, seen from the front, waist up: on the left the first traveller (tall, round glasses, short neat hair, a zip-up jacket), sleeves pushed up, washes a plate in the sink; on the right the second traveller (short, a high ponytail, a plain sweater) dries the previous plate with a tea towel. A short stack of dirty plates waits on the counter at the far left; a plate rack at the far right holds a neat row of clean dry plates. Both are relaxed and in rhythm, one plate in each pair of hands at the same moment. Simple round faces, dot eyes. Landscape image 1536x1024; the two characters, sink, stack and rack fill about 92% of the width and about 75% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_overlap_wet_pile",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tap_two_people",
+    "line_tap_glass",
+    "line_reader_writer"
+   ],
+   "prompt": "The same two invented characters at the same kitchen sink, seen from the front, waist up: on the left the first traveller (tall, round glasses, short neat hair, a zip-up jacket) has finished washing and stands idle with folded arms, bored, the counter on the left empty; on the right the second traveller (short, a high ponytail, a plain sweater) is overwhelmed, drying a plate as fast as possible, beside a tall teetering pile of wet plates dripping water drops onto the counter. The plate rack on the far right is almost empty. Simple round faces, dot eyes. Landscape image 1536x1024; the characters, sink and pile fill about 92% of the width and about 80% of the height. No text, no letters, no numbers, no logos."
+  },
+  {
+   "name": "line_dp_bug_lens",
+   "kind": "line",
+   "group": "B",
+   "sweep": "c",
+   "refs": [
+    "line_balance",
+    "line_three_readers",
+    "line_glue_tiles"
+   ],
+   "prompt": "A large round magnifying glass with a wooden handle, held by an invented person's hand coming in from the lower right, hovers over a sheet of blank paper lying flat on a table. Through the lens, a small cute round beetle with six little legs and two short feelers sits on the paper, magnified and looking up, surprised. Square image 1024x1024; the lens is centred and fills about 60% of the width; the paper fills about 85%. No text, no letters, no numbers, no logos, no writing on the paper."
+  }
+ ]
+}

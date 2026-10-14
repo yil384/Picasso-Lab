@@ -1,0 +1,156 @@
+{
+ "episode": "L03-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: give a 405B model plain multi-head attention and a 1M-token prompt and its memory of what it read is ~8 TB (decimal; slide 12 mixes units): a reader with one note and a convoy of removal lorries (line_kv_lorry_convoy).",
+  "Recap from L03-01's party: every token holds a question card (query), a name tag (key) and a parcel (value) (line_word_three_things, line_three_readers).",
+  "Without a cache, each new word makes every earlier guest cut a new name tag and wrap a new parcel again: the same projections recomputed every step (line_kv_remake_tags).",
+  "The KV cache: past guests leave tag + parcel in a cloakroom; the newcomer brings only a question card and reads the wall; compute only the new token (slide 11) (line_kv_cloakroom_wall, CLERK continues from line_clerk_ladder).",
+  "The price: 2 (tag + parcel) x layers (one cloakroom per floor) x KV heads x head dim x 2 bytes per token (slide 12); 8B ~512 KB/token, ~2 GB at 4k, batch 1 (line_kv_cloakroom_tower, line_postal_scale).",
+  "And every new token re-reads the whole cache: memory traffic, not maths, is the cost (line_kv_trolley_reload); long prompts flood the cloakroom (line_kv_parcel_flood, line_scroll_reader).",
+  "MHA: every reader (head) has a private rack (line_kv_private_racks).",
+  "MQA: one rack for all readers: 32-128x smaller, quality drops (Shazeer 2019) (line_kv_one_rack_crowd).",
+  "GQA: groups of readers share a rack: 8 KV heads; Llama 3 8B / 70B / 405B with 32 / 64 / 128 query heads: 4x / 8x / 16x (slides 13-14) (line_kv_group_racks).",
+  "Pitfall: GQA barely changes compute or training; it is an inference memory saving (slide 13). Takeaway + next: MLA zips the parcels instead of sharing them (L03-03)."
+ ],
+ "reuse": [
+  "line_word_three_things",
+  "line_three_readers",
+  "line_clerk_ladder",
+  "line_round_table",
+  "line_scroll_reader",
+  "line_postal_scale",
+  "line_heap",
+  "line_card_catalog",
+  "line_mic"
+ ],
+ "drawings": [
+  {
+   "name": "line_kv_cloakroom_wall",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_word_three_things",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. The second image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A cloakroom at a party, seen from the front and a little from the side of the guests. Behind a long wooden counter stands the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron), reaching up to slide one more item into a big wall of open square pigeonholes behind the counter. The wall has about 6 rows by 8 columns of pigeonholes; each filled pigeonhole holds exactly two things: a blank round name tag on a string loop hanging from a small hook, and a small cardboard parcel tied with string. The last few pigeonholes at the bottom right are still empty. In front of the counter, on the left, stands the party guest (an invented young person: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag hanging on the chest), holding up only a blank paper question card and looking at the wall. Landscape image 1536x1024; the wall and the counter fill about 90% of the width and about 80% of the height. The tags, parcels and card are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_remake_tags",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long queue of seven invented readers (simple round faces, dot eyes, different hairstyles: glasses, a ponytail, a cap, curls, a bob, a bun) stands in one row from left to right, seen from the front, and every one of them is frantically making their things all over again at the same moment: some cut out a new round name tag with scissors, some wrap a small parcel with tape and string; small sweat drops and hurried motion lines around them, paper scraps and bits of string falling at their feet. At the far right end of the row a newcomer has just arrived, holding up a single blank question card and looking at the busy row in surprise. Landscape image 1536x1024; the row fills about 90% of the width and about 70% of the height. The tags, parcels and card are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_cloakroom_tower",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron) in the new scene described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the pose, the cabinet or the ladder.",
+   "prompt": "A very tall, narrow building cut open at the front like a doll's house, so we can see inside every floor: about ten identical floors stacked from the ground to the roof, and on every floor the same small cloakroom: a short counter and a back wall of open pigeonholes, each pigeonhole holding a tiny round name tag and a tiny parcel. On the top floor the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) leans over the counter with an armful of parcels, looking down at all the floors below with raised eyebrows. Portrait image 1024x1536; the building fills about 55% of the width and about 92% of the height, centred. No signs on the building. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_parcel_flood",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron) in the new scene described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the pose, the cabinet or the ladder.",
+   "prompt": "The cloakroom overwhelmed: the wall of pigeonholes behind the counter is crammed full, and parcels and round name tags spill out of every hole, tumble over the counter and pile up on the floor in a big drift that reaches the waist of the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron), who stands half buried in the pile holding one more parcel above the head with a dazed look and two small sweat drops. Square image 1024x1024; the scene fills about 90% of the width and about 85% of the height. The tags and parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_private_racks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A long cloakroom hall seen straight from the front: eight small separate counters side by side in one row, each with its own small rack of open pigeonholes behind it, every rack equally full of round name tags and small parcels. At each counter stands one reader, eight invented readers (simple round faces, dot eyes, different hairstyles: glasses, a ponytail, a cap, curls, a bob, a bun) in all, each holding up a blank question card towards their own rack. Everything repeats eight times, evenly spaced, tidy. Landscape image 1536x1024; the row fills about 92% of the width and about 65% of the height. The cards, tags and parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_one_rack_crowd",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "One single small rack of open pigeonholes holding round name tags and small parcels stands in the middle of the picture, and eight invented readers (simple round faces, dot eyes, different hairstyles: glasses, a ponytail, a cap, curls, a bob, a bun) crowd around it from both sides, all holding up blank question cards and craning to look into the same few pigeonholes; the two at the edges squint and frown, one scratches their head, because there is not enough there for so many of them. Landscape image 1536x1024; the group fills about 85% of the width and about 75% of the height. The cards, tags and parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_group_racks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "Three small racks of open pigeonholes holding round name tags and small parcels stand in a row with space between them, and around each rack stands a small group of four invented readers (simple round faces, dot eyes, different hairstyles: glasses, a ponytail, a cap, curls, a bob, a bun), each holding a blank question card, calm and content, sharing their group's rack. Twelve readers in all, in three tidy groups of four. Landscape image 1536x1024; the three groups fill about 92% of the width and about 70% of the height. The cards, tags and parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_trolley_reload",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron) in the new scene described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the pose, the cabinet or the ladder.",
+   "prompt": "The clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) pushes a heavily loaded hand trolley from left to right along a corridor towards a counter on the right; the trolley is stacked high and wobbly with dozens of parcels and round name tags, the stack taller than the clerk. The clerk leans into the trolley with effort, short motion lines behind the wheels. Landscape image 1536x1024; the clerk and the trolley fill about 75% of the width and about 85% of the height. The tags and parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kv_lorry_convoy",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "In the lower left of the picture an invented reader (simple round face, dot eyes, short hair, a sweater) sits at a small desk holding one short blank note card. Behind the reader and to the right, a long convoy of large removal lorries stretches away along a straight road into the distance, one behind another; the back doors of the nearest lorries are open and every one is packed to the roof with stacked cardboard parcels. The reader glances back over one shoulder at the convoy with a startled look. Landscape image 1536x1024; the scene fills about 95% of the width and about 70% of the height. Plain lorries with no writing and no number plates. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

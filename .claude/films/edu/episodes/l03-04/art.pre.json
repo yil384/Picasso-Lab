@@ -1,0 +1,147 @@
+{
+ "episode": "L03-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: a skip connection is one express lane past every block; what if you built four, and how do you keep them from blowing up? (line_res_bypass_road, line_res_four_lanes)",
+  "Why the skip path: with x + F(x), layer 100's gradient reaches layer 1 directly; without it the signal is a whisper passed through 100 people (line_whisper_line, line_res_bypass_road).",
+  "LayerNorm, not BatchNorm: sequences differ in length, so normalise each token on its own, not across the batch (slide 23) (line_res_tailor_split).",
+  "RMSNorm: drop the mean and the bias, about as good and cheaper; Llama-family models use it (slide 24).",
+  "Post-LN vs Pre-LN: a toll gate across the highway vs a gate on the exit ramp only; Pre-LN leaves the identity path clean, only early models like BERT kept Post-LN (slide 25) (line_res_gate_on_road, line_res_gate_on_ramp).",
+  "Peri-LN: gates on the way in and out of the ramp, highway untouched (Gemma 2/3, OLMo 2; Kim et al. 2025) (slide 26) (line_res_gate_both_ends).",
+  "Hyper-connections: n learnable lanes with crossovers instead of one fixed lane (Zhu et al. 2025); y = 0.2 x1 + 0.8 x2 scales the gradients (slides 28-29) (line_res_four_lanes, line_knob_board).",
+  "Pitfall: multiply mixing weights over many layers and the signal can blow up or die (line_res_snowball, line_whisper_line).",
+  "mHC: keep the mixing doubly stochastic (rows and columns sum to 1, entries 0-1); closed under multiplication, so any depth stays stable (Xie et al. 2026) (slides 30-31) (line_res_jugs_glasses).",
+  "Her analogy (slide 31): attention = a person listening to others in a meeting (line_round_table); hyper-connections = one person's four clones talking among themselves (line_res_four_clones). Takeaway."
+ ],
+ "reuse": [
+  "line_whisper_line",
+  "line_round_table",
+  "line_knob_board",
+  "line_switch_dimmer",
+  "line_balance",
+  "line_wave",
+  "line_block_towers",
+  "line_mic"
+ ],
+ "drawings": [
+  {
+   "name": "line_res_bypass_road",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "A long straight express road runs horizontally across the whole picture from the left edge to the right edge, seen from a little above. Below the road sit five small towns in a row, evenly spaced, each a compact cluster of little houses around a small roundabout. At each town a short exit ramp leaves the express road, loops into the town and a second ramp leads back onto the road just after it, so the road itself passes straight by every town. One small car speeds along the express road with short speed lines. Landscape image 1536x1024; the road and the towns fill about 95% of the width and about 70% of the height. No road signs, no writing on the road. Drawn as a lively picture-book scene in gentle perspective with little three-dimensional buildings, never as a flat top-down plan. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_res_four_lanes",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "Four parallel express roads run horizontally side by side across the whole picture from the left edge to the right edge, seen from a little above. At five evenly spaced places, short diagonal crossover links join each road to its neighbours, so cars can move between roads. Below the roads sit five small towns in a row, each a compact cluster of little houses, each joined to the roads by a ramp. A few small cars drive on different roads; two of them are changing roads at a crossover. Landscape image 1536x1024; the roads and towns fill about 95% of the width and about 75% of the height. No road signs, no writing on the road. Drawn as a lively picture-book scene in gentle perspective with little three-dimensional buildings, never as a flat top-down plan. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_res_tailor_split",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "Two scenes side by side with a little space between them. Left: an invented tailor (simple round face, dot eyes, a measuring tape around the neck, a pincushion on the wrist) stretches one long measuring tape across the chests of five very different people standing shoulder to shoulder in a row (one very tall, one a small child, one broad, one thin, one medium), trying to measure them all at once; the tape sags and kinks awkwardly. Right: the same tailor measures one single person alone, carefully, from shoulder to waist. Everyone is an invented character with a simple round face and dot eyes. Landscape image 1536x1024; the two scenes fill about 92% of the width and about 75% of the height. The tapes have only plain tick marks. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_res_gate_on_road",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A highway with three lanes runs horizontally across the picture, seen from a little above. Right across all three lanes stands a barrier gate with a small booth, and every car must stop at it: a queue of small cars stretches back bumper to bumper to the left edge, and one driver leans out of a window looking annoyed. Landscape image 1536x1024; the road fills about 95% of the width and about 55% of the height. No road signs, no licence plates. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_res_gate_on_ramp",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_res_gate_on_road",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "A wide three-lane highway runs across the upper half of the picture from the left edge to the right edge, completely clear and free: one small car speeds along the middle lane with short speed lines, its driver (simple round face, dot eyes) smiling. Below the highway, a single-lane side ramp leaves the highway on the left, curves down to a small workshop with a big open garage door (a mechanic in overalls with a simple round face and dot eyes stands in the doorway holding a spanner), and curves back up to rejoin the highway on the right. A barrier gate with a small toll booth (an attendant in a cap inside) stands only on that side ramp, just before the workshop, its bar down, and one small car waits calmly at it, the driver leaning an elbow out of the window. The highway itself has no gate. Landscape image 1536x1024; the scene fills about 95% of the width and about 75% of the height. Drawn as a lively picture-book scene seen from a little above in gentle three-quarter perspective, with the same confident medium-bold pen line as the reference images, little three-dimensional buildings, a few round bushy trees and a strip of grass verge; never a flat top-down plan, never a thin technical diagram. No road signs, no licence plates, no writing on the road or the buildings. No text, no letters, no numbers, no symbols, no logos anywhere.",
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the same highway, cars, toll booth and barrier gate: draw them in exactly the same style, line weight and gentle three-quarter perspective, but in the new layout described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the queue of cars."
+  },
+  {
+   "name": "line_res_gate_both_ends",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_res_gate_on_road",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "A wide three-lane highway runs across the upper part of the picture from the left edge to the right edge, clear, with one small car speeding along it with short speed lines. Below it, a single-lane side loop leaves the highway on the left, dips down to a small workshop with a big open garage door in the middle (a mechanic in overalls with a simple round face and dot eyes at work inside), and climbs back to rejoin the highway on the right. On this loop stand two small barrier gates, each with a small toll booth and an attendant in a cap: one on the way down into the workshop and one on the way back up out of it; one small car waits at the first gate and another at the second. The highway itself has no gate at all. Landscape image 1536x1024; the scene fills about 95% of the width and about 75% of the height. Drawn as a lively picture-book scene seen from a little above in gentle three-quarter perspective, with the same confident medium-bold pen line as the reference images, little three-dimensional buildings, a few round bushy trees and a strip of grass verge; never a flat top-down plan, never a thin technical diagram. No road signs, no licence plates, no writing on the road or the buildings. No text, no letters, no numbers, no symbols, no logos anywhere.",
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the same highway, cars, toll booth and barrier gate: draw them in exactly the same style, line weight and gentle three-quarter perspective, but in the new layout described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the queue of cars."
+  },
+  {
+   "name": "line_res_four_clones",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "Four copies of the very same invented person (identical simple round face with dot eyes, identical short wavy hair, identical round glasses, identical striped sweater) sit around one small square table and talk with each other with lively hand gestures, passing small blank paper notes across the table; they look exactly alike, like clones. Seen from a little above. Square image 1024x1024; the group fills about 85% of the width and about 80% of the height. The notes are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_res_jugs_glasses",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "Four identical water jugs float in a row near the top of the picture, each tilted and pouring from its spout several thin streams of water down into four identical drinking glasses standing in a row on a shelf below; the thin streams cross each other in a tidy criss-cross, so each glass receives a little water from several jugs. All four glasses are filled to exactly the same level, right to the brim. Landscape image 1536x1024; the jugs and glasses fill about 85% of the width and about 85% of the height. No measuring marks. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_res_snowball",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "A snowy hillside slope runs from the upper left down to the lower right. A snowball rolls down it and grows: a trail of snowballs along the slope shows it getting bigger and bigger, from a tiny ball at the top left to a huge boulder of snow at the bottom right that towers over a small invented skier (simple round face, dot eyes, a woolly hat) who flees in alarm. Landscape image 1536x1024; the scene fills about 92% of the width and about 80% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

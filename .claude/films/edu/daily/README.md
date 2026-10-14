@@ -13,7 +13,7 @@ delivers to `~/Downloads/picasso-daily/<YYYY-MM-DD>_<id>/` by 08:45 (it is kille
 | `next.py` | Picks tonight's episode and its delivery morning; writes the work order; `status`; `mark` |
 | `run.sh` | The launchd entry (below) |
 | `PROMPT.md` | The producer's brief for the headless session: the whole per-episode pipeline, rules and time plan |
-| `art.py` | The episode's drawings: `gen` (image tool, 3 at a time, retries, checks), `pack`, `check`, `prompts` (fallback page) |
+| `art.py` | The episode's drawings: `gen` (image tool, 3 at a time, retries, checks), `pack`, `check`, `prompts` (fallback page), `pre` / `take` (the pre-drawn library below); `test_art_library.py` checks the library handling in a scratch folder |
 | `clips.py` | Her voice clips: `cut` from the recording, `check` with two recognizers, `words` around a moment |
 | `notify.sh` | A macOS notification + a line in `~/picasso-work/logs/notify.log` |
 | `ship_git.sh` | Commit only the given paths (never slide images or crops), push the branch, merge into origin/main (`--no-ff`) in a temporary detached worktree, push main |
@@ -73,6 +73,14 @@ cd /Users/linyichen/UCSD/Picasso-Lab/.claude/films/edu && HF_HUB_OFFLINE=1 nohup
 Decisions live in `state.json`: `"guest_policy": "narration-only"` makes guest episodes without clips or taped slides;
 `"speaker_ok": {"L09": {"voice_clips": true, "slides_on_screen": true, "date": "...", "note": "..."}}` when a speaker
 says yes; `"skip": ["L09-03"]` drops an episode.
+
+## Pre-drawn art
+Drawings for later episodes were made ahead (2026-10-14, before the image tool's account ended on 2026-10-16): each
+`episodes/<ep>/art.pre.json` (committed) plans them, and the files live outside git in the library
+`~/picasso-assets/edu-art-library/` (`src/`, `cut/`, `logs/`, `INDEX.md`; backup on the lab server
+`picasso:/scr/dataset/yichen/edu-art-library/`). A night copies only the drawings its film uses into `art/src` and
+commits those (PROMPT.md step 5); run.sh's Tonight block says how many are made (`art.py pre EP --line`). The library
+was drawn with `EDU_ART_DIR=~/picasso-assets/edu-art-library art.py gen episodes/<ep>/art.pre.json`.
 
 ## Logs and outputs
 - `~/picasso-work/logs/daily/<date>_<time>.log` (run.sh), `.r<N>.jsonl` (each round's stream; its first line has

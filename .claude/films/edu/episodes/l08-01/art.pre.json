@@ -1,0 +1,155 @@
+{
+ "episode": "L08-01",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: a big model writing one word at a time is mostly waiting; let a small model guess the next five words and the big one just check (line_spec_editor_waiting, then line_spec_handoff, the cover). Cast for all of L08: the editor = the big target model, the intern = the small draft model.",
+  "Why checking is nearly free (slide 30): at batch 1 decoding is matrix-vector work and the GPU's compute sits idle, so checking five words costs about as much as writing one (line_spec_oven_one_cookie vs line_spec_oven_full_tray).",
+  "Roots (slide 3): blockwise parallel decoding (Google Brain, 2018) and speculative execution in CPUs: do the likely thing early, undo it if wrong (line_spec_waiter_usual).",
+  "Core (slides 4-5): two papers, 2022-23: a small draft model writes ahead, the large target checks the whole draft in one pass (line_spec_intern_drafts, line_spec_editor_checks); T5-XXL 11B with T5-small 60M, Chinchilla 70B with a 400M draft.",
+  "Keep the longest correct prefix; the first wrong guess is replaced by the editor's own word, so every pass gains at least one word (red pen ticks and a cross on line_spec_editor_checks).",
+  "Sampling, not only greedy (slide 6): accept a draft word with probability min(1, target/draft), else resample from the leftover max(0, target - draft); the result is exactly the big model's own distribution (line_spec_play_or_study for \"I like playing / studying\"; reuse line_dice_hand; line_spec_twin_books for \"exactly the same output\").",
+  "Speed-ups depend on the task (slide 7): predictable code vs free-form summaries (line_spec_fence_vs_book; reuse line_coder_storyteller).",
+  "Takeaway: the same answer with fewer slow passes; the serving season starts here."
+ ],
+ "reuse": [
+  "line_dice_hand",
+  "line_coder_storyteller",
+  "line_temp_knob",
+  "line_chat_first",
+  "line_gpu",
+  "line_clock_face"
+ ],
+ "drawings": [
+  {
+   "name": "line_spec_editor_waiting",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_clock_face",
+    "line_reader_writer"
+   ],
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), sits in a large armchair at a huge, almost empty desk, chin propped on one hand, drumming the fingers of the other hand on the desk, bored, waiting; on the vast desk lie only one tiny blank card and a fountain pen. On the wall behind him a plain round clock with no hands and no numerals. Square image 1024x1024; the editor and the desk fill about 85% of the width and about 80% of the height. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_spec_oven_one_cookie",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_knob_board",
+    "line_clock_face"
+   ],
+   "prompt": "A huge commercial bakery oven seen from the front with its big door wide open; inside, on an enormous empty baking tray that fills the whole oven, sits one single small round cookie in the middle. Square image 1024x1024; the oven fills about 85% of the width and about 80% of the height. No dials with numerals. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_spec_oven_full_tray",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": false,
+   "refs": [
+    "line_balance",
+    "line_knob_board",
+    "line_clock_face"
+   ],
+   "prompt": "A huge commercial bakery oven seen from the front with its big door wide open; inside, the enormous baking tray is completely full of neat rows of small round cookies, edge to edge. Square image 1024x1024; the oven fills about 85% of the width and about 80% of the height, framed so it pairs with a matching picture of the same oven holding one cookie. No dials with numerals. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_spec_handoff",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "On the left, the intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), dashes in with a few speed lines behind, holding out a strip of five blank word cards joined edge to edge. On the right, the editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), sits at a large desk and leans forward, peering over his glasses at the strip, a fountain pen raised, ready to check. Landscape image 1536x1024; the two characters and the strip fill about 92% of the width and about 85% of the height; the five cards are large and clearly separated. The cards are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_spec_intern_drafts",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_chat_first",
+    "line_tiny_lab"
+   ],
+   "prompt": "The intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), sits on a tall stool at a small standing desk, scribbling very fast with a pencil on the third of a row of five small blank cards laid side by side, tongue poking out in concentration; short motion lines around the pencil hand; two crumpled scraps on the floor. Portrait image 1024x1536; the intern and the desk fill about 80% of the width and about 85% of the height. The cards are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_spec_editor_checks",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_three_readers",
+    "line_tiny_lab"
+   ],
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches), sits behind a large desk, seen from the front, and in one glance reads a row of five large blank cards laid side by side across the desk in front of him, holding a big magnifying glass over the row with one hand and a fountain pen over the cards with the other. Landscape image 1536x1024; the editor fills the upper middle, the five cards span about 80% of the width in the lower half; everything fills about 90% of the width and about 85% of the height. The cards are blank and evenly spaced: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_spec_waiter_usual",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_reader_writer",
+    "line_round_table"
+   ],
+   "prompt": "Inside a small cafe, seen from the side: an invented regular customer (simple round face, dot eyes, a scarf, a flat cap) is just stepping in through the door on the left, and an invented waiter (simple round face, dot eyes, a waistcoat, an apron) is already walking towards them with a cup of coffee on a saucer, smiling knowingly, before anything has been ordered; the customer looks delighted. A few cafe tables and chairs in the background. Landscape image 1536x1024; the two figures fill about 85% of the width and about 80% of the height. No signs, no menus, no text, no letters, no numbers."
+  },
+  {
+   "name": "line_spec_play_or_study",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "A young invented child (simple round face, dot eyes, short hair, a t-shirt) stands at a fork in a garden path, finger on chin, deciding: the left path leads to a football, a kite and a skipping rope on the grass; the right path leads to a small desk with a stack of books and a desk lamp. Square image 1024x1024; the child in the middle, the two destinations on either side; everything fills about 90% of the width and about 80% of the height. The books are blank. No text, no letters, no numbers."
+  },
+  {
+   "name": "line_spec_fence_vs_book",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_coder_storyteller",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "A picture in two halves side by side. Left: the intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), happily paints a long picket fence with a brush, all the pickets identical and evenly spaced, working fast and confidently, most pickets already done. Right: the same intern sits at a table scratching their head over an enormous thick book and a tiny blank postcard, trying to squeeze the whole book into the card, puzzled. Landscape image 1536x1024; the two scenes fill about 92% of the width and about 80% of the height. The book and the postcard are blank: no text, no letters, no numbers."
+  },
+  {
+   "name": "line_spec_twin_books",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_reader_writer",
+    "line_tiny_lab",
+    "line_chat_first"
+   ],
+   "prompt": "The editor, a big, calm, older invented man (simple round face, dot eyes, a short bushy beard, half-moon reading glasses, a cardigan with elbow patches) stands behind his large desk, seen from the front, holding up two identical closed hardback books side by side, one in each hand, comparing them with a satisfied little smile: same size, same thickness, same plain cover, the only difference a small blank bookmark ribbon hanging from the right-hand book. Beside the desk on the right, the intern, a small, quick, young invented character (simple round face, dot eyes, short spiky hair, a hoodie with pushed-up sleeves, sneakers, a pencil tucked behind one ear), peeks over the desk edge with a hopeful thumbs-up. Landscape image 1536x1024; the editor, the books and the intern fill about 85% of the width and about 85% of the height; the two books are large and clearly identical. The covers are blank: no titles, no text, no letters, no numbers."
+  }
+ ]
+}

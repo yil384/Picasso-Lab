@@ -23,6 +23,8 @@ Rules:
 - Work order: ~/picasso-work/daily/<id>/work_order.json (keyed by episode only, so a retry on a later night finds the
   earlier attempt's progress.md, TTS, previews and scripts). Delivery: ~/Downloads/picasso-daily/<morning>_<id>/.
 - When it is past 08:45 and today has no video, the order lists today under "missed" (run.sh says so).
+- When the episode folder holds art.pre.json (drawings planned and made ahead, kept in the library outside git), the
+  order's "pre_drawn" names it and the library (PROMPT.md step 5; `art.py pre` counts what is made).
 """
 import argparse, datetime as dt, glob, json, os, re, shlex, subprocess, sys
 
@@ -33,6 +35,7 @@ SYLLABUS = os.path.join(HERE, 'syllabus.json')
 STATE = os.path.join(HERE, 'state.json')
 WORK = os.path.expanduser('~/picasso-work/daily')
 DELIVER = os.path.expanduser('~/Downloads/picasso-daily')
+LIBRARY = os.path.expanduser(os.environ.get('EDU_ART_LIBRARY') or '~/picasso-assets/edu-art-library')
 CUTOFF = dt.time(8, 45)
 BUFFER_DAYS = 2
 BUDGET = dt.timedelta(hours=6, minutes=45)
@@ -222,6 +225,10 @@ def work_order(now=None, write=True):
             resume += sorted(os.path.relpath(p, EDU) if p.startswith(EDU) else p
                              for p in glob.glob(os.path.join(d, '**', '*'), recursive=True)
                              if os.path.isfile(p) and os.path.basename(p) != 'work_order.json')[:200]
+    plan = os.path.join(EDU, ep['episode_dir'], 'art.pre.json')
+    pre_drawn = None if not os.path.exists(plan) else {
+        'plan': plan, 'library': LIBRARY, 'library_found': os.path.isdir(os.path.join(LIBRARY, 'src')),
+        'how': 'PROMPT.md step 5 (pre-drawn art); daily/art.py pre EP counts what is made'}
     order = {
         'id': ep['id'], 'title': ep['title'], 'seq': ep['seq'], 'series_number': len(made) + 1,
         'lecture': ep['lecture'], 'lecture_title': ep['lecture_title'], 'speaker': ep['speaker'], 'guest': ep['guest'],
@@ -240,6 +247,7 @@ def work_order(now=None, write=True):
             'id': prev['id'], 'title': prev['title'],
             'episode_dir': state['episodes'].get(prev['id'], {}).get('episode_dir', prev.get('episode_dir'))},
         'resume_files': resume, 'progress': os.path.join(work, 'progress.md'), 'missed': missed,
+        'pre_drawn': pre_drawn,
         'passed_over': passed,
         'reference': syl[0].get('shipped', {}),
     }
@@ -419,6 +427,9 @@ def main():
         print(f'  missed: {", ".join(order["missed"])} has no video')
     if order['resume_files']:
         print(f'  resume: {len(order["resume_files"])} files from an earlier attempt')
+    if order['pre_drawn']:
+        print(f'  pre-drawn art: {order["pre_drawn"]["plan"]} (library {order["pre_drawn"]["library"]}'
+              f'{"" if order["pre_drawn"]["library_found"] else ": NOT FOUND"})')
     print('  work order:', order.get('work_order', '(dry run, not written)'))
     print('  deliver to:', order['deliver_dir'])
 

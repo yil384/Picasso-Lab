@@ -1,0 +1,162 @@
+{
+ "episode": "L14-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Cast rule (episodes/e01-moe/FACTS.md: an expert is not a topic specialist; never label one by subject): the receptionist plus eight doctors told apart only by face and hair, no specialty props; the film numbers the doors in code (#0-#255), never names a department.",
+  "Hook: DeepSeek-V3 decodes on 320 GPUs, and 256 of them each hold a single expert: a dollhouse building of tiny rooms, one doctor per room (line_moe_room_grid); 40 nodes of 8 GPUs as a campus of 40 small buildings (line_moe_campus_grid).",
+  "An MoE layer is a set of isolated experts. The dense way (tensor parallelism) splits one patient between four doctors who must then pool their notes (the AllReduce: line_moe_split_patient; or L04-04's line_allreduce_desk_circle from the library); expert parallelism gives every expert its own room and no meeting (line_moe_own_rooms).",
+  "The bills: two all-to-alls per layer, dispatch and combine: patients cross between every pair of buildings and back (line_moe_shuttle_crisscross); and uneven load: in a DeepSeek layer the busiest expert gets 15-20x the average, and everyone waits for it (line_moe_one_long_queue).",
+  "The real layout: data/tensor parallel attention, expert-parallel experts. DeepSeek-V3 on H800s (NVLink 160 GB/s vs 450 GB/s on H100): prefill on 4 nodes / 32 GPUs (EP32), decode on 40 nodes / 320 GPUs (EP320): 256 rooms for the routed experts, 64 for the shared expert and the spares (line_moe_spare_rooms; reuse line_servers, line_gpu).",
+  "Balance (EPLB): copy the hot expert into a spare room (line_moe_twin_doctors), re-planned every few minutes from recent traffic, because people at the same hour ask similar things: at midnight the waiting room is all students with code due (line_moe_midnight_waiting_room; reuse line_clock_face, line_tally_pages).",
+  "Fewer trips: each token may use experts on at most 4 nodes (draw the route over line_moe_campus_grid); the lab's own profiling (arXiv 2510.05497) saw this as square patterns.",
+  "Two hops: one slow bus between buildings over InfiniBand (about 50 GB/s), then a fast walkway inside over NVLink (160 GB/s): 3.2x faster, so about 3.2 experts per node ride free, 3.2 x 4 = about 13 per token in theory (line_moe_bus_then_walkway).",
+  "Takeaway + cliffhanger: attention and experts share the same GPUs; is that wise? (tease L14-04 with line_moe_decode_cutaway from its plan)."
+ ],
+ "reuse": [
+  "line_servers",
+  "line_gpu",
+  "line_d_servers",
+  "line_clock_face",
+  "line_tally_pages",
+  "line_balance"
+ ],
+ "drawings": [
+  {
+   "name": "line_moe_room_grid",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
+   "prompt": "A tall building drawn as a dollhouse cutaway with the whole front wall removed, seen straight on: a regular grid of identical small rooms, about eight across and ten up, separated by thin walls and floors. In every room sits exactly one tiny doctor in a white coat at a small desk, each with a small simple prop on the desk. At the bottom, a wide ground-floor entrance where a short line of patients waits. Clean, orderly, a little overwhelming in number. Portrait image 1024x1536; the building fills about 88% of the width and 90% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_campus_grid",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
+   "prompt": "A hospital campus seen from high above at a gentle slant, like a tidy architect's model on a table, so the buildings read as small boxes with walls and doors: forty identical small flat-roofed buildings arranged in a neat grid, five across and eight down, with straight footpaths between them and plain lawns with a few small round shrubs. Each roof shows one simple rectangular skylight. A few tiny people walk along the paths. No road markings, no compass, no labels. Portrait image 1024x1536; the campus fills about 90% of the width and 90% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_split_patient",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "One patient (a relaxed man in a T-shirt) lies on an examination table in the middle. Four doctors in white coats stand around the table, each examining only one part of him: one shines a small lamp at his head, one checks his arm, one taps his knee with a little reflex hammer, one looks at his foot. Each doctor holds a small clipboard with a blank sheet. Square image 1024x1024; the scene fills about 90% of the width and 80% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_own_rooms",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
+   "prompt": "A cutaway of four small consulting rooms in a row, side by side, the front wall removed and solid walls between the rooms (no doors or windows between them). In each room one doctor works calmly with their own patient: the curly-haired doctor (a young man with short curly hair, in a plain white coat) listens with a stethoscope, the doctor with the bob (a tall woman with a short straight bob, in a plain white coat) takes a pulse, the moustached doctor (a round-faced bald man with a bushy moustache, in a plain white coat) writes on a clipboard while the patient talks, the ponytailed doctor (a woman with a long ponytail, in a plain white coat) hands over a blank slip of paper. Nobody looks into the next room. Landscape image 1536x1024; the four rooms fill about 94% of the width and 70% of the height. None of the doctors carries any special instrument or object that hints at a medical specialty: identical white coats and stethoscopes only. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_shuttle_crisscross",
+   "kind": "line",
+   "group": "B",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
+   "prompt": "Seen from above at a gentle slant, like a model on a table, four identical small hospital buildings standing at the four corners of a square plaza. Straight footpaths join every pair of buildings: the four sides of the square and both diagonals, crossing in the middle. On every path small open shuttle carts carrying patients, and patients on foot, hurry in both directions, so the plaza is busy with crossing traffic; short speed lines behind the carts. Square image 1024x1024; the buildings and paths fill about 90% of the width and of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_one_long_queue",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "Four plain consulting-room doors, each with a small blank rectangular plate and a round handle in a row along a wall, seen from the front, each with a doctor in a white coat standing in the doorway. In front of the second door an enormous queue of patients winds back and forth across the whole floor in tight loops, all inside the picture. At the other three doors nobody is waiting: one doctor checks a wristwatch, one yawns, one taps a foot with folded arms. Landscape image 1536x1024; the scene fills about 94% of the width and 80% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_twin_doctors",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "Two identical twins, both exactly like the curly-haired doctor (a young man with short curly hair, in a plain white coat), stand in two neighbouring open doorways side by side, each greeting the first patient of their own queue. In front of them one long queue of patients splits into two shorter queues, one for each twin. The twins look exactly alike and grin at each other. Landscape image 1536x1024; the scene fills about 90% of the width and 75% of the height. None of the doctors carries any special instrument or object that hints at a medical specialty: identical white coats and stethoscopes only. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_midnight_waiting_room",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_whisper_line"
+   ],
+   "prompt": "A hospital waiting room late at night. On the back wall a window shows a crescent moon and a few stars, and a plain round wall clock with tick marks only (no numerals) has both hands pointing straight up. Two rows of waiting-room chairs are full of tired students in hoodies, each hunched over an open laptop with a blank screen, coffee cups beside them; one sleeps with the head on the keyboard, one chews a pencil. At the side, the receptionist (a cheerful young woman with her hair in a high round bun, small round glasses, and a plain short-sleeved tunic with a pen clipped to the breast pocket) stands at her desk with a clipboard, noting it all down. Landscape image 1536x1024; the scene fills about 92% of the width and 80% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_bus_then_walkway",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
+   "prompt": "A two-part scene read from left to right. Left: a small shuttle bus drives along a long winding road from the distance and pulls up at the entrance of a hospital building. Right: the same building drawn as a cutaway, and inside it a long moving walkway (like an airport travelator) runs past a row of consulting-room doors; three or four patients who just got off the bus ride it quickly, with speed lines, stepping off at different doors. Landscape image 1536x1024; the scene fills about 94% of the width and 75% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_moe_spare_rooms",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_building_h",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content: the first one shows how a cutaway building is drawn in this series, the others how people are drawn.",
+   "prompt": "A corridor drawn as a side cutaway with six small consulting rooms in a row. In the first two rooms a doctor in a white coat sees a patient. The other four rooms are ready but empty: each has a small desk, a chair, a fresh white coat hanging on a stand, and the door wide open, waiting for whoever is needed. Landscape image 1536x1024; the rooms fill about 94% of the width and 70% of the height. No signs, no posters, no cross symbols, no writing on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

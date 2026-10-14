@@ -1,0 +1,159 @@
+{
+ "episode": "L12-02",
+ "pre": true,
+ "made": "2026-10-14",
+ "note": "Sources: her quantization lecture is the recording transcribed in course/L13.transcript.md (it opens \"for this lecture, we will cover large language model quantizations\"); course/L12.transcript.md is the serving lecture, and the slide markers in both transcripts point at the other PDF. Slides: course/L12.txt / L12.pdf.",
+ "beats": [
+  "Hook: squeeze 0, 0.8, 1.2 and 2.5 into 4-bit integers. What comes back out? (0, 0.714, 1.071, 2.5: recompute) Four bowls of flour and one scoop (line_quant_scoop_bowls).",
+  "Symmetric round-to-nearest (slide 9): choose one scoop size so the biggest amount is exactly seven scoops, S = 2.5 / 7 = 0.357; every amount becomes a whole number of scoops: 0, 2, 3, 7 (red pen on a code-drawn ruler of 15 ticks).",
+  "Dequantize: scoops x scoop size; whatever was levelled off is the rounding error (line_quant_scoop_level). Use [-7, 7], not [-8, 7], so zero sits in the middle (line_bits_hook_rails from L12-01's plan).",
+  "Asymmetric (slide 11): a lopsided range also gets a zero point, like re-zeroing a kitchen scale under the bowl (line_quant_tare_scale); old days: weights symmetric, activations asymmetric; today: symmetric plus fine-grained groups.",
+  "Granularity (slide 10): one scoop for the whole pantry is sized by the biggest sack, and the spices round to nothing (line_quant_giant_scoop); one scoop per shelf fits each row (line_quant_shelf_scoops); per-row error 2.08 vs per-tensor 2.28 (recompute).",
+  "Which axis (slide 12): group along the input features, the axis the multiply adds up; weights are measured offline in groups of 128 (line_quant_night_prep), activations per token on the fly as they arrive (line_quant_conveyor_scoop).",
+  "Pitfall, does it save compute? (slides 13-14): only if the GPU can multiply in the small format; otherwise every weight is unpacked back to FP16 first, and unpacking eight INT4 from one 32-bit word into half2 is fiddly (line_quant_vacuum_unpack).",
+  "Benefits (slide 16): less memory, a big model on fewer GPUs (line_quant_van_fit); less traffic, faster small-batch decoding (line_tap_glass); simpler math.",
+  "Slide 17: W4A16 vs W8A8 vs W4A4: memory and small batches favour 4-bit weights; at large batches the winner is whatever the GPU multiplies natively: A100 FP16, H100 FP8, B100 FP4 (line_quant_plug_adapter, taped slide 17).",
+  "Takeaway: quantization is three choices: the levels, who shares a scale, and whether the hardware speaks the format; next: making 4-bit weights accurate (GPTQ, AWQ)."
+ ],
+ "reuse": [
+  "line_switch_dimmer",
+  "line_postal_scale",
+  "line_temp_knob",
+  "line_tap_glass",
+  "line_press",
+  "line_gpu",
+  "line_d_chefs"
+ ],
+ "drawings": [
+  {
+   "name": "line_quant_scoop_bowls",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chef",
+    "line_d_chefs",
+    "line_balance"
+   ],
+   "refnote": "The first two attached images show the cook cast of this series (tall pleated chef's hat, double-breasted jacket, apron, simple round face with dot eyes): draw the cook in the same look, in the new pose described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The cook (the same character in every picture): an invented cook with a simple round face, dot eyes, short hair under a tall pleated chef's hat, a double-breasted chef's jacket and a long apron tied at the waist, like the cooks in the first two reference images. The cook stands behind a long kitchen counter, seen from the front, holding one small metal measuring scoop full of flour above the counter, very focused. On the counter, in one row from left to right, stand four identical wide mixing bowls: the first is empty, the second holds a small heap of flour, the third a slightly bigger heap, and the fourth a big tall heap. Beside the cook stands an open plain sack of flour. Landscape image 1536x1024; the counter, the bowls and the cook fill about 90% of the width and about 85% of the height; the four bowls take most of the width, in front. The sack is plain. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_scoop_level",
+   "kind": "line",
+   "group": "G",
+   "sweep": "c",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "Close-up of one metal measuring scoop heaped with flour, held level over a mixing bowl by a friendly hand; a second hand drags the flat back of a table knife across the rim of the scoop, levelling it: the extra flour above the rim falls off in a small sprinkle into the bowl below. Square image 1024x1024; the scoop, knife, hands and bowl fill about 80% of the width and of the height, centred. The flour is drawn with outlines and a few small dots only, no shading. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_giant_scoop",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chef",
+    "line_d_chefs",
+    "line_balance"
+   ],
+   "refnote": "The first two attached images show the cook cast of this series (tall pleated chef's hat, double-breasted jacket, apron, simple round face with dot eyes): draw the cook in the same look, in the new pose described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The cook (the same character in every picture): an invented cook with a simple round face, dot eyes, short hair under a tall pleated chef's hat, a double-breasted chef's jacket and a long apron tied at the waist, like the cooks in the first two reference images. A comic scene in a pantry: the cook holds an enormous measuring scoop as big as a shovel with both hands, trying very carefully to measure one pinch of spice into a tiny saucer on the counter; the giant scoop is far too big and the cook squints in frustration. Behind, on the floor, stands one gigantic sack, taller than the cook, the reason the scoop is so big. On the counter, a row of tiny spice jars. Landscape image 1536x1024; the cook, scoop, sack and counter fill about 90% of the width and about 85% of the height. Plain sack and jars, no labels. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_shelf_scoops",
+   "kind": "line",
+   "group": "G",
+   "sweep": "y",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "A pantry wall with four long wooden shelves one above the other, seen straight from the front. Each shelf holds things of one size: the top shelf tiny spice jars, the second shelf medium jars, the third shelf big tins, the bottom shelf two huge sacks. At the right end of every shelf hangs its own measuring scoop on a hook, sized to fit that shelf: a tiny spoon at the top, a small scoop, a bigger scoop, and a big scoop at the bottom. Square image 1024x1024; the shelves fill about 88% of the width and about 88% of the height. No labels on anything. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_tare_scale",
+   "kind": "line",
+   "group": "G",
+   "sweep": "c",
+   "refs": [
+    "line_postal_scale",
+    "line_temp_knob",
+    "line_balance"
+   ],
+   "prompt": "An old-fashioned kitchen scale with a round dial and a needle, seen from the front, with a big empty mixing bowl sitting on its platform. A friendly hand turns the small knob on the front of the scale to set the dial back, and the needle is swinging back to the starting mark at the top of the dial (a small curved motion line beside the needle). The dial has only plain tick marks around its edge. Square image 1024x1024; the scale and bowl fill about 75% of the width and about 80% of the height, centred. Nothing written on the dial. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_night_prep",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chef",
+    "line_d_chefs",
+    "line_balance"
+   ],
+   "refnote": "The first two attached images show the cook cast of this series (tall pleated chef's hat, double-breasted jacket, apron, simple round face with dot eyes): draw the cook in the same look, in the new pose described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The cook (the same character in every picture): an invented cook with a simple round face, dot eyes, short hair under a tall pleated chef's hat, a double-breasted chef's jacket and a long apron tied at the waist, like the cooks in the first two reference images. A kitchen at night: through a window at the back, a crescent moon and a few stars. The cook, calm and unhurried, works at a long table, measuring ingredients into rows of identical small jars and packing them into identical square crates, each crate holding the same number of jars in a neat grid; a stack of finished crates stands on shelves behind. A small lamp over the table, shown by a few short ray lines. Landscape image 1536x1024; table, crates, shelves and cook fill about 90% of the width and about 85% of the height. Jars and crates are unlabelled. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_conveyor_scoop",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chef",
+    "line_d_chefs",
+    "line_balance"
+   ],
+   "refnote": "The first two attached images show the cook cast of this series (tall pleated chef's hat, double-breasted jacket, apron, simple round face with dot eyes): draw the cook in the same look, in the new pose described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The cook (the same character in every picture): an invented cook with a simple round face, dot eyes, short hair under a tall pleated chef's hat, a double-breasted chef's jacket and a long apron tied at the waist, like the cooks in the first two reference images. A conveyor belt runs across the picture from left to right in front of the cook, carrying a steady stream of bowls of different sizes, each with a different amount of something in it. The cook stands behind the belt, glancing at the bowl that is just passing and quickly scooping for it, with short motion lines showing speed; the next bowls keep coming from the left. Landscape image 1536x1024; belt, bowls and cook fill about 92% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_vacuum_unpack",
+   "kind": "line",
+   "group": "B",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The packer (the same character in every picture): an invented cheerful removals worker, an adult with a simple round face, dot eyes, a short neat beard, a flat cap, a plain T-shirt under bib overalls, and a roll of packing tape hanging on a loop at the belt. In a small room, the packer kneels on the floor beside an opened vacuum storage bag: the clothes inside spring out puffy and crumpled, a sweater and shirts bursting up with small motion lines. Next to the packer lies a neat stack of still-flat vacuum bags waiting to be opened, and behind stands an ironing board with an iron on it. The packer looks a little overwhelmed, wiping the brow. Square image 1024x1024; the packer, the bags and the ironing board fill about 85% of the width and of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_van_fit",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The packer (the same character in every picture): an invented cheerful removals worker, an adult with a simple round face, dot eyes, a short neat beard, a flat cap, a plain T-shirt under bib overalls, and a roll of packing tape hanging on a loop at the belt. A street seen from the side. On the left, a small van with its back doors open, packed perfectly full with flat, neatly stacked boxes and vacuum bags, every gap used; the packer is closing one door with a satisfied grin and a thumbs-up. On the right, parked behind it, an enormous removal lorry stands completely empty with its back shutter rolled up, no longer needed; a little cobweb hangs in its empty doorway. Landscape image 1536x1024; the van, the packer and the lorry fill about 94% of the width and about 70% of the height. No company names or writing on the vehicles; number plates left blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_quant_plug_adapter",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "refs": [
+    "line_switch_dimmer",
+    "line_glue_tiles",
+    "line_balance"
+   ],
+   "prompt": "A plain wall with two wall sockets side by side, seen straight from the front, a small desk lamp standing below each. At the left socket, a hand pushes in a plug that fits it directly, its pins sliding straight in, and the lamp below it lights at once (a few short ray lines). At the right socket, the plug's pins clearly do not match the socket's holes, so a big, chunky adapter block sits between plug and socket, a second hand fiddling with it, and the lamp below it is still dark. Sockets and plugs are simple invented shapes, not any real country's design. Landscape image 1536x1024; sockets, plugs, adapter, lamps and hands fill about 90% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

@@ -1,0 +1,145 @@
+{
+ "episode": "L13-04",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: millions of requests begin with the same system prompt; why compute it again for every one? (line_prefix_same_speech).",
+  "Sharing patterns (slide 28, taped): few-shot examples (line_prefix_examples_board), self-consistency (many answers to one question), multi-turn chat where every turn repeats the history (line_prefix_chat_stack, line_round_table), tree of thought.",
+  "vLLM already shared prefix blocks inside one batch (L13-03), but a request's cache died with it; SGLang keeps it alive for later requests (her words: 'one request is dead... we may still want to keep it') (line_paged_shared_coat, planned for L13-03).",
+  "RadixAttention (SGLang, NeurIPS 2024; slides 29-31): every request's KV cache in one radix tree (a compressed trie, her LeetCode aside); a new request walks down the longest matching branch and computes only its new tip; nodes split where conversations part (line_prefix_tree_tags or line_prefix_rail_junctions; red pen marks new / hit / evicted).",
+  "A cache hit, in the cloakroom: the clerk already has the bundle for that beginning (line_prefix_lookup_drawer).",
+  "LRU eviction (slide 29): when memory runs out, cut the leaf used longest ago that no live request is on (line_prefix_gardener_prune).",
+  "Zero-overhead scheduler (slide 32): the tree matching runs on the CPU; it prepares the next batch while the GPU runs this one; the price: a finished request's memory is freed one iteration late (line_prefix_next_tray_ready).",
+  "vLLM vs SGLang (slide 33): no new fragmentation, because tree nodes hold whole blocks (line_paged_crates_on_demand, planned for L13-03); vLLM now does automatic prefix caching by hashing blocks; both do chunked prefill and disaggregation.",
+  "Mooncake (Qin et al., FAST 2025, Best Paper; slide 34): one big cluster shares a distributed KV pool, with CPU memory and SSDs behind the GPUs, so a hit can come from another machine (line_prefix_shared_warehouse).",
+  "Takeaway: compute a beginning once and keep it while it stays popular."
+ ],
+ "reuse": [
+  "line_round_table",
+  "line_clerk_ladder",
+  "line_card_catalog",
+  "line_same_question",
+  "line_scroll_reader",
+  "line_manager"
+ ],
+ "drawings": [
+  {
+   "name": "line_prefix_same_speech",
+   "kind": "line",
+   "group": "D",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). The second image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, the cabinet, the ladder or the layout.",
+   "prompt": "The clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) sits at a desk, seen from the front, tiredly copying out by hand the same long page yet again, with heavy eyelids and a slumped back; the page is covered only in wavy pen lines, not letters. Beside the desk stand three tall wobbly towers of identical finished pages. In front of the desk, on the right, a long queue of invented guests (simple round faces, dot eyes; different hairstyles: round glasses, a ponytail, a cap, curls, a bob, a bun) wait their turn, and every one of them holds up the same rolled-up blank scroll. Landscape image 1536x1024; everything fills about 92% of the width and about 80% of the height. The scrolls are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_prefix_tree_tags",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "refs": [
+    "line_tiny_lab",
+    "line_chat_first",
+    "line_balance"
+   ],
+   "prompt": "A single tree drawn clearly, like a picture-book illustration, seen from the front: one thick trunk rises from a small mound at the bottom and splits into three main branches; each main branch splits again into two or three smaller branches, and some of those split once more, giving about nine twig ends in all, well spread out. From the end of every twig hangs one small blank paper tag on a short string. The bark is drawn with only a few simple lines; no foliage except two or three small leaves near each tag; no birds, no ground details, no background. Portrait image 1024x1536; the tree fills about 88% of the width and about 90% of the height. The tags are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_prefix_rail_junctions",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "refs": [
+    "line_tiny_lab",
+    "line_chat_first",
+    "line_balance"
+   ],
+   "prompt": "A railway seen from straight above, a bird's-eye view like a model railway: one single track enters at the bottom centre and runs up the picture; at three junctions with switch points it splits, branch after branch, into six tracks that fan out towards the top. Small simple trains sit on the tracks: a long train on the shared main line coming up from the bottom, and a short train waiting at the end of three of the branches. Portrait image 1024x1536; the tracks fill about 85% of the width and about 90% of the height. No signals with writing, no station signs. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_prefix_gardener_prune",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "An invented gardener (simple round face, dot eyes, a wide sun hat, gardening gloves, an apron with pockets) stands on a small step ladder and snips off one dry, drooping twig at the end of a branch with garden shears; on that twig hangs an old, curled paper tag with a small cobweb on it. The rest of the branch carries fresh twigs, each with a crisp new blank tag, which the gardener carefully leaves alone. A small basket on the ground below already holds a few cut dry twigs. Square image 1024x1024; the gardener, the ladder and the branch fill about 85% of the width and about 85% of the height. The tags are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_prefix_chat_stack",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "refs": [
+    "line_tiny_lab",
+    "line_chat_first",
+    "line_balance"
+   ],
+   "prompt": "Four stacks of paper sheets stand side by side on a long table, seen from the front, evenly spaced from left to right and growing like a staircase: the first stack is a short pile of sheets; the second is the very same pile plus one new sheet on top; the third has one more again; the fourth one more again. The lower sheets of all four stacks are drawn exactly alike, and each newer top sheet is slightly offset so the layers are easy to tell apart. Landscape image 1536x1024; the stacks fill about 85% of the width and about 60% of the height. The sheets are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_prefix_examples_board",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A small classroom seen from the side and a little above. At the front, an invented teacher (simple round face, dot eyes, a cardigan, hair in a low ponytail) pins the third of three large example cards to a board; each card shows only a few simple blank boxes joined by arrows, no writing. Facing the board, five invented students (simple round faces, dot eyes; different hairstyles: round glasses, a ponytail, a cap, curls, a bob, a bun) sit at five small desks in a row, all looking up at the same three cards, and each works on their own, different puzzle on the desk (a jigsaw piece, a cube puzzle, a maze card, a stack of blocks, a knot of string). Landscape image 1536x1024; everything fills about 92% of the width and about 80% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_prefix_lookup_drawer",
+   "kind": "line",
+   "group": "D",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). The second image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, the cabinet, the ladder or the layout.",
+   "prompt": "At a cloakroom counter seen from the front, the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) holds a guest's blank rolled scroll in one hand and with the other pulls a long drawer out of a cabinet: inside lies a ready-made bundle of small parcels with blank round name tags, tied with string. The clerk beams, with small sparkle lines around the drawer. On the other side of the counter, the party guest (an invented young person: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag hanging on the chest) looks delighted, hands clasped. Square image 1024x1024; the clerk, the cabinet and the guest fill about 88% of the width and about 85% of the height. The scroll, tags and parcels are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_prefix_next_tray_ready",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_manager",
+    "line_d_chefs",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first attached image shows the recurring host character (hair in a neat bun with a pencil in it, waistcoat, small bow tie): draw that same character in the new pose described. The second shows the series' cooks, but our line cooks wear a low folded paper cap, not the tall chef hats shown there. All attached images are black-ink line drawings made earlier for this series: match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy poses or layouts.",
+   "prompt": "A kitchen pass seen from the front. On the right, a line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) works hard at the stove, tossing a pan over a flame. On the left, at the pass counter, the host (the same invented character as in the first reference image: hair in a neat bun with a pencil tucked in it, a waistcoat over a shirt with a small bow tie, trousers, simple round face with dot eyes) calmly lays out the NEXT tray: blank order tickets clipped in a row along its edge and small bowls of prepared ingredients set out in order, so that it is completely ready the moment the cook turns round. Landscape image 1536x1024; the cook, the host and the tray fill about 90% of the width and about 75% of the height. The tickets are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_prefix_shared_warehouse",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A bird's-eye view of a small square: in the centre, a big open-fronted warehouse with tall shelves full of identical small parcels with blank round name tags; around it, four small kitchen buildings with open fronts and one line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) visible inside each. Tiny invented porters (simple round faces, dot eyes, caps) push small hand carts of parcels along paths between the warehouse and the kitchens, in both directions; in one corner a short stairway leads down to a cellar door with more shelves behind it, the slow back store. Landscape image 1536x1024; everything fills about 92% of the width and about 85% of the height. No signs. No cakes, no pastries, no baked goods anywhere. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

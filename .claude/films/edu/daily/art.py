@@ -6,6 +6,8 @@ pack them for the film; or write the fallback page of ready-to-paste prompts whe
     ~/miniforge3/bin/python3 .claude/films/edu/daily/art.py gen     EPISODE_DIR/art.json [--jobs 3] [--tries 3]
     ~/miniforge3/bin/python3 .claude/films/edu/daily/art.py pack    EPISODE_DIR/art.json
     ~/miniforge3/bin/python3 .claude/films/edu/daily/art.py prompts EPISODE_DIR/art.json OUT.html [--drop DIR]
+    ~/miniforge3/bin/python3 .claude/films/edu/daily/art.py pre     EPISODE_DIR[/art.pre.json] [--line]
+    ~/miniforge3/bin/python3 .claude/films/edu/daily/art.py take    EPISODE_DIR/art.json
 
 art.json (committed with the episode):
     {"episode": "L01-02", "drawings": [
@@ -17,6 +19,17 @@ art.json (committed with the episode):
         "green" a sprite on #00FF00 -> art/key.py keys it into art/cut/<name>.png
   sweep: the order the pen draws strokes: "x" left first (landscape), "y" top first (portrait, square), "c" centre out.
   refs: names in art/src (default: three L01-01 drawings, for the style). people: adds "invented characters".
+
+The pre-drawn library (EDU_ART_LIBRARY, default ~/picasso-assets/edu-art-library: src/, cut/, logs/; never in git)
+holds drawings made ahead for later episodes, planned in each EPISODE_DIR/art.pre.json (the art.json schema plus
+"beats" and "reuse"). `pre` says which of an episode's planned drawings are in the library (`--line`: one line for
+run.sh's Tonight block). `take` copies every drawing of art.json that is in the library but not in art/src into
+art/src (and its packed file into art/cut); gen and pack do the same first, so an art.json that lists a library
+drawing never makes it again. A missing library (an unplugged disk, another Mac) is not an error: those drawings
+count as missing and gen makes them (or the prompts page lists them). Refs are looked up in art/src, then the library.
+EDU_ART_DIR=DIR (default: the repo's art dir) puts src/, cut/ and logs/ in DIR instead: how the library is made
+(EDU_ART_DIR=~/picasso-assets/edu-art-library art.py gen EPISODE_DIR/art.pre.json); a drawing already in DIR/src or the
+repo's art/src is never made again.
 
 gen runs art/gen.sh for every drawing not yet in art/src (a file already there is never replaced or moved: it may be
 drawn by hand; a failed check is only noted), at most --jobs at once, and checks each new
@@ -30,8 +43,10 @@ import argparse, base64, html, io, json, os, re, shutil, signal, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EDU = os.path.abspath(os.path.join(HERE, '..'))
-ART = os.path.join(EDU, 'art')
-WORK = os.path.expanduser('~/picasso-work/art')
+REPO_ART = os.path.join(EDU, 'art')
+ART = os.path.abspath(os.path.expanduser(os.environ.get('EDU_ART_DIR') or REPO_ART))   # src/, cut/, logs/
+LIB = os.path.abspath(os.path.expanduser(os.environ.get('EDU_ART_LIBRARY') or '~/picasso-assets/edu-art-library'))
+WORK = os.path.expanduser(os.environ.get('EDU_ART_WORK') or '~/picasso-work/art')   # status, rejects
 STY = ('Style: a hand-drawn line illustration for a friendly science-explainer, black ink only on a pure white (#FFFFFF) '
        'background. Confident, clean, continuous pen lines of even medium-bold weight (like a 1.0 mm fineliner), '
        'slightly hand-made but tidy, every shape drawn with closed outlines; NO shading, NO hatching, NO grey tones, '
@@ -53,7 +68,7 @@ STOP = re.compile(r'hit your usage limit|Quota exceeded|usage_limit_reached|rate
                   r'Not logged in|insufficient_quota|command not found|No such file or directory', re.I)
 CODEX = os.environ.get('CODEX') or shutil.which('codex') or \
     os.path.expanduser('~/.local/share/picasso-tools/node_modules/.bin/codex')
-GEN = os.environ.get('ART_GEN', os.path.join(ART, 'gen.sh'))      # ART_GEN: a stand-in for tests
+GEN = os.environ.get('ART_GEN', os.path.join(REPO_ART, 'gen.sh'))      # ART_GEN: a stand-in for tests
 PACKER = [os.path.join(EDU, 'tools', 'ink.py'), os.path.join(EDU, 'episodes', 'hot-strata', 'bakeoff', 'line', 'ink.py')]
 
 
@@ -90,6 +105,89 @@ def full_prompt(d, strict=False):
 
 def refs_of(d):
     return [r if r.endswith('.png') else r + '.png' for r in d.get('refs', REFS if d.get('kind', 'line') == 'line' else [])]
+
+
+def ref_path(r, library=True):
+    """A reference image (or an existing drawing): ART/src first, then the repo's art/src, then (library=True) the
+    pre-drawn library. Returns (path, None) or (None, 'missing')."""
+    for base in dict.fromkeys((ART, REPO_ART) + ((LIB,) if library else ())):
+        p = os.path.join(base, 'src', r)
+        if os.path.exists(p):
+            return p, None
+    return None, 'missing'
+
+
+def take(art):
+    """Copy each drawing of art that is in the library but not in ART/src into ART/src (and its packed file into
+    ART/cut); a file already in ART/src is never replaced. Returns ({name: what happened}, None); a missing library is
+    reported per drawing, not as an error."""
+    out = {}
+    have_lib = os.path.isdir(os.path.join(LIB, 'src'))
+    for d in art['drawings']:
+        name = d['name'] + '.png'
+        if os.path.exists(os.path.join(ART, 'src', name)):
+            out[d['name']] = 'in art/src'
+            continue
+        if ART == LIB or not have_lib:
+            out[d['name']] = 'missing' + ('' if have_lib else f' (no library at {LIB})')
+            continue
+        lib_src = os.path.join(LIB, 'src', name)
+        if not os.path.exists(lib_src):
+            out[d['name']] = 'missing (not in the library)'
+            continue
+        try:
+            os.makedirs(os.path.join(ART, 'src'), exist_ok=True)
+            shutil.copy2(lib_src, os.path.join(ART, 'src', name))
+            lib_cut, cut = os.path.join(LIB, 'cut', name), os.path.join(ART, 'cut', name)
+            if os.path.exists(lib_cut) and not os.path.exists(cut):
+                os.makedirs(os.path.dirname(cut), exist_ok=True)
+                shutil.copy2(lib_cut, cut)
+        except OSError as e:
+            out[d['name']] = f'missing (copy from the library failed: {e})'
+            continue
+        out[d['name']] = 'copied from the library'
+    return out, None
+
+
+def pre(path):
+    """An episode's pre-drawn plan (EPISODE_DIR/art.pre.json) against the library and art/src.
+    Returns ({'art_pre', 'library', 'library_found', 'drawings': {name: 'library' | 'art/src' | 'missing'}, 'reuse',
+    'beats'}, None), or (None, 'error') when there is no plan."""
+    if os.path.isdir(path):
+        path = os.path.join(path, 'art.pre.json')
+    if not os.path.exists(path):
+        return None, f'no pre-drawn plan: {path}'
+    art, err = load(path)
+    if err:
+        return None, err
+    found = os.path.isdir(os.path.join(LIB, 'src'))
+    where = {}
+    for d in art['drawings']:
+        name = d['name'] + '.png'
+        if os.path.exists(os.path.join(REPO_ART, 'src', name)):
+            where[d['name']] = 'art/src'
+        elif found and os.path.exists(os.path.join(LIB, 'src', name)):
+            where[d['name']] = 'library'
+        else:
+            where[d['name']] = 'missing'
+    return {'episode': art.get('episode'), 'art_pre': os.path.abspath(path), 'library': LIB, 'library_found': found,
+            'drawings': where, 'reuse': art.get('reuse', []), 'beats': len(art.get('beats', []))}, None
+
+
+def pre_line(p):
+    """One line for run.sh's Tonight block from pre()'s result."""
+    n = len(p['drawings'])
+    have = sum(v != 'missing' for v in p['drawings'].values())
+    miss = [k for k, v in p['drawings'].items() if v == 'missing']
+    head = f"{p['art_pre']} plans {n} drawings (+ {len(p['reuse'])} reused, {p['beats']} beats)"
+    if not p['library_found']:
+        return (f"{head}, but the library {p['library']} is not on this Mac: treat them as not made (step 5: make the "
+                'ones the film needs, or the prompts page)')
+    if not have:
+        return f'{head}; none of them is made yet (not in the library): use the plan, make what the film needs (step 5)'
+    tail = f"; not made: {', '.join(miss)}" if miss else ''
+    return (f"{head}; {have} of {n} are made, in {p['library']}/src (cut/ packed). Build from them first (step 5, "
+            f'pre-drawn art){tail}')
 
 
 def inspect(path, kind='line'):
@@ -136,7 +234,8 @@ def inspect(path, kind='line'):
 
 def status_path(art):
     os.makedirs(WORK, exist_ok=True)
-    return os.path.join(WORK, f'{art.get("episode", "episode")}.status.json')
+    lib = '' if ART == REPO_ART else '.library'
+    return os.path.join(WORK, f'{art.get("episode", "episode")}{lib}.status.json')
 
 
 def write_status(art, st):
@@ -146,12 +245,14 @@ def write_status(art, st):
 
 
 def check(art):
-    """Which drawings exist and pass the checks. Returns ({name: 'ok' | 'missing' | 'rejected: why'}, None)."""
+    """Which drawings exist and pass the checks. Returns ({name: 'ok' | 'missing' | 'in the library ...' |
+    'rejected: why'}, None)."""
     out = {}
     for d in art['drawings']:
-        p = os.path.join(ART, 'src', d['name'] + '.png')
-        if not os.path.exists(p):
-            out[d['name']] = 'missing'
+        p = ref_path(d['name'] + '.png', library=False)[0]
+        if not p:
+            lib = ART != LIB and os.path.exists(os.path.join(LIB, 'src', d['name'] + '.png'))
+            out[d['name']] = 'in the library, not yet in art/src (art.py take)' if lib else 'missing'
             continue
         _, err = inspect(p, d.get('kind', 'line'))
         out[d['name']] = 'ok' if not err else 'rejected: ' + err
@@ -176,20 +277,23 @@ def tool_ready():
 
 def gen(art, jobs=3, tries=3, timeout=900):
     """Make every missing drawing. Returns (status dict, None) or (None, 'error')."""
-    missing = [r for r in refs_of_all(art) if not os.path.exists(os.path.join(ART, 'src', r))]
+    missing = [r for r in refs_of_all(art) if not ref_path(r)[0]]
     if missing:
         return None, f'reference images missing from art/src: {missing}'
+    taken, _ = take(art)                          # library drawings first: never made again
     st = {'episode': art.get('episode'), 'drawings': {}, 'stopped': None}
     ok, why = tool_ready()
     if not ok:
         st['stopped'] = why                       # nothing is started; the status says "tool stopped: ..."
     queue = []
     for d in art['drawings']:
-        p = os.path.join(ART, 'src', d['name'] + '.png')
-        if os.path.exists(p):                     # kept as it is (it may be drawn by hand): only flagged
+        p = ref_path(d['name'] + '.png', library=False)[0]
+        if p:                                     # kept as it is (it may be drawn by hand): only flagged
             _, why = inspect(p, d.get('kind', 'line'))
+            how = 'copied from the library' if taken.get(d['name']) == 'copied from the library' else \
+                f'already in {os.path.dirname(p)}'
             st['drawings'][d['name']] = {'state': 'ok', 'tries': 0,
-                                         'note': 'already in art/src' + (f' (check: {why}; look at it)' if why else '')}
+                                         'note': how + (f' (check: {why}; look at it)' if why else '')}
         else:
             st['drawings'][d['name']] = {'state': 'queued', 'tries': 0}
             queue.append(d)
@@ -210,9 +314,9 @@ def gen(art, jobs=3, tries=3, timeout=900):
             d = queue.pop(0)
             s = st['drawings'][d['name']]
             s['tries'] += 1
-            env = dict(os.environ, SKIP_EXISTING='1', REFNOTE=d.get('refnote', REFNOTE), CODEX=CODEX)
+            env = dict(os.environ, SKIP_EXISTING='1', REFNOTE=d.get('refnote', REFNOTE), CODEX=CODEX, ART_OUT=ART)
             cmd = ['bash', GEN, d['name'], full_prompt(d, strict=s['tries'] > 1)] + \
-                  ['src/' + r for r in refs_of(d)]
+                  [ref_path(r)[0] for r in refs_of(d)]
             running[d['name']] = (subprocess.Popen(cmd, cwd=ART, env=env, stdout=subprocess.DEVNULL,
                                                    stderr=subprocess.DEVNULL, start_new_session=True), time.time(), d)
             s['state'] = 'running'
@@ -239,7 +343,7 @@ def gen(art, jobs=3, tries=3, timeout=900):
                 s['note'] = 'rejected: ' + why
             else:
                 m = STOP.search(logtext)
-                s['note'] = ('tool stopped: ' + m.group(0)) if m else ('no file (see art/logs/%s.log)' % name)
+                s['note'] = ('tool stopped: ' + m.group(0)) if m else ('no file (see %s)' % log)
                 if m:
                     st['stopped'] = m.group(0)
             if s['tries'] < tries and not st['stopped']:
@@ -266,6 +370,7 @@ def pack(art):
     packer = next((p for p in PACKER if os.path.exists(p)), None)
     if not packer:
         return None, 'no ink.py found'
+    take(art)                                     # library drawings into art/src first
     out = {}
     for d in art['drawings']:
         kind, name = d.get('kind', 'line'), d['name']
@@ -278,8 +383,8 @@ def pack(art):
         if kind == 'line':
             cmd = [sys.executable, packer, f'{name}:{d.get("sweep", "y")}' + ('' if d.get('fill', True) else ':0')]
         else:
-            cmd = [sys.executable, os.path.join(ART, 'key.py'), name]
-        r = subprocess.run(cmd, cwd=EDU, capture_output=True, text=True)
+            cmd = [sys.executable, os.path.join(REPO_ART, 'key.py'), name]
+        r = subprocess.run(cmd, cwd=EDU, capture_output=True, text=True, env=dict(os.environ, EDU_ART_DIR=ART))
         out[name] = (r.stdout.strip() or r.stderr.strip())[-200:] if r.returncode == 0 else 'FAILED ' + r.stderr[-300:]
     return out, None
 
@@ -287,7 +392,7 @@ def pack(art):
 def thumb(name, h=300):
     """A small JPEG data URI of art/src/<name>.png for the prompts page."""
     from PIL import Image
-    im = Image.open(os.path.join(ART, 'src', name)).convert('RGB')
+    im = Image.open(ref_path(name)[0]).convert('RGB')
     im.thumbnail((h * 2, h))
     buf = io.BytesIO()
     im.save(buf, 'JPEG', quality=82)
@@ -297,9 +402,9 @@ def thumb(name, h=300):
 def prompts_page(art, out, drop=None, only_missing=True):
     """The fallback page: one card per drawing, grouped into chats, with its reference images, the prompt and the
     file name to save as. Returns (path, None) or (None, 'error')."""
-    rows = [d for d in art['drawings'] if not (only_missing and os.path.exists(os.path.join(ART, 'src', d['name'] + '.png')))]
+    rows = [d for d in art['drawings'] if not (only_missing and ref_path(d['name'] + '.png')[0])]
     if not rows:
-        return None, 'every drawing is already in art/src'
+        return None, 'every drawing is already in art/src or the library'
     groups = {}
     for d in rows:
         groups.setdefault(d.get('group', 'A'), []).append(d)
@@ -356,14 +461,21 @@ function cp(id, b){{navigator.clipboard.writeText(document.getElementById(id).te
 
 def main():
     ap = argparse.ArgumentParser(description='the episode drawings; see the module doc')
-    ap.add_argument('cmd', choices=['check', 'gen', 'pack', 'prompts'])
+    ap.add_argument('cmd', choices=['check', 'gen', 'pack', 'prompts', 'pre', 'take'])
     ap.add_argument('art_json')
     ap.add_argument('out', nargs='?')
     ap.add_argument('--jobs', type=int, default=3)
     ap.add_argument('--tries', type=int, default=3)
     ap.add_argument('--drop')
     ap.add_argument('--all', action='store_true', help='prompts: include drawings that already exist')
+    ap.add_argument('--line', action='store_true', help='pre: one line for the Tonight block')
     a = ap.parse_args()
+    if a.cmd == 'pre':
+        res, err = pre(a.art_json)
+        if err:
+            sys.exit(err)
+        print(pre_line(res) if a.line else json.dumps(res, indent=1))
+        return
     art, err = load(a.art_json)
     if err:
         sys.exit(err)
@@ -373,6 +485,8 @@ def main():
         res, err = gen(art, a.jobs, a.tries)
     elif a.cmd == 'pack':
         res, err = pack(art)
+    elif a.cmd == 'take':
+        res, err = take(art)
     else:
         if not a.out:
             sys.exit('prompts needs OUT.html')

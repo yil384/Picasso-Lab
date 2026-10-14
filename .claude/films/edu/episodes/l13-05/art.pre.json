@@ -1,0 +1,159 @@
+{
+ "episode": "L13-05",
+ "pre": true,
+ "made": "2026-10-14",
+ "beats": [
+  "Hook: when a model writes one word, a GPU with 132 processors (an H100 SXM's SMs) might keep only a handful busy (line_decode_idle_hall).",
+  "Recap FlashAttention (Dao et al., NeurIPS 2022; slide 36): online softmax, fuse the steps and keep the tiles on the counter (shared memory) instead of carrying bowls back to the fridge: far less memory traffic; great for training and prefill (line_decode_fused_counter; L09 plans: line_gpu_tray_fetch).",
+  "Why decode starves the GPU (slide 37): prefill splits the many queries into tiles, so S/T x heads x batch blocks; decode has one query per request, so only 1 x heads x batch blocks, far fewer than the SMs at small batch (line_decode_idle_hall).",
+  "FlashDecoding (Stanford CRFM, Oct 2023; slide 38): split the long KV cache into pieces, read them on many SMs at once, then merge the partial softmax results (the split-K idea from GEMM) (line_decode_scroll_split_readers, line_decode_merge_notes; line_scroll_reader for the long cache).",
+  "Wave quantization (slides 39, 42-45, self study): 168 blocks on 132 SMs = one full wave plus a second wave of only 36 (a bus with 132 seats and 168 passengers) (line_decode_bus_full, line_decode_bus_stragglers).",
+  "LeanAttention (2024) / stream-K (slide 39): add up all the work and deal every SM an equal share (line_decode_equal_piles).",
+  "FlashInfer (Ye et al., MLSys 2025; slide 40): the attention engine behind many serving systems: reads paged KV in place, one format for many systems, JIT-compiles custom attention variants (line_decode_mixer_attachments, line_decode_key_cutter).",
+  "POD-Attention (Kamath et al., ASPLOS 2025; slide 41): in a chunked-prefill batch, put compute-bound prefill and memory-bound decode work on the same SMs so burners and pantry door are both busy (line_decode_shared_station).",
+  "Takeaway (her summary): FlashAttention for prefill, FlashDecoding for generation, FlashInfer packages them for the serving engines; scheduling, KV management and kernels are the three layers of serving."
+ ],
+ "reuse": [
+  "line_gpu",
+  "line_pc_kitchen",
+  "line_kitchen",
+  "line_d_chefs",
+  "line_scroll_reader",
+  "line_scroll_ends",
+  "line_heap"
+ ],
+ "drawings": [
+  {
+   "name": "line_decode_idle_hall",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "A huge kitchen hall seen from high above and in front, a steep bird's-eye view: a regular grid of identical square cooking stations, five across and six deep (thirty in all), with clear walkways between them; at each station stands one small identical line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron). Only THREE stations near the front are busy: their cooks chop and stir at full speed, with small motion lines. At every other station the cook is idle: leaning on the counter, yawning, asleep with the head on folded arms, reading a small book, balancing a spoon on the nose, two of them playing cards across a walkway. Portrait image 1024x1536; the hall fills about 92% of the width and about 90% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_decode_fused_counter",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "Two scenes side by side with a thin gap between them, both seen from the front. Left: a line cook (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) runs back and forth between a small counter and a far walk-in fridge door, carrying a single bowl, sweating, with a long dotted trail of footprints looping between counter and fridge. Right: the same cook stands at one counter with everything already on a tray within reach (a cutting board, three small bowls, a pan on a burner) and does every step right there, calm and quick, never leaving the counter. Landscape image 1536x1024; both scenes together fill about 92% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_decode_scroll_split_readers",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "One very long blank paper scroll lies flat along a row of four small desks placed end to end across the whole picture, seen from the front and a little above; the scroll is cut cleanly into four equal pieces at the joins between the desks. At each desk sits a different invented reader (simple round faces, dot eyes; different hairstyles: round glasses, a ponytail, a cap, curls, a bob, a bun), each reading only their own piece through a magnifying glass and jotting on one small note card, all at the same time. Landscape image 1536x1024; the desks and the readers fill about 95% of the width and about 70% of the height. The scroll and the cards are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_decode_merge_notes",
+   "kind": "line",
+   "group": "A",
+   "sweep": "c",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "An invented person (simple round face, dot eyes, short neat hair, round glasses, a cardigan) sits at a small desk seen from the front and takes four small blank note cards, one from each of four hands reaching in from the left edge, the right edge and the two top corners of the picture, and clips them together with one big paper clip into one neat little stack on the desk, looking satisfied. Square image 1024x1024; the person, the desk and the hands fill about 85% of the width and about 85% of the height. The cards are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_decode_bus_full",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A long single-decker city bus seen from the side, pulling away from a stop towards the right, completely full: a passenger's head in every window and a few standing passengers squeezed by the doors. At the stop on the left, a crowd of about a dozen invented passengers (simple round faces, dot eyes; different hairstyles, bags, an umbrella) is left behind, watching it go, one waving an arm, one sitting on a suitcase. Landscape image 1536x1024; the bus and the crowd fill about 95% of the width and about 70% of the height. The destination sign above the windscreen is blank; no route number, no adverts, no writing on the bus or the stop. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_decode_bus_stragglers",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "A long single-decker city bus seen from the side, driving to the right on a second trip, almost empty: only a few invented passengers (simple round faces, dot eyes) sit in the first windows behind the driver, and every other window shows rows of empty seat backs. The invented driver (simple round face, dot eyes, a peaked cap) glances back over the shoulder at all the empty seats with a shrug. Landscape image 1536x1024; the bus fills about 92% of the width and about 55% of the height. The destination sign is blank; no route number, no adverts, no writing. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_decode_equal_piles",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "Four invented movers (simple round faces, dot eyes, overalls, work gloves; different hairstyles) stand side by side in a row, seen from the front, each in front of a stack of identical plain cardboard boxes; all four stacks are exactly the same height, and all four movers lift the top box at the same moment, in step. At the left edge, an invented dispatcher (simple round face, dot eyes, a cap, a clipboard) stands beside an empty hand cart, having just shared out the boxes. Landscape image 1536x1024; the movers, the stacks and the dispatcher fill about 92% of the width and about 80% of the height. The boxes and the clipboard are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_decode_mixer_attachments",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "refs": [
+    "line_tiny_lab",
+    "line_chat_first",
+    "line_balance"
+   ],
+   "prompt": "A kitchen counter seen from the front: in the middle stands one sturdy stand mixer with its motor head tilted up; laid out in a neat row on both sides of it, many different attachments that all fit the same socket: a balloon whisk, a dough hook, a flat beater, a drum slicer, a pasta roller, a citrus juicer cone and a meat grinder. Landscape image 1536x1024; the mixer and the attachments fill about 90% of the width and about 65% of the height. No brand marks, no logos, no dials with numbers. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_decode_key_cutter",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "At a small key-cutting counter seen from the front, an invented locksmith (simple round face, dot eyes, a leather apron, small magnifying spectacles pushed up on the forehead) cuts a brand-new key on a little bench machine with a spinning wheel and a few sparks, while an invented customer (simple round face, dot eyes, a bob haircut) waits on the other side holding an oddly shaped padlock. On a pegboard behind hang many key blanks of different shapes. Square image 1024x1024; the locksmith, the machine and the customer fill about 88% of the width and about 85% of the height. No signs, no tags with writing. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_decode_shared_station",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content. Our line cooks wear a low folded paper cap, not the tall chef hats of the first reference.",
+   "prompt": "One square cooking station seen from the front and a little above, shared by two line cooks (simple round face, dot eyes, a low folded paper cook's cap like a diner cook, NOT a tall chef's hat, a plain short-sleeved cook's jacket and a short apron) working at the same time: on the left half of the counter one cook chops a mountain of vegetables at full speed with a big knife, with small motion lines; on the right half the other cook hurries in and out of a pantry door just behind the station, carrying jars and trays. Both are busy and nobody waits. Landscape image 1536x1024; the station and the cooks fill about 85% of the width and about 80% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

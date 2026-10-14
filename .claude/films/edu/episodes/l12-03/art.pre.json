@@ -1,0 +1,147 @@
+{
+ "episode": "L12-03",
+ "pre": true,
+ "made": "2026-10-14",
+ "note": "Sources: her quantization lecture is the recording transcribed in course/L13.transcript.md (it opens \"for this lecture, we will cover large language model quantizations\"); course/L12.transcript.md is the serving lecture, and the slide markers in both transcripts point at the other PDF. Slides: course/L12.txt / L12.pdf.",
+ "beats": [
+  "Hook: GPTQ squeezed a 175-billion-parameter model to 3 or 4 bits in a few hours, and it ran faster on fewer GPUs (3-bit OPT-175B on one 80 GB A100 instead of five: check) (line_gptq_cards_packed).",
+  "Why not just retrain? Fine-tuning a 175B model to repair the rounding is out of reach, so: one-shot post-training quantization from a small calibration set (128-512 samples); larger models are easier to quantize (slides 19-20; line_grow, line_gptq_tailor_fittings).",
+  "GPTQ's idea (slide 21): round a few weights, then nudge the not-yet-rounded ones to cancel the error, left to right, like pinning a hem and smoothing the rest before the next pin (line_gptq_tailor_pin_hem). H = 2XX^T says which neighbours move together: intuition only.",
+  "Old way vs GPTQ: picking the easiest weight next meant recomputing H and its inverse after every weight: months; a fixed order plus one Cholesky factorisation: hours (line_gptq_tailor_two_ways).",
+  "Results (slide 22): 3-bit OPT-175B, per-token latency at batch 1 3.24x (A100) / 4.53x (A6000) lower (check); small groups rescue 2-bit (taped slide 22).",
+  "Kernels (slide 23): the INT4-to-FP16 unpacking from L12-02 has to be nearly free: AutoGPTQ, ExLlama, Marlin, inside vLLM, SGLang and TensorRT-LLM (line_gptq_unpack_relay; line_quant_vacuum_unpack from L12-02).",
+  "AWQ (slide 24): only about 1% of the weights matter a lot: the ones that meet big activations, found by watching real inputs (line_awq_worn_path); scale those channels up before rounding and the activation down, so they round more precisely (line_awq_bubble_wrap).",
+  "Results (slide 25): INT4 with groups of 128 matches FP16 on MBPP and GSM8K; about 3x faster than FP16 at batch 1 (check).",
+  "llama.cpp (slide 26): plain C/C++, CPU and Apple silicon first: run the model at home, privately (line_local_laptop_elephant); GGUF uses small blocks (16-32) that a CPU can afford.",
+  "k-quants (slide 27): different layers get different bits, 2-6, like packing a suitcase item by item (line_kquant_suitcase_mix). Takeaway: careful rounding beats retraining: fix one and adjust the rest (GPTQ), or protect the few that matter (AWQ)."
+ ],
+ "reuse": [
+  "line_grow",
+  "line_servers",
+  "line_gpu",
+  "line_heap",
+  "line_cabinet_tower",
+  "line_postal_scale"
+ ],
+ "drawings": [
+  {
+   "name": "line_gptq_tailor_pin_hem",
+   "kind": "line",
+   "group": "D",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The tailor (the same character in every picture): an invented older tailor with a simple round face, dot eyes, small round glasses, short curly hair, a cloth tape measure draped around the neck, a cardigan over a shirt with rolled-up sleeves, and a round pincushion strapped to the left wrist. The tailor kneels on the floor beside a dress form wearing a long coat, pinning up its hem from left to right. The left part of the hem is already folded up and held by a neat row of pins; the tailor's left hand pushes the newest pin in, while the right hand gently smooths and nudges the still-loose fabric just to the right of it so the rest of the hem lies straight; the remaining fabric further right still hangs loose, unpinned. Landscape image 1536x1024; the dress form, the coat and the tailor fill about 88% of the width and about 90% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gptq_tailor_fittings",
+   "kind": "line",
+   "group": "D",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The tailor (the same character in every picture): an invented older tailor with a simple round face, dot eyes, small round glasses, short curly hair, a cloth tape measure draped around the neck, a cardigan over a shirt with rolled-up sleeves, and a round pincushion strapped to the left wrist. Three invented customers of different builds (simple round faces, dot eyes: one tall and thin, one short and round, one broad-shouldered) stand in a row on small low fitting platforms, each wearing the same unfinished jacket with loose basting stitches. The tailor walks along the row with a small notebook, looking closely at where the jacket pulls on each of them and jotting a note. Landscape image 1536x1024; the three customers and the tailor fill about 92% of the width and about 85% of the height. The notebook pages are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gptq_tailor_two_ways",
+   "kind": "line",
+   "group": "D",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The tailor (the same character in every picture): an invented older tailor with a simple round face, dot eyes, small round glasses, short curly hair, a cloth tape measure draped around the neck, a cardigan over a shirt with rolled-up sleeves, and a round pincushion strapped to the left wrist. One picture in two halves, the same tailor in both, with clear white space between the halves and no dividing line. Left half: the tailor sits at a cutting table buried under a mountain of crumpled, redrawn paper sewing patterns that spill onto the floor, cobwebs at the corner of the table, a wall calendar above with most of its pages torn off and flying away, looking exhausted. Right half: the tailor stands relaxed beside a finished coat on a dress form, a cup of tea in hand, one tidy paper pattern on the table and the pins in a neat row. Landscape image 1536x1024; the two scenes fill about 94% of the width and about 80% of the height. Calendar pages blank, patterns without markings. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gptq_cards_packed",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_gpu",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The first attached image shows the graphics card as drawn earlier for this series: draw the cards in the same way. The other attached images are style references only (line drawings made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The packer (the same character in every picture): an invented cheerful removals worker, an adult with a simple round face, dot eyes, a short neat beard, a flat cap, a plain T-shirt under bib overalls, and a roll of packing tape hanging on a loop at the belt. On a long workbench lie five identical large graphics cards in a row (long rectangular bodies with three big round fans on top, like the card in the first reference image). The packer is lowering the fourth card into an open cardboard box; the fifth is already boxed and taped shut on the floor beside the bench; the second and third are wrapped in packing paper, ready to go. Only the first card, at the left, stays on the bench and is running happily, with a few short whirl lines around its fans. Landscape image 1536x1024; bench, cards, boxes and packer fill about 92% of the width and about 80% of the height. No brand names, no writing on the cards or boxes. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_gptq_unpack_relay",
+   "kind": "line",
+   "group": "C",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chef",
+    "line_d_chefs",
+    "line_balance"
+   ],
+   "refnote": "The first two attached images show the cook cast of this series (tall pleated chef's hat, double-breasted jacket, apron, simple round face with dot eyes): draw the cook in the same look, in the new pose described. The last image is a style reference only. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The cook (the same character in every picture): an invented cook with a simple round face, dot eyes, short hair under a tall pleated chef's hat, a double-breasted chef's jacket and a long apron tied at the waist, like the cooks in the first two reference images. Three identical copies of the cook stand in a line along a counter like a relay team, working at top speed with motion lines: the first takes a small flat vacuum-packed brick from a crate and tosses it to the second, the second slits it open with one swift stroke of a knife, and the third tips the puffed-up contents straight into a big bubbling pot. Landscape image 1536x1024; the three cooks, counter, crate and pot fill about 94% of the width and about 80% of the height. Packets plain. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_awq_bubble_wrap",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_round_table",
+    "line_balance"
+   ],
+   "prompt": "The packer (the same character in every picture): an invented cheerful removals worker, an adult with a simple round face, dot eyes, a short neat beard, a flat cap, a plain T-shirt under bib overalls, and a roll of packing tape hanging on a loop at the belt. The packer packs a big open cardboard moving box on the floor. A crowd of plain sturdy mugs on a table go straight into the box without any wrapping. But three tall, delicate glass vases get carefully wrapped first in thick bubble wrap (drawn as a sheet of small circles): one vase is already fat with wrapping, one is half wrapped in the packer's hands, one waits unwrapped beside the roll of bubble wrap. Landscape image 1536x1024; the packer, box, mugs and vases fill about 90% of the width and about 80% of the height. Plain box, no writing or arrows. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_awq_worn_path",
+   "kind": "line",
+   "group": "G",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_two_lanterns",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "A small park seen from slightly above. Neat paved paths form a tidy grid between rectangles of lawn, all completely empty. But one diagonal shortcut has been worn straight across the lawns by footsteps: a bare, trodden dirt track with footprints, and four small invented walkers (simple round faces, dot eyes, plain clothes) are walking along it in a line. A few round trees and a bench along the edges. Landscape image 1536x1024; the park fills about 94% of the width and about 85% of the height. No signs. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_local_laptop_elephant",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_ruler_curve",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "refnote": "The first two attached images show the recurring student (short messy hair, hoodie, simple round face with dot eyes): draw the same person in the new pose described. The last image is a style reference only (a line drawing made earlier for this series, black ink on white). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The student (the same invented character as in the first two reference images, in every picture): a young person with a simple round face, dot eyes, short messy hair, a plain hoodie, jeans and sneakers. At home in the evening, the student sits on a sofa with a laptop on the knees, typing happily. On the sofa cushion right next to the student sits a friendly elephant shrunk to the size of a house cat, with the proportions of a full-grown elephant, leaning in to look at the laptop screen with interest, its trunk resting on the student's arm. A floor lamp, a side table with a mug and a window with curtains behind. Landscape image 1536x1024; sofa, student and elephant fill about 85% of the width and about 80% of the height. The laptop screen is blank and there is no logo on the laptop. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_kquant_suitcase_mix",
+   "kind": "line",
+   "group": "G",
+   "sweep": "c",
+   "refs": [
+    "line_balance",
+    "line_glue_tiles",
+    "line_tiny_lab"
+   ],
+   "prompt": "Seen straight from above: a big open suitcase lying on a bed, packed in different ways in different sections: on the left, sweaters rolled up very tightly into small hard rolls; in the middle, T-shirts squeezed flat in a vacuum bag; at the top right, a camera nested in a thick padded case with soft foam all around it; at the bottom right, a pair of shoes stuffed with socks. Landscape image 1536x1024; the suitcase fills about 85% of the width and about 80% of the height. No labels, no logos on the camera. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}
