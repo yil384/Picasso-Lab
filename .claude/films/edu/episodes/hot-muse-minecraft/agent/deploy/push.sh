@@ -7,8 +7,9 @@
 #                               production (play.picasso-lab.com) exactly as before
 #   deploy/push.sh --check      the staging checks alone, against what staging runs now
 #   add --dry-run to print what would run (no ssh, no rsync, no checks)
-# Each deploy copies the code, then rebuilds and restarts the containers. Games in progress end when an agent restarts;
-# check https://play.picasso-lab.com/ first ("Bots in use"). With deploy/stream.env on picasso, the live-video streamer
+# Each deploy copies the code, then rebuilds and restarts the containers. Games in progress end when an agent restarts:
+# the deploy stops while staging has games in progress (before anything is copied; STAGING_NOW=1 goes on) and before
+# production while production has (MUSE_NOW=1 goes on), counted by each agent ("Bots in use"). With deploy/stream.env on picasso, the live-video streamer
 # (compose profile "stream") is built and started in production too; with deploy/camera.env, the real-client camera
 # (profile "camera"; its account signed in with scripts/camera-login.mjs). Staging runs the camera the same way when its
 # own deploy/camera.env exists, unless another camera container runs (one account, one client).
@@ -69,6 +70,25 @@ check() {
   x node "$A/scripts/staging-check.mjs" https://play-staging.picasso-lab.com
 }
 
+# Games in progress where the deploy goes (a deploy recreates the agent and ends them; 2026-10-14: one recreated staging
+# under the dev agent's 8-game load test): it stops unless forced, STAGING_NOW=1 for staging, MUSE_NOW=1 for
+# production (as deploy/recreate.sh). The count comes from the agent itself ("Bots in use"); an agent that does not
+# answer (down, restarting, a first deploy) does not stop it.
+idle() {  # $1: staging | production
+  local c=muse-minecraft-agent-1 force=${MUSE_NOW:-} name=MUSE_NOW
+  if [[ $1 == staging ]]; then c=muse-staging-agent-1; force=${STAGING_NOW:-}; name=STAGING_NOW; fi
+  local n
+  n=$(x ssh picasso "docker exec $c node -e \"fetch('http://127.0.0.1:8787/').then((r) => r.text()).then((t) => console.log((/Bots in use: (\\\\d+) of/.exec(t) || [])[1] ?? '?'), () => console.log('?'))\" 2>/dev/null || echo '?'")
+  (( DRY )) && return 0
+  n=${n//[^0-9?]/}
+  if [[ $n == <1-> ]]; then
+    if [[ $force == 1 ]]; then print "push: $n game(s) in progress on $1, going on ($name=1): they end"; return 0; fi
+    print -u2 "push: STOPPED, nothing deployed to $1: $n game(s) in progress there, and the deploy recreates its agent, which ends them; wait for 0 (or $name=1)"
+    return 1
+  fi
+  return 0
+}
+
 # production, as before staging existed, with: the prune of our own dangling images (a note when picasso refuses it),
 # the trusted-proxy note, mineai/ (its image builds the runtime too, MINEAI=1), the bots' data folder (mode 700) and
 # the body deploy/.env picks (BODY; without it, ours)
@@ -107,6 +127,7 @@ disk() {
 
 if (( CHECK_ONLY )); then check; exit; fi
 disk || exit 1
+idle staging || exit 1
 before=$(fingerprint)
 staging
 if ! check; then print -u2 "push: the staging checks failed; production was not touched"; exit 1; fi
@@ -115,4 +136,5 @@ if (( ! PROD )); then
   exit 0
 fi
 if [[ $(fingerprint) != "$before" ]]; then print -u2 "push: files changed while staging was checked; production was not touched (run it again)"; exit 1; fi
+idle production || { print -u2 "push: staging runs this code and passed its checks; production was not touched"; exit 1; }
 prod

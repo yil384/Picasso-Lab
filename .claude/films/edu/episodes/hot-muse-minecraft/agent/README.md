@@ -425,7 +425,13 @@ deploy/push.sh --prod              # the same, then production exactly as before
 deploy/push.sh --check             # the staging checks alone, against what staging runs now
 deploy/push.sh --prod --dry-run    # print what would run, run nothing
 node scripts/staging-check.mjs [url] [--no-game]   # the checks by hand (default: the staging URL)
+STAGING_NOW=1 deploy/push.sh       # even while staging has games in progress (they end)
+MUSE_NOW=1 deploy/push.sh --prod   # even while production has games in progress (they end)
 ```
+
+A deploy recreates the agent, which ends every game in progress (2026-10-14: one recreated staging under an 8-game load
+test). So push.sh asks each agent ("Bots in use") first: with games on staging it stops before copying anything; with
+games on production it stops after staging, production untouched. An agent that does not answer does not stop it.
 
 Since ROADMAP M4 staging plays on Normal with real days and nights (`PAPER_DIFFICULTY=normal`, `PAPER_DAYLIGHT=cycle` in
 its `deploy/.env`): the check's strict game can be stopped by a mob at night (2026-10-09: a zombie took `craft stick`
