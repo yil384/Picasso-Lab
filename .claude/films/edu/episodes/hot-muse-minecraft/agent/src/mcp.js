@@ -32,6 +32,7 @@ import { createPlanner, describeMissing } from './plan.js';
 import { registryFor } from './mc.js';
 import { liveViewHtml } from './live-page.js';
 import { createTermFeed, cutWords, callerOf } from './terminal.js';
+import { moderator } from './moderation.js';
 
 const CALL_MS = 45_000; // every reply within 45 s: MCP clients commonly give up after 60 s (a long skill keeps going)
 /** Of a call's time, what building the reply may take (the state text scans the blocks around: ~850 ms on Paper). */
@@ -40,7 +41,9 @@ const replyBudget = (callMs) => Math.min(2_000, Math.round(callMs / 20));
 export const WHY_MAX = 140;
 /** Muse's plan with a call (play, play_sequence: plan): its next few steps and fallbacks; longer is cut at a word. */
 export const PLAN_MAX = 400;
-const IDLE_MS = 5 * 60_000; // a game nobody has called for 5 minutes (and that runs nothing) is ended, freeing its bot
+const IDLE_MS_DEFAULT = 5 * 60_000; // a game nobody has called for 5 minutes (and that runs nothing) is ended, freeing its bot (WEB_IDLE_MS)
+/** In-game chat (say) is the owner's on a public server: an outside agent's words go in why and plan instead. */
+export const SAY_CLOSED_TEXT = 'say (in-game chat) is off for games on this public server: nothing was run. Your words reach viewers through why and plan on every play call.';
 const IDLE_SESSION_MS = 10 * 60_000; // an MCP session without a game is dropped after 10 minutes without calls
 const JOIN_WAIT_MS = 30_000;
 /** start_game waits this long for a Minecraft server that is still starting, then says SERVER_STARTING (retry in N s). */
@@ -325,7 +328,9 @@ export function createMcp(hooks) {
     const list = [extra?.signal, http.getStore()?.cut.signal].filter(Boolean);
     return list.length > 1 ? AbortSignal.any(list) : list[0];
   };
-  const limits = { sessions: 200, perAddress: 20, ...(hooks.limits ?? {}) };
+  const limits = { sessions: 200, perAddress: 20, perMinute: 120, ...(hooks.limits ?? {}) };
+  const IDLE_MS = hooks.idleMs ?? IDLE_MS_DEFAULT;
+  const words = moderator();
   const leaseMin = Math.round((hooks.leaseMs ?? 600_000) / 60_000);
   const queues = new WeakMap(); // game (the web's session object) -> its queue; it moves with the game on a resume
   // game version -> dry-run planner; the server's version is loaded here (about 170 ms), not inside a call's 45 s
@@ -344,6 +349,17 @@ export function createMcp(hooks) {
   const game = (entry) => lookupGame(entry).s;
   const text = (t) => ({ content: [{ type: 'text', text: t }] });
   const fail = (t) => ({ content: [{ type: 'text', text: t }], isError: true });
+  /**
+   * start_game refused before a game began (src/web.js newSession), as a typed answer: SERVER_FULL (every game in use:
+   * the queue place and when to try), RATE_LIMITED (this address's games or starts), CLOSED (public play is off),
+   * NOT_ALLOWED (a banned address); retryAfterS when known.
+   */
+  const startRefused = (e) => {
+    const retryAfterS = Number(e?.headers?.['retry-after']) || null;
+    const code = e?.extra?.closed ? 'CLOSED' : e?.status === 403 ? 'NOT_ALLOWED' : e?.status === 503 && e?.extra?.queue ? 'SERVER_FULL' : e?.status === 429 ? 'RATE_LIMITED' : 'FAILED';
+    const text = code === 'FAILED' ? `could not start: ${e?.message ?? e}` : `${code}: ${e.message}`;
+    return { ...fail(text), structuredContent: { code, ...(retryAfterS ? { retryAfterS } : {}), ...(e?.extra?.queue ? { queue: e.extra.queue } : {}) } };
+  };
   const queueOf = (s) => {
     let q = queues.get(s);
     if (!q) {
@@ -703,6 +719,11 @@ export function createMcp(hooks) {
       return { skill: p.skill, args: v.args };
     });
     if (read.length) hooks.log.event('mcp_args_read', { game: s.id, tool, read: read.slice(0, 16).map((x) => x.slice(0, 200)), ok: !bad.length });
+    // in-game chat is the owner's on a public server (other players and the stream would read it)
+    if (steps.some((st) => st?.skill === 'say') && !entry.owner && !hooks.publicChat) {
+      hooks.log.event('mcp_refused', { session: String(entry.transport?.sessionId ?? '').slice(0, 8), game: s.id, code: 'NOT_ALLOWED', message: 'say' });
+      return refuse(s, extra, 'NOT_ALLOWED', SAY_CLOSED_TEXT);
+    }
     if (bad.length) {
       const one = tool === 'play';
       return refuse(s, extra, 'BAD_ARGS', `${one ? bad[0].replace(/^1\. /, '') : bad.join('\n')}\nNothing was run: fix ${bad.length > 1 ? 'these steps' : one ? 'it' : 'that step'} and send the call again.`);
@@ -841,6 +862,20 @@ export function createMcp(hooks) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
       instructions: instructionsText({ callMs, leaseMin, idleMin: IDLE_MS / 60_000, skillNames: SKILL_NAMES_TEXT, skillCount: skills.names.length, care: CARE_TEXT, live: true }),
     });
+    if (hooks.moderate !== false) {
+      // every word an outside agent sends is cleaned before anything keeps or shows it (its why and plan on the stream,
+      // its goal, the console's arguments, the report, the log): offensive words become "[removed]" (src/moderation.js).
+      // Installed first, so it runs before the log and the feed see the call
+      const register = server.registerTool.bind(server);
+      server.registerTool = (name, def, handler) => register(name, def, async (args, extra) => {
+        const r = safely(() => words.cleanValue(args), null);
+        if (r?.removed) {
+          safely(() => hooks.log.event('moderation', { session: String(entry.transport?.sessionId ?? '').slice(0, 8), game: safely(() => game(entry)?.id, null) ?? null, tool: name, removed: r.removed, fields: r.fields.slice(0, 8) }));
+          return handler(r.value, extra);
+        }
+        return handler(args, extra);
+      });
+    }
     {
       // every call in the log (F9 of the log hunt: refusals, calls and the advice shown were in no log): the game, the
       // tool, a short and scrubbed summary of its arguments, the reply's code, its steps' outcomes and the advice
@@ -925,6 +960,12 @@ export function createMcp(hooks) {
         const result = await init(request);
         const p = request?.params ?? {};
         entry.client = { name: clean(p.clientInfo?.name, 80), version: clean(p.clientInfo?.version, 40) };
+        // the client's name is the HUD's caller: an offensive one becomes "agent"
+        const named = safely(() => words.clean(entry.client.name ?? ''), null);
+        if (named?.removed) {
+          hooks.log.event('moderation', { session: sid8(), game: null, tool: 'initialize', removed: named.removed, fields: ['clientInfo.name'] });
+          entry.client.name = 'agent';
+        }
         hooks.log.event('mcp_client', { session: sid8(), protocolVersion: clean(p.protocolVersion, 20), negotiated: result?.protocolVersion ?? null, client: entry.client });
         return result;
       };
@@ -969,8 +1010,8 @@ export function createMcp(hooks) {
       }
       if (!s) {
         try {
-          s = hooks.newSession(null, { key: entry.key, address: entry.address });
-        } catch (e) { return fail(`could not start: ${e.message}`); }
+          s = hooks.newSession(null, { key: entry.key, address: entry.address, owner: Boolean(entry.owner) });
+        } catch (e) { return startRefused(e); }
         forget(null);
         entry.token = s.token;
         hooks.log.event('mcp_game', { session: sid8(), game: s.id, client: entry.client ?? null });
@@ -1239,7 +1280,8 @@ export function createMcp(hooks) {
   }
 
   /** May this address open one more MCP session? null, or {status, message, headers}. */
-  function admit(address) {
+  function admit(address, owner = false) {
+    if (!owner && safely(() => hooks.banned?.(address), false)) return { status: 403, message: 'this address may not play on this server' };
     const limit = hooks.initLimiter?.take(address) ?? { ok: true };
     if (!limit.ok) return { status: 429, message: `too many new MCP sessions from your address; try again in ${roughly(limit.retryMs)}`, headers: { 'retry-after': String(Math.ceil(limit.retryMs / 1000)) } };
     const mine = [...sessions].filter(([, e]) => e.address === address);
@@ -1281,10 +1323,11 @@ export function createMcp(hooks) {
       // refusals before a session, in the log too (g71c9f5: two get_state calls Muse saw fail are in no log of ours)
       if (id) { hooks.log.event('mcp_http', { status: 404, session: String(id).slice(0, 8), method: req.method, why: 'unknown session' }); reply(404, 'unknown session; initialize again'); return; }
       const address = hooks.clientKey(req);
-      const refused = admit(address);
+      const ownerHere = Boolean(safely(() => hooks.isOwner?.(req), false));
+      const refused = admit(address, ownerHere);
       if (refused) { hooks.log.event('mcp_http', { status: refused.status, method: req.method, why: clean(refused.message, 120) }); reply(refused.status, refused.message, refused.headers); return; }
-      // only what the session needs later: never the request itself
-      entry = { address, base: hooks.base(req), token: null, handle: null, client: null, endedWhy: null, lastCall: now() };
+      // only what the session needs later: never the request itself (the owner's key is checked, never kept)
+      entry = { address, base: hooks.base(req), token: null, handle: null, client: null, endedWhy: null, lastCall: now(), owner: ownerHere, hits: [] };
       entry.key = `mcp:${crypto.randomUUID()}`; // the key the game counts under: mcp:<MCP session id> once there is one
       entry.transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
@@ -1301,6 +1344,19 @@ export function createMcp(hooks) {
         if (s) hooks.endSession(s, 'MCP session closed');
       };
       await build(entry).connect(entry.transport);
+    }
+    // a session's requests, at most limits.perMinute a minute (a caller looping on get_state or tools/list)
+    {
+      const t = now();
+      entry.hits = (entry.hits ?? []).filter((x) => x > t - 60_000);
+      if (!entry.owner && entry.hits.length >= limits.perMinute) {
+        const retry = Math.max(1, Math.ceil((entry.hits[0] + 60_000 - t) / 1000));
+        if (!entry.slowTold || t - entry.slowTold > 60_000) { entry.slowTold = t; hooks.log.event('mcp_http', { status: 429, session: String(entry.transport?.sessionId ?? '').slice(0, 8), method: req.method, why: 'requests per minute' }); }
+        req.resume();
+        res.writeHead(429, { 'content-type': 'application/json', 'retry-after': String(retry) }).end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message: `too many requests on this MCP session (at most ${limits.perMinute} a minute); slow down and send it again in ${retry} s` }, id: null }));
+        return;
+      }
+      entry.hits.push(t);
     }
     entry.lastCall = now();
     // the owner's connection (MCP_OWNER_KEY, ?owner= or X-Muse-Owner): its games are first in line for the camera

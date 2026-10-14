@@ -496,7 +496,7 @@ test('mineai host: missed heartbeats and a lost connection count as a crash; clo
 test('mineai through MCP: the queue, request_id, typed codes and the extra skills on top of the body', async () => {
   const hosts = fakeHosts(() => ({ durations: { collect_block: 50 } }));
   const web = createWeb({
-    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '' }), log, skills: MINEAI_SKILLS,
+    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '', PUBLIC_CHAT: 'on', WEB_MCP_REQUESTS_PER_MINUTE: '100000' }), log, skills: MINEAI_SKILLS,
     makeBody: (id, o) => createMineAiBody({ config, log, hosts, gameId: id, username: `Tst_rv_${id}`, viewId: o?.viewId }),
   });
   const { url } = await web.start();
@@ -1033,7 +1033,7 @@ test('mineai: what a step itself used and made, from their evidence (ownChange)'
 test('mineai body and MCP: a step\'s own use and gain apart from what changed on the way (the Muse run\'s deltas)', async () => {
   const hosts = fakeHosts(() => ({ inventory: { cobblestone: 3, stick: 2, crafting_table: 1, stone_pickaxe: 1, raw_iron: 3, coal: 2, furnace: 1 } }));
   const web = createWeb({
-    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '' }), log, skills: MINEAI_SKILLS,
+    config: loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', MODEL_API_KEY: '', PUBLIC_CHAT: 'on', WEB_MCP_REQUESTS_PER_MINUTE: '100000' }), log, skills: MINEAI_SKILLS,
     makeBody: (id, o) => createMineAiBody({ config, log, hosts, gameId: id, username: `Tst_rv_${id}`, viewId: o?.viewId }),
   });
   const { url } = await web.start();

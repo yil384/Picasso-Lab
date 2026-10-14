@@ -356,6 +356,10 @@ stay; our body ignores them. To switch again: `sed -i "s/^BODY=.*/BODY=mineai/" 
 - Bot data: deleted when a game ends, the last 10 failed games kept (`MINEAI_KEEP_FAILED`), folders older than 3 days
   removed at agent start (`MINEAI_DATA_DAYS`).
 - Capacity: production allows 8 guest bots (`WEB_MAX_SESSIONS`), about 0.4 GB and a fifth of a core each.
+  - Load test on staging, 2026-10-14: 8 scripted strict iron-pickaxe games at once (`test/e2e/mcp-iron.mjs`, one per MCP session).
+  - Agent container: 2.1 cores on average, at most 3.75, and 2.7 GB on average, at most 3.6 GB (0.45 GB a game).
+  - Paper: 0.9 cores on average, at most 1.2, and 2.3 GB; TPS 20.0 in every reading.
+  - 7 of the 8 games made the iron pickaxe in 141 to 216 s. The 8th game's runtime was killed (SIGKILL) on purpose at 2 minutes: the agent restarted it, the strict harness ended that game at its first failed step, and the other 7 went on unaffected.
 
 ## 7. A runtime update after the switch (patch 0011, 2026-10-08)
 
@@ -485,3 +489,72 @@ sh recreate.sh production all
 The border stays in the world as last set: a border the old images do not set again is harmless. A long Muse run sets
 `PROD_LEASE_MS` and removes it afterwards (`docs/MUSE-LONG-RUN.md`). Remove the `pre-m8a` tags once the update has held
 for a week.
+
+## 10. The public server: the operator's runbook (2026-10-14)
+
+`play.picasso-lab.com/mcp` is open to everyone. README section "The public server" describes what keeps strangers' agents in bounds: words cleaned, in-game chat for the owner only, and limits with typed answers. This section is what the operator does.
+
+### Setting up and calling the admin routes
+
+Every command below runs on picasso. The calls go to the agent from inside its own container. That way the admin token stays in the container's environment, never in a shell's history, and the proxy secret is not needed. Define the helper once per shell:
+
+```sh
+admin() { docker exec muse-minecraft-agent-1 node -e "const [p,b]=process.argv.slice(1);fetch('http://127.0.0.1:8787'+p,{method:b?'POST':'GET',headers:{authorization:'Bearer '+process.env.WEB_ADMIN_TOKEN,'content-type':'application/json'},body:b||undefined}).then(r=>r.text()).then(t=>console.log(t))" "$@"; }
+```
+
+For staging, use the container `muse-staging-agent-1`.
+
+### Common tasks
+
+- **Who plays now:** run `admin /admin/games`. It lists every game with its address hash (`ip`, 12 characters: an address is never shown), its caller (the client's name, cleaned), goal, status, seconds since start and seconds left. It also shows the queue length, whether public play is on, and the bans.
+  - The log has the same hash in `session_start` rows (`ip`).
+  - The log also has `moderation` rows: the tool, the fields and how many words were removed, never the words.
+- **End one game:** run `admin /admin/end '{"game":"g1a2b3c"}'`. The bot leaves, the game's reply says "ended by the operator", and the game's queue place goes to the next caller.
+- **Ban an address hash:** run `admin /admin/ban '{"ip":"0123456789ab","hours":24}'`. Leave out `hours` for no end.
+  - Its games end. New MCP sessions from it get HTTP 403, and start_game gets `NOT_ALLOWED`.
+  - Bans are kept in `mineai-data/bans.json` and survive a restart. `WEB_BANNED_IPS` in `deploy/.env` can hold more, comma separated.
+  - The owner's key is never banned with an address, because Muse may share its cloud's address with others.
+  - To lift a ban, run `admin /admin/unban '{"ip":"0123456789ab"}'`.
+
+### Turning off public access
+
+**At once, with no restart:** run `admin /admin/public '{"on":false}'`.
+
+- start_game answers `CLOSED: this server is closed for new games right now; try again later`. The web page and API get a 503.
+- Games already running go on. To end them too, run `admin /admin/stop '{"end":true}'`, or end each one.
+- The owner's key still starts games.
+- To open again, run `admin /admin/public '{"on":true}'`.
+
+**Across restarts:** the switch above lasts until the agent restarts. To keep the server closed:
+
+```sh
+cd ~/workspace/muse-minecraft/app/deploy && printf 'PUBLIC_PLAY=off\n' >> .env && MUSE_NOW=1 sh recreate.sh production
+```
+
+To lift it: `sed -i '/^PUBLIC_PLAY=/d' .env && sh recreate.sh production`.
+
+### The owner's key
+
+1. Once, make the key: `openssl rand -hex 16`. It needs at least 16 letters, digits, `_` or `-`.
+2. Put it in `deploy/.env` as `MCP_OWNER_KEY=...` and recreate the agent.
+3. In Muse's connector, set the MCP URL to `https://play.picasso-lab.com/mcp?owner=<the key>`, or send the header `X-Muse-Owner: <the key>` if the connector can set headers. `Authorization: Bearer` and `?key=` work too.
+
+The same key gives Muse's games the camera first (the camera queue, README).
+
+With the key, Muse plays while the server is closed and goes ahead of the queue. It may use `say`, and the per-address limits and address bans do not apply to it. Never paste the key anywhere else: a key that leaks is replaced by a new one in `.env`.
+
+### Limits
+
+Each limit is an environment line in `deploy/.env`, followed by a recreate. The defaults:
+
+| Setting | Default |
+| --- | --- |
+| `WEB_MCP_GAMES_PER_ADDRESS` | 3 |
+| `WEB_MCP_STARTS_PER_HOUR` | 10 |
+| `WEB_MCP_REQUESTS_PER_MINUTE` | 120 |
+| `WEB_IDLE_MS` | 300000 |
+| `WEB_LEASE_MS` | 1800000 |
+| `WEB_MAX_SESSIONS` | 8 (compose) |
+| `PUBLIC_CHAT` | off |
+
+Players of one agent cloud (for example many muse.ai users) can share one address. If `RATE_LIMITED` refusals show up in the log (`mcp_call` rows with that code) for an address with many different players, raise `WEB_MCP_GAMES_PER_ADDRESS` and `WEB_MCP_STARTS_PER_HOUR`.

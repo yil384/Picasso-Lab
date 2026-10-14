@@ -341,15 +341,18 @@ test('mcp limits: games per address, sessions per address (oldest idle one evict
   assert.deepEqual(statuses, [200, 200, 200, 429]);
 });
 
-test('mcp games per address: WEB_MCP_GAMES_PER_ADDRESS (from probe T8), default half the bots and at least 2', async (t) => {
-  assert.equal(loadConfig({}).web.mcpGamesPerAddress, 2);
-  assert.equal(loadConfig({ WEB_MAX_SESSIONS: '8' }).web.mcpGamesPerAddress, 4);
+test('mcp games per address: WEB_MCP_GAMES_PER_ADDRESS (from probe T8), default 3 (the public server, 2026-10-14); RATE_LIMITED', async (t) => {
+  assert.equal(loadConfig({}).web.mcpGamesPerAddress, 3);
+  assert.equal(loadConfig({ WEB_MAX_SESSIONS: '8' }).web.mcpGamesPerAddress, 3);
   assert.equal(loadConfig({ WEB_MAX_SESSIONS: '8', WEB_MCP_GAMES_PER_ADDRESS: '8' }).web.mcpGamesPerAddress, 8, 'up to the global cap');
   assert.throws(() => loadConfig({ WEB_MCP_GAMES_PER_ADDRESS: '0' }), /WEB_MCP_GAMES_PER_ADDRESS/);
   const { client } = await serve(t, { env: { WEB_MAX_SESSIONS: '4', WEB_MCP_GAMES_PER_ADDRESS: '1' } });
   const [a, b] = [await client(), await client()];
   assert.match(text(await a.callTool({ name: 'start_game', arguments: START })), /^New game/);
-  assert.match(text(await b.callTool({ name: 'start_game', arguments: START })), /already plays 1 game, the most one address may hold/);
+  const second = await b.callTool({ name: 'start_game', arguments: START });
+  assert.match(text(second), /^RATE_LIMITED: your connector's address already plays 1 game, the most one address may hold/);
+  assert.equal(second.structuredContent.code, 'RATE_LIMITED');
+  assert.ok(second.structuredContent.retryAfterS > 0);
 });
 
 test('mcp queue: a full server answers with a place in the queue and an estimate; the first in line gets the next bot', async (t) => {
@@ -361,7 +364,10 @@ test('mcp queue: a full server answers with a place in the queue and an estimate
   assert.match(text(await b.callTool({ name: 'start_game', arguments: START })), /^New game/);
   const third = await c.callTool({ name: 'start_game', arguments: START });
   assert.equal(third.isError, true);
-  assert.match(text(third), /^could not start: all 2 bots are in use; you are number 1 in the queue \(1 waiting\), and your turn comes in about 8 min at the latest, when enough leases end \(games often end sooner\); call start_game again within 90 s to keep your place/);
+  assert.match(text(third), /^SERVER_FULL: all 2 bots are in use; you are number 1 in the queue \(1 waiting\), and your turn comes in about 8 min at the latest, when enough leases end \(games often end sooner\); call start_game again within 90 s to keep your place/);
+  assert.equal(third.structuredContent.code, 'SERVER_FULL');
+  assert.deepEqual(third.structuredContent.queue, { position: 1, waiting: 1, etaSeconds: 480, holdSeconds: 90 });
+  assert.ok(third.structuredContent.retryAfterS >= 1);
   assert.match(text(await d.callTool({ name: 'start_game', arguments: START })), /you are number 2 in the queue \(2 waiting\), and your turn comes in about 10 min/);
 
   // a bot frees up: it is c's, not d's, even though d asks first
