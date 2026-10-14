@@ -229,6 +229,6 @@ test('PUBLIC_PLAY=off closes the server from the start; the config reads the lim
   assert.match(text(await owner.callTool({ name: 'start_game', arguments: { live: false } })), /^New game/);
   const cfg = loadConfig({}).web;
   assert.deepEqual([cfg.mcpGamesPerAddress, cfg.mcpStartsPerHour, cfg.mcpRequestsPerMinute, cfg.idleMs, cfg.publicPlay, cfg.publicChat], [3, 10, 120, 300_000, true, false]);
-  assert.throws(() => loadConfig({ MCP_OWNER_KEY: 'short' }), /MCP_OWNER_KEY must be at least 24/);
+  assert.throws(() => loadConfig({ MCP_OWNER_KEY: 'short' }), /MCP_OWNER_KEY must be at least 16/);
   assert.deepEqual(loadConfig({ WEB_BANNED_IPS: 'ABCDEF012345, 0123456789ab' }).web.bannedIps, ['abcdef012345', '0123456789ab']);
 });

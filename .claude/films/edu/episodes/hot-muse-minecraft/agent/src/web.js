@@ -525,17 +525,6 @@ export function createWeb(opts = {}) {
     if (b.until && b.until <= now()) { bans.delete(ipHash(address)); saveBans(); return false; }
     return true;
   };
-  /** Does this request carry the owner's key (Authorization: Bearer, or ?key= on /mcp)? */
-  const isOwner = (req) => {
-    if (!ownerKey) return false;
-    const header = String(req.headers.authorization ?? '').match(/^Bearer\s+(.+)$/i)?.[1];
-    let given = header ?? '';
-    if (!given) { try { given = new URL(req.url, 'http://x').searchParams.get('key') ?? ''; } catch { given = ''; } }
-    if (!given) return false;
-    const a = crypto.createHash('sha256').update(String(given)).digest();
-    const b = crypto.createHash('sha256').update(ownerKey).digest();
-    return crypto.timingSafeEqual(a, b);
-  };
   const askNotice = opts.askNotice ?? null;
   const adminToken = web.adminToken ?? '';
 
@@ -545,10 +534,12 @@ export function createWeb(opts = {}) {
   const endedGames = new Map();
   // the owner's key (MCP_OWNER_KEY): compared in constant time, never logged
   const ownerDigest = web.ownerKey ? crypto.createHash('sha256').update(web.ownerKey).digest() : null;
+  // ?owner= on the /mcp URL or the header X-Muse-Owner; also Authorization: Bearer or ?key= (the public server's docs)
   const isOwner = (req) => {
     if (!ownerDigest) return false;
     let k = String(req.headers['x-muse-owner'] ?? '');
-    if (!k) { try { k = new URL(req.url, 'http://local').searchParams.get('owner') ?? ''; } catch { k = ''; } }
+    if (!k) k = String(req.headers.authorization ?? '').match(/^Bearer\s+(.+)$/i)?.[1] ?? '';
+    if (!k) { try { const q = new URL(req.url, 'http://local').searchParams; k = q.get('owner') ?? q.get('key') ?? ''; } catch { k = ''; } }
     if (!k) return false;
     return crypto.timingSafeEqual(crypto.createHash('sha256').update(k).digest(), ownerDigest);
   };
@@ -1482,7 +1473,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       mcp ??= createMcp({
         newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log, now, clientKey, base,
         leaseMs: web.leaseMs, testLives: Boolean(web.testLives), testRecord: Boolean(web.testRecord), posterLogo: (cfg.stream?.logo ?? 'off') !== 'off', initLimiter: mcpInitLimiter, limits: { perMinute: web.mcpRequestsPerMinute ?? 120, ...(opts.mcpLimits ?? {}) }, callMs: opts.mcpCallMs, idleMs: opts.idleMs ?? web.idleMs,
-        isOwner, banned, publicChat: Boolean(web.publicChat), moderate: opts.moderate, skills: opts.skills, careMode: opts.careMode,
+        banned, publicChat: Boolean(web.publicChat), moderate: opts.moderate, skills: opts.skills, careMode: opts.careMode,
         links: (s, b) => ({ eyes: `${b}/eyes/${s.viewId}/`, watch: `${b}/watch/${s.viewId}/` }),
         liveVideo: (s) => { try { return opts.liveVideo?.(s.id) ?? null; } catch { return null; } },
         liveView: opts.liveView ? (s, o) => Promise.resolve(opts.liveView(s.id, o)).catch(() => null) : null,

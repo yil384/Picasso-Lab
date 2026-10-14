@@ -535,9 +535,11 @@ To lift it: `sed -i '/^PUBLIC_PLAY=/d' .env && sh recreate.sh production`.
 
 ### The owner's key
 
-1. Once, make the key: `openssl rand -hex 24`.
+1. Once, make the key: `openssl rand -hex 16`. It needs at least 16 letters, digits, `_` or `-`.
 2. Put it in `deploy/.env` as `MCP_OWNER_KEY=...` and recreate the agent.
-3. In Muse's connector, set the MCP URL to `https://play.picasso-lab.com/mcp?key=<the key>`, or send it as `Authorization: Bearer <the key>` if the connector can set headers.
+3. In Muse's connector, set the MCP URL to `https://play.picasso-lab.com/mcp?owner=<the key>`, or send the header `X-Muse-Owner: <the key>` if the connector can set headers. `Authorization: Bearer` and `?key=` work too.
+
+The same key gives Muse's games the camera first (the camera queue, README).
 
 With the key, Muse plays while the server is closed and goes ahead of the queue. It may use `say`, and the per-address limits and address bans do not apply to it. Never paste the key anywhere else: a key that leaks is replaced by a new one in `.env`.
 

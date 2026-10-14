@@ -233,11 +233,6 @@ export function loadConfig(env = process.env) {
     problems.push('WEB_ADMIN_TOKEN must be at least 24 characters (make one with: openssl rand -base64 24)');
   }
   hidden(web, 'adminToken', adminToken);
-  // the owner's key: an MCP session that brings it (Authorization: Bearer, or ?key= on /mcp) plays when public play is
-  // off, goes first in the queue, may use say, and is not held to the per-address limits
-  const ownerKey = r.str('MCP_OWNER_KEY', '');
-  if (ownerKey && (ownerKey.length < 24 || !/^[\x21-\x7e]+$/.test(ownerKey))) problems.push('MCP_OWNER_KEY must be at least 24 printable characters without spaces (make one with: openssl rand -hex 24)');
-  hidden(web, 'ownerKey', ownerKey);
   // the salt of the address hashes (logs and the operator see a hash, never an address); without it, one made from
   // the admin token (stable across restarts), else a random one for this process
   hidden(web, 'ipSalt', r.str('WEB_IP_SALT', ''));
@@ -250,8 +245,9 @@ export function loadConfig(env = process.env) {
   }
   if (proxySecret && trustProxy === 'off') problems.push('WEB_PROXY_SECRET needs WEB_TRUST_PROXY (cloudflare, or the number of proxies that append to X-Forwarded-For)');
   hidden(web, 'proxySecret', proxySecret);
-  // The owner's key for demos (deploy/.env, never in code): an MCP connection that brings it (?owner=<key> on the /mcp
-  // URL, or the header X-Muse-Owner) puts its games first in line for the camera (src/fb-live.js)
+  // The owner's key (deploy/.env, never in code): an MCP connection that brings it (?owner=<key> on the /mcp URL, the
+  // header X-Muse-Owner, or Authorization: Bearer) puts its games first in line for the camera (src/fb-live.js) and for
+  // a bot, plays while public play is off, may use say, and is held to none of the per-address limits or bans
   const ownerKey = r.str('MCP_OWNER_KEY', '');
   if (ownerKey && (ownerKey.length < 16 || !/^[A-Za-z0-9_-]+$/.test(ownerKey))) problems.push('MCP_OWNER_KEY must be at least 16 letters, digits, _ or - (make one with: openssl rand -hex 16)');
   hidden(web, 'ownerKey', ownerKey);
