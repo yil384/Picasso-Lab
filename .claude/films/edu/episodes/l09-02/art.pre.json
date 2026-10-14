@@ -77,7 +77,7 @@
    "kind": "line",
    "group": "B",
    "sweep": "c",
-   "prompt": "Seen from a little above on a plain table: a large flat rectangular sheet of rolled-out dough. A pair of hands (only the hands and forearms) rolls a pastry wheel along a straight cut, dividing the sheet into a neat grid of equal squares: half the grid is already cut, the other half is still whole. A rolling pin lies along the top edge, and on the right a baking tray holds a few square pieces already lifted off, set in neat rows. No flour dust, no texture. Square image 1024x1024; the dough and the tray fill about 85% of the width and of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+   "prompt": "Seen from a little above on a plain table: a large flat rectangular sheet of rolled-out dough, drawn WHOLE with all four edges and corners visible and a clear white margin around it. A pair of hands (only the hands and forearms, coming in from the top edge of the picture, the only thing that may touch an edge) rolls a pastry wheel along a straight cut, dividing the sheet into a neat grid of equal squares: the left half of the grid is already cut, the right half is still whole. A rolling pin lies still on the table just above the dough, not held by anyone. On the right, a small baking tray, drawn whole with a margin around it, holds a few square pieces already lifted off, set in neat rows. No flour dust, no texture. Square image 1024x1024; the dough and the tray together fill about 80% of the width and about 75% of the height, centred; nothing is cut off by the picture edges. No text, no letters, no numbers, no symbols, no logos anywhere."
   },
   {
    "name": "line_sched_stopwatch_trials",
@@ -140,7 +140,7 @@
    "kind": "line",
    "group": "B",
    "sweep": "x",
-   "prompt": "Two identical picture frames hanging side by side on a plain wall, with space between them. Each frame shows the same simple scene: a small house with a pointed roof, a round tree beside it, a gentle hill behind and a round sun. In the left frame every line is single and crisp. In the right frame the same scene is drawn with every outline doubled and tripled by slightly offset thin lines, so it looks soft and blurred, like a photo out of focus. No people. Landscape image 1536x1024; the two frames fill about 85% of the width and about 65% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+   "prompt": "Two identical picture frames hanging side by side on a plain wall, with space between them; both frames are drawn with single crisp lines. Each frame shows the same simple scene: a small house with a pointed roof, a round tree beside it, a gentle hill behind and a round sun. In the left frame every line is single and crisp. In the right frame the same scene is a blurred, out-of-focus copy: every outline of the house, tree, hill and sun is drawn two or three times in thin lines, each copy shifted a little sideways and a little up or down from the others, like a ghosted double exposure from a shaking camera, so the shapes look smeared and soft. The copies are offset ghosts, NOT neat parallel rings, NOT embossed or double-walled outlines. No people. Landscape image 1536x1024; the two frames fill about 85% of the width and about 65% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
   },
   {
    "name": "line_cover_l09_02",
