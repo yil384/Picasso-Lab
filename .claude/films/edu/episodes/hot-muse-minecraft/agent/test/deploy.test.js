@@ -129,16 +129,17 @@ test('BODY=mineai: both images carry the Mine AI MCP runtime, run under an init 
 // files that could put the real tools first) and checks that the stand-ins are what the script will find.
 const ZSH = ['/bin/zsh', '/usr/bin/zsh'].find((p) => fs.existsSync(p));
 
-function push(args, { nodeExit = 0, freeGb = 100 } = {}) {
+function push(args, { nodeExit = 0, freeGb = 100, stgBots = 0, prodBots = 0, env: more = {} } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'push-'));
   const bin = path.join(dir, 'bin');
   fs.mkdirSync(bin);
   const calls = path.join(dir, 'calls.txt');
   for (const tool of ['ssh', 'rsync', 'node']) {
     // ssh answers push.sh's free-disk question (df on picasso, in whole GB) with freeGb
-    fs.writeFileSync(path.join(bin, tool), `#!/bin/sh\nprintf '%s\\n' "[$PWD] ${tool} $*" >> '${calls}'\n${tool === 'ssh' ? `case "$*" in *"df -Pk"*) echo ${freeGb};; esac\n` : ''}${tool === 'node' ? `exit ${nodeExit}` : 'exit 0'}\n`, { mode: 0o755 });
+    // and the games in progress (the agent's "Bots in use") on staging and production with stgBots and prodBots
+    fs.writeFileSync(path.join(bin, tool), `#!/bin/sh\nprintf '%s\\n' "[$PWD] ${tool} $*" >> '${calls}'\n${tool === 'ssh' ? `case "$*" in *"df -Pk"*) echo ${freeGb};; *"muse-staging-agent-1"*"Bots in use"*) echo ${stgBots};; *"Bots in use"*) echo ${prodBots};; esac\n` : ''}${tool === 'node' ? `exit ${nodeExit}` : 'exit 0'}\n`, { mode: 0o755 });
   }
-  const env = { PATH: `${bin}:/usr/bin:/bin:/usr/sbin:/sbin`, HOME: dir, ZDOTDIR: dir, LANG: 'C' };
+  const env = { PATH: `${bin}:/usr/bin:/bin:/usr/sbin:/sbin`, HOME: dir, ZDOTDIR: dir, LANG: 'C', ...more };
   const found = spawnSync(ZSH, ['-f', '-c', 'whence -p ssh rsync node'], { env, encoding: 'utf8' }).stdout.trim().split('\n');
   assert.deepEqual(found, ['ssh', 'rsync', 'node'].map((t) => path.join(bin, t)), 'the stand-ins come first');
   const r = spawnSync(ZSH, ['-f', path.join(ROOT, 'deploy/push.sh'), ...args], { cwd: ROOT, env, encoding: 'utf8', timeout: 30_000 });
@@ -177,7 +178,7 @@ test('push.sh: staging by default; production only with --prod and only after th
   assert.ok(check > 0);
   assert.ok(prod.calls.slice(0, check).every((l) => !/workspace\/muse-minecraft/.test(l)), 'staging comes first');
   // the production ssh command is multi-line: the recorded lines after the check are its calls plus its script lines
-  const after = prod.calls.slice(check + 1);
+  const after = prod.calls.slice(check + 1).filter((l) => !/Bots in use/.test(l));
   assert.deepEqual(after.slice(0, PROD_CALLS.length), PROD_CALLS);
   assert.match(after.join('\n'), /cd deploy && docker compose up -d --build 2>&1 \| tail -4 && docker compose ps --format "\{\{\.Service\}\}: \{\{\.Status\}\}"$/m);
   // after the build: our own dangling images only (ROADMAP M0 item 8), a note instead of a stop when picasso refuses the
@@ -198,6 +199,21 @@ test('push.sh: staging by default; production only with --prod and only after th
   assert.match(full.err, /only 3 GB free on picasso's ~\/workspace \(at least 10 GB, MIN_FREE_GB\): nothing was deployed/);
   assert.equal(full.calls.length, 1, 'only the disk question');
   assert.match(full.calls[0], /ssh picasso df -Pk ~\/workspace/);
+
+  // games in progress: staging's stop the deploy before anything is copied (STAGING_NOW=1 goes on); production's stop it
+  // after staging (MUSE_NOW=1 goes on)
+  const busyStg = push(['--prod'], { stgBots: 3 });
+  assert.equal(busyStg.code, 1);
+  assert.match(busyStg.err, /push: STOPPED, nothing deployed to staging: 3 game\(s\) in progress there, and the deploy recreates its agent, which ends them; wait for 0 \(or STAGING_NOW=1\)/);
+  assert.ok(busyStg.calls.every((l) => !/rsync|compose/.test(l)), 'nothing copied or built');
+  const forced = push([], { stgBots: 3, env: { STAGING_NOW: '1' } });
+  assert.equal(forced.code, 0, forced.err);
+  assert.match(forced.out, /push: 3 game\(s\) in progress on staging, going on \(STAGING_NOW=1\): they end/);
+  const busyProd = push(['--prod'], { prodBots: 1 });
+  assert.equal(busyProd.code, 1);
+  assert.match(busyProd.err, /STOPPED, nothing deployed to production: 1 game\(s\) in progress[^]*production was not touched/);
+  assert.ok(busyProd.calls.some((l) => /staging-check/.test(l)) && busyProd.calls.every((l) => !/workspace\/muse-minecraft\/app/.test(l)), 'staging deployed and checked, production untouched');
+  assert.equal(push(['--prod'], { prodBots: 1, env: { MUSE_NOW: '1' } }).code, 0);
 
   const only = push(['--check']);
   assert.equal(only.code, 0, only.err);
