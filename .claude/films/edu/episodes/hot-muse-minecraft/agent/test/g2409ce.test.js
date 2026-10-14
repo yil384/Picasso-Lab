@@ -185,3 +185,13 @@ test('an empty bucket refilled before obsidian formed beside the bot: the refill
     assert.equal(fill.count, undefined, 'no count on the refill');
   } finally { await body.close(); await hosts.closeAll(); }
 });
+
+test('a reflex that owns the body with an action id of its own is waited for, never cancelled (the soak: 43 steps failed ACTION_BUSY at night)', async () => {
+  const { body, fake, hosts } = await bodyOf('g2409i', { oak_log: 2 });
+  try {
+    fake.world.held = { owner: 'hostile_reflex', until: Date.now() + 1_200, withId: true };
+    const r = await body.run('craft', { item: 'oak_planks', n: 4 });
+    assert.equal(r.ok, true, r.result);
+    assert.equal(fake.tools('cancel_foreground_action').length, 0, 'the reflex was not cancelled');
+  } finally { await body.close(); await hosts.closeAll(); }
+});

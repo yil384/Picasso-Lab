@@ -275,7 +275,8 @@ export async function startFakeMineAi(opts = {}) {
     if (unretrieved) return { state: 'refused', code: 'RESULT_NOT_RETRIEVED', error: 'retrieve the earlier result first', unretrievedActionId: unretrieved };
     if (active) return { state: 'refused', code: 'ACTION_BUSY', error: 'another action is running', activeActionId: active };
     // their exact words when a reflex owns an idle body (src/session/async-actions.ts): no action id to wait for
-    if (world.held && Date.now() < world.held.until) return { state: 'refused', code: 'ACTION_BUSY', error: `No new action started; body owner: ${world.held.owner}. Wait for physical ownership to become available.` };
+    // world.held.withId: their reflex's own action id in the refusal, as their hostile reflex gives it at night
+    if (world.held && Date.now() < world.held.until) return { state: 'refused', code: 'ACTION_BUSY', error: `No new action started; body owner: ${world.held.owner}. ${world.held.withId ? 'Call wait_for_action with activeActionId to retrieve its result.' : 'Wait for physical ownership to become available.'}`, ...(world.held.withId ? { activeActionId: 'reflex-action-1' } : {}) };
     const id = crypto.randomUUID();
     const t0 = Date.now();
     const act = { id, tool, state: 'running', output: null, cancel: false, waiters: [] };

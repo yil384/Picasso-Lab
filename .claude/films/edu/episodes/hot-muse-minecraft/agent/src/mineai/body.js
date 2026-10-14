@@ -696,14 +696,18 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     const submit = () => rpc(call.tool, { ...call.args, submission_id: tries++ ? `${submission}-${tries}` : submission, wait_timeout_ms: first() }, first() + RPC_SLACK_MS);
     let data = await submit();
     // a result of an earlier action not read yet (a call cut short), or an action still running: read it, then once more
-    if (data.state === 'refused' && (data.unretrievedActionId || data.activeActionId)) {
+    // a reflex that owns the body (its fight has an action id too: "body owner: hostile_reflex ... activeActionId") is
+    // waited for below, never cancelled as a step of ours left running (the soak, 2026-10-14: 43 steps of one game
+    // failed "ACTION_BUSY" at night)
+    const reflexOwns = (d) => d.state === 'refused' && d.code === 'ACTION_BUSY' && /body owner: [a-z_]*reflex/.test(String(d.error ?? ''));
+    if (data.state === 'refused' && (data.unretrievedActionId || data.activeActionId) && !reflexOwns(data)) {
       const other = data.unretrievedActionId ?? data.activeActionId;
       if (data.activeActionId) await rpc('cancel_foreground_action', { action_id: other, reason: 'an earlier step was left running' });
       await rpc('wait_for_action', { action_id: other, timeout_ms: 15_000 }, 35_000);
       data = await submit();
     }
     // the body is busy looking after itself (one of their reflexes owns it): wait for it, up to the skill's limit
-    const heldBy = (d) => (d.state === 'refused' && d.code === 'ACTION_BUSY' && !d.activeActionId ? /body owner: ([a-z_]+)/.exec(String(d.error ?? ''))?.[1] ?? 'its own business' : null);
+    const heldBy = (d) => (d.state === 'refused' && d.code === 'ACTION_BUSY' && (!d.activeActionId || reflexOwns(d)) ? /body owner: ([a-z_]+)/.exec(String(d.error ?? ''))?.[1] ?? 'its own business' : null);
     if (heldBy(data)) {
       const since = Date.now();
       let owner = heldBy(data);
