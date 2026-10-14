@@ -111,6 +111,7 @@ function html(strings, ...values) {
 const CSS = `:root{color-scheme:light dark;--bg:#f6f4ef;--card:#fffdf9;--fg:#1e1c19;--muted:#655f56;--line:#d8d1c4;--accent:#2d6a4f;--on-accent:#fff;--warn:#9c2f16;--warn-bg:#fbebe5}
 @media (prefers-color-scheme:dark){:root{--bg:#141311;--card:#1c1a17;--fg:#ece8e0;--muted:#a59f94;--line:#3a362f;--accent:#7cc49b;--on-accent:#0f1a14;--warn:#f29b7f;--warn-bg:#2c1a14}}
 *{box-sizing:border-box}
+.brand{display:block;max-width:100%;height:auto;margin:0 0 8px}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
 .wrap{max-width:54rem;margin:0 auto;padding:24px 16px 48px}
 h1{font-size:1.55rem;line-height:1.2;margin:0 0 .3rem}
@@ -151,6 +152,15 @@ const BASE_HEADERS = Object.freeze({
   'x-frame-options': 'DENY',
   'cross-origin-opener-policy': 'same-origin',
 });
+
+let BRAND = null;
+/** The lab's pixel logo (assets/brand, in the agent image), read once; null when it is not there. */
+function brandLogo() {
+  if (BRAND === null) {
+    try { BRAND = fs.readFileSync(new URL('../assets/brand/picasso-lab-pixel.png', import.meta.url)); } catch { BRAND = false; }
+  }
+  return BRAND || null;
+}
 
 function shell({ title, refresh = 0, main, index = true }) {
   return html`<!doctype html>
@@ -924,6 +934,37 @@ export function createWeb(opts = {}) {
 
   // ----- pages
 
+  /**
+   * The page a browser gets at /mcp: this is an agent's address (MCP, streamable HTTP), the one line to send it, how
+   * to add it in muse.ai, Claude and other MCP clients, the open source, the not-affiliated line and the lab's logo.
+   */
+  function mcpPage(req) {
+    const mcpUrl = `${web.publicUrl || base(req)}/mcp`;
+    const oneLine = `Play Minecraft on ${mcpUrl} and get to the Nether and back.`;
+    const source = web.openSourceUrl;
+    return shell({
+      title: 'Muse plays Minecraft: the address for your AI agent',
+      main: html`<header><img class="brand" src="/brand/picasso-lab-pixel.png" alt="Picasso Lab, UC San Diego" width="280" height="69">
+<h1>This is the address for your AI agent</h1>
+<p><code>${mcpUrl}</code> is an MCP server (streamable HTTP, no sign-in), not a web page. Give it to an AI agent and the
+agent plays its own Minecraft bot in our world, live.</p></header>
+<main>
+<section aria-labelledby="h-line"><h2 id="h-line">Send your agent one sentence</h2>
+<pre class="oneline">${oneLine}</pre>
+<p class="muted">Other goals: end it with "get an iron pickaxe", "get diamonds" or "just play".</p></section>
+<section aria-labelledby="h-add"><h2 id="h-add">Add it to your agent</h2>
+<ul class="steps">
+<li><strong>muse.ai:</strong> in a chat, ask Muse to build a custom integration (an MCP connector) for <code>${mcpUrl}</code>, then send the sentence above in a new conversation.</li>
+<li><strong>Claude:</strong> in Settings, Connectors, add a custom connector with the URL <code>${mcpUrl}</code>. In Claude Code: <code>claude mcp add --transport http minecraft ${mcpUrl}</code>.</li>
+<li><strong>Other MCP clients:</strong> add a remote MCP server of type streamable HTTP with the URL <code>${mcpUrl}</code>. The server's tools and its ready prompts (play_to_the_nether, free_play) explain the rest to the agent.</li>
+</ul></section>
+<section aria-labelledby="h-more"><h2 id="h-more">More</h2>
+<p>${source ? html`The agent server is open source: <a href="${source}">${source.replace(/^https:\/\//, '')}</a>. ` : ''}To drive a bot by hand, or to read how it works, see <a href="/">the start page</a>.</p>
+<p class="notice"><strong>${NOT_OFFICIAL}</strong> Not affiliated with or endorsed by Meta, Mojang or Microsoft.</p></section>
+</main>`,
+    });
+  }
+
   function landingPage(req) {
     const lease = leaseWords(web.leaseMs);
     // the one-line prompt (the server's instructions carry the rest; src/mcp.js instructionsText)
@@ -1469,6 +1510,20 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
   async function route(req, res) {
     const u = new URL(req.url, 'http://local');
     const p = u.pathname;
+    // a person who opens the MCP address in a browser (the promo shows it): a page that says what it is and how to
+    // give it to an agent; MCP clients (no text/html, or a session, or an event stream) never get it
+    if (p === '/mcp' && req.method === 'GET' && !req.headers['mcp-session-id'] && /text\/html/i.test(String(req.headers.accept ?? '')) && !/text\/event-stream/i.test(String(req.headers.accept ?? ''))) {
+      req.resume();
+      return sendHtml(res, 200, mcpPage(req));
+    }
+    if (p === '/brand/picasso-lab-pixel.png') {
+      if (req.method !== 'GET' && req.method !== 'HEAD') throw new HttpError(405, 'use GET', { allow: 'GET, HEAD' });
+      req.resume();
+      const png = brandLogo();
+      if (!png) throw new HttpError(404, 'not found');
+      res.writeHead(200, { ...BASE_HEADERS, 'content-type': 'image/png', 'content-length': png.length, 'cache-control': 'public, max-age=86400' });
+      return res.end(req.method === 'HEAD' ? undefined : png);
+    }
     if (p === '/mcp') {
       mcp ??= createMcp({
         newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log, now, clientKey, base,
