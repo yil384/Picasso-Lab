@@ -7,7 +7,10 @@
 // The player starts by itself, muted (autoplay: browsers allow it only without sound), with nothing of ours over it (the owner,
 // 2026-10-14: the "Tap the video for sound" hint is gone). A fresh player of the same live video
 // is loaded in the background every 5 minutes while the viewer has not touched it, and on "Reload video" at once, and
-// cross-faded in once loaded: never more than two frames, no black flash.
+// cross-faded in once loaded: never more than two frames, no black flash. Under the player a poster (inline SVG, no
+// request: MUSE PLAYS MINECRAFT, LIVE, the game) from the first paint: the player comes 2.5 s later (at once on a tap),
+// see-through until loaded, so muse.ai's card thumbnail (2026-10-14: Chrome's broken-frame icon on grey) shows the
+// poster, and a player that cannot load never shows.
 //
 // The game's end (the owner, 2026-10-14: after gd7540a ended, a fresh player started Facebook's replay from 0:00 and
 // the game looked alive again): the page asks our server every 15 s whether its game has ended, with an image (the
@@ -49,16 +52,37 @@ export function statusLine(v) {
   return v.fb === false ? 'Live video is off on this server.' : 'Waiting for the next game.';
 }
 
-/** The watchdog, and the game's end from our server's images (no fetch: the panel allows none). */
-const SCRIPT = `(()=>{const v=document.getElementById('v');if(!v)return;const src=v.dataset.src,st=v.dataset.st;let cur=v.querySelector('iframe'),next=null,touched=0;
-function swap(){if(next)next.remove();const f=document.createElement('iframe');next=f;f.src=src;f.title='Live video';f.allow='autoplay; encrypted-media; picture-in-picture; web-share';f.allowFullscreen=true;f.style.opacity='0';v.appendChild(f);
-f.onload=()=>setTimeout(()=>{if(next!==f)return;f.style.opacity='1';const old=cur;cur=f;next=null;setTimeout(()=>old.remove(),900);},2500);}
+/**
+ * The player after the poster (2.5 s, or at once on a tap or a key: muse.ai's card thumbnail is taken before, so it
+ * shows the poster, never a frame that could not load), see-through until it has loaded; the watchdog; the game's end
+ * from our server's images (no fetch: the panel allows none).
+ */
+const SCRIPT = `(()=>{const v=document.getElementById('v');if(!v)return;const src=v.dataset.src,st=v.dataset.st;let cur=null,next=null,touched=0,ended=0;
+function swap(){if(ended)return;if(next)next.remove();const f=document.createElement('iframe');next=f;f.src=src;f.title='Live video';f.allow='autoplay; encrypted-media; picture-in-picture; web-share';f.allowFullscreen=true;f.style.opacity='0';v.appendChild(f);
+f.onload=()=>setTimeout(()=>{if(next!==f)return;f.style.opacity='1';const old=cur;cur=f;next=null;if(old)setTimeout(()=>old.remove(),900);},cur?2500:800);}
+function first(){if(!cur&&!next)swap();}
+const ft=setTimeout(first,2500);addEventListener('pointerdown',first);addEventListener('keydown',first);
 document.getElementById('r').onclick=()=>swap();
 const wd=setInterval(()=>{if(!touched)swap();},300000);
-function end(){clearInterval(wd);clearInterval(pl);next=null;for(const f of v.querySelectorAll('iframe'))f.remove();const c=new Image();c.className='end';c.alt='The game has ended';c.src=st+'end.svg?'+Date.now();v.appendChild(c);
+function end(){ended=1;clearTimeout(ft);clearInterval(wd);clearInterval(pl);next=null;for(const f of v.querySelectorAll('iframe'))f.remove();const c=new Image();c.className='end';c.alt='The game has ended';c.src=st+'end.svg?'+Date.now();v.appendChild(c);
 const p=document.querySelector('#s p');if(p)p.textContent='The game has ended. A new game gets a new live video.';const r=document.getElementById('r');if(r)r.remove();}
 const pl=st?setInterval(()=>{const i=new Image();i.onload=()=>{if(i.naturalWidth===2)end();};i.src=st+'state.svg?'+Date.now();},15000):0;
 addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement&&document.activeElement.tagName==='IFRAME')touched=1;},0));})();`;
+
+/**
+ * The poster under the player, from the first paint and with no request (inline SVG): MUSE PLAYS MINECRAFT, LIVE, the
+ * game, a stair of blocks in the HUD's colours. muse.ai's card thumbnail shows it; the player covers it once loaded.
+ */
+function posterSvg(game, aw, ah) {
+  const W = 1080, H = Math.round((1080 * ah) / aw), cy = H / 2;
+  const blocks = [[0, 3, '#9d8cff'], [1, 3, '#5fd39b'], [1, 2, '#9d8cff'], [2, 3, '#efa443'], [2, 2, '#5fd39b'], [2, 1, '#9d8cff'], [3, 3, '#2a3040'], [3, 2, '#efa443'], [3, 1, '#5fd39b'], [3, 0, '#9d8cff']];
+  const bx = 120, by = cy - 150, b = 60;
+  return `<svg class="poster" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-label="Muse plays Minecraft, live"><rect width="${W}" height="${H}" fill="#0b0e14"/>`
+    + blocks.map(([x, y, c]) => `<rect x="${bx + x * (b + 6)}" y="${by + y * (b + 6)}" width="${b}" height="${b}" rx="6" fill="${c}"/>`).join('')
+    + `<g font-family="system-ui,sans-serif" fill="#f3f5f9"><text x="430" y="${cy - 40}" font-size="58" font-weight="700">MUSE PLAYS</text><text x="430" y="${cy + 30}" font-size="58" font-weight="700">MINECRAFT</text>`
+    + `<rect x="430" y="${cy + 66}" width="96" height="40" rx="8" fill="#e5484d"/><text x="478" y="${cy + 95}" font-size="24" font-weight="700" text-anchor="middle">LIVE</text>`
+    + `<text x="546" y="${cy + 95}" font-size="26" fill="#aeb6c6">${game ? `game ${game} · ` : ''}Picasso Lab</text></g></svg>`;
+}
 
 /**
  * The page: Facebook's player for embedUrl (when there is one and it is Facebook's) above the status line.
@@ -74,12 +98,12 @@ export function liveViewHtml(v) {
   const g = gameId(v.game);
   const st = live && g && isStatusBase(v.statusBase) ? `${String(v.statusBase).replace(/\/+$/, '')}/live/${g}/` : '';
   const player = live
-    ? `<div id="v" data-src="${esc(src)}"${st ? ` data-st="${esc(st)}"` : ''}><iframe src="${esc(src)}" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe></div>`
+    ? `<div id="v" data-src="${esc(src)}"${st ? ` data-st="${esc(st)}"` : ''}>${posterSvg(g, aw, ah)}</div>`
     : '';
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
     + '<title>Minecraft live</title><style>html,body{margin:0;background:#0c0e10;color:#e8e4dc;font:13px/1.4 system-ui,sans-serif}'
     + `#v{position:relative;aspect-ratio:${aw}/${ah};width:min(100%,calc((100vh - 28px)*${ratio}));margin:0 auto;background:#000;overflow:hidden}`
-    + 'iframe,img.end{position:absolute;inset:0;width:100%;height:100%;border:0;transition:opacity .8s}'
+    + 'iframe,img.end,svg.poster{position:absolute;inset:0;width:100%;height:100%;border:0;transition:opacity .8s}'
     // "Reload video" in the status line under the player: it covers nothing
     + '#s{display:flex;align-items:center;justify-content:space-between;gap:10px}#r{flex:none;margin-right:10px;padding:1px 9px;border:1px solid #3a3f47;border-radius:99px;background:none;color:#c9c5bd;font:12px system-ui,sans-serif;cursor:pointer}#r:hover{color:#fff}'
     + `p{margin:0;padding:5px 12px}</style></head><body>${player}${live ? `<div id="s"><p>${esc(statusLine(v))}</p><button id="r" type="button">Reload video</button></div>` : `<p>${esc(statusLine(v))}</p>`}`

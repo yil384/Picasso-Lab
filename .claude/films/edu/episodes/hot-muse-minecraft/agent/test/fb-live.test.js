@@ -545,37 +545,38 @@ test('service and client: focus and /live over loopback; focus puts a game the c
 test('live page: small, no request of its own, only Facebook\'s player (autoplay, muted) and the reload watchdog; joining, live, waiting, off', () => {
   const embed = facebookEmbedUrl(`https://www.facebook.com/${PAGE_ID}/videos/7100000000001/`);
   const live = liveViewHtml({ state: 'live', game: 'g1a2b3c', camera: 'g1a2b3c', embedUrl: embed, fb: true });
-  assert.ok(Buffer.byteLength(live) < 3072, `${Buffer.byteLength(live)} bytes`);
+  assert.ok(Buffer.byteLength(live) < 4096, `${Buffer.byteLength(live)} bytes`);
   assert.match(live, /^<!doctype html>/);
   for (const banned of ['fetch', 'WebSocket', 'XMLHttpRequest', 'sendBeacon', 'http-equiv', 'javascript:', 'eval(', 'import(']) assert.equal(live.toLowerCase().includes(banned.toLowerCase()), false, banned);
   assert.doesNotMatch(live, /\son\w+=/i, 'no event handler attributes');
   const player = `${embed}&autoplay=true&mute=true`;
   const urls = live.match(/https?:\/\/[^"\s<]+/g);
   assert.deepEqual([...new Set(urls.map((u) => u.replace(/&amp;/g, '&')))], [player], 'one URL: the player, starting by itself and muted');
-  assert.ok(live.includes(`<iframe src="${player.replace(/&/g, '&amp;')}"`));
-  assert.match(live, /allowfullscreen><\/iframe><\/div><div id="s"><p>Live: [^<]*<\/p><button id="r" type="button">Reload video<\/button><\/div>/, 'the player alone, the button under it');
+  assert.ok(live.includes(`data-src="${player.replace(/&/g, '&amp;')}"`));
+  assert.match(live, /<svg class="poster" [^>]*>[^]*MUSE PLAYS[^]*MINECRAFT[^]*LIVE[^]*game g1a2b3c · Picasso Lab[^]*<\/svg><\/div><div id="s"><p>Live: [^<]*<\/p><button id="r" type="button">Reload video<\/button><\/div>/, 'the poster in the player\'s place, the button under it');
+  assert.doesNotMatch(live, /<iframe/, 'the player comes from the script, after the poster');
   const script = live.match(/<script>([\s\S]*)<\/script>/)[1];
   assert.match(script, /setInterval\(\(\)=>\{if\(!touched\)swap\(\);\},300000\)/, 'a fresh player every 5 min while untouched');
   assert.match(script, /if\(next\)next\.remove\(\)/, 'never more than two players');
   assert.match(script, /old\.remove\(\)/);
   assert.match(live, /<p>Live: game g1a2b3c\. One camera films the game that asked for the live view last\.<\/p>/);
   const joining = liveViewHtml({ state: 'connecting', game: 'g1a2b3c', embedUrl: embed, fb: true });
-  assert.match(joining, /<iframe/);
+  assert.match(joining, /data-src=/);
   assert.match(joining, /Joining: the live video of game g1a2b3c starts in a few seconds\./);
-  assert.equal(liveViewHtml({ state: 'starting', game: 'g1', embedUrl: null, fb: true }).includes('<iframe'), false);
+  assert.equal(liveViewHtml({ state: 'starting', game: 'g1', embedUrl: null, fb: true }).includes('data-src='), false);
   const waiting = liveViewHtml({ state: 'off', game: 'g1', embedUrl: embed, fb: true });
-  assert.equal(waiting.includes('<iframe'), false);
+  assert.equal(waiting.includes('data-src='), false);
   assert.match(waiting, /Waiting for the next game\./);
   assert.match(liveViewHtml({ state: 'off', fb: false }), /Live video is off on this server\./);
   assert.equal(statusLine({ state: 'live', game: 'g1', camera: 'g2' }), 'Live: the camera is on game g2 now (it films the game that asked for the live view last).');
   assert.equal(statusLine({ state: 'retrying', game: 'g1' }), 'Not live yet: the live video could not start; it is tried again by itself.');
   // anything but Facebook's player, or a strange game id, stays out
-  assert.equal(liveViewHtml({ state: 'live', game: 'g1', embedUrl: 'https://evil.example/plugins/video.php?href=x' }).includes('<iframe'), false);
+  assert.equal(liveViewHtml({ state: 'live', game: 'g1', embedUrl: 'https://evil.example/plugins/video.php?href=x' }).includes('data-src='), false);
   assert.equal(isPlayerUrl('https://www.facebook.com/plugins/video.php?href=x#y'), false);
   assert.equal(liveViewHtml({ state: 'live', game: '<b>x</b>', embedUrl: embed }).includes('<b>'), false);
 });
 
-test('live page: nothing of ours over the player (no sound hint); the watchdog as before: a fresh player every 5 min until the viewer taps it, Reload at once', () => {
+test('live page: the poster first (muse.ai\'s card), the player 2.5 s later or at a tap, see-through until loaded; the watchdog as before: a fresh player every 5 min until the viewer taps it, Reload at once', () => {
   const embed = facebookEmbedUrl(`https://www.facebook.com/${PAGE_ID}/videos/7100000000001/`);
   const page = liveViewHtml({ state: 'live', game: 'g1', camera: 'g1', embedUrl: embed, fb: true });
   assert.doesNotMatch(page, /Tap the video|id="h"|id="k"|for sound/);
@@ -585,23 +586,31 @@ test('live page: nothing of ours over the player (no sound hint); the watchdog a
     let now = 0; const timers = []; let seq = 0;
     const later = (fn, ms, every = 0) => { const id = ++seq; timers.push({ id, at: now + ms, fn, every }); return id; };
     const tick = (ms) => { const end = now + ms; for (;;) { timers.sort((x, y) => x.at - y.at); const x = timers[0]; if (!x || x.at > end) break; now = x.at; if (x.every) x.at += x.every; else timers.shift(); x.fn(); } now = end; };
+    const drop = (id) => { const i = timers.findIndex((x) => x.id === id); if (i >= 0) timers.splice(i, 1); };
     const made = [];
     const el = (tag) => ({ tagName: tag, style: {}, remove() { this.gone = true; } });
-    const cur = el('IFRAME');
-    const nodes = { v: { dataset: { src: 'x' }, querySelector: () => cur, appendChild: (f) => made.push(f) }, r: {} };
+    const nodes = { v: { dataset: { src: 'x' }, appendChild: (f) => made.push(f), querySelectorAll: () => made.filter((f) => !f.gone) }, r: {} };
     const win = {};
-    const document = { activeElement: null, getElementById: (id) => nodes[id], createElement: (tag) => el(tag.toUpperCase()) };
-    vm.runInNewContext(script, { document, setTimeout: (fn, ms) => later(fn, ms), setInterval: (fn, ms) => later(fn, ms, ms), addEventListener: (type, fn) => { win[type] = fn; } });
-    return { made, nodes, win, document, tick, cur };
+    const document = { activeElement: null, getElementById: (id) => nodes[id], createElement: (tag) => el(tag.toUpperCase()), querySelector: () => null };
+    vm.runInNewContext(script, { document, setTimeout: (fn, ms) => later(fn, ms), clearTimeout: drop, setInterval: (fn, ms) => later(fn, ms, ms), clearInterval: drop, addEventListener: (type, fn) => { win[type] = fn; } });
+    return { made, nodes, win, document, tick };
   };
   let p = run();
-  p.tick(299_000); assert.equal(p.made.length, 0);
-  p.tick(2_000); assert.equal(p.made.length, 1, 'a fresh player at 5 min');
-  p.made[0].onload(); p.tick(2_600); assert.equal(p.made[0].style.opacity, '1', 'cross-faded in'); p.tick(1_000); assert.ok(p.cur.gone, 'the old one out');
-  p.nodes.r.onclick(); assert.equal(p.made.length, 2, 'Reload video: at once');
+  p.tick(2_400); assert.equal(p.made.length, 0, 'the poster alone at first (the card thumbnail)');
+  p.tick(200); assert.equal(p.made.length, 1, 'the player at 2.5 s');
+  assert.equal(p.made[0].style.opacity, '0', 'see-through until it has loaded: a frame that cannot load never shows');
+  p.made[0].onload(); p.tick(900); assert.equal(p.made[0].style.opacity, '1', 'shown once loaded');
+  p.tick(300_000); assert.equal(p.made.length, 2, 'a fresh player at 5 min');
+  p.made[1].onload(); p.tick(2_600); assert.equal(p.made[1].style.opacity, '1', 'cross-faded in'); p.tick(1_000); assert.ok(p.made[0].gone, 'the old one out');
+  p.nodes.r.onclick(); assert.equal(p.made.length, 3, 'Reload video: at once');
+  // a tap: the player at once
   p = run();
-  p.document.activeElement = p.cur; p.win.blur(); p.tick(1);
-  p.tick(900_000); assert.equal(p.made.length, 0, 'a player the viewer tapped is never replaced');
+  p.win.pointerdown(); assert.equal(p.made.length, 1); p.tick(5_000); assert.equal(p.made.length, 1, 'once');
+  // a tap into the player: never replaced
+  p = run();
+  p.tick(3_000); p.made[0].onload(); p.tick(1_000);
+  p.document.activeElement = p.made[0]; p.win.blur(); p.tick(1);
+  p.tick(900_000); assert.equal(p.made.length, 1, 'a player the viewer tapped is never replaced');
 });
 
 test('MCP live_view with the channel: called before the stream is up it waits for Facebook, then answers with the page and a plain link; the one camera is said plainly', async (t) => {
@@ -624,7 +633,7 @@ test('MCP live_view with the channel: called before the stream is up it waits fo
   assert.match(txt, new RegExp(`^Live view of game ${game}: live on Facebook since \\d\\d:\\d\\d:\\d\\d UTC\\.\\nVideo \\(plain link\\): ${video.replace(/[./]/g, '\\$&')}\\nOne camera serves every game on this server: it films the game whose live_view call came last`));
   assert.ok(txt.includes('\nHTML page (Facebook\'s video player and a status line; a small script reloads the player, no request of its own):\n<!doctype html>'));
   assert.deepEqual({ ...r.structuredContent, html: undefined }, { format: 'html', game, state: 'live', live: true, camera_game: game, video_url: video, embed_url: facebookEmbedUrl(video), html: undefined });
-  assert.ok(r.structuredContent.html.includes(`<iframe src="${`${facebookEmbedUrl(video)}&autoplay=true&mute=true`.replace(/&/g, '&amp;')}"`));
+  assert.ok(r.structuredContent.html.includes(`data-src="${`${facebookEmbedUrl(video)}&autoplay=true&mute=true`.replace(/&/g, '&amp;')}"`));
   const embed = JSON.parse((await c.callTool({ name: 'live_view', arguments: { format: 'embed' } })).content[0].text);
   assert.deepEqual(embed, { format: 'embed', game, live: true, state: 'live', camera_game: game, player: 'facebook', embed_url: facebookEmbedUrl(video), video_url: video });
   // the game ends: its body's end takes it off the channel (the agent hands the channel the body), and the live video ends
@@ -648,7 +657,7 @@ test('MCP live_view: not live within the wait, it says so and when to ask again;
   const txt = r.content[0].text;
   assert.match(txt, new RegExp(`^Live view of game ${game}: the live video is starting but was not live after \\d s\\. Call live_view again in about 20 s for a page that shows it live\\.\\nVideo \\(plain link\\): https://www\\.facebook\\.com/`));
   assert.equal(r.structuredContent.live, false);
-  assert.match(r.structuredContent.html, /<iframe src="https:\/\/www\.facebook\.com\/plugins\/video\.php\?href=/);
+  assert.match(r.structuredContent.html, /data-src="https:\/\/www\.facebook\.com\/plugins\/video\.php\?href=/);
   assert.match(r.structuredContent.html, /Joining: the live video of game g\w+ starts in a few seconds\./);
 });
 
@@ -670,7 +679,7 @@ test('MCP live_view: a refusal the channel waits out is said at once, with the r
   assert.ok(Date.now() - t0 < 5_000, 'no 40 s wait for a try ten minutes away');
   assert.match(r.content[0].text, new RegExp(`^Live view of game ${game}: not live: the live video could not start \\(Facebook says the Page is not eligible to go live yet: a profile or Page must be at least 60 days old \\(code 200/1363120\\)\\)\\. It is tried again by itself in \\d+ s; call live_view again after that\\.\n3D view in a web page \\(plain link\\): `));
   assert.match(r.structuredContent.html, /<p>Not live yet: the live video could not start; it is tried again by itself\.<\/p>/);
-  assert.equal(r.structuredContent.html.includes('<iframe'), false);
+  assert.equal(r.structuredContent.html.includes('data-src='), false);
 });
 
 test('config: FB_LIVE off by default; on, it needs the Page id, the token file and the camera; FB_* checked', () => {
@@ -772,7 +781,7 @@ test('a test caller (TEST SCRIPT) spends no Facebook live: the same answer shape
   assert.match(r.content[0].text, new RegExp(`^Live view of game ${game}: test caller: no Facebook live .*The game itself works\\.\\n3D view in a web page \\(plain link\\): http`));
   assert.deepEqual({ ...r.structuredContent, html: undefined }, { format: 'html', game, state: 'test', live: false, camera_game: null, video_url: null, embed_url: null, html: undefined });
   assert.match(r.structuredContent.html, /<p>Test caller: no Facebook live for game g\w+ \(tests never use the live videos a day\)\. The game goes on\.<\/p>/);
-  assert.doesNotMatch(r.structuredContent.html, /<iframe/);
+  assert.doesNotMatch(r.structuredContent.html, /data-src=/);
   const embed = JSON.parse((await c.callTool({ name: 'live_view', arguments: { format: 'embed' } })).content[0].text);
   assert.deepEqual([embed.state, embed.live, embed.embed_url], ['test', false, null]);
   await new Promise((res) => { setTimeout(res, 300); });
