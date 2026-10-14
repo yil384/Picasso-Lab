@@ -184,9 +184,9 @@ export function createUiPanel(o) {
   // icons, each scaled once to every size the HUD draws it at
   const images = {};
   try { for (const f of fs.readdirSync(path.join(assets, 'icons'))) if (f.endsWith('.png')) { const im = new Image(); im.src = fs.readFileSync(path.join(assets, 'icons', f)); images[f.slice(0, -4)] = im; } } catch { /* drawn without */ }
-  // the lab's wordmark for the top right of the video (concept B; the stream only, never the clean recording)
+  // the lab's logo for the top right of the video (concept B; the stream only, never the clean recording)
   let logo = null;
-  try { logo = new Image(); logo.src = fs.readFileSync(path.join(assets, 'logo_word_iv.png')); } catch { logo = null; }
+  try { logo = new Image(); logo.src = fs.readFileSync(path.join(assets, 'lab-logo-152.png')); } catch { logo = null; }
   const scaled = new Map();
   const iconAt = (n, size) => {
     const k = `${n}@${size}`;

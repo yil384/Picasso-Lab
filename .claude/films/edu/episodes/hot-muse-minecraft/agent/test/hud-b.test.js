@@ -263,7 +263,7 @@ test('HUD B: the lab\'s mark at the top right of the video, clear of the toasts\
   g.run(1100);
   const px = (x, y) => g.p.render(g.t).getContext('2d').getImageData(x, y, 1, 1).data[3];
   assert.ok(px(1000, 40) > 0, 'the mark');
-  assert.equal(px(1000, 120), 0, 'nothing between it and the toasts');
+  assert.equal(px(1000, 126), 0, 'nothing between it and the toasts');
   assert.equal(px(60, 40), 0, 'nothing at the top left (Facebook\'s LIVE badge)');
 });
 

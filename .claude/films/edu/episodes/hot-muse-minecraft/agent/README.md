@@ -1206,10 +1206,11 @@ and Muse's panel under it:
   it: before the first call, a toast, a second call while one holds, a burst, three at once, 14 steps and a long why,
   STUCK and TIME, rules none and some, a rule firing, a split, a new goal, a death, the Nether, a refusal; no text
   leaves the frame or overlaps another. Back to the design before it: `STREAM_HUD=final` in deploy/camera.env, then
-  the camera again (while idle). The lab's mark stands at the top right of the video (2026-10-14): the ivory PICASSO
-  wordmark (`assets/muse-ui/logo_word_iv.png`) 170 px wide with "LAB · UC SAN DIEGO" in the HUD's spaced capitals, a
-  hard 2 px shadow and a faint plate (no blur) for bright sky, at 85 %, clear of the toasts and of Facebook's LIVE badge;
-  in the stream and `stream-<n>.mp4`, never in the clean recording. Measured on the muse-camera-test stack (2026-10-13; `deploy/camera-test/camera-bench.sh`
+  the camera again (while idle). The lab's logo stands at the top right of the video (2026-10-14): the official one as it is
+  (`home/static/PicassoLab-Logo.png`: the three rings and PICASSO), put on white at its full size and scaled to 152 px
+  with lanczos (`assets/muse-ui/lab-logo-152.png`), on a white card (radius 10, a 1 px dark edge, no blur) at 92 %,
+  clear of the toasts and of Facebook's LIVE badge; in the stream and `stream-<n>.mp4`, never in the clean recording.
+  Measured on the muse-camera-test stack (2026-10-13; `deploy/camera-test/camera-bench.sh`
   with `hud-storm.cjs` feeding a busy game: a call every 3 s, an item every 1.5 s, a rule every 10 s, banners; 6 CPUs as
   production, the clean recorder running): at a host load of 157 the client 25.4 frames a second (p10 21), the stream
   30 a second with no frame dropped or duplicated, speed 1.0x, the camera 5.17 cores; the HUD 26.8 frames written a

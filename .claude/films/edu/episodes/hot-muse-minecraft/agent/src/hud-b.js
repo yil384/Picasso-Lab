@@ -632,22 +632,16 @@ function drawRaw(M) {
     }
   }
 }
-// the lab's mark at the top right of the video (the owner, 2026-10-14): the ivory PICASSO wordmark 170 px wide and
-// "LAB · UC SAN DIEGO" under it in the HUD's spaced capitals, a hard dark shadow 2 px down and a faint plate (no blur)
-// for bright sky, at 85 %; the mark 26 px in from the corner, above the toasts' band (from y 136) and away from
-// Facebook's LIVE badge (top left)
-export const LOGO = { w: 170, right: 1062, y: 16, alpha: 0.85, ivory: '#efe6cf' };
+// the lab's logo at the top right of the video (the owner, 2026-10-14: the official one as it is): the three rings and
+// PICASSO (home/static/PicassoLab-Logo.png, put on white at its full size and scaled to 152 px with lanczos:
+// assets/muse-ui/lab-logo-152.png) on a white card (radius 10, 7 px around, a 1 px dark edge for snow and sky, no blur)
+// at 92 %; 16 px in from the corner, above the toasts' band (from y 136) and away from Facebook's LIVE badge (top left)
+export const LOGO = { right: 1064, y: 14, pad: 7, alpha: 0.92 };
 function buildLogo(img) {
-  const w = LOGO.w, lh = Math.round((img.height * w) / img.width), pad = 10;
-  const c = mk(w + pad * 2, lh + 26 + pad * 2), x = c.getContext('2d');
-  // a faint plate: ivory on a bright sky needs it, on a cave it is barely there
-  fillRR(0, 0, c.width, c.height, 8, 'rgba(8,10,14,0.30)', x);
-  const sil = mk(w, lh), sx = sil.getContext('2d');
-  sx.drawImage(img, 0, 0, w, lh); sx.globalCompositeOperation = 'source-in'; sx.fillStyle = 'rgba(6,8,12,0.6)'; sx.fillRect(0, 0, w, lh);
-  x.drawImage(sil, pad + 1, pad + 2); x.drawImage(img, pad, pad, w, lh);
-  const line = 'Lab · UC San Diego';
-  CAPS(line, pad + w / 2 + 1, pad + lh + 19, 11, 'rgba(6,8,12,0.6)', 600, x, 'center');
-  CAPS(line, pad + w / 2, pad + lh + 17, 11, LOGO.ivory, 600, x, 'center');
+  const p = LOGO.pad, c = mk(img.width + p * 2, img.height + p * 2), x = c.getContext('2d');
+  fillRR(0, 0, c.width, c.height, 10, '#ffffff', x);
+  strokeRR(0, 0, c.width, c.height, 10, 'rgba(0,0,0,0.28)', 1, x);
+  x.drawImage(img, p, p);
   return c;
 }
 /** The HUD layer: everything that stands still (pend: the homes still waiting for a toast's tile). */
