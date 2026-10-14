@@ -356,6 +356,10 @@ stay; our body ignores them. To switch again: `sed -i "s/^BODY=.*/BODY=mineai/" 
 - Bot data: deleted when a game ends, the last 10 failed games kept (`MINEAI_KEEP_FAILED`), folders older than 3 days
   removed at agent start (`MINEAI_DATA_DAYS`).
 - Capacity: production allows 8 guest bots (`WEB_MAX_SESSIONS`), about 0.4 GB and a fifth of a core each.
+  - Load test on staging, 2026-10-14: 8 scripted strict iron-pickaxe games at once (`test/e2e/mcp-iron.mjs`, one per MCP session).
+  - Agent container: 2.1 cores on average, at most 3.75, and 2.7 GB on average, at most 3.6 GB (0.45 GB a game).
+  - Paper: 0.9 cores on average, at most 1.2, and 2.3 GB; TPS 20.0 in every reading.
+  - 7 of the 8 games made the iron pickaxe in 141 to 216 s. The 8th game's runtime was killed (SIGKILL) on purpose at 2 minutes: the agent restarted it, the strict harness ended that game at its first failed step, and the other 7 went on unaffected.
 
 ## 7. A runtime update after the switch (patch 0011, 2026-10-08)
 

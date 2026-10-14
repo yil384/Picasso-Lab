@@ -1501,7 +1501,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       only('GET');
       requireAdmin(req);
       const n = Math.min(200, Math.max(1, Number.parseInt(u.searchParams.get('n') ?? '50', 10) || 50));
-      const secrets = [adminToken, ...sessions.keys()];
+      const secrets = [adminToken, ...(ownerKey ? [ownerKey] : []), ...sessions.keys()];
       const body = log.tail(n).map((row) => scrub(jsonText(row), secrets)).join('\n');
       return send(res, 200, body ? `${body}\n` : '', { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store', ...PRIVATE });
     }
