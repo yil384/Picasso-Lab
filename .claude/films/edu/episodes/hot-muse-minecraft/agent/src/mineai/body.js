@@ -136,6 +136,12 @@ export const FRAME_GUARD = 160;
 export const PORTAL_SETTLE_MS = 10_000;
 /** How long a search for obsidian may bring none in before it is stopped and said why (making one takes about 30 s). */
 export const OBSIDIAN_STALL_MS = 75_000;
+/**
+ * How long a step waits for their action to end once it was cancelled (F8 of the 2026-10-12 log hunt: a cancelled
+ * obsidian collect ran 360 s past its limit, the step with it). After that the step ends; their action, if still
+ * running, is cancelled again before the next one starts (act: "an earlier step was left running").
+ */
+export const CANCEL_GRACE_MS = 30_000;
 /** What a block placed into a cell simply replaces (nothing to dig first). */
 const REPLACEABLE = /^(air|cave_air|void_air|short_grass|tall_grass|grass|fern|large_fern|snow|dead_bush|vine|glow_lichen|seagrass|[a-z_]*_sapling|dandelion|poppy|blue_orchid|allium|azure_bluet|[a-z_]*_tulip|oxeye_daisy|cornflower|lily_of_the_valley|sunflower|lilac|rose_bush|peony)$/;
 /**
@@ -272,7 +278,7 @@ export function attributionOf(muse, { reflex = 0, care = 0, rule = null, body = 
   return { muse, rule, body: own, care, reflex, byRule: { ...byRule }, musePct, decidedPct, text };
 }
 
-export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs, careYieldMs, obsidianStallMs = OBSIDIAN_STALL_MS, portalSettleMs = PORTAL_SETTLE_MS }) {
+export function createMineAiBody({ config, log, hosts, gameId, username, viewId = null, onEyes = null, connect = connectSdk, timeouts = MINEAI_TIMEOUTS, care: careOpt = 'advise', careTickMs, careIdleMs, careYieldMs, obsidianStallMs = OBSIDIAN_STALL_MS, portalSettleMs = PORTAL_SETTLE_MS, cancelGraceMs = CANCEL_GRACE_MS }) {
   const emitter = new EventEmitter();
   emitter.setMaxListeners(50);
   let host = null;
@@ -408,7 +414,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         return { text: `the walk to ${t.x} ${t.y} ${t.z} does not get there${words ? ` (${words})` : ''}`, options: [
           { text: `come at it from another side: go_to ${t.x + 3} ${t.y} ${t.z}`, hint: { skill: 'go_to', args: { x: t.x + 3, y: t.y, z: t.z } } },
           { text: `dig down beside it: go_to ${t.x} ${t.y - 1} ${t.z + 1}`, hint: { skill: 'go_to', args: { x: t.x, y: t.y - 1, z: t.z + 1 } } },
-          { text: 'or change the plan: a different spot or a different way to what you need' },
+          { text: 'change the plan: a different spot or a different way to what you need' },
         ] };
       }
       // a frame that does not go up (production game gd7540a: three builds and only "change the plan" to go on)
@@ -422,7 +428,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
         }
         options.push({ text: 'build on open, flat ground with sky above: the frame goes 1 block in front of you, 4 wide and 5 tall, its bottom row in the ground (in rock the body digs the site out first)' });
         if (lastPortal && !lastPortal.complete) options.push({ text: 'take back the obsidian of the frame that failed: portal dismantle', hint: { skill: 'portal', args: { action: 'dismantle' } } });
-        options.push({ text: 'or place the frame yourself, block by block (place obsidian: 4 wide, 5 tall, corners optional)' });
+        options.push({ text: 'place the frame yourself, block by block (place obsidian: 4 wide, 5 tall, corners optional)' });
         return { text: `the frame does not go up${words ? ` (the last one said: ${words})` : ''}`, options };
       }
       return { text: words ? `the last one said: ${words}` : 'nothing changed', options: [{ text: 'change the plan: a different spot, a different skill or a different order' }] };
@@ -684,10 +690,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       }
     }
     let cancelled = false;
+    let cancelledAt = 0;
     // self: a cancel of our own making that is not a stop (an attack whose mob died)
     const cancel = async (why, { self = false } = {}) => {
       if (cancelled || !ctl.actionId) return;
       cancelled = true;
+      cancelledAt = Date.now();
       if (!self) ctl.stopped ??= why;
       await rpc('cancel_foreground_action', { action_id: ctl.actionId, reason: String(why).slice(0, 200) });
     };
@@ -716,7 +724,12 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       if (ctl.attack && !cancelled && deaths(data) > 0) { ctl.killed = deaths(data); await cancel(KILLED, { self: true }); }
       else if (ctl.stopped) await cancel(ctl.stopped);
       else if (left() <= 0) await cancel(`timed out after ${Math.round((ctl.limitMs ?? timeouts[ctl.skill] ?? 60_000) / 1000)} s`);
-      const ms = cancelled ? 15_000 : ctl.attack ? Math.max(500, Math.min(ATTACK_POLL_MS, waitFor())) : watch ? Math.max(1_000, Math.min(5_000, waitFor())) : Math.max(1_000, waitFor());
+      // cancelled and still not ended after the grace: the step ends here (F8)
+      if (cancelled && Date.now() - cancelledAt >= cancelGraceMs) {
+        if (lastSub !== 'null') { lastSub = 'null'; emit('progress', { sub: null }); }
+        return { output: { action: call.tool, result: { status: 'cancelled' } }, stopped: ctl.stopped, lingered: true };
+      }
+      const ms = cancelled ? Math.max(1_000, Math.min(15_000, cancelGraceMs - (Date.now() - cancelledAt))) : ctl.attack ? Math.max(500, Math.min(ATTACK_POLL_MS, waitFor())) : watch ? Math.max(1_000, Math.min(5_000, waitFor())) : Math.max(1_000, waitFor());
       data = await rpc('wait_for_action', { action_id: ctl.actionId, timeout_ms: ms }, ms + RPC_SLACK_MS);
     }
     if (lastSub !== 'null') { lastSub = 'null'; emit('progress', { sub: null }); }
@@ -1097,11 +1110,21 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       if (!plan.refused && tool === 'collect' && v.args.block === 'obsidian') {
         const g = await obsidianGuard();
         if (g?.note) plan.note = `${plan.note ? `${plan.note}; ` : ''}${g.note}`;
-        else if (g) plan.refused = g;
+        else if (g?.code === 'LAVA' && /(^|; )(no lava pool within|the lava within \d+ blocks is flowing)/.test(g.result)) {
+          // no pool near, but obsidian already formed beside the bot (not a frame): that much is mined at its cells,
+          // with no search (the pre-launch sweep: a LAVA refusal stood between the bot and obsidian lying beside it)
+          const near = await formedObsidian(6);
+          if (near.length) {
+            const n = Math.min(v.args.n, near.length);
+            plan.calls = near.slice(0, n).map((c) => ({ tool: 'collect_block', args: { block_name: 'obsidian', x: c.x, y: c.y, z: c.z } }));
+            plan.note = `${plan.note ? `${plan.note}; ` : ''}mined the obsidian already formed beside you${n < v.args.n ? ` (${n} of the ${v.args.n}: the rest needs a lava pool: ${g.result})` : ''}`;
+            plan.formedOnly = true;
+          } else plan.refused = g;
+        } else if (g) plan.refused = g;
         // obsidian already formed next to the bot: mined at its own cells first (production game g0a414c, 2026-10-13:
         // standing by formed obsidian, the search walked off to targets it could not reach, 0 of 1 for 9 minutes);
         // the search makes the rest (a step of its own, counted from what the cells gave)
-        if (!plan.refused) {
+        if (!plan.refused && !plan.formedOnly) {
           const near = await formedObsidian(6);
           if (near.length) {
             const n = v.args.n;
@@ -1174,6 +1197,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped, call });
+          if (out.lingered) res = { ...res, result: `${res.result} (it had not let go ${Math.round(cancelGraceMs / 1000)} s after being stopped: it is stopped again before your next step)` };
           // a walk into open air (production game g0842ff, 2026-10-14: go_to straight down to y -8 twice over a big
           // cavern, "no ground within 64 blocks below it"): the nearest place to stand there, read around the target
           if (!res.ok && call.tool === 'navigate' && Number.isFinite(call.args?.x) && /no ground within \d+ blocks below it/.test(res.result)) {

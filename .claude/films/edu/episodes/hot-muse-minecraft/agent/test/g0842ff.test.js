@@ -99,6 +99,7 @@ test('g0842ff over /mcp: no stuck for a walk that gets closer, one still on its 
     const fifth = await go(-182, 108, 215);
     assert.equal(fifth.advice?.[0]?.kind, 'stuck', JSON.stringify(fifth.advice));
     assert.match(fifth.advice[0].text, /^stuck: walking to -182 108 215 \(no progress for 3 calls/);
+    assert.doesNotMatch(fifth.advice[0].text, /\bor or\b/, 'g0842ff showed "; or or change the plan"');
 
     // a walk still on its way is no try: two walks that failed, then one that takes its time and gets there
     fake.world.position = { x: -100.5, y: 70, z: 100.5 };
