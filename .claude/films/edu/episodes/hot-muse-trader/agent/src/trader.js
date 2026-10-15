@@ -23,7 +23,7 @@ export function createTrader({ alpaca, store, uni, now = () => Date.now(), mock 
   async function asset(sym) {
     const c = assets.get(sym);
     if (c && now() - c.at < 86_400_000) return c.asset;
-    const a = await alpaca.asset(sym).catch((e) => (e instanceof BrokerError && e.status === 404 ? { tradable: false } : null));
+    const a = await alpaca.asset(sym).catch(() => null); // not found or failed: no information, the broker decides
     if (a) assets.set(sym, { at: now(), asset: a });
     return a;
   }
@@ -103,9 +103,9 @@ export function createTrader({ alpaca, store, uni, now = () => Date.now(), mock 
     },
 
     /** An order from the agent: read, checked, sent; every attempt in the journal. */
-    async placeOrder(raw, { session = null } = {}) {
+    async placeOrder(raw, { session = null, test = false } = {}) {
       const [o, bad] = readOrder(raw, uni);
-      const base = { symbol: o?.symbol ?? String(raw?.symbol ?? '').slice(0, 20), side: o?.side ?? String(raw?.side ?? '').slice(0, 10), qty: o?.qty ?? (o?.all ? 'all' : null), notional: o?.notional ?? null, type: o?.type ?? null, limit_price: o?.limit_price ?? null, why: o?.why ?? String(raw?.why ?? '').slice(0, 140), plan: o?.plan ?? String(raw?.plan ?? '').slice(0, 400), session };
+      const base = { symbol: o?.symbol ?? String(raw?.symbol ?? '').slice(0, 20), side: o?.side ?? String(raw?.side ?? '').slice(0, 10), qty: o?.qty ?? (o?.all ? 'all' : null), notional: o?.notional ?? null, type: o?.type ?? null, limit_price: o?.limit_price ?? null, why: o?.why ?? String(raw?.why ?? '').slice(0, 140), plan: o?.plan ?? String(raw?.plan ?? '').slice(0, 400), session, ...(test ? { test: true } : {}) };
       const refused = (r, extra = {}) => { store.record('refused', { ...base, ...extra, code: r.code, rule: r.rule ?? null, message: r.message }); return fail(r.code, r.message, r.rule); };
       if (bad) return refused(bad);
       let b, clock, price, a;

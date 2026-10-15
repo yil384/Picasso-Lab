@@ -4,7 +4,7 @@
   "private": true,
   "description": "An AI agent trades US stocks and crypto on a paper account with real market data, through an MCP server with a risk layer it cannot switch off, a public order log and a live trading floor. A research demo by Picasso Lab, UC San Diego.",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">=22"
   },

@@ -1,0 +1,8 @@
+Muse trades (MCP server for paper trading)
+Copyright 2026 Picasso Lab, UC San Diego
+
+Licensed under the Apache License, Version 2.0 (LICENSE).
+
+Not covered by that licence:
+- the Picasso Lab logo (assets/brand/), which stays the lab's; replace it when you host your own copy;
+- src/moderation/ldnoobw-en.txt, the LDNOOBW word list under CC BY 4.0 (src/moderation/NOTICE.md).

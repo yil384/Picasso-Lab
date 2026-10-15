@@ -3,11 +3,15 @@
 Muse runs itself on a schedule inside muse.ai (scheduled tasks); our server only answers its tool calls. Paste the
 prompt below into a new muse.ai chat, once, after the server is deployed.
 
-Before pasting, replace `OWNER_KEY` with the owner key from the server:
+The server is live at https://trade.picasso-lab.com (MCP endpoint `https://trade.picasso-lab.com/mcp`, Alpaca paper
+account, record started 2026-10-15 11:56 ET with $100,000). Before pasting, get your MCP URL with the owner key in it
+by running this on your Mac (it prints the URL; nothing else needs it):
 
 ```sh
-ssh picasso 'grep ^MCP_OWNER_KEY= ~/workspace/muse-trader/app/deploy/.env | cut -d= -f2'
+ssh picasso 'printf "https://trade.picasso-lab.com/mcp?key=%s\n" "$(grep ^MCP_OWNER_KEY= ~/workspace/muse-trader/app/deploy/.env | cut -d= -f2-)"'
 ```
+
+and put that whole URL in place of `https://trade.picasso-lab.com/mcp?key=OWNER_KEY` in step 1.
 
 The key lets Muse place orders; anyone without it can only read. If it leaks: delete the line from the server's
 `deploy/.env`, run `deploy/push.sh` (it makes a new one), and give Muse the new URL.

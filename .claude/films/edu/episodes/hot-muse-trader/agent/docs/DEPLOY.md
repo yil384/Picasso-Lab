@@ -1,7 +1,10 @@
 # Deploying on picasso (trade.picasso-lab.com)
 
-Compose project `muse-trader` in `~/workspace/muse-trader` (code in `app/`, the record in `run/`), next to the
-Minecraft stack: its own project name, and port `172.24.0.1:7870` (7850, 7851 and 7860 are taken). Secrets only in
+Live since 2026-10-15 (Alpaca paper, record started 11:56 ET with $100,000; the two $10 AAPL orders at 11:57 ET are
+the deployment test, labelled TEST in the public log). Compose project `muse-trader` in `~/workspace/muse-trader`
+(code in `app/`, the record in `run/paper`), next to the Minecraft stack: its own project name, port
+`172.24.0.1:7870` (7850, 7851 and 7860 are taken) and network `10.77.80.0/29` (picasso's default address pools are
+used up). Secrets only in
 files outside git: `deploy/.env` on the server, `~/.config/picasso/alpaca-paper.env` on the owner's Mac.
 
 ## 1. DNS

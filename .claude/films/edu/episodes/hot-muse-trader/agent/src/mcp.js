@@ -38,7 +38,7 @@ function orderLine(r) {
   const size = r.notional ? money(Number(r.notional)) : r.qty;
   const st = r.status === 'refused' ? `refused ${r.code}` : r.status === 'filled' ? `filled @ ${money(Number(r.fill_price))}` : r.status;
   const out = [r.outcome_1d_pct !== null ? `1d ${signedPct(r.outcome_1d_pct)} (${money(r.outcome_1d_pnl)})` : '', r.outcome_1w_pct !== null ? `1w ${signedPct(r.outcome_1w_pct)} (${money(r.outcome_1w_pnl)})` : ''].filter(Boolean).join(', ');
-  return `${etTime(r.t)} ${String(r.side ?? '').toUpperCase()} ${size} ${r.symbol}${r.type === 'limit' ? ` limit ${money(Number(r.limit_price))}` : ''}: ${st}${r.id ? ` [id ${r.id}]` : ''}${out ? ` | outcome ${out}` : ''} | why: ${r.why}`;
+  return `${r.test ? '[TEST] ' : ''}${etTime(r.t)} ${String(r.side ?? '').toUpperCase()} ${size} ${r.symbol}${r.type === 'limit' ? ` limit ${money(Number(r.limit_price))}` : ''}: ${st}${r.id ? ` [id ${r.id}]` : ''}${out ? ` | outcome ${out}` : ''} | why: ${r.why}`;
 }
 
 /**
@@ -113,7 +113,7 @@ export function createMcp(hooks) {
     });
 
     server.registerTool('market', {
-      description: `Quotes and a few plain indicators for up to ${MARKET_MAX} symbols (S&P 500 stocks, SPY, the listed crypto pairs such as BTC/USD): last price, returns over 1, 5 and 20 days, the price against its 20- and 50-day averages, 20-day volatility (annualized), today's volume against the 20-day average; and whether the stock market is open. They describe the past; none predicts.`,
+      description: `Quotes and a few plain indicators for up to ${MARKET_MAX} symbols (S&P 500 stocks, SPY, the listed crypto pairs such as BTC/USD): last price, returns over 1, 5 and 20 days, the price against its 20- and 50-day averages, 20-day volatility (annualized), today's volume so far against the 20-day average; and whether the stock market is open. They describe the past; none predicts.`,
       inputSchema: { symbols: z.union([z.array(z.string()), z.string()]).describe('e.g. ["AAPL", "MSFT", "BTC/USD"] or "AAPL, MSFT, BTC/USD"') },
       annotations: { readOnlyHint: true },
     }, async ({ symbols }) => {
@@ -163,10 +163,11 @@ export function createMcp(hooks) {
         limit_price: num.optional().describe('for a limit order'),
         why: z.string().describe(`the reason for this order, <= ${WHY_MAX} chars, public`),
         plan: z.string().describe(`what you will do next: when you would add, take profit or cut it, <= ${PLAN_MAX} chars, public`),
+        test: z.boolean().optional().describe('operators only: true marks a deployment test, labelled TEST in the public log. Leave it out.'),
       },
     }, async (args) => {
       if (!mayAct()) return ownerOnly('place_order');
-      const r = await trader.placeOrder(args, { session: String(entry.transport?.sessionId ?? '').slice(0, 8) });
+      const r = await trader.placeOrder(args, { session: String(entry.transport?.sessionId ?? '').slice(0, 8), test: args.test === true });
       hooks.onChange?.();
       if (!r.ok) return refusal(r);
       const o = r.order;
