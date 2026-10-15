@@ -1,0 +1,23 @@
+{
+  "name": "muse-trader",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An AI agent trades US stocks and crypto on a paper account with real market data, through an MCP server with a risk layer it cannot switch off, a public order log and a live trading floor. A research demo by Picasso Lab, UC San Diego.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "start": "node src/index.js",
+    "start:paper": "node --env-file=$HOME/.config/picasso/alpaca-paper.env src/index.js",
+    "demo": "node scripts/demo-seed.mjs",
+    "still": "node scripts/still.mjs",
+    "refresh-sp500": "node scripts/refresh-sp500.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.5"
+  }
+}

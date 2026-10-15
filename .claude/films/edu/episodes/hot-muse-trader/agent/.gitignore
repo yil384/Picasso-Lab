@@ -1,0 +1,5 @@
+node_modules
+run/
+deploy/.env
+deploy/.env.*
+*.log
