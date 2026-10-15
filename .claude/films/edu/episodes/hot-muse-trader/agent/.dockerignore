@@ -1,0 +1,6 @@
+node_modules
+run
+test
+scripts
+deploy/.env
+deploy/.env.*

@@ -1,0 +1,26 @@
+# The Muse trader on picasso, next to the Minecraft stack (its own compose project and port). Run from
+# ~/workspace/muse-trader/app/deploy (deploy/push.sh does it). deploy/.env holds the secrets (made by push.sh on the
+# server, never in git): MCP_OWNER_KEY, WEB_PROXY_SECRET, TRADER_UID/GID, and ALPACA_KEY_ID/ALPACA_SECRET_KEY once
+# the paper keys are in (push.sh --keys). Without the keys the server runs on its mock broker and says so on every page.
+# The record (journal, equity, summaries) lives in ~/workspace/muse-trader/run, outside the copied code.
+name: muse-trader
+services:
+  trader:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    restart: unless-stopped
+    init: true
+    user: "${TRADER_UID:-1000}:${TRADER_GID:-1000}"
+    env_file: [ .env ]
+    environment:
+      WEB_PUBLIC_URL: https://trade.picasso-lab.com
+      WEB_TRUST_PROXY: "1"
+      DATA_DIR: /data
+    volumes: [ "../../run:/data" ]
+    # the shared edge Caddy reaches it on the docker bridge, like play.picasso-lab.com (7850) and staging (7851)
+    ports: [ "172.24.0.1:7870:8790" ]
+    read_only: true
+    tmpfs: [ "/tmp:size=16m" ]
+    cpus: 1
+    mem_limit: 512m
+    pids_limit: 256
+    security_opt: [ "no-new-privileges:true" ]

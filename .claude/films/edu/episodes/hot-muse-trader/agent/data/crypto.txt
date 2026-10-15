@@ -1,0 +1,12 @@
+# Crypto pairs the agent may trade: the ten largest coins by market value that Alpaca lists against USD (stablecoins
+# left out), one pair per line in Alpaca's form (BTC/USD). Edit by hand; the risk layer reads it at start.
+BTC/USD
+ETH/USD
+XRP/USD
+SOL/USD
+DOGE/USD
+LINK/USD
+AVAX/USD
+LTC/USD
+BCH/USD
+DOT/USD
