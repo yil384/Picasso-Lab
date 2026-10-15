@@ -176,8 +176,12 @@ export function endCardSvg(e) {
     const x = 72 + (i >= 6 ? 480 : 0), y = 410 + (i % 6) * 64, done = m.atS != null;
     out.push(`<circle cx="${x + 14}" cy="${y - 10}" r="12" fill="${done ? '#5fd09c' : 'none'}" stroke="${done ? '#5fd09c' : '#4e5667'}" stroke-width="3"/>`);
     if (done) out.push(`<path d="M${x + 8} ${y - 10} l4 5 l8 -10" stroke="#0b0e14" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`);
-    out.push(`<text x="${x + 42}" y="${y}" fill="${done ? '#f3f5f9' : '#6b7488'}" font-size="30" font-weight="${done ? 600 : 500}">${xml(cap(m.name))}</text>`);
-    if (done) out.push(`<text x="${x + 420}" y="${y}" fill="#c9d1df" font-size="30" font-family="ui-monospace,Menlo,Consolas,monospace" text-anchor="end">${mmss(m.atS)}</text>`);
+    // the time in a column of its own (right edge x + 420, 90 wide), the label in the 272 px left of it with a 16 px gap:
+    // a long one in smaller type (g68528e: "Back in the Overworld" ran into 16:06), 0.54 em a character at most (a
+    // sans's average with room to spare)
+    const label = cap(m.name), size = Math.max(18, Math.min(30, Math.floor(272 / (label.length * 0.54))));
+    out.push(`<text x="${x + 42}" y="${y}" fill="${done ? '#f3f5f9' : '#6b7488'}" font-size="${size}" font-weight="${done ? 600 : 500}">${xml(label)}</text>`);
+    if (done) out.push(`<text x="${x + 420}" y="${y}" fill="#c9d1df" font-size="28" font-family="ui-monospace,Menlo,Consolas,monospace" text-anchor="end">${mmss(m.atS)}</text>`);
   });
   // who decided: the caller directly or by its rules, the bot on its own
   const a = e.attribution;
