@@ -1,0 +1,3384 @@
+{
+ "id": "l03-03",
+ "lecture": "L03",
+ "facts": "FACTS.md",
+ "title": "L03-03 MLA: Zipping the KV Cache",
+ "langs": [
+  "en"
+ ],
+ "voice": {
+  "lines": "vo_lines.json",
+  "clips": "clips.json",
+  "clipDir": "~/picasso-work/clips/l03-03",
+  "rate": "+4%",
+  "slotPad": 0.4
+ },
+ "sound": {
+  "dir": "~/picasso-assets/snd"
+ },
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "slides",
+  "drawings": {
+   "cover": {
+    "src": "line_cover_l03_03",
+    "w": 1040
+   },
+   "pack": {
+    "src": "line_mla_vacuum_pack",
+    "w": 960
+   },
+   "shelf": {
+    "src": "line_mla_slim_shelf",
+    "w": 980
+   },
+   "mess": {
+    "src": "line_mla_unpack_mess",
+    "w": 980
+   },
+   "optic": {
+    "src": "line_mla_optician_glasses",
+    "w": 840
+   },
+   "read": {
+    "src": "line_mla_reading_pouches",
+    "w": 940
+   },
+   "turned": {
+    "src": "line_mla_turned_pouches",
+    "w": 980
+   },
+   "tag": {
+    "src": "line_mla_luggage_tag",
+    "w": 720
+   },
+   "hedge": {
+    "src": "line_mla_hedge_trim",
+    "w": 1000
+   },
+   "sock": {
+    "src": "line_mla_one_sock",
+    "w": 1000
+   },
+   "shirts": {
+    "src": "line_mla_same_shirts",
+    "w": 650
+   },
+   "groups": {
+    "src": "line_kv_group_racks",
+    "w": 1040
+   },
+   "wall": {
+    "src": "line_kv_cloakroom_wall",
+    "w": 980
+   },
+   "mic": {
+    "src": "line_mic",
+    "w": 240,
+    "boost": 0.3
+   }
+  },
+  "slides": {
+   "s15": {
+    "src": "p15.png"
+   },
+   "s17": {
+    "src": "p17.png"
+   },
+   "s17d": {
+    "src": "p17.png"
+   },
+   "s18": {
+    "src": "p18.png"
+   },
+   "s19": {
+    "src": "p19.png"
+   },
+   "s20": {
+    "src": "p20.png"
+   },
+   "w5": {
+    "src": "l04_p05.png"
+   },
+   "g3": {
+    "src": "l04_p03.png"
+   },
+   "strip_sA": {
+    "src": "strip_sA.png"
+   },
+   "strip_sB": {
+    "src": "strip_sB.png"
+   },
+   "strip_sC": {
+    "src": "strip_sC.png"
+   },
+   "strip_sE": {
+    "src": "strip_sE.png"
+   },
+   "strip_sD": {
+    "src": "strip_sD.png"
+   },
+   "strip_sR": {
+    "src": "strip_sR.png"
+   },
+   "strip_sF": {
+    "src": "strip_sF.png"
+   },
+   "strip_sW": {
+    "src": "strip_sW.png"
+   },
+   "strip_sT": {
+    "src": "strip_sT.png"
+   },
+   "strip_sK": {
+    "src": "strip_sK.png"
+   },
+   "strip_gH": {
+    "src": "strip_gH.png"
+   },
+   "strip_gA": {
+    "src": "strip_gA.png"
+   },
+   "strip_gB": {
+    "src": "strip_gB.png"
+   },
+   "strip_gC": {
+    "src": "strip_gC.png"
+   },
+   "strip_gD": {
+    "src": "strip_gD.png"
+   }
+  }
+ },
+ "mic": {
+  "drawing": "mic"
+ },
+ "end": {
+  "at": "endCard"
+ },
+ "panels": [
+  {
+   "id": "p0",
+   "note": "cover: the clerk holds up one flat pouch; memory down to a few %, scored better in their own tests (F23, F22)",
+   "items": [
+    {
+     "id": "cover",
+     "t": "draw",
+     "d": "cover",
+     "xy": [
+      540,
+      1040
+     ],
+     "w": 1040
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cover",
+      0.8326,
+      0.5313
+     ],
+     "w": 440,
+     "h": 270,
+     "a": 0.32,
+     "rot": 0.05
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "cover",
+      0.1893,
+      0.5569
+     ],
+     "w": 430,
+     "h": 250,
+     "a": 0.4,
+     "rot": -0.08
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "cover",
+      0.6436,
+      0.218
+     ],
+     "w": 270,
+     "h": 180,
+     "a": 0.45,
+     "rot": -0.1
+    },
+    {
+     "t": "label",
+     "text": "title.0",
+     "xy": [
+      66,
+      350
+     ],
+     "px": 128,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.1",
+     "xy": [
+      84,
+      452
+     ],
+     "px": 78,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "id": "title2"
+    },
+    {
+     "t": "underline",
+     "of": "title2",
+     "dx": 6,
+     "dy": 42,
+     "rise": -8,
+     "bend": 0.03,
+     "at": "title",
+     "dur": 0.6
+    },
+    {
+     "t": "sans",
+     "text": "strip",
+     "xy": [
+      86,
+      528
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left"
+    },
+    {
+     "t": "label",
+     "text": "hA",
+     "xy": [
+      70,
+      614
+     ],
+     "px": 50,
+     "align": "left",
+     "font": "latin",
+     "rot": -0.02,
+     "fit": 850
+    },
+    {
+     "t": "label",
+     "text": "hB",
+     "xy": [
+      104,
+      688
+     ],
+     "px": 62,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "rot": -0.02,
+     "fit": 800
+    },
+    {
+     "t": "sans",
+     "text": "hS",
+     "xy": [
+      110,
+      742
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      945,
+      640
+     ],
+     "to": [
+      "cover",
+      0.8127,
+      0.3523
+     ],
+     "bend": -0.2,
+     "lw": 6,
+     "at": "title-9"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "cover",
+      0.6436,
+      0.218
+     ],
+     "r": [
+      118,
+      86
+     ],
+     "seed": 4,
+     "lw": 6,
+     "at": "title-9"
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "note": "callback (L03-01/02): query, key, value; the cloakroom = the KV cache; GQA shares racks (F1)",
+   "items": [
+    {
+     "t": "label",
+     "text": "lt",
+     "xy": [
+      70,
+      345
+     ],
+     "px": 64,
+     "align": "left",
+     "at": "p1+0.3",
+     "rot": -0.03
+    },
+    {
+     "t": "group",
+     "items": [
+      {
+       "id": "wall",
+       "t": "draw",
+       "d": "wall",
+       "xy": [
+        540,
+        985
+       ],
+       "w": 980,
+       "at": "p1+0.3",
+       "dur": 2.4
+      },
+      {
+       "t": "wash",
+       "c": "cobalt",
+       "xy": [
+        "wall",
+        0.751,
+        0.3197
+       ],
+       "w": 480,
+       "h": 300,
+       "a": 0.28,
+       "rot": 0.0,
+       "at": "n3@cloakroom"
+      },
+      {
+       "t": "label",
+       "text": "q1",
+       "xy": [
+        70,
+        432
+       ],
+       "px": 50,
+       "align": "left",
+       "font": "latin",
+       "at": "n2@query",
+       "fit": 620
+      },
+      {
+       "t": "label",
+       "text": "q2",
+       "xy": [
+        70,
+        494
+       ],
+       "px": 50,
+       "align": "left",
+       "font": "latin",
+       "at": "n2@key",
+       "fit": 620
+      },
+      {
+       "t": "label",
+       "text": "q3",
+       "xy": [
+        70,
+        556
+       ],
+       "px": 50,
+       "align": "left",
+       "font": "latin",
+       "at": "n2@value",
+       "fit": 620
+      },
+      {
+       "t": "label",
+       "text": "kvc",
+       "xy": [
+        70,
+        630
+       ],
+       "px": 52,
+       "color": "red",
+       "align": "left",
+       "at": "n3@cloakroom",
+       "fit": 900
+      }
+     ],
+     "fadeOut": [
+      "n3@groupedquery-0.3",
+      "n3@groupedquery+0.2"
+     ]
+    },
+    {
+     "id": "groups",
+     "t": "draw",
+     "d": "groups",
+     "xy": [
+      540,
+      1030
+     ],
+     "w": 1040,
+     "at": "n3@groupedquery",
+     "dur": 2.2
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "groups",
+      0.3517,
+      0.6701
+     ],
+     "w": 760,
+     "h": 260,
+     "a": 0.25,
+     "rot": 0.0,
+     "at": "n3@rack"
+    },
+    {
+     "t": "label",
+     "text": "gqa",
+     "xy": [
+      70,
+      440
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n3@groupedquery+0.3",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "gqa2",
+     "xy": [
+      70,
+      510
+     ],
+     "px": 52,
+     "color": "red",
+     "align": "left",
+     "at": "n3@heads",
+     "fit": 940
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "groups",
+      0.2043,
+      0.6424
+     ],
+     "r": [
+      70,
+      90
+     ],
+     "seed": 1,
+     "lw": 5,
+     "at": "n3@rack",
+     "dur": 0.45
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "groups",
+      0.4957,
+      0.6701
+     ],
+     "r": [
+      70,
+      90
+     ],
+     "seed": 2,
+     "lw": 5,
+     "at": "n3@rack+0.2",
+     "dur": 0.45
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "note": "her slide 15 cut into three readable strips (the paper figure left out), red pen under \"does not rely on head sharing\", ring on \"compresses\", under \"low-rank latent representation\"; the clerk packs one flat pouch: the latent c-KV, made by W-down, shared by K, V and every head (F2-F4)",
+   "items": [
+    {
+     "id": "pack",
+     "t": "draw",
+     "d": "pack",
+     "xy": [
+      540,
+      990
+     ],
+     "w": 940,
+     "at": "p2+0.7",
+     "dur": 2.6
+    },
+    {
+     "t": "group",
+     "items": [
+      {
+       "t": "label",
+       "text": "hs15",
+       "xy": [
+        150,
+        350
+       ],
+       "px": 48,
+       "color": "red",
+       "at": "tape2+0.4",
+       "rot": -0.06
+      },
+      {
+       "id": "sA",
+       "t": "printout",
+       "slide": "strip_sA",
+       "xy": [
+        540,
+        440
+       ],
+       "w": 1072,
+       "rot": -0.012,
+       "at": "p2+0.7"
+      },
+      {
+       "t": "tape",
+       "i": 0,
+       "xy": [
+        12,
+        404
+       ],
+       "w": 110,
+       "rot": -0.75,
+       "at": "tape2"
+      },
+      {
+       "t": "tape",
+       "i": 5,
+       "xy": [
+        1068,
+        402
+       ],
+       "w": 110,
+       "rot": 0.7,
+       "at": "tape2+0.12"
+      },
+      {
+       "id": "sB",
+       "t": "printout",
+       "slide": "strip_sB",
+       "xy": [
+        400,
+        532
+       ],
+       "w": 736,
+       "rot": 0.01,
+       "at": "p2+0.85"
+      },
+      {
+       "t": "tape",
+       "i": 5,
+       "xy": [
+        40,
+        496
+       ],
+       "w": 110,
+       "rot": -0.75,
+       "at": "tape2+0.15"
+      },
+      {
+       "t": "tape",
+       "i": 0,
+       "xy": [
+        760,
+        494
+       ],
+       "w": 110,
+       "rot": 0.7,
+       "at": "tape2+0.15+0.12"
+      },
+      {
+       "id": "sC",
+       "t": "printout",
+       "slide": "strip_sC",
+       "xy": [
+        470,
+        622
+       ],
+       "w": 866,
+       "rot": -0.006,
+       "at": "p2+1.0"
+      },
+      {
+       "t": "tape",
+       "i": 0,
+       "xy": [
+        45,
+        592
+       ],
+       "w": 110,
+       "rot": -0.75,
+       "at": "tape2+0.3"
+      },
+      {
+       "t": "tape",
+       "i": 5,
+       "xy": [
+        895,
+        590
+       ],
+       "w": 110,
+       "rot": 0.7,
+       "at": "tape2+0.3+0.12"
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sA:px",
+         527,
+         76
+        ],
+        [
+         "sA:px",
+         1139,
+         74
+        ]
+       ],
+       "lw": 6,
+       "at": "n5@share",
+       "dur": 0.6
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sB:px",
+         250,
+         76
+        ],
+        [
+         "sB:px",
+         488,
+         75
+        ]
+       ],
+       "lw": 6,
+       "at": "n5@compresses",
+       "dur": 0.45
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sC:px",
+         294,
+         63
+        ],
+        [
+         "sC:px",
+         912,
+         61
+        ]
+       ],
+       "lw": 6,
+       "at": "n5@compresses+0.5",
+       "dur": 0.6
+      }
+     ],
+     "fadeOut": [
+      "n6@bag-0.4",
+      "n6@bag"
+     ]
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "pack",
+      0.7555,
+      0.561
+     ],
+     "w": 320,
+     "h": 140,
+     "a": 0.4,
+     "rot": 0.0,
+     "at": "n6@flat"
+    },
+    {
+     "t": "label",
+     "text": "one",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "n6@flat",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "lat",
+     "xy": [
+      70,
+      438
+     ],
+     "px": 56,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n7@latent",
+     "fit": 820
+    },
+    {
+     "t": "arrow",
+     "from": [
+      760,
+      460
+     ],
+     "to": [
+      "pack",
+      0.7355,
+      0.5153,
+      0,
+      -6
+     ],
+     "bend": -0.25,
+     "lw": 5,
+     "at": "n7@latent+0.3",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "wd",
+     "xy": [
+      70,
+      512
+     ],
+     "px": 46,
+     "align": "left",
+     "font": "latin",
+     "at": "n7@squeezes",
+     "fit": 860
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "pack",
+      0.2285,
+      0.4542
+     ],
+     "r": [
+      60,
+      130
+     ],
+     "seed": 5,
+     "lw": 6,
+     "at": "n7@squeezes+0.2",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "pj",
+     "xy": [
+      70,
+      572
+     ],
+     "px": 40,
+     "align": "left",
+     "at": "n7@projection",
+     "fit": 860
+    },
+    {
+     "t": "label",
+     "text": "sh",
+     "xy": [
+      70,
+      645
+     ],
+     "px": 46,
+     "color": "red",
+     "align": "left",
+     "at": "n8@every",
+     "fit": 860
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "note": "the slim shelf vs the wall: 512 numbers vs 32,768 (F5); not an exact zip (F6); her clip C4",
+   "items": [
+    {
+     "t": "label",
+     "text": "flT",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "p3+0.3",
+     "rot": -0.03
+    },
+    {
+     "id": "shelf",
+     "t": "draw",
+     "d": "shelf",
+     "xy": [
+      465,
+      1010
+     ],
+     "w": 860,
+     "at": "p3+0.3",
+     "dur": 2.6
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "shelf",
+      0.905,
+      0.6802
+     ],
+     "w": 200,
+     "h": 420,
+     "a": 0.38,
+     "rot": 0.0,
+     "at": "n9@512"
+    },
+    {
+     "t": "label",
+     "text": "p512",
+     "xy": [
+      70,
+      440
+     ],
+     "px": 58,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n9@512",
+     "fit": 700
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "shelf",
+      0.905,
+      0.6802
+     ],
+     "r": [
+      120,
+      230
+     ],
+     "seed": 6,
+     "lw": 6,
+     "at": "n9@512+0.2",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "p4h",
+     "xy": [
+      70,
+      508
+     ],
+     "px": 48,
+     "align": "left",
+     "font": "latin",
+     "at": "n9@four",
+     "fit": 620
+    },
+    {
+     "t": "label",
+     "text": "pall",
+     "xy": [
+      70,
+      594
+     ],
+     "px": 46,
+     "align": "left",
+     "font": "latin",
+     "at": "n9@32768",
+     "fit": 500
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "shelf",
+      0.3346,
+      0.5005
+     ],
+     "r": [
+      250,
+      270
+     ],
+     "seed": 2,
+     "lw": 5,
+     "at": "n9@32768+0.2",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "zip",
+     "xy": [
+      70,
+      668
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "at": "n10@learned",
+     "fit": 860
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "note": "her slide 17 equations (keys and values rebuilt by W-UK and W-UV, ringed); the clerk unpacks every pouch for every step (F3, F7)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs17",
+     "xy": [
+      160,
+      338
+     ],
+     "px": 46,
+     "color": "red",
+     "at": "tape4+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sE",
+     "t": "printout",
+     "slide": "strip_sE",
+     "xy": [
+      540,
+      552
+     ],
+     "w": 876,
+     "rot": -0.012,
+     "at": "p4+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      110,
+      401
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape4"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      970,
+      399
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape4+0.12"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sE:px",
+       146,
+       160
+      ],
+      [
+       "sE:px",
+       237,
+       159
+      ]
+     ],
+     "lw": 6,
+     "at": "n11@wuk",
+     "dur": 0.4
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sE:px",
+       146,
+       238
+      ],
+      [
+       "sE:px",
+       237,
+       237
+      ]
+     ],
+     "lw": 6,
+     "at": "n11@wuv",
+     "dur": 0.4
+    },
+    {
+     "id": "mess",
+     "t": "draw",
+     "d": "mess",
+     "xy": [
+      540,
+      1040
+     ],
+     "w": 840,
+     "at": "p4+0.5",
+     "dur": 2.6
+    },
+    {
+     "t": "label",
+     "text": "every",
+     "xy": [
+      70,
+      745
+     ],
+     "px": 48,
+     "color": "red",
+     "align": "left",
+     "at": "n12@every",
+     "fit": 800,
+     "patch": 0.3
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "mess",
+      0.8614,
+      0.189
+     ],
+     "r": [
+      90,
+      80
+     ],
+     "seed": 3,
+     "lw": 5,
+     "at": "n12@every#2",
+     "dur": 0.45
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "note": "her slide 17 derivation taped large: S = K^T Q ringed, the regrouped factor ringed; W-UK ground into the glasses, W-UV folded into the output (F8); the same for every pouch, out of the loop, her clip C5 (F9)",
+   "items": [
+    {
+     "id": "optic",
+     "t": "draw",
+     "d": "optic",
+     "xy": [
+      540,
+      1060
+     ],
+     "w": 620,
+     "at": "p5+0.3",
+     "dur": 2.6
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "optic",
+      0.2594,
+      0.2237
+     ],
+     "w": 300,
+     "h": 140,
+     "a": 0.4,
+     "rot": 0.0,
+     "at": "n15@glasses"
+    },
+    {
+     "t": "group",
+     "items": [
+      {
+       "t": "label",
+       "text": "hs17b",
+       "xy": [
+        160,
+        338
+       ],
+       "px": 46,
+       "color": "red",
+       "at": "tape5+0.4",
+       "rot": -0.06
+      },
+      {
+       "id": "sD",
+       "t": "printout",
+       "slide": "strip_sD",
+       "xy": [
+        540,
+        548
+       ],
+       "w": 900,
+       "rot": -0.01,
+       "at": "p5+0.7"
+      },
+      {
+       "t": "tape",
+       "i": 5,
+       "xy": [
+        98,
+        396
+       ],
+       "w": 110,
+       "rot": -0.75,
+       "at": "tape5"
+      },
+      {
+       "t": "tape",
+       "i": 0,
+       "xy": [
+        982,
+        394
+       ],
+       "w": 110,
+       "rot": 0.7,
+       "at": "tape5+0.12"
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sD:px",
+         52,
+         123
+        ],
+        [
+         "sD:px",
+         224,
+         122
+        ]
+       ],
+       "lw": 6,
+       "at": "n13@score",
+       "dur": 0.45
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sD:px",
+         140,
+         172
+        ],
+        [
+         "sD:px",
+         320,
+         172
+        ]
+       ],
+       "lw": 6,
+       "at": "n13@pouch",
+       "dur": 0.5
+      },
+      {
+       "t": "arrow",
+       "from": [
+        "sD:px",
+        725,
+        160
+       ],
+       "to": [
+        "sD:px",
+        580,
+        222
+       ],
+       "bend": 0.25,
+       "lw": 6,
+       "at": "n14@query",
+       "dur": 0.4
+      },
+      {
+       "t": "label",
+       "text": "rg",
+       "xy": [
+        70,
+        752
+       ],
+       "px": 46,
+       "color": "red",
+       "align": "left",
+       "at": "n14@brackets",
+       "fit": 700,
+       "out": "n15@glasses-0.4"
+      },
+      {
+       "t": "label",
+       "text": "gl",
+       "xy": [
+        70,
+        752
+       ],
+       "px": 50,
+       "color": "red",
+       "align": "left",
+       "at": "n15@glasses",
+       "fit": 700,
+       "patch": 0.3
+      },
+      {
+       "t": "arrow",
+       "from": [
+        640,
+        768
+       ],
+       "to": [
+        "optic",
+        0.2594,
+        0.2237,
+        0,
+        -10
+       ],
+       "bend": -0.3,
+       "lw": 5,
+       "at": "n15@glasses+0.3",
+       "dur": 0.4
+      },
+      {
+       "t": "label",
+       "text": "wo",
+       "xy": [
+        70,
+        808
+       ],
+       "px": 42,
+       "align": "left",
+       "at": "n15@output",
+       "fit": 700,
+       "patch": 0.3
+      }
+     ],
+     "fadeOut": [
+      "n16-0.4",
+      "n16"
+     ]
+    },
+    {
+     "t": "label",
+     "text": "same",
+     "xy": [
+      70,
+      470
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "n16@same",
+     "rot": -0.03,
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "loop",
+     "xy": [
+      70,
+      552
+     ],
+     "px": 54,
+     "color": "red",
+     "align": "left",
+     "at": "c5@60%",
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "once",
+     "xy": [
+      70,
+      630
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n17@once",
+     "fit": 900
+    },
+    {
+     "t": "label",
+     "text": "once2",
+     "xy": [
+      70,
+      690
+     ],
+     "px": 46,
+     "align": "left",
+     "at": "n17@not",
+     "fit": 900
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "optic",
+      0.2594,
+      0.2237
+     ],
+     "r": [
+      150,
+      70
+     ],
+     "seed": 8,
+     "lw": 6,
+     "at": "n16@glasses",
+     "dur": 0.45
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "note": "the guest in glasses reads the row of sealed pouches; ticks along the row (F8)",
+   "items": [
+    {
+     "t": "label",
+     "text": "rdT",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 64,
+     "align": "left",
+     "at": "p6+0.3",
+     "rot": -0.03,
+     "fit": 940
+    },
+    {
+     "id": "read",
+     "t": "draw",
+     "d": "read",
+     "xy": [
+      540,
+      980
+     ],
+     "w": 920,
+     "at": "p6+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "read",
+      0.5179,
+      0.4935
+     ],
+     "w": 820,
+     "h": 200,
+     "a": 0.3,
+     "rot": -0.28,
+     "at": "n18@row"
+    },
+    {
+     "t": "label",
+     "text": "nv",
+     "xy": [
+      70,
+      435
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "n18@nothing",
+     "fit": 940
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "read",
+      0.1703,
+      0.6276
+     ],
+     "s": 32,
+     "lw": 5,
+     "at": "n18@row+0.00",
+     "dur": 0.2
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "read",
+      0.2967,
+      0.573
+     ],
+     "s": 32,
+     "lw": 5,
+     "at": "n18@row+0.15",
+     "dur": 0.2
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "read",
+      0.4126,
+      0.5333
+     ],
+     "s": 32,
+     "lw": 5,
+     "at": "n18@row+0.30",
+     "dur": 0.2
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "read",
+      0.5249,
+      0.4935
+     ],
+     "s": 32,
+     "lw": 5,
+     "at": "n18@row+0.45",
+     "dur": 0.2
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "read",
+      0.6232,
+      0.4538
+     ],
+     "s": 32,
+     "lw": 5,
+     "at": "n18@row+0.60",
+     "dur": 0.2
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "read",
+      0.7075,
+      0.424
+     ],
+     "s": 32,
+     "lw": 5,
+     "at": "n18@row+0.75",
+     "dur": 0.2
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "read",
+      0.7918,
+      0.3942
+     ],
+     "s": 32,
+     "lw": 5,
+     "at": "n18@row+0.90",
+     "dur": 0.2
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "read",
+      0.8655,
+      0.3644
+     ],
+     "s": 32,
+     "lw": 5,
+     "at": "n18@row+1.05",
+     "dur": 0.2
+    }
+   ]
+  },
+  {
+   "id": "p7",
+   "note": "her clip C7 (the killer); the turned pouches: RoPE turns each key by its position (F10); her slide 18 derivation taped large, R(Pos) ringed between the query and W-UK; no single pair of glasses fits (F11)",
+   "items": [
+    {
+     "id": "turned",
+     "t": "draw",
+     "d": "turned",
+     "xy": [
+      540,
+      1060
+     ],
+     "w": 900,
+     "at": "p7+0.3",
+     "dur": 2.6
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "turned",
+      0.58,
+      0.42
+     ],
+     "w": 760,
+     "h": 170,
+     "a": 0.28,
+     "at": "n19@angle"
+    },
+    {
+     "t": "label",
+     "text": "kill",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "c7@75%",
+     "rot": -0.03,
+     "fit": 700
+    },
+    {
+     "t": "label",
+     "text": "rope",
+     "xy": [
+      70,
+      425
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "at": "n19@rope",
+     "fit": 640
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "turned",
+      0.2136,
+      0.7172
+     ],
+     "to": [
+      "turned",
+      0.9485,
+      0.7172
+     ],
+     "bend": 0.08,
+     "lw": 6,
+     "at": "n19@angle",
+     "dur": 0.9
+    },
+    {
+     "t": "label",
+     "text": "hs18",
+     "xy": [
+      880,
+      428
+     ],
+     "px": 44,
+     "color": "red",
+     "at": "t7+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sR",
+     "t": "printout",
+     "slide": "strip_sR",
+     "xy": [
+      540,
+      628
+     ],
+     "w": 920,
+     "rot": -0.012,
+     "at": "n20@derivation-0.3"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      88,
+      480
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "t7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      992,
+      478
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "t7+0.12"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sR:px",
+       406,
+       290
+      ],
+      [
+       "sR:px",
+       553,
+       289
+      ]
+     ],
+     "lw": 6,
+     "at": "n20@lands",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "nofit",
+     "xy": [
+      70,
+      806
+     ],
+     "px": 46,
+     "color": "red",
+     "align": "left",
+     "at": "n20@no",
+     "fit": 800,
+     "patch": 0.3
+    }
+   ]
+  },
+  {
+   "id": "p8",
+   "note": "the luggage tag: position out of the pouch; her slide 19 formula k^R = RoPE(W^KR h_t), cached (its d_c / 2 slip corrected to d_h / 2 in red, D1); her slide 19 reason for one shared key (F12, F13)",
+   "items": [
+    {
+     "id": "tag",
+     "t": "draw",
+     "d": "tag",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 680,
+     "at": "p8+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "tag",
+      0.7685,
+      0.7295
+     ],
+     "w": 230,
+     "h": 300,
+     "a": 0.45,
+     "rot": 0.0,
+     "at": "n22@tag"
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "tag",
+      0.2799,
+      0.718
+     ],
+     "w": 380,
+     "h": 300,
+     "a": 0.3,
+     "rot": 0.0,
+     "at": "n21@pouch"
+    },
+    {
+     "t": "label",
+     "text": "fix",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 52,
+     "color": "red",
+     "align": "left",
+     "at": "n21@fix",
+     "fit": 940
+    },
+    {
+     "t": "group",
+     "items": [
+      {
+       "t": "label",
+       "text": "hs19",
+       "xy": [
+        880,
+        432
+       ],
+       "px": 44,
+       "color": "red",
+       "at": "t8a+0.4",
+       "rot": -0.06
+      },
+      {
+       "id": "sF",
+       "t": "printout",
+       "slide": "strip_sF",
+       "xy": [
+        540,
+        578
+       ],
+       "w": 811,
+       "rot": -0.01,
+       "at": "n22-0.2"
+      },
+      {
+       "t": "tape",
+       "i": 5,
+       "xy": [
+        142,
+        486
+       ],
+       "w": 110,
+       "rot": -0.75,
+       "at": "t8a"
+      },
+      {
+       "t": "tape",
+       "i": 0,
+       "xy": [
+        938,
+        484
+       ],
+       "w": 110,
+       "rot": 0.7,
+       "at": "t8a+0.12"
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sF:px",
+         136,
+         68
+        ],
+        [
+         "sF:px",
+         243,
+         67
+        ]
+       ],
+       "lw": 6,
+       "at": "n22@turned",
+       "dur": 0.35
+      },
+      {
+       "t": "arrow",
+       "from": [
+        "sF:px",
+        510,
+        38
+       ],
+       "to": [
+        "sF:px",
+        402,
+        40
+       ],
+       "bend": 0.0,
+       "lw": 5,
+       "at": "n22@token#2",
+       "dur": 0.3
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sF:px",
+         292,
+         156
+        ],
+        [
+         "sF:px",
+         447,
+         156
+        ]
+       ],
+       "lw": 6,
+       "at": "n22@cached",
+       "dur": 0.4
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "sF:px",
+         542,
+         110
+        ],
+        [
+         "sF:px",
+         590,
+         66
+        ]
+       ],
+       "lw": 5,
+       "at": "n22@64",
+       "dur": 0.3
+      },
+      {
+       "t": "label",
+       "text": "dfix",
+       "xy": [
+        790,
+        694
+       ],
+       "px": 38,
+       "color": "red",
+       "at": "n22@64+0.2",
+       "fit": 330
+      },
+      {
+       "t": "label",
+       "text": "tg",
+       "xy": [
+        70,
+        428
+       ],
+       "px": 50,
+       "align": "left",
+       "at": "n22@tag",
+       "fit": 560
+      }
+     ],
+     "fadeOut": [
+      "n23-0.5",
+      "n23-0.1"
+     ]
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "tag",
+      0.2799,
+      0.718
+     ],
+     "r": [
+      190,
+      150
+     ],
+     "seed": 2,
+     "lw": 6,
+     "at": "n21@pouch",
+     "dur": 0.45
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "tag",
+      0.7685,
+      0.7295
+     ],
+     "r": [
+      90,
+      130
+     ],
+     "seed": 5,
+     "lw": 6,
+     "at": "n22@tag",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "hs19b",
+     "xy": [
+      880,
+      432
+     ],
+     "px": 44,
+     "color": "red",
+     "at": "t8+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sW",
+     "t": "printout",
+     "slide": "strip_sW",
+     "xy": [
+      540,
+      580
+     ],
+     "w": 814,
+     "rot": -0.012,
+     "at": "n23@slide-0.3"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      141,
+      484
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "t8"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      939,
+      482
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "t8+0.12"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sW:px",
+       89,
+       156
+      ],
+      [
+       "sW:px",
+       567,
+       156
+      ]
+     ],
+     "lw": 6,
+     "at": "n23@reason",
+     "dur": 0.6
+    },
+    {
+     "t": "label",
+     "text": "what",
+     "xy": [
+      70,
+      430
+     ],
+     "px": 52,
+     "color": "red",
+     "align": "left",
+     "at": "n23@what",
+     "fit": 600
+    }
+   ]
+  },
+  {
+   "id": "p9",
+   "note": "her slide 20 (the DeepSeek-V2 text only, taped large; the paper table left out): d_c = 4 d_h, d_h^R = d_h/2 ringed; 576 = 4.5 head sizes; / 256 = 2.25 groups (F14-F16)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs20",
+     "xy": [
+      180,
+      330
+     ],
+     "px": 44,
+     "color": "red",
+     "at": "tape9+0.4",
+     "rot": -0.06
+    },
+    {
+     "id": "sT",
+     "t": "printout",
+     "slide": "strip_sT",
+     "xy": [
+      540,
+      525
+     ],
+     "w": 951,
+     "rot": -0.012,
+     "at": "p9+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      72,
+      381
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape9"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      1008,
+      379
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape9+0.12"
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "sT:px",
+      340,
+      86
+     ],
+     "to": [
+      "sT:px",
+      215,
+      86
+     ],
+     "bend": 0.0,
+     "lw": 6,
+     "at": "n24@512number",
+     "dur": 0.35
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "sT:px",
+      370,
+      130
+     ],
+     "to": [
+      "sT:px",
+      262,
+      130
+     ],
+     "bend": 0.0,
+     "lw": 6,
+     "at": "n24@64number",
+     "dur": 0.35
+    },
+    {
+     "t": "label",
+     "text": "sum",
+     "xy": [
+      70,
+      712
+     ],
+     "px": 50,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n24@576",
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "grp",
+     "xy": [
+      70,
+      778
+     ],
+     "px": 46,
+     "align": "left",
+     "font": "latin",
+     "at": "n25@256",
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "res",
+     "xy": [
+      70,
+      848
+     ],
+     "px": 58,
+     "color": "red",
+     "align": "left",
+     "font": "latin",
+     "at": "n25@quarter",
+     "fit": 800
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sT:px",
+       48,
+       248
+      ],
+      [
+       "sT:px",
+       261,
+       247
+      ]
+     ],
+     "lw": 6,
+     "at": "n25@quarter+0.3",
+     "dur": 0.45
+    },
+    {
+     "id": "groups2",
+     "t": "draw",
+     "d": "groups",
+     "xy": [
+      540,
+      1095
+     ],
+     "w": 860,
+     "at": "p9+0.5",
+     "dur": 2.2
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "groups2",
+      0.1834,
+      0.5757
+     ],
+     "r": [
+      56,
+      120
+     ],
+     "seed": 1,
+     "lw": 5,
+     "at": "n25@quarter+0.5",
+     "dur": 0.45
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "groups2",
+      0.5088,
+      0.5757
+     ],
+     "r": [
+      56,
+      120
+     ],
+     "seed": 2,
+     "lw": 5,
+     "at": "n25@quarter+0.8",
+     "dur": 0.45
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "groups2",
+      0.8297,
+      0.3924
+     ],
+     "w": 110,
+     "h": 70,
+     "a": 0.55,
+     "rot": 0.0,
+     "at": "n25@quarter+1.1"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "groups2",
+       0.7787,
+       0.334
+      ],
+      [
+       "groups2",
+       0.8808,
+       0.334
+      ],
+      [
+       "groups2",
+       0.8808,
+       0.4535
+      ],
+      [
+       "groups2",
+       0.7787,
+       0.4535
+      ],
+      [
+       "groups2",
+       0.7787,
+       0.334
+      ]
+     ],
+     "lw": 5,
+     "at": "n25@quarter+1.1",
+     "dur": 0.6
+    },
+    {
+     "t": "label",
+     "text": "qtr",
+     "xy": [
+      760,
+      872
+     ],
+     "px": 44,
+     "color": "red",
+     "at": "n25@quarter+1.4",
+     "fit": 160
+    },
+    {
+     "t": "arrow",
+     "from": [
+      800,
+      900
+     ],
+     "to": [
+      "groups2",
+      0.83,
+      0.33
+     ],
+     "bend": -0.2,
+     "lw": 5,
+     "at": "n25@quarter+1.6",
+     "dur": 0.4
+    }
+   ]
+  },
+  {
+   "id": "p10",
+   "note": "her worksheet (L04 slide 5, as printed, KB = 1,024 bytes), cut to four columns so the savings column clears the rail: the shapes ringed, the 8B row washed, its MHA / MLA cells boxed, 14x / 28x / 56x ringed (F17-F19); vs real GQA 8 / 2.25 = 3.6x (F20)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs5",
+     "xy": [
+      330,
+      345
+     ],
+     "px": 50,
+     "color": "red",
+     "at": "tape10+0.4",
+     "rot": -0.05
+    },
+    {
+     "id": "sK",
+     "t": "printout",
+     "slide": "strip_sK",
+     "xy": [
+      470,
+      640
+     ],
+     "w": 873,
+     "rot": -0.008,
+     "at": "p10+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      74,
+      390
+     ],
+     "w": 200,
+     "rot": -0.55,
+     "at": "tape10"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      866,
+      388
+     ],
+     "w": 180,
+     "rot": 0.5,
+     "at": "tape10+0.15"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sK:px",
+      115,
+      388
+     ],
+     "r": [
+      86,
+      165
+     ],
+     "seed": 5,
+     "lw": 5,
+     "at": "n26@32",
+     "dur": 0.5
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      470,
+      636
+     ],
+     "w": 833,
+     "h": 80,
+     "a": 0.32,
+     "at": "n27@smallest"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sK:px",
+       197,
+       245
+      ],
+      [
+       "sK:px",
+       358,
+       245
+      ],
+      [
+       "sK:px",
+       358,
+       314
+      ],
+      [
+       "sK:px",
+       197,
+       314
+      ],
+      [
+       "sK:px",
+       197,
+       245
+      ]
+     ],
+     "lw": 5,
+     "at": "n27@512",
+     "dur": 0.6
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sK:px",
+       459,
+       245
+      ],
+      [
+       "sK:px",
+       579,
+       245
+      ],
+      [
+       "sK:px",
+       579,
+       314
+      ],
+      [
+       "sK:px",
+       459,
+       314
+      ],
+      [
+       "sK:px",
+       459,
+       245
+      ]
+     ],
+     "lw": 5,
+     "at": "n27@36",
+     "dur": 0.6
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sK:px",
+       694,
+       232
+      ],
+      [
+       "sK:px",
+       912,
+       232
+      ],
+      [
+       "sK:px",
+       912,
+       325
+      ],
+      [
+       "sK:px",
+       694,
+       325
+      ],
+      [
+       "sK:px",
+       694,
+       232
+      ]
+     ],
+     "lw": 5,
+     "at": "n27@fourteen",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sK:px",
+       694,
+       337
+      ],
+      [
+       "sK:px",
+       912,
+       337
+      ],
+      [
+       "sK:px",
+       912,
+       430
+      ],
+      [
+       "sK:px",
+       694,
+       430
+      ],
+      [
+       "sK:px",
+       694,
+       337
+      ]
+     ],
+     "lw": 5,
+     "at": "n27@28",
+     "dur": 0.5
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sK:px",
+       694,
+       442
+      ],
+      [
+       "sK:px",
+       912,
+       442
+      ],
+      [
+       "sK:px",
+       912,
+       545
+      ],
+      [
+       "sK:px",
+       694,
+       545
+      ],
+      [
+       "sK:px",
+       694,
+       442
+      ]
+     ],
+     "lw": 5,
+     "at": "n27@56",
+     "dur": 0.5
+    },
+    {
+     "t": "label",
+     "text": "shp",
+     "xy": [
+      470,
+      945
+     ],
+     "px": 42,
+     "font": "latin",
+     "at": "n26@32",
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "mult",
+     "xy": [
+      470,
+      1022
+     ],
+     "px": 60,
+     "color": "red",
+     "font": "latin",
+     "at": "n27@fourteen",
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "g8",
+     "xy": [
+      470,
+      1098
+     ],
+     "px": 44,
+     "font": "latin",
+     "at": "n27@real",
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "kib",
+     "xy": [
+      470,
+      1160
+     ],
+     "px": 36,
+     "at": "n26@if",
+     "fit": 780
+    },
+    {
+     "t": "label",
+     "text": "cols",
+     "xy": [
+      470,
+      1205
+     ],
+     "px": 34,
+     "at": "n26@if+0.5",
+     "fit": 780
+    }
+   ]
+  },
+  {
+   "id": "p11",
+   "note": "DeepSeek tests: 4-14% of the cache, higher on 7 of 8 scores (F22); her guesses: her slide (L04 3) \"My Guess\" and guess 1 taped as strips, dropout ticked, her clip C11 (F24, F25)",
+   "items": [
+    {
+     "id": "hedge",
+     "t": "draw",
+     "d": "hedge",
+     "xy": [
+      540,
+      1015
+     ],
+     "w": 980,
+     "at": "n29@guesses",
+     "dur": 2.6
+    },
+    {
+     "t": "wash",
+     "c": "sage",
+     "xy": [
+      "hedge",
+      0.42,
+      0.45
+     ],
+     "w": 420,
+     "h": 380,
+     "a": 0.3,
+     "rot": 0.0,
+     "at": "n30@trim"
+    },
+    {
+     "t": "group",
+     "items": [
+      {
+       "id": "shelf2",
+       "t": "draw",
+       "d": "shelf",
+       "xy": [
+        465,
+        1030
+       ],
+       "w": 860,
+       "at": "p11+0.3",
+       "dur": 2.2
+      },
+      {
+       "t": "wash",
+       "c": "cobalt",
+       "xy": [
+        "shelf2",
+        0.905,
+        0.6802
+       ],
+       "w": 200,
+       "h": 420,
+       "a": 0.38,
+       "rot": 0.0,
+       "at": "n28@4"
+      },
+      {
+       "t": "ring",
+       "xy": [
+        "shelf2",
+        0.905,
+        0.6802
+       ],
+       "r": [
+        120,
+        230
+       ],
+       "seed": 6,
+       "lw": 6,
+       "at": "n28@4+0.2",
+       "dur": 0.45
+      },
+      {
+       "t": "label",
+       "text": "qT",
+       "xy": [
+        70,
+        350
+       ],
+       "px": 62,
+       "align": "left",
+       "at": "p11+0.3",
+       "rot": -0.03,
+       "fit": 900
+      },
+      {
+       "t": "label",
+       "text": "qr1",
+       "xy": [
+        70,
+        430
+       ],
+       "px": 50,
+       "align": "left",
+       "font": "latin",
+       "at": "n28@4",
+       "fit": 900
+      },
+      {
+       "t": "label",
+       "text": "qr2",
+       "xy": [
+        70,
+        505
+       ],
+       "px": 56,
+       "color": "red",
+       "align": "left",
+       "font": "latin",
+       "at": "n28@seven",
+       "fit": 900
+      }
+     ],
+     "fadeOut": [
+      "n29-0.5",
+      "n29@guesses-0.1"
+     ]
+    },
+    {
+     "t": "label",
+     "text": "gs",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 64,
+     "color": "red",
+     "align": "left",
+     "at": "n29@guesses",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "hs3",
+     "xy": [
+      600,
+      350
+     ],
+     "px": 44,
+     "color": "red",
+     "at": "t11h+0.4",
+     "rot": -0.05
+    },
+    {
+     "id": "gH",
+     "t": "printout",
+     "slide": "strip_gH",
+     "xy": [
+      190,
+      445
+     ],
+     "w": 332,
+     "rot": -0.02,
+     "at": "n29@guesses-0.2"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      32,
+      414
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "t11h"
+    },
+    {
+     "id": "gA",
+     "t": "printout",
+     "slide": "strip_gA",
+     "xy": [
+      520,
+      530
+     ],
+     "w": 956,
+     "rot": -0.008,
+     "at": "c11.end"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      50,
+      495
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "t11"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      990,
+      493
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "t11+0.12"
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "gA:px",
+      18,
+      33
+     ],
+     "s": 34,
+     "lw": 5,
+     "at": "t11+0.3",
+     "dur": 0.25
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "gA:px",
+       577,
+       58
+      ],
+      [
+       "gA:px",
+       752,
+       58
+      ]
+     ],
+     "lw": 6,
+     "at": "t11+0.5",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "drop",
+     "xy": [
+      540,
+      625
+     ],
+     "px": 44,
+     "at": "n30@switch",
+     "fit": 960
+    },
+    {
+     "t": "label",
+     "text": "trim",
+     "xy": [
+      540,
+      690
+     ],
+     "px": 52,
+     "color": "red",
+     "at": "n30@trim",
+     "fit": 960
+    }
+   ]
+  },
+  {
+   "id": "p12",
+   "note": "her guesses 2 and 3 taped as strips from her slide (L04 3), her clip C13 (redundancy), the identical shirts; her clip C14 (her caution); the authors own runs, V3: comparable, kept (F22, F24, F30)",
+   "items": [
+    {
+     "id": "shirts",
+     "t": "draw",
+     "d": "shirts",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 600,
+     "at": "p12+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "shirts",
+      0.8351,
+      0.4541
+     ],
+     "w": 300,
+     "h": 260,
+     "a": 0.35,
+     "rot": 0.0,
+     "at": "n31@shirt"
+    },
+    {
+     "t": "group",
+     "items": [
+      {
+       "t": "label",
+       "text": "g2",
+       "xy": [
+        70,
+        350
+       ],
+       "px": 58,
+       "color": "red",
+       "align": "left",
+       "at": "c13",
+       "rot": -0.03,
+       "fit": 520
+      },
+      {
+       "t": "label",
+       "text": "hs3b",
+       "xy": [
+        720,
+        350
+       ],
+       "px": 44,
+       "color": "red",
+       "at": "t12a+0.4",
+       "rot": -0.05
+      },
+      {
+       "id": "gB",
+       "t": "printout",
+       "slide": "strip_gB",
+       "xy": [
+        520,
+        440
+       ],
+       "w": 972,
+       "rot": -0.01,
+       "at": "c13.end"
+      },
+      {
+       "t": "tape",
+       "i": 5,
+       "xy": [
+        42,
+        407
+       ],
+       "w": 110,
+       "rot": -0.75,
+       "at": "t12a"
+      },
+      {
+       "t": "tape",
+       "i": 0,
+       "xy": [
+        998,
+        405
+       ],
+       "w": 110,
+       "rot": 0.7,
+       "at": "t12a+0.12"
+      },
+      {
+       "t": "tick",
+       "xy": [
+        "gB:px",
+        18,
+        32
+       ],
+       "s": 34,
+       "lw": 5,
+       "at": "t12a+0.3",
+       "dur": 0.25
+      },
+      {
+       "id": "gC",
+       "t": "printout",
+       "slide": "strip_gC",
+       "xy": [
+        430,
+        590
+       ],
+       "w": 745,
+       "rot": 0.008,
+       "at": "n31@position-0.3"
+      },
+      {
+       "t": "tape",
+       "i": 0,
+       "xy": [
+        65,
+        560
+       ],
+       "w": 110,
+       "rot": -0.75,
+       "at": "t12b"
+      },
+      {
+       "t": "tape",
+       "i": 5,
+       "xy": [
+        795,
+        558
+       ],
+       "w": 110,
+       "rot": 0.7,
+       "at": "t12b+0.12"
+      },
+      {
+       "id": "gD",
+       "t": "printout",
+       "slide": "strip_gD",
+       "xy": [
+        560,
+        665
+       ],
+       "w": 980,
+       "rot": -0.01,
+       "at": "n31@position-0.15"
+      },
+      {
+       "t": "tape",
+       "i": 5,
+       "xy": [
+        78,
+        633
+       ],
+       "w": 110,
+       "rot": -0.75,
+       "at": "t12b+0.15"
+      },
+      {
+       "t": "tape",
+       "i": 0,
+       "xy": [
+        1042,
+        631
+       ],
+       "w": 110,
+       "rot": 0.7,
+       "at": "t12b+0.15+0.12"
+      },
+      {
+       "t": "tick",
+       "xy": [
+        "gC:px",
+        18,
+        31
+       ],
+       "s": 34,
+       "lw": 5,
+       "at": "n31@muddling",
+       "dur": 0.25
+      },
+      {
+       "t": "label",
+       "text": "g2s",
+       "xy": [
+        70,
+        520
+       ],
+       "px": 44,
+       "align": "left",
+       "at": "n31@shirt",
+       "fit": 800,
+       "patch": 0.3
+      }
+     ],
+     "fadeOut": [
+      "c14-0.5",
+      "c14-0.1"
+     ]
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "shirts",
+      0.8351,
+      0.4541
+     ],
+     "r": [
+      130,
+      110
+     ],
+     "seed": 4,
+     "lw": 6,
+     "at": "n31@shirt+0.2",
+     "dur": 0.45
+    },
+    {
+     "t": "group",
+     "items": [
+      {
+       "t": "label",
+       "text": "caut",
+       "xy": [
+        70,
+        350
+       ],
+       "px": 60,
+       "color": "red",
+       "align": "left",
+       "at": "c14@15%",
+       "rot": -0.03,
+       "fit": 600
+      }
+     ],
+     "fadeOut": [
+      "n32-0.4",
+      "n32"
+     ]
+    },
+    {
+     "t": "label",
+     "text": "lo",
+     "xy": [
+      70,
+      360
+     ],
+     "px": 60,
+     "color": "red",
+     "align": "left",
+     "at": "n32@authors",
+     "fit": 900
+    },
+    {
+     "t": "label",
+     "text": "lo2",
+     "xy": [
+      70,
+      440
+     ],
+     "px": 48,
+     "align": "left",
+     "at": "n32@comparable",
+     "fit": 900
+    },
+    {
+     "t": "label",
+     "text": "lo3",
+     "xy": [
+      70,
+      510
+     ],
+     "px": 48,
+     "align": "left",
+     "at": "n32@kept",
+     "fit": 900
+    }
+   ]
+  },
+  {
+   "id": "p13",
+   "note": "the reading row again: inside attention the glasses read every pouch 512 wide, several times the arithmetic (F26); her clip C6 (F27); engines: unpack while reading a prompt, fold while generating; the cache stays packed either way (F28)",
+   "items": [
+    {
+     "id": "read2",
+     "t": "draw",
+     "d": "read",
+     "xy": [
+      540,
+      990
+     ],
+     "w": 900,
+     "at": "p13+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "read2",
+      0.3775,
+      0.1907
+     ],
+     "w": 300,
+     "h": 130,
+     "a": 0.38,
+     "rot": 0.0,
+     "at": "n33@glasses"
+    },
+    {
+     "t": "group",
+     "items": [
+      {
+       "t": "label",
+       "text": "lcT",
+       "xy": [
+        70,
+        350
+       ],
+       "px": 66,
+       "align": "left",
+       "at": "p13+0.3",
+       "rot": -0.03
+      },
+      {
+       "t": "label",
+       "text": "w5",
+       "xy": [
+        70,
+        430
+       ],
+       "px": 52,
+       "align": "left",
+       "font": "latin",
+       "at": "n33@512",
+       "fit": 740
+      },
+      {
+       "t": "label",
+       "text": "ar",
+       "xy": [
+        70,
+        500
+       ],
+       "px": 46,
+       "color": "red",
+       "align": "left",
+       "at": "n33@several",
+       "fit": 740
+      },
+      {
+       "t": "ring",
+       "xy": [
+        "read2",
+        0.3775,
+        0.1907
+       ],
+       "r": [
+        150,
+        70
+       ],
+       "seed": 4,
+       "lw": 6,
+       "at": "n33@glasses",
+       "dur": 0.45
+      },
+      {
+       "t": "ring",
+       "xy": [
+        "read2",
+        0.1703,
+        0.6475
+       ],
+       "r": [
+        112,
+        62
+       ],
+       "seed": 6,
+       "lw": 6,
+       "at": "n33@whole",
+       "dur": 0.45
+      }
+     ],
+     "fadeOut": [
+      "n34-0.4",
+      "n34"
+     ]
+    },
+    {
+     "t": "label",
+     "text": "gen",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n34@generating",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "pre",
+     "xy": [
+      70,
+      425
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n34@reading",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "pre2",
+     "xy": [
+      70,
+      490
+     ],
+     "px": 40,
+     "color": "red",
+     "align": "left",
+     "at": "n34@three",
+     "fit": 860
+    },
+    {
+     "t": "sans",
+     "text": "pre3",
+     "xy": [
+      74,
+      540
+     ],
+     "px": 30,
+     "a": 0.8,
+     "align": "left",
+     "at": "n34@vllm"
+    },
+    {
+     "t": "label",
+     "text": "pk",
+     "xy": [
+      70,
+      620
+     ],
+     "px": 56,
+     "color": "red",
+     "align": "left",
+     "at": "n34@either",
+     "fit": 860
+    }
+   ]
+  },
+  {
+   "id": "p14",
+   "note": "takeaway over the cover drawing; next: the residual highway (F31)",
+   "items": [
+    {
+     "id": "cover2",
+     "t": "draw",
+     "d": "cover",
+     "xy": [
+      540,
+      1050
+     ],
+     "w": 1000,
+     "at": "p14+0.3",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cover2",
+      0.8326,
+      0.5313
+     ],
+     "w": 440,
+     "h": 270,
+     "a": 0.32,
+     "rot": 0.05,
+     "at": "n35@read"
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "cover2",
+      0.1893,
+      0.5569
+     ],
+     "w": 430,
+     "h": 250,
+     "a": 0.4,
+     "rot": -0.08,
+     "at": "n35@pack"
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "cover2",
+      0.6436,
+      0.218
+     ],
+     "w": 270,
+     "h": 180,
+     "a": 0.45,
+     "rot": -0.1,
+     "at": "n35@pouch"
+    },
+    {
+     "t": "label",
+     "text": "s1",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n35@pack",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "s2",
+     "xy": [
+      70,
+      425
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n35@read",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "s3",
+     "xy": [
+      70,
+      500
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n35@position",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "s4",
+     "xy": [
+      70,
+      575
+     ],
+     "px": 56,
+     "color": "red",
+     "align": "left",
+     "at": "n35@quarter",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "nx",
+     "xy": [
+      540,
+      690
+     ],
+     "px": 60,
+     "color": "red",
+     "at": "n36@residual",
+     "id": "nxL"
+    },
+    {
+     "t": "underline",
+     "of": "nxL",
+     "dx": 4,
+     "dy": 36,
+     "rise": -6,
+     "bend": 0.03,
+     "at": "n36@highway+0.3",
+     "dur": 0.6
+    }
+   ]
+  }
+ ]
+}
