@@ -48,6 +48,27 @@ test('end card: the server says when a game has ended (an image 2 px wide) and d
   assert.equal((await fetch(`${url}/live/../state.svg`)).status, 404);
 });
 
+test('end card: every preset label stays clear of its time (measured in the HUD\'s sans and mono), long ones in smaller type', async () => {
+  const { milestonesOf } = await import('../src/report.js');
+  const { GOAL_TITLES } = await import('../src/goals.js');
+  const { createUiPanel } = await import('../src/ui-panel.js');
+  createUiPanel({ width: 1080, height: 472, over: 608 }); // the fonts, registered once
+  const { createCanvas } = (await import('node:module')).createRequire(import.meta.url)('canvas');
+  const g = createCanvas(10, 10).getContext('2d');
+  const names = [...new Set(Object.keys(GOAL_TITLES).flatMap((k) => { try { return milestonesOf(k).map((x) => x.name); } catch { return []; } }))];
+  assert.ok(names.includes('back in the Overworld') && names.length >= 12);
+  const card = endCardSvg({ game: 'g68528e', report: { goal: 'nether_and_back', goalTitle: 'Nether and back', goalReached: false, elapsedS: 1300, milestones: names.slice(0, 12).map((name, i) => ({ name, atS: 60 * (i + 1) + 6 })) } });
+  const rows = [...card.matchAll(/<text x="(\d+)" y="(\d+)" fill="#f3f5f9" font-size="(\d+)" font-weight="600">([^<]+)<\/text><text x="(\d+)" y="\2" [^>]*font-size="(\d+)"[^>]*text-anchor="end">([^<]+)<\/text>/g)];
+  assert.equal(rows.length, 12);
+  for (const [, lx, , ls, label, tx, ts, time] of rows) {
+    g.font = `600 ${ls}px MuseUI`; const right = Number(lx) + g.measureText(label.replace(/&apos;/g, "'")).width;
+    g.font = `${ts}px MuseMono`; const left = Number(tx) - g.measureText(time).width;
+    assert.ok(left - right >= 12, `${label} (${ls} px) ends at ${right.toFixed(0)}, its time starts at ${left.toFixed(0)}`);
+  }
+  assert.match(card, /font-size="23" font-weight="600">Back in the Overworld</, 'the long one smaller');
+  assert.match(card, /font-size="30" font-weight="600">Iron</, 'a short one as before');
+});
+
 test('end card: a goal reached reads "<goal> in m:ss"; the splits with their times; the test script by its name', () => {
   const card = endCardSvg({ game: 'gabc123', caller: 'TEST SCRIPT', reason: 'ended with end_game', attribution: { muse: 40, rule: 3, body: 2, decidedPct: 96 },
     report: { goal: 'nether_and_back', goalTitle: 'Nether and back', goalReached: true, goalReachedS: 947, elapsedS: 980, milestones: [{ name: 'wooden pickaxe', atS: 40 }, { name: 'stone pickaxe', atS: 110 }, { name: 'back', atS: 947 }] } });
