@@ -1,0 +1,143 @@
+{
+ "episode": "L03-03",
+ "drawings": [
+  {
+   "name": "line_mla_vacuum_pack",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron) in the new scene described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the pose, the cabinet or the ladder.",
+   "prompt": "A before-and-after on one long table, seen from the front. On the left half, the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) has put one round name tag and one small parcel together into a clear plastic storage bag and is working a small hand pump attached to the bag's valve; the bag is already collapsing tightly around the two things. On the right half of the table lies a finished bag, flat and thin like an envelope, smoothed tight around the faint shapes inside. Landscape image 1536x1024; the clerk and the table fill about 85% of the width and about 80% of the height. The tag, parcel and bags are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_mla_slim_shelf",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_clerk_ladder",
+    "line_word_three_things",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring clerk: draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron) in the new scene described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the pose, the cabinet or the ladder.",
+   "prompt": "Two kinds of storage side by side, seen from the front. On the left, a huge wall of open pigeonholes reaching nearly to the top of the picture, every hole stuffed with a round name tag and a small parcel. On the right, one slim, short shelf holding a neat row of thin flat sealed pouches standing upright like envelopes in a letter rack; the whole shelf is only as tall as the shoulder of the clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron), who leans on it, relaxed and smiling, with one pouch in hand. Landscape image 1536x1024; the scene fills about 90% of the width and about 85% of the height. The tags, parcels and pouches are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_mla_unpack_mess",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_word_three_things",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. The second image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The clerk (an invented cheerful clerk: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron) sits on the floor in the middle of a big mess: dozens of flat pouches torn open, and round name tags and small parcels springing back out of them in every direction, puffing up to full size again. The clerk tears open yet another pouch with a frantic look and sweat drops, while at the right edge the party guest (an invented young person: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag hanging on the chest) waits with a blank question card, tapping one foot. Landscape image 1536x1024; the scene fills about 90% of the width and about 80% of the height. All tags, parcels, pouches and the card are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_mla_optician_glasses",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_word_three_things",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. The second image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "At a small optician's table, an invented optician (simple round face, dot eyes, small round glasses on a cord, a cardigan) carefully fits a pair of large round reading glasses onto the face of the party guest (an invented young person: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag hanging on the chest), who sits still on a stool and smiles. On the table: a small tray of spare round lenses and a tiny screwdriver. Landscape image 1536x1024; the two characters fill about 80% of the width and about 85% of the height. No eye chart. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_mla_reading_pouches",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_word_three_things",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. The second image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "The party guest (an invented young person: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag hanging on the chest), now wearing large round glasses, walks along a long low table on which one single row of thin flat sealed pouches lies side by side, from the near end of the table into the distance. The guest bends over the row and reads the sealed pouches straight through the glasses without opening any of them; a few small sparkle lines in the lenses. Landscape image 1536x1024; the table runs across about 90% of the width; the guest fills about 70% of the height. The pouches are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_mla_turned_pouches",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_word_three_things",
+    "line_clerk_ladder",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image shows the recurring party guest: when the guest appears, draw the same person (same messy hair, face, sweater and round name tag) in the new pose described. The second image shows the recurring clerk: when the clerk appears, draw the same person (tousled hair, pencil behind the ear, rolled-up sleeves, bib apron). Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "A long low table seen straight from the front. Standing on the table in one evenly spaced row are five identical round wooden display boards, each upright on a little foot and facing the viewer like a clock face without any marks. On each board one thin flat sealed plastic pouch (a soft vacuum-packed bag with crimped zig-zag sealed ends; NOT a tablet, NOT a phone, NO screen) is pinned through its middle with one round pin, and the pouches turn steadily like the hand of a clock, always clockwise and always further than the one before, never going back: the first (leftmost) pouch points straight up (12 o'clock), the second is tilted a quarter of the way over (about 22 degrees to the right), the third leans exactly diagonally (45 degrees), the fourth is three quarters of the way over (about 67 degrees), and the fifth (rightmost) lies flat, exactly horizontal (3 o'clock). At the left end stands the party guest (an invented young person: simple round face, dot eyes, short messy hair, a plain loose sweater, a large blank round name tag hanging on the chest), wearing large round glasses, tilting the head far over to one side to follow the turning pouches, puzzled. Landscape image 1536x1024; the scene fills about 90% of the width and about 60% of the height. The pouches and boards are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_mla_luggage_tag",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "A close-up seen from a little above: one thin flat sealed pouch lies on a table, and tied to its corner by a short loop of string hangs one small separate luggage tag, about half the width of the pouch. Two hands with rolled-up shirt sleeves are just pulling the knot tight. Square image 1024x1024; the pouch, the tag and the hands fill about 80% of the width, centred. The pouch and the tag are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_mla_hedge_trim",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_three_readers",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "refnote": "The attached images are style references only (line drawings made earlier for this series, black ink on white): match their line weight, pen feel, simple round faces with dot eyes and level of detail exactly, but do not copy their content.",
+   "prompt": "An invented gardener (simple round face, dot eyes, a wide sun hat, gardening gloves) trims an overgrown, bushy, shapeless hedge with big garden shears; the left half of the hedge is already clipped into a neat, healthy rounded shape with fresh small leaves, the right half is still wild and straggly; clippings lie on the grass. Landscape image 1536x1024; the hedge and the gardener fill about 88% of the width and about 70% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_mla_same_shirts",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "An open suitcase seen from a little above, packed with ten identical folded plain shirts in two neat stacks, every shirt exactly the same; a hand at the right lifts one shirt out, and it is just like all the others. Square image 1024x1024; the suitcase fills about 85% of the width, centred. No labels. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_cover_l03_03",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_mla_vacuum_pack",
+    "line_mla_slim_shelf",
+    "line_clerk_ladder"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this episode's clerk and the vacuum-packed pouches, the third the clerk: draw the same clerk (same face, hair and clothes) and the same kind of pouches in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "Before and after on one long table, seen from the front. At the left end of the table, a bulky, untidy heap of three round name tags on strings and three plump parcels tied with string. In the middle stands the clerk (the same invented character as in the references: simple round face, dot eyes, short tousled hair, a pencil tucked behind one ear, a collared shirt with rolled-up sleeves under a bib apron), beaming, holding up in one hand one finished vacuum-packed pouch, flat and thin as an envelope, with the faint outlines of a round tag and a small parcel pressed inside it; the other hand rests on a small hand pump. At the right end, a short neat row of about eight identical flat pouches stands upright in a shallow crate like records, taking up very little room. The tags, parcels and pouches are blank. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ],
+ "_note": "v2 (2026-10-15, round 2): line_mla_one_sock dropped (review S5); it stays in the library."
+}

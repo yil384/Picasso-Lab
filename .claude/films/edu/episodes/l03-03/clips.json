@@ -1,0 +1,60 @@
+[
+ {
+  "id": "C4",
+  "lecture": "L03",
+  "rec_start": 1874.15,
+  "rec_end": 1882.47,
+  "dur": 8.32,
+  "text": "It seems that pretty straightforward. Like, what are the tricks here? Why others cannot really think about it?"
+ },
+ {
+  "id": "C5",
+  "lecture": "L03",
+  "rec_start": 2020.37,
+  "rec_end": 2026.1,
+  "dur": 5.73,
+  "text": "this is a loop invariant component. You can abstract it outside of the loop."
+ },
+ {
+  "id": "C7",
+  "lecture": "L03",
+  "rec_start": 2130.77,
+  "rec_end": 2139.13,
+  "dur": 8.36,
+  "text": "Does that solve all the problems? No. Actually, there's a killer. The killer is the positional encoding.",
+  "text_was": "Does that solve all the problems? No. Actually, like there's a killer, okay? The killer is the positional encoding."
+ },
+ {
+  "id": "C11",
+  "lecture": "L04",
+  "rec_start": 378.97,
+  "rec_end": 386.67,
+  "dur": 7.7,
+  "text": "But if you really want to think about why this is working, I think it's kind of like why sometimes you do dropout."
+ },
+ {
+  "id": "C13",
+  "lecture": "L04",
+  "rec_start": 420.24,
+  "rec_end": 424.95,
+  "dur": 4.71,
+  "text": "If it's working, it means that there is some redundancy in it. So you can do compression.",
+  "text_was": "If it's working, it means that there's some redundancy in it. So you can do compression."
+ },
+ {
+  "id": "C14",
+  "lecture": "L04",
+  "rec_start": 449.13,
+  "rec_end": 458.94,
+  "dur": 9.81,
+  "text": "But to me, I feel like a lot of this explanation is still like we want to explain how it works. No matter what kind of results we can get, we always can find a reason for it."
+ },
+ {
+  "id": "C6",
+  "lecture": "L03",
+  "rec_start": 2071.93,
+  "rec_end": 2077.76,
+  "dur": 5.83,
+  "text": "But the good news is for the serving process, the memory overhead is a huge part."
+ }
+]
