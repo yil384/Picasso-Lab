@@ -33,6 +33,10 @@ Settings (environment): `ALPACA_KEY_ID`, `ALPACA_SECRET_KEY` (paper keys; withou
 may trade; without it only callers on this machine), `WEB_PUBLIC_URL`, `WEB_TRUST_PROXY=1` and `WEB_PROXY_SECRET`
 (behind a proxy), `DATA_DIR`, `PORT`. The broker URL is Alpaca's paper API, wired in; live trading is refused.
 
+## Licence
+
+Apache-2.0 (`LICENSE`), copyright Picasso Lab, UC San Diego. The lab logo in `assets/brand/` is not covered (`NOTICE`).
+
 ## Self-hosting
 
 No secret is in this folder: keys come from the environment. Point your agent's MCP client at

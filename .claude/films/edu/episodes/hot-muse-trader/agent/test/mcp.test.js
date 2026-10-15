@@ -181,3 +181,17 @@ test('the daily loss halt stops buys until the next day, sells go on', async () 
   const next = await call(owner, 'place_order', { symbol: 'SOL/USD', side: 'buy', notional: 50, ...W });
   assert.equal(next.code, 'OK', next.text);
 });
+
+test('a deployment test order is labelled TEST in the public log', async () => {
+  const r = await call(owner, 'place_order', { symbol: 'LTC/USD', side: 'buy', notional: 10, why: 'deployment test', plan: 'deployment test: sell it back at once', test: true });
+  assert.equal(r.code, 'OK', r.text);
+  const row = (await call(owner, 'orders', { limit: 1 })).structuredContent.orders[0];
+  assert.equal(row.test, true);
+  assert.match((await call(owner, 'orders', { limit: 1 })).text, /^\[TEST\]/);
+  const csv = await (await fetch(`${app.url}/orders.csv`)).text();
+  assert.match(csv.split('\n')[0], /,test$/);
+  assert.match(csv.split('\n')[1], /,true$/);
+  app.floor.forget();
+  assert.match(await (await fetch(`${app.url}/floor/tape.svg`)).text(), /TEST BUY \$10\.00 LTC\/USD/);
+  assert.match(await (await fetch(`${app.url}/`)).text(), /class="tag">TEST</);
+});

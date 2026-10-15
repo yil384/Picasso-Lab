@@ -146,7 +146,7 @@ export function thinkingSvg(e, W = WIDE) {
   let head = '';
   if (e.kind === 'hold') head = pill(32, 80, 'HOLD', C.ink2);
   else {
-    const what = `${sideWord(e)} ${sizeWord(e)} ${e.symbol}`;
+    const what = `${e.test ? 'TEST ' : ''}${sideWord(e)} ${sizeWord(e)} ${e.symbol}`;
     const [word, col] = statusOf(e);
     head = pill(32, 80, what, C.ink) + pill(32 + pillW(what) + 10, 80, word, col);
     const extra = e.status === 'refused' ? String(e.code ?? '').replace(/^RISK_LIMIT:/, '') : e.fill_price ? `@ ${money(Number(e.fill_price))}` : '';
@@ -210,7 +210,7 @@ export function tapeSvg(rows, { total = rows.length } = {}, W = WIDE) {
   let y = 84;
   if (!list.length) { body += t(32, y + 10, 'No orders yet.', { size: 16, fill: C.ink2 }); y += 40; }
   list.forEach((r, i) => {
-    const what = `${sideWord(r)} ${sizeWord(r)} ${r.symbol ?? ''}`;
+    const what = `${r.test ? 'TEST ' : ''}${sideWord(r)} ${sizeWord(r)} ${r.symbol ?? ''}`;
     const [w0, col] = statusOf(r);
     const word = r.status === 'refused' ? `${w0} ${String(r.code ?? '').replace(/^RISK_LIMIT:/, '')}` : r.status === 'filled' ? `${w0} @ ${money(Number(r.fill_price))}` : w0;
     y += 20;

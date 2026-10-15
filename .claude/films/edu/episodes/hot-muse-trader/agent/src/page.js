@@ -62,7 +62,7 @@ export function publicPageHtml({ base, rows, summaries, state, mock, sourceUrl =
   const status = (r) => (r.status === 'refused' ? `refused (${esc(r.code)})` : r.status === 'filled' ? `filled @ ${esc(money(Number(r.fill_price)))}` : esc(r.status));
   const size = (r) => (r.notional ? money(Number(r.notional)) : esc(r.qty ?? ''));
   const table = shown.length
-    ? `<div class="tw"><table><thead><tr><th>Time</th><th>Order</th><th>Status</th><th>Why</th><th>Plan</th><th>1 day</th><th>1 week</th></tr></thead><tbody>${shown.map((r) => `<tr><td class="n">${esc(tsCell(r.t))}</td><td><b>${esc((r.side ?? '').toUpperCase())} ${size(r)} ${esc(r.symbol)}</b>${r.type === 'limit' ? ` <span class="m">limit ${esc(money(Number(r.limit_price)))}</span>` : ''}</td><td>${status(r)}</td><td>${esc(r.why)}</td><td class="m">${esc(r.plan)}</td><td class="n">${pctCell(r.outcome_1d_pct)}</td><td class="n">${pctCell(r.outcome_1w_pct)}</td></tr>`).join('')}</tbody></table></div>`
+    ? `<div class="tw"><table><thead><tr><th>Time</th><th>Order</th><th>Status</th><th>Why</th><th>Plan</th><th>1 day</th><th>1 week</th></tr></thead><tbody>${shown.map((r) => `<tr><td class="n">${esc(tsCell(r.t))}</td><td>${r.test ? '<span class="tag">TEST</span> ' : ''}<b>${esc((r.side ?? '').toUpperCase())} ${size(r)} ${esc(r.symbol)}</b>${r.type === 'limit' ? ` <span class="m">limit ${esc(money(Number(r.limit_price)))}</span>` : ''}</td><td>${status(r)}</td><td>${esc(r.why)}</td><td class="m">${esc(r.plan)}</td><td class="n">${pctCell(r.outcome_1d_pct)}</td><td class="n">${pctCell(r.outcome_1w_pct)}</td></tr>`).join('')}</tbody></table></div>`
     : '<p class="m">No orders yet.</p>';
   const days = summaries.slice(-30).reverse();
   const sumTable = days.length
@@ -76,6 +76,7 @@ section{max-width:1960px;margin:22px auto 0}h2{font-size:15px;letter-spacing:2px
 .tw{overflow-x:auto;border:1px solid ${C.axis};border-radius:12px}table{border-collapse:collapse;width:100%;min-width:760px;font-size:13px}
 th,td{padding:7px 10px;border-bottom:1px solid ${C.grid};text-align:left;vertical-align:top}th{color:${C.muted};font-weight:600;background:${C.surface};position:sticky;top:0}
 td.n{white-space:nowrap;font-variant-numeric:tabular-nums}.m{color:${C.muted}}ul{margin:0;padding-left:20px;color:${C.ink2}}li{margin:3px 0}
+.tag{display:inline-block;padding:0 6px;border:1px solid ${C.muted};border-radius:6px;color:${C.muted};font-size:11px;font-weight:700}
 .dl a{display:inline-block;margin-right:10px;padding:4px 12px;border:1px solid ${C.axis};border-radius:99px;text-decoration:none}</style></head><body><div class="wrap">`
     + floorHtml(b, mock)
     + `<section><h2>The challenge</h2><p>${started} Muse, Meta's AI, decides what to buy and sell through this server's tools; it is measured against buying and holding SPY (stocks) and BTC (crypto) from the same start. Muse runs on a schedule: stocks every 30 minutes in market hours, crypto every 2 hours, and a daily wrap-up.</p></section>`

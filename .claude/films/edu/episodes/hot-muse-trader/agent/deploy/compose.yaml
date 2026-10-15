@@ -24,3 +24,9 @@ services:
     mem_limit: 512m
     pids_limit: 256
     security_opt: [ "no-new-privileges:true" ]
+    networks: [ trade ]
+# a small network of its own with an explicit subnet: picasso's default address pools are used up (next to the
+# Minecraft stacks' 10.77.77-79.0/28)
+networks:
+  trade:
+    ipam: { config: [ { subnet: 10.77.80.0/29 } ] }

@@ -65,11 +65,11 @@ export function orderRows(journal) {
   const rows = [];
   for (const e of journal) {
     if (e.kind === 'order') {
-      const r = { t: e.t, id: e.id, symbol: e.symbol, side: e.side, qty: e.qty ?? null, notional: e.notional ?? null, type: e.type, limit_price: e.limit_price ?? null, status: e.status ?? 'accepted', price_at_order: e.price ?? null, filled_qty: null, fill_price: null, filled_at: null, why: e.why, plan: e.plan, outcome_1d_pct: null, outcome_1d_pnl: null, outcome_1w_pct: null, outcome_1w_pnl: null, code: null };
+      const r = { t: e.t, id: e.id, symbol: e.symbol, side: e.side, qty: e.qty ?? null, notional: e.notional ?? null, type: e.type, limit_price: e.limit_price ?? null, status: e.status ?? 'accepted', price_at_order: e.price ?? null, filled_qty: null, fill_price: null, filled_at: null, why: e.why, plan: e.plan, outcome_1d_pct: null, outcome_1d_pnl: null, outcome_1w_pct: null, outcome_1w_pnl: null, code: null, test: Boolean(e.test) };
       byId.set(e.id, r);
       rows.push(r);
     } else if (e.kind === 'refused') {
-      rows.push({ t: e.t, id: null, symbol: e.symbol ?? null, side: e.side ?? null, qty: e.qty ?? null, notional: e.notional ?? null, type: e.type ?? null, limit_price: e.limit_price ?? null, status: 'refused', price_at_order: e.price ?? null, filled_qty: null, fill_price: null, filled_at: null, why: e.why ?? '', plan: e.plan ?? '', outcome_1d_pct: null, outcome_1d_pnl: null, outcome_1w_pct: null, outcome_1w_pnl: null, code: e.rule ? `${e.code}:${e.rule}` : e.code });
+      rows.push({ t: e.t, id: null, symbol: e.symbol ?? null, side: e.side ?? null, qty: e.qty ?? null, notional: e.notional ?? null, type: e.type ?? null, limit_price: e.limit_price ?? null, status: 'refused', price_at_order: e.price ?? null, filled_qty: null, fill_price: null, filled_at: null, why: e.why ?? '', plan: e.plan ?? '', outcome_1d_pct: null, outcome_1d_pnl: null, outcome_1w_pct: null, outcome_1w_pnl: null, code: e.rule ? `${e.code}:${e.rule}` : e.code, test: Boolean(e.test) });
     } else if (byId.has(e.id)) {
       const r = byId.get(e.id);
       if (e.kind === 'fill') Object.assign(r, { status: 'filled', filled_qty: e.filled_qty, fill_price: e.price, filled_at: e.filled_at });
@@ -80,7 +80,7 @@ export function orderRows(journal) {
   return rows.reverse();
 }
 
-export const CSV_COLUMNS = ['t', 'id', 'symbol', 'side', 'qty', 'notional', 'type', 'limit_price', 'status', 'code', 'price_at_order', 'filled_qty', 'fill_price', 'filled_at', 'why', 'plan', 'outcome_1d_pct', 'outcome_1d_pnl', 'outcome_1w_pct', 'outcome_1w_pnl'];
+export const CSV_COLUMNS = ['t', 'id', 'symbol', 'side', 'qty', 'notional', 'type', 'limit_price', 'status', 'code', 'price_at_order', 'filled_qty', 'fill_price', 'filled_at', 'why', 'plan', 'outcome_1d_pct', 'outcome_1d_pnl', 'outcome_1w_pct', 'outcome_1w_pnl', 'test'];
 const cell = (v) => {
   if (v === null || v === undefined) return '';
   const s = String(v);
@@ -122,7 +122,7 @@ export function decisions(journal, { since = 0, limit = 30 } = {}) {
 export function daySummary(date, journal, equity, state) {
   const of = (e) => nyDate(Date.parse(e.t)) === date;
   const pts = equity.filter(of);
-  const rows = orderRows(journal.filter(of));
+  const rows = orderRows(journal.filter(of)).filter((r) => !r.test);
   const outcomes = journal.filter((e) => e.kind === 'outcome' && of(e));
   const first = pts[0], last = pts.at(-1);
   const ret = (a, b) => (a && b ? b / a - 1 : null);

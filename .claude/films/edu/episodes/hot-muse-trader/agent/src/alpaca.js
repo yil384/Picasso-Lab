@@ -45,7 +45,7 @@ export function createAlpaca(cfg, fetchFn = fetch) {
   return {
     account: () => trade('GET', 'v2/account'),
     clock: () => trade('GET', 'v2/clock'),
-    asset: (sym) => trade('GET', `v2/assets/${encodeURIComponent(sym)}`),
+    asset: (sym) => trade('GET', `v2/assets/${encodeURIComponent(String(sym).replace('/', ''))}`),
     positions: async () => (await trade('GET', 'v2/positions')).map((p) => ({ ...p, symbol: symbolOf(p.symbol, p.asset_class) })),
     orders: (status = 'all', limit = 100) => trade('GET', 'v2/orders', { query: { status, limit, direction: 'desc', nested: 'false' } }),
     order: (id) => trade('GET', `v2/orders/${encodeURIComponent(id)}`),

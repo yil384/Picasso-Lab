@@ -45,5 +45,5 @@ export const signedPct = p;
 
 /** One line of market for a symbol. */
 export function indicatorLine(sym, q, ind) {
-  return `${sym} ${money(q.price)} | ret 1d ${p(ind.ret_1d)} 5d ${p(ind.ret_5d)} 20d ${p(ind.ret_20d)} | vs SMA20 ${p(ind.vs_sma20)} vs SMA50 ${p(ind.vs_sma50)} | vol20 ${ind.volatility_20d_annual === null ? 'n/a' : `${(ind.volatility_20d_annual * 100).toFixed(0)}%/yr`} | volume ${f(ind.volume_vs_avg, 1)}x 20d avg`;
+  return `${sym} ${money(q.price)} | ret 1d ${p(ind.ret_1d)} 5d ${p(ind.ret_5d)} 20d ${p(ind.ret_20d)} | vs SMA20 ${p(ind.vs_sma20)} vs SMA50 ${p(ind.vs_sma50)} | vol20 ${ind.volatility_20d_annual === null ? 'n/a' : `${(ind.volatility_20d_annual * 100).toFixed(0)}%/yr`} | volume today so far ${f(ind.volume_vs_avg, 1)}x the 20d avg`;
 }
