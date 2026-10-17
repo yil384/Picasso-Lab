@@ -409,7 +409,8 @@ def prompts_page(art, out, drop=None, only_missing=True):
     for d in rows:
         groups.setdefault(d.get('group', 'A'), []).append(d)
     drop = drop or os.path.join(ART, 'src')
-    thumbs = {r: thumb(r) for r in refs_of_all({'drawings': rows})}
+    # a ref may be a drawing of this same page that is not made yet: no picture, the card says to make it first
+    thumbs = {r: thumb(r) for r in refs_of_all({'drawings': rows}) if ref_path(r)[0]}
     cards, n = [], 0
     for g, ds in groups.items():
         cards.append(f'<h2>对话 {html.escape(g)} · {len(ds)} 张</h2>')
@@ -422,6 +423,8 @@ def prompts_page(art, out, drop=None, only_missing=True):
             note = d.get('refnote', REFNOTE) if refs and i == 0 else ''
             text = ' '.join(x for x in (lead, full_prompt(d), note) if x)
             imgs = ''.join(f'<figure><img src="{thumbs[r]}" alt=""><figcaption>{html.escape(r)}</figcaption></figure>'
+                           if r in thumbs else
+                           f'<figure><figcaption>{html.escape(r)}：本页先画这张，存好后再附上</figcaption></figure>'
                            for r in refs) if i == 0 else ''
             attach = ('附图（拖进对话）：' + ', '.join(refs)) if (refs and i == 0) else '不用再附图'
             cards.append(f'''<section class="card"><div class="head"><span class="n">{n}</span>

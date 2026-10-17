@@ -106,6 +106,18 @@ def checks(p):
     made = sorted(open(p['made']).read().split())
     out.append(('gen with no library makes both drawings', r[0] == 0 and made == ['line_t_from_lib', 'line_t_new'],
                 r[1] + r[2]))
+
+    chain = os.path.join(p['ep'], 'chain.json')             # a ref that is another, not yet made drawing of the page
+    json.dump({'episode': 'T00-02', 'drawings': [{'name': 'line_t_base', 'prompt': 'a'},
+                                                 {'name': 'line_t_child', 'prompt': 'b', 'refs': ['line_t_base'],
+                                                  'group': 'B'}]}, open(chain, 'w'))
+    page = os.path.join(p['work'], 'chain.html')
+    r, err = run(env, 'prompts', chain, page)
+    if err:
+        return None, err
+    text = open(page, encoding='utf-8').read() if os.path.exists(page) else ''
+    out.append(('prompts page with a not-yet-made ref says to draw it first', r[0] == 0 and '本页先画' in text,
+                r[1] + r[2]))
     return out, None
 
 
