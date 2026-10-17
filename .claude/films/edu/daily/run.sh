@@ -82,6 +82,14 @@ export HF_HUB_OFFLINE=1 PYTHONUNBUFFERED=1 EDU_DAILY_RUN="$STAMP" CODEX="$IMG_CL
 ENV
 export CLAUDE_ENV_FILE="$ENVF"
 
+# another account's login when the owner's weekly limit is out: ~/.config/picasso/claude-oauth.env (chmod 600) holds
+# CLAUDE_CODE_OAUTH_TOKEN; only the producer process gets it (never written to env.sh or a log)
+OAUTH_ENV="$HOME/.config/picasso/claude-oauth.env"
+if [ -f "$OAUTH_ENV" ]; then
+  CLAUDE_CODE_OAUTH_TOKEN=$(sed -n 's/^CLAUDE_CODE_OAUTH_TOKEN=//p' "$OAUTH_ENV"); export CLAUDE_CODE_OAUTH_TOKEN
+  say "producer login: the token in ${OAUTH_ENV}"
+fi
+
 # power: on battery the Mac may sleep; low power mode slows rendering and transcription
 pmset -g batt | grep -q "AC Power" || { say "WARNING: on battery"; notify "每日视频：Mac 没插电，夜里可能睡眠"; }
 LOWPOWER=$(pmset -g custom 2>/dev/null | awk '/AC Power/{f=1} f&&/lowpowermode/{print $2; exit}')
