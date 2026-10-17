@@ -109,7 +109,7 @@
    "episode_dir": "episodes/l03-03",
    "morning": "2026-10-16",
    "run": "2026-10-15_120005",
-   "note": "run.sh: no checked mp4 after 4 round(s), exit 124; exit 124; session 82701331-8f54-46d3-8e7e-9cefef34b030 | success: ",
+   "note": "run.sh: no checked mp4 after 4 round(s), exit 124; exit 124; session 82701331-8f54-46d3-8e7e-9cefef34b030 | success:  | kept delivered over a same-run failed mark: run.sh: no checked mp4 after 4 round(s), exit 0; exit 0; session 43aff559-32d3-44a8-8278-b6041ad52767 | success: 没有剩下的事，L03-03 已交付：`~/Downloads/picasso-daily/2026-10-16_L03-03/L03-03_mla_zipping_kv_cache_en.mp4`，8:04。",
    "attempts": 1,
    "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-16_L03-03/L03-03_mla_zipping_kv_cache_en.mp4",
    "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-16_L03-03"

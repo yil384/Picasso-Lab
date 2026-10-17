@@ -48,6 +48,13 @@ RUN_START=$(date +%s)
 say "run.sh start (dry=${DRY}, pid $$, repo ${REPO})"
 [ -d "${EDU}" ] || { say "no ${EDU}"; notify "每日视频：找不到仓库 ${REPO}"; exit 1; }
 
+# a pause the owner asked for (e.g. the weekly limit is out): $WORKROOT/daily/pause-until holds an epoch; until then a
+# night does nothing, so it is not marked failed (two failed nights pass an episode over)
+PAUSE=$(cat "$WORKROOT/daily/pause-until" 2>/dev/null)
+if [ -n "${PAUSE}" ] && [ "$(date +%s)" -lt "${PAUSE}" ]; then
+  say "paused until $(date -r "${PAUSE}" '+%F %T'): exit"; exit 0
+fi
+
 # one run at a time; a lock whose pid is not a run.sh copy any more (a reboot, a crash) is stale
 LOCK="$WORKROOT/daily/run.lock"
 if ! mkdir "$LOCK" 2>/dev/null; then
