@@ -1,0 +1,202 @@
+[
+ {
+  "id": "n0",
+  "en": "Every block of a language model has one express lane running past it. What if you built four?",
+  "zh": ""
+ },
+ {
+  "id": "n0b",
+  "en": "And how would you keep four lanes from blowing up?",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "Start with one lane. A transformer is a tall stack of blocks: attention, then a feed-forward layer, again and again, dozens of times.",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "Each block doesn't replace its input. It adds a change on top: x plus F of x. The plain x is an express road. The block is a town you exit into, and its result merges back onto the road.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "Why does that matter? Training sends a correction signal, the gradient, backwards from the last layer to the first. Her example:",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "The express road has no gates, so the gradient rides straight down it. ResNet made this shortcut the standard, about ten years ago.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "Without it, the signal would pass through every block in turn, like a message whispered down a long line of people. By the end, it is mush.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "The second thing a deep stack needs is normalization: shift and scale a group of numbers, so they average zero, with a standard spread. But which group?",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "BatchNorm, from image models, measures each feature across a whole batch of examples. Like a tailor measuring the waist of everyone in a row.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "LayerNorm measures one example at a time: all the numbers of one token, head to toe.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "Sentences come short and long, so batch averages wobble. LayerNorm needs no batch at all. And her slide is honest about the real reason: experiments show it works better.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "Modern models trim it further. RMSNorm skips subtracting the average, and has no bias. It only rescales.",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "In its 2019 paper, it matched LayerNorm's quality, with 7 to 64 percent less running time, depending on the model. The Llama family uses it.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "Now the real question. Where on the highway do you put the toll gate?",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "The 2017 Transformer added first, then normalized. That puts a gate right across the express road. This is called Post-LN.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "Every gradient has to squeeze through every gate. In 2020, Xiong and colleagues showed that Post-LN starts training with large gradients near the output, so it needs a slow warm-up.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "Pre-LN moves the gate onto the exit ramp. Only the copy going into the block is normalized. The road itself stays untouched.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "Pre-LN can train without warm-up and reach comparable results. BERT kept the original Post-LN. GPT-2 moved the norm to the input. Her slide's verdict: only earlier models, like BERT, used Post-LN.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "Her point is that the names mislead. What matters is not before or after. It is whether a gate sits on the express road.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "One more idea: normalize what goes into the block, and also what comes out, before it merges back. Two gates, both on the ramp. The road stays clean.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "This is Peri-LN. Gemma 2 and Gemma 3 do exactly this. OLMo 2 uses a close cousin. Models shipped it in 2024, and a paper studied it in 2025.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "A norm is cheap next to the big matrix multiplications, so an extra gate costs little.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "So far, one road. The residual shortcut itself had barely changed in ten years. Then she asks:",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "Hyper-connections, from Zhu and colleagues in 2025, copy the stream into several lanes, here four. Each block reads a learned mix of the lanes, and writes back into all of them.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "The block itself still runs once, so the expensive part costs the same. Only the cheap merging gets richer.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "But now the crossovers have weights. Her toy example: if y is x1 plus x2, each input gets the full gradient back.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "If y is 0.2 x1 plus 0.8 x2, the gradients come back scaled, by 0.2 and by 0.8. So the weights decide how much signal gets through.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "Learned, they worked. In the paper's big test, the model reached the baseline's loss 1.8 times faster, counted in training tokens.",
+  "zh": ""
+ },
+ {
+  "id": "n27",
+  "en": "Here is the catch. Those weights multiply, layer after layer. A weight of 1.1, a hundred times over, is about 13,800. A weight of 0.9, a hundred times over, is about 3 in 100,000.",
+  "zh": ""
+ },
+ {
+  "id": "n28",
+  "en": "A snowball, or a whisper. When DeepSeek measured plain hyper-connections, the signal gain through the stack hit about 3,000.",
+  "zh": ""
+ },
+ {
+  "id": "n29",
+  "en": "Their fix is called mHC, from Xie and colleagues. It puts one rule on the mixing. Picture four jugs pouring into four pots.",
+  "zh": ""
+ },
+ {
+  "id": "n30",
+  "en": "Every jug pours out exactly what it holds: each column sums to 1. Every pot ends up with exactly one jug's worth: each row sums to 1. Nothing negative. That is a doubly stochastic matrix.",
+  "zh": ""
+ },
+ {
+  "id": "n31",
+  "en": "And here is the trick. Multiply two of them, and you get another one. Her slide checks it with real numbers.",
+  "zh": ""
+ },
+ {
+  "id": "n32",
+  "en": "So stack a hundred layers, and the total mix still obeys the rule: the mixing itself can never stretch the signal. Measured, the gain stays near 1.6, not 3,000.",
+  "zh": ""
+ },
+ {
+  "id": "n33",
+  "en": "With one lane, the rule leaves just the number 1: the plain shortcut, back again. The price is about 6.7 percent more training time, with four lanes. Their main test model has 27B parameters.",
+  "zh": ""
+ },
+ {
+  "id": "n34",
+  "en": "Her slide has the best picture of all this. Attention is a person in a meeting, listening to others, learning whose words matter more.",
+  "zh": ""
+ },
+ {
+  "id": "n35",
+  "en": "Hyper-connections are one person with four clones, talking among themselves. Same token, a richer picture of itself, deeper in the network.",
+  "zh": ""
+ },
+ {
+  "id": "n36",
+  "en": "One honest limit: the 1.8 times is counted in training tokens, on one model. Clock time is another question.",
+  "zh": ""
+ },
+ {
+  "id": "n37",
+  "en": "So: deep models train because every block adds onto a clean road, and the gates stay off it. Now the road can have lanes, as long as every mix keeps its rows and columns at 1.",
+  "zh": ""
+ },
+ {
+  "id": "n38",
+  "en": "Next time: the knobs we set before training.",
+  "zh": ""
+ }
+]
