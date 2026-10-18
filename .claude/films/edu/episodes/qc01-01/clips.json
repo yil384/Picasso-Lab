@@ -1,0 +1,62 @@
+[
+ {
+  "id": "C1",
+  "lecture": "Q25-01",
+  "rec_start": 710.15,
+  "rec_end": 715.63,
+  "dur": 5.48,
+  "text": "quantum hardware is really developing very fast, faster than expected"
+ },
+ {
+  "id": "C4",
+  "lecture": "Q25-01",
+  "rec_start": 761.31,
+  "rec_end": 767.28,
+  "dur": 5.97,
+  "text": "you can only verify the type of gates on it, and it's not really that useful."
+ },
+ {
+  "id": "C5",
+  "lecture": "Q25-01",
+  "rec_start": 770.79,
+  "rec_end": 778.99,
+  "dur": 8.2,
+  "text": "unless you are physics students and your lab is doing quantum computing and building quantum hardware you will never have access to this that kind of computer"
+ },
+ {
+  "id": "C9",
+  "lecture": "Q25-01",
+  "rec_start": 1127.66,
+  "rec_end": 1133.02,
+  "dur": 5.36,
+  "text": "So generally speaking, in principle, only superconducting requires low temperature."
+ },
+ {
+  "id": "C10",
+  "lecture": "Q25-01",
+  "rec_start": 1139.82,
+  "rec_end": 1144.56,
+  "dur": 4.74,
+  "text": "But sometimes we still use low temperature to get better results."
+ },
+ {
+  "id": "C11",
+  "lecture": "Q25-01",
+  "rec_start": 987.93,
+  "rec_end": 993.75,
+  "dur": 5.82,
+  "text": "ion trap is a very mature technology that has been used to build quantum computers",
+  "accept": [
+   "ion",
+   "trap"
+  ]
+ },
+ {
+  "id": "C12",
+  "lecture": "Q25-01",
+  "rec_start": 789.29,
+  "rec_end": 794.97,
+  "dur": 5.68,
+  "text": "not only we have much larger quantum computers and up to like 1,000 qubits"
+ }
+]

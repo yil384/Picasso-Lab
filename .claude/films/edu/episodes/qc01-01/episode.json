@@ -1,0 +1,1691 @@
+{
+ "id": "qc01-01",
+ "lecture": "Q25-01",
+ "facts": "FACTS.md",
+ "title": "QC01-01 From Two Qubits to a Thousand",
+ "langs": [
+  "en"
+ ],
+ "tag": {
+  "text": "tag"
+ },
+ "voice": {
+  "lines": "vo_lines.json",
+  "clips": "clips.json",
+  "clipDir": "~/picasso-work/clips/qc01-01",
+  "rate": "+4%",
+  "slotPad": 0.4
+ },
+ "sound": {
+  "dir": "~/picasso-assets/snd"
+ },
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "slides",
+  "drawings": {
+   "cover": {
+    "src": "line_qc_cover_01_01",
+    "w": 1040
+   },
+   "bench": {
+    "src": "line_qc_thousand_two_qubit_bench",
+    "w": 900
+   },
+   "locked": {
+    "src": "line_qc_thousand_locked_lab",
+    "w": 600
+   },
+   "crowd": {
+    "src": "line_qc_thousand_chip_crowd",
+    "w": 1040
+   },
+   "cloud": {
+    "src": "line_qc_thousand_cloud_access",
+    "w": 1040
+   },
+   "fair": {
+    "src": "line_qc_thousand_tech_fair",
+    "w": 1040
+   },
+   "cold": {
+    "src": "line_qc_thousand_cold_vs_room",
+    "w": 1040
+   },
+   "door": {
+    "src": "line_qc_thousand_open_door",
+    "w": 1040
+   },
+   "mic": {
+    "src": "line_mic",
+    "w": 240,
+    "boost": 0.3
+   }
+  },
+  "slides": {
+   "s8": {
+    "src": "q25p08.png"
+   },
+   "s7": {
+    "src": "q24p07.png"
+   }
+  }
+ },
+ "panels": [
+  {
+   "id": "p0",
+   "note": "cover: two qubits on tweezers vs the big chip; hook (F1, F2, F7)",
+   "items": [
+    {
+     "id": "cv",
+     "t": "draw",
+     "d": "cover",
+     "xy": [
+      540,
+      1080
+     ],
+     "w": 1040
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cv",
+      0.53,
+      0.62
+     ],
+     "w": 470,
+     "h": 430,
+     "a": 0.26,
+     "rot": 0.0
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "cv",
+      0.29,
+      0.12
+     ],
+     "w": 150,
+     "h": 120,
+     "a": 0.45,
+     "rot": -0.1
+    },
+    {
+     "t": "label",
+     "text": "title.0",
+     "xy": [
+      66,
+      386
+     ],
+     "px": 118,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.1",
+     "xy": [
+      84,
+      478
+     ],
+     "px": 96,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "id": "title2"
+    },
+    {
+     "t": "underline",
+     "of": "title2",
+     "dx": 6,
+     "dy": 46,
+     "rise": -8,
+     "bend": 0.03,
+     "at": "title",
+     "dur": 0.6
+    },
+    {
+     "t": "sans",
+     "text": "strip",
+     "xy": [
+      86,
+      548
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left",
+     "fit": 920
+    },
+    {
+     "t": "label",
+     "text": "c2",
+     "xy": [
+      "cv",
+      0.22,
+      -0.07
+     ],
+     "px": 66,
+     "align": "center",
+     "color": "red",
+     "font": "latin",
+     "rot": -0.04,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "c1121",
+     "xy": [
+      "cv",
+      0.53,
+      0.13
+     ],
+     "px": 70,
+     "align": "center",
+     "color": "red",
+     "font": "latin",
+     "rot": -0.02,
+     "patch": 0.25,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "hk1",
+     "xy": [
+      70,
+      660
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "n0@computer",
+     "font": "latin",
+     "out": "n1@qubit-0.4",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "qdef",
+     "xy": [
+      70,
+      660
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "n1@qubit",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "cv",
+      0.31,
+      0.06
+     ],
+     "to": [
+      "cv",
+      0.42,
+      0.2
+     ],
+     "bend": -0.35,
+     "lw": 6,
+     "at": "n3@thousand",
+     "dur": 0.5
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "note": "two qubits on a bench, 1998; tiny demos; is it a computer? her answer C4 (F2-F4)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h1",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "p1+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "bn",
+     "t": "draw",
+     "d": "bench",
+     "xy": [
+      540,
+      1120
+     ],
+     "w": 900,
+     "at": "p1+0.4",
+     "dur": 2.6
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "bn",
+      0.36,
+      0.42
+     ],
+     "r": [
+      70,
+      55
+     ],
+     "seed": 2,
+     "lw": 6,
+     "at": "n5@two",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "nmr",
+     "xy": [
+      70,
+      435
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n5@molecules",
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "demo",
+     "xy": [
+      70,
+      620
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n6@finding",
+     "fit": 800
+    },
+    {
+     "t": "label",
+     "text": "comp",
+     "xy": [
+      70,
+      690
+     ],
+     "px": 70,
+     "align": "left",
+     "color": "red",
+     "at": "n7@computer",
+     "font": "latin",
+     "out": "n7@gate-0.4",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "gate",
+     "xy": [
+      70,
+      690
+     ],
+     "px": 45,
+     "align": "left",
+     "at": "n7@gate",
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "note": "her slide (2025 lecture 1, p8), the logo legend covered; C1 on the title; 2 to 12; lab access (F1, F5, F26)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape2+0.4",
+     "rot": -0.04,
+     "fit": 760
+    },
+    {
+     "id": "sl",
+     "t": "printout",
+     "slide": "s8",
+     "xy": [
+      540,
+      868
+     ],
+     "w": 1040,
+     "rot": -0.01,
+     "crop": [
+      0,
+      0,
+      1,
+      0.93
+     ],
+     "at": "p2+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      70,
+      606
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape2"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      1010,
+      598
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape2+0.15"
+    },
+    {
+     "t": "cover",
+     "xy": [
+      "sl:px",
+      1505,
+      645
+     ],
+     "size": [
+      130,
+      310
+     ],
+     "rot": 0.02,
+     "at": "tape2+0.4",
+     "dur": 0.4,
+     "tape": {
+      "i": 6,
+      "dy": -150,
+      "w": 110,
+      "rot": 0.05,
+      "at": "tape2+0.6"
+     }
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "sl:px",
+       412,
+       142
+      ],
+      [
+       "sl:px",
+       1900,
+       140
+      ]
+     ],
+     "lw": 6,
+     "at": "n9@title",
+     "dur": 0.8
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sl:px",
+      640,
+      268
+     ],
+     "r": [
+      82,
+      46
+     ],
+     "seed": 3,
+     "lw": 6,
+     "at": "n10@seventeen",
+     "dur": 0.45
+    },
+    {
+     "id": "pa",
+     "t": "clipping",
+     "slide": "s8",
+     "crop": [
+      0.26,
+      0.178,
+      0.125,
+      0.12
+     ],
+     "from": [
+      "sl:px",
+      640,
+      268
+     ],
+     "to": [
+      330,
+      1170
+     ],
+     "w0": 140,
+     "w": 480,
+     "rot0": 0,
+     "rot": -0.02,
+     "at": "n11",
+     "fly": 0.6,
+     "tapes": [
+      {
+       "i": 2,
+       "dx": -0.42,
+       "dy": -0.3,
+       "w": 120,
+       "rot": -0.4,
+       "at": "n11+0.6"
+      },
+      {
+       "i": 6,
+       "dx": 0.42,
+       "dy": -0.3,
+       "w": 110,
+       "rot": 0.4,
+       "at": "n11+0.7"
+      }
+     ],
+     "items": [
+      {
+       "t": "ring",
+       "xy": [
+        "pa:px",
+        585,
+        272
+       ],
+       "r": [
+        70,
+        34
+       ],
+       "seed": 4,
+       "lw": 5,
+       "at": "n11@biggest",
+       "dur": 0.45
+      },
+      {
+       "t": "label",
+       "text": "to12",
+       "xy": [
+        590,
+        1190
+       ],
+       "px": 60,
+       "align": "left",
+       "color": "red",
+       "at": "n11@writes",
+       "font": "latin",
+       "fit": 290
+      },
+      {
+       "t": "pen",
+       "pts": [
+        [
+         "pa:px",
+         548,
+         334
+        ],
+        [
+         "pa:px",
+         736,
+         334
+        ]
+       ],
+       "lw": 7,
+       "at": "n12@lab",
+       "dur": 0.5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "note": "lab access = a locked door (C5); May 2016: a 5-qubit machine online; the mail slot (F5, F11)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h3",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "p3+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "lk",
+     "t": "draw",
+     "d": "locked",
+     "xy": [
+      680,
+      1095
+     ],
+     "w": 600,
+     "at": "p3+0.4",
+     "dur": 2.6
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "lk",
+      0.81,
+      0.53
+     ],
+     "r": [
+      70,
+      90
+     ],
+     "seed": 5,
+     "lw": 6,
+     "at": "n13@locked",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "only",
+     "xy": [
+      70,
+      435
+     ],
+     "px": 55,
+     "align": "left",
+     "at": "c5",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "m16",
+     "xy": [
+      70,
+      620
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n16@may",
+     "fit": 800
+    },
+    {
+     "t": "sans",
+     "text": "ibm16",
+     "xy": [
+      70,
+      690
+     ],
+     "px": 32,
+     "a": 0.95,
+     "align": "left",
+     "at": "n16@ibm"
+    },
+    {
+     "t": "box",
+     "rect": [
+      0.5,
+      0.628,
+      0.7,
+      0.652
+     ],
+     "on": "lk",
+     "lw": 6,
+     "at": "n17@mail",
+     "dur": 0.7
+    },
+    {
+     "t": "label",
+     "text": "slot",
+     "xy": [
+      40,
+      900
+     ],
+     "px": 70,
+     "align": "left",
+     "color": "red",
+     "at": "n17@mail+0.3",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "arrow",
+     "from": [
+      250,
+      920
+     ],
+     "to": [
+      "lk",
+      0.5,
+      0.64
+     ],
+     "bend": 0.3,
+     "lw": 5,
+     "at": "n17@mail+0.6",
+     "dur": 0.4
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "note": "cloud access: the machine stays in the builder lab, programs go over the internet (F11)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h4",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 73,
+     "align": "left",
+     "at": "p4+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "cl",
+     "t": "draw",
+     "d": "cloud",
+     "xy": [
+      540,
+      1030
+     ],
+     "w": 1040,
+     "at": "p4+0.4",
+     "dur": 2.6
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cl",
+      0.5,
+      0.22
+     ],
+     "w": 520,
+     "h": 300,
+     "a": 0.3,
+     "rot": 0.0,
+     "at": "n18@machine"
+    },
+    {
+     "t": "label",
+     "text": "stay",
+     "xy": [
+      70,
+      435
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n18@machine",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "send",
+     "xy": [
+      70,
+      620
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n18@send",
+     "fit": 940
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "cl",
+      0.17,
+      0.62
+     ],
+     "to": [
+      "cl",
+      0.31,
+      0.4
+     ],
+     "bend": -0.3,
+     "lw": 6,
+     "at": "n18@programs",
+     "dur": 0.4
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "cl",
+      0.69,
+      0.4
+     ],
+     "to": [
+      "cl",
+      0.84,
+      0.62
+     ],
+     "bend": -0.3,
+     "lw": 6,
+     "at": "n18@answers",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "inout",
+     "xy": [
+      70,
+      700
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "n18@programs",
+     "font": "latin",
+     "fit": 940
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "note": "her slide middle: 127 (2021), 433 (2022, her 2024 slide), C12; the pen fixes 1,127 -> 1,121 (F7-F9, F12)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs5",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape5+0.4",
+     "rot": -0.04,
+     "fit": 760
+    },
+    {
+     "id": "s5",
+     "t": "printout",
+     "slide": "s8",
+     "xy": [
+      730,
+      990
+     ],
+     "w": 560,
+     "rot": 0.012,
+     "crop": [
+      0.395,
+      0.169,
+      0.295,
+      0.711
+     ],
+     "at": "p5+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      470,
+      600
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape5"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      990,
+      604
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape5+0.15"
+    },
+    {
+     "t": "label",
+     "text": "y21",
+     "xy": [
+      60,
+      650
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "n20@2021",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "y22",
+     "xy": [
+      60,
+      735
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "n20@433",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "id": "pb",
+     "t": "clipping",
+     "slide": "s7",
+     "crop": [
+      0.448,
+      0.2,
+      0.093,
+      0.045
+     ],
+     "from": [
+      200,
+      1600
+     ],
+     "to": [
+      210,
+      870
+     ],
+     "w0": 120,
+     "w": 320,
+     "rot0": 0.1,
+     "rot": -0.03,
+     "at": "n20@2024",
+     "fly": 0.6,
+     "tapes": [
+      {
+       "i": 3,
+       "dx": -0.44,
+       "dy": -0.32,
+       "w": 100,
+       "rot": -0.5,
+       "at": "n20@2024+0.6"
+      }
+     ]
+    },
+    {
+     "t": "sans",
+     "text": "s24",
+     "xy": [
+      60,
+      950
+     ],
+     "px": 30,
+     "a": 0.95,
+     "align": "left",
+     "at": "n20@2024+0.4"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "s5:px",
+      908,
+      268
+     ],
+     "r": [
+      56,
+      28
+     ],
+     "seed": 6,
+     "lw": 5,
+     "at": "n21@thousand",
+     "dur": 0.45
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "s5:px",
+       930,
+       292
+      ],
+      [
+       "s5:px",
+       956,
+       246
+      ]
+     ],
+     "lw": 7,
+     "at": "n22@1121",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "fx",
+     "xy": [
+      60,
+      1090
+     ],
+     "px": 88,
+     "align": "left",
+     "color": "red",
+     "at": "n22@1121+0.2",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "arrow",
+     "from": [
+      290,
+      1060
+     ],
+     "to": [
+      "s5:px",
+      858,
+      282
+     ],
+     "bend": 0.3,
+     "lw": 5,
+     "at": "n22@1121+0.5",
+     "dur": 0.4
+    },
+    {
+     "t": "sans",
+     "text": "condor",
+     "xy": [
+      60,
+      1160
+     ],
+     "px": 30,
+     "a": 0.95,
+     "align": "left",
+     "at": "n22@condor",
+     "fit": 360
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "note": "1,121 vs 2; the honest catch: a research test; cloud machines 100-160 qubits; few mistakes (F12, F13)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h6",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 73,
+     "align": "left",
+     "at": "p6+0.3",
+     "rot": -0.03,
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "id": "cc",
+     "t": "draw",
+     "d": "crowd",
+     "xy": [
+      540,
+      1050
+     ],
+     "w": 1040,
+     "at": "p6+0.4",
+     "dur": 2.6
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cc",
+      0.55,
+      0.35
+     ],
+     "w": 860,
+     "h": 380,
+     "a": 0.22,
+     "rot": 0.0,
+     "at": "n23@counting"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "cc",
+      0.26,
+      0.54
+     ],
+     "r": [
+      40,
+      32
+     ],
+     "seed": 7,
+     "lw": 5,
+     "at": "n23@two",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "test",
+     "xy": [
+      70,
+      435
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "n24@research",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "today",
+     "xy": [
+      70,
+      590
+     ],
+     "px": 42,
+     "align": "left",
+     "at": "n25@100",
+     "fit": 900
+    },
+    {
+     "t": "sans",
+     "text": "asof",
+     "xy": [
+      70,
+      640
+     ],
+     "px": 30,
+     "a": 0.95,
+     "align": "left",
+     "at": "n25@october"
+    },
+    {
+     "t": "label",
+     "text": "few",
+     "xy": [
+      70,
+      690
+     ],
+     "px": 50,
+     "align": "left",
+     "color": "red",
+     "at": "n26@mistakes",
+     "font": "latin",
+     "fit": 900
+    }
+   ]
+  },
+  {
+   "id": "p7",
+   "note": "five ways to build a qubit, no winner yet; C11 on the ion stall (F15-F18)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h7",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "p7+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "nw",
+     "xy": [
+      70,
+      435
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "n33@winner",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "id": "tf",
+     "t": "draw",
+     "d": "fair",
+     "xy": [
+      540,
+      1110
+     ],
+     "w": 1040,
+     "at": "p7+0.4",
+     "dur": 2.6
+    },
+    {
+     "t": "label",
+     "text": "k1",
+     "xy": [
+      30,
+      630
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n28",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "sans",
+     "text": "k1c",
+     "xy": [
+      30,
+      668
+     ],
+     "px": 26,
+     "a": 0.75,
+     "align": "left",
+     "at": "n28+0.3"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "tf",
+      0.1,
+      0.3
+     ],
+     "r": [
+      90,
+      120
+     ],
+     "seed": 11,
+     "lw": 5,
+     "at": "n28@circuits",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "k3",
+     "xy": [
+      540,
+      630
+     ],
+     "px": 50,
+     "align": "center",
+     "at": "n29",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "sans",
+     "text": "k3c",
+     "xy": [
+      540,
+      668
+     ],
+     "px": 26,
+     "a": 0.75,
+     "align": "center",
+     "at": "n29+0.3"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "tf",
+      0.5,
+      0.42
+     ],
+     "r": [
+      80,
+      70
+     ],
+     "seed": 12,
+     "lw": 5,
+     "at": "n29@row",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "k4",
+     "xy": [
+      748,
+      718
+     ],
+     "px": 50,
+     "align": "center",
+     "at": "n30",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "sans",
+     "text": "k4c",
+     "xy": [
+      748,
+      756
+     ],
+     "px": 26,
+     "a": 0.75,
+     "align": "center",
+     "at": "n30+0.3"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "tf",
+      0.73,
+      0.42
+     ],
+     "r": [
+      60,
+      60
+     ],
+     "seed": 13,
+     "lw": 5,
+     "at": "n30@grid",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "k5",
+     "xy": [
+      1040,
+      630
+     ],
+     "px": 50,
+     "align": "right",
+     "at": "n31",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "sans",
+     "text": "k5c",
+     "xy": [
+      1040,
+      668
+     ],
+     "px": 26,
+     "a": 0.75,
+     "align": "right",
+     "at": "n31+0.3"
+    },
+    {
+     "t": "label",
+     "text": "k2",
+     "xy": [
+      332,
+      718
+     ],
+     "px": 50,
+     "align": "center",
+     "at": "n32",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "sans",
+     "text": "k2c",
+     "xy": [
+      332,
+      756
+     ],
+     "px": 26,
+     "a": 0.75,
+     "align": "center",
+     "at": "n32+0.3"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "tf",
+      0.31,
+      0.42
+     ],
+     "r": [
+      70,
+      70
+     ],
+     "seed": 14,
+     "lw": 5,
+     "at": "n32@transistor",
+     "dur": 0.45
+    }
+   ]
+  },
+  {
+   "id": "p8",
+   "note": "does every qubit need deep cold? superconducting yes; her C9, C10; ions and atoms; photon detectors (F19-F24)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h8",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "p8+0.3",
+     "rot": -0.03,
+     "fit": 940
+    },
+    {
+     "id": "cd",
+     "t": "draw",
+     "d": "cold",
+     "xy": [
+      540,
+      1060
+     ],
+     "w": 1040,
+     "at": "p8+0.4",
+     "dur": 2.6
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cd",
+      0.2,
+      0.45
+     ],
+     "w": 520,
+     "h": 620,
+     "a": 0.35,
+     "rot": 0.0,
+     "at": "n35@superconducting"
+    },
+    {
+     "t": "label",
+     "text": "sc1",
+     "xy": [
+      60,
+      435
+     ],
+     "px": 48,
+     "align": "left",
+     "at": "n35@hundredth",
+     "fit": 780,
+     "out": "n37@ions-0.4"
+    },
+    {
+     "t": "label",
+     "text": "sc3",
+     "xy": [
+      60,
+      625
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n35@colder",
+     "fit": 960,
+     "out": "n37@ions-0.4"
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "cd",
+      0.75,
+      0.5
+     ],
+     "w": 520,
+     "h": 560,
+     "a": 0.3,
+     "rot": 0.0,
+     "at": "n37@ions"
+    },
+    {
+     "t": "label",
+     "text": "io1",
+     "xy": [
+      60,
+      435
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n37@ions",
+     "fit": 780
+    },
+    {
+     "t": "label",
+     "text": "io2",
+     "xy": [
+      60,
+      625
+     ],
+     "px": 48,
+     "align": "left",
+     "at": "n37@box",
+     "fit": 960
+    },
+    {
+     "t": "label",
+     "text": "ph",
+     "xy": [
+      60,
+      700
+     ],
+     "px": 52,
+     "align": "left",
+     "color": "red",
+     "at": "n38@detectors",
+     "fit": 960
+    }
+   ]
+  },
+  {
+   "id": "p9",
+   "note": "her slide right: future six years to a million qubits: plans (F14)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs9",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape9+0.4",
+     "rot": -0.04,
+     "fit": 760
+    },
+    {
+     "id": "s9",
+     "t": "printout",
+     "slide": "s8",
+     "xy": [
+      540,
+      760
+     ],
+     "w": 880,
+     "rot": -0.012,
+     "crop": [
+      0.57,
+      0.178,
+      0.1275,
+      0.142
+     ],
+     "at": "p9+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      130,
+      530
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape9"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      955,
+      524
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape9+0.15"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "s9:px",
+      1232,
+      275
+     ],
+     "r": [
+      95,
+      70
+     ],
+     "seed": 8,
+     "lw": 6,
+     "at": "n39@million",
+     "dur": 0.45
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "s9:px",
+       1160,
+       360
+      ],
+      [
+       "s9:px",
+       1360,
+       360
+      ]
+     ],
+     "lw": 6,
+     "at": "n40@plans+0.2",
+     "dur": 0.6,
+     "dash": [
+      14,
+      12
+     ]
+    },
+    {
+     "t": "label",
+     "text": "pl",
+     "xy": [
+      70,
+      1110
+     ],
+     "px": 106,
+     "align": "left",
+     "color": "red",
+     "at": "n40@plans",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "pl1",
+     "xy": [
+      440,
+      1080
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n40@2030",
+     "fit": 420
+    },
+    {
+     "t": "label",
+     "text": "pl2",
+     "xy": [
+      440,
+      1150
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n40@date",
+     "fit": 500
+    }
+   ]
+  },
+  {
+   "id": "p10",
+   "note": "what changed: real machines, many kinds, all online; computer scientists now; next (F25)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h10",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 73,
+     "align": "left",
+     "at": "p10+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "ch",
+     "xy": [
+      70,
+      435
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n41@real",
+     "fit": 940
+    },
+    {
+     "id": "od",
+     "t": "draw",
+     "d": "door",
+     "xy": [
+      540,
+      1030
+     ],
+     "w": 1040,
+     "at": "p10+0.4",
+     "dur": 2.6
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "od",
+      0.62,
+      0.45
+     ],
+     "w": 560,
+     "h": 520,
+     "a": 0.32,
+     "rot": 0.0,
+     "at": "n43@open"
+    },
+    {
+     "t": "label",
+     "text": "need",
+     "xy": [
+      70,
+      620
+     ],
+     "px": 48,
+     "align": "left",
+     "at": "n42@write",
+     "fit": 940
+    },
+    {
+     "t": "label",
+     "text": "nx",
+     "xy": [
+      70,
+      688
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n44@next",
+     "font": "latin",
+     "fit": 800
+    }
+   ]
+  }
+ ]
+}
