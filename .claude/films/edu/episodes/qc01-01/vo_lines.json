@@ -1,0 +1,227 @@
+[
+ {
+  "id": "n0",
+  "en": "Two qubits on a lab bench. Is that even a computer?",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "A qubit is a quantum bit, the unit a quantum computer works with.",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "For seventeen years, quantum computers stayed about that small: 2 qubits in 1998, 12 at most.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "In the next nine years, one chip held over a thousand. What changed?",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "Meet two people we made up: an old physicist, and a young computer-science student.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "In 1998, machines like his had two qubits: molecules in a liquid, read by magnets.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "They ran tiny demos, like finding one item out of four in a single look.",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "It works. So, back to the question: is it a computer? A gate is one basic step of a quantum program.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "This chart is from the first lecture of Professor Yufei Ding's course on quantum computing systems, at UC San Diego.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "Look at its title.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "The first stretch is the past seventeen years, 1998 to 2015.",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "The slide says 7 to 12: those are the biggest ones, 7 qubits in 2000, then 12 in 2006. So the red pen writes 2 to 12.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "And under the numbers, two words: lab access.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "For our student, that meant a locked door. The machine lived in one lab.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "So a computer-science student could only stand on tiptoe and look through the glass.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "Then, from 2016 on, the door began to give.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "In May 2016, IBM put a five-qubit quantum computer online for anyone to try.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "The door was still shut, but now it had a mail slot.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "That is cloud access: the machine stays in the builder's lab, and you send it a program from your laptop over the internet. Programs in, answers out.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "Meanwhile, the chips kept growing.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "127 qubits in 2021. 433 in 2022, the number on her 2024 slide.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "A year later, her slide said over a thousand.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "To be exact: IBM's Condor chip, December 2023, held 1,121 qubits. The red pen fixes one digit.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "Our physicist holds two. The student is still counting.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "One honest catch: that 1,121-qubit chip was a research test.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "The machines people run code on today have about 100 to 160 qubits, as of October 2026.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "More qubits only help if they make few mistakes. After the big chip, IBM put a smaller chip with fewer errors online.",
+  "zh": ""
+ },
+ {
+  "id": "n27",
+  "en": "And behind the door, there was no longer one kind of machine. There were five.",
+  "zh": ""
+ },
+ {
+  "id": "n28",
+  "en": "Superconducting circuits: metal loops on a chip that carry current with no resistance.",
+  "zh": ""
+ },
+ {
+  "id": "n29",
+  "en": "Ions held in a row in a vacuum.",
+  "zh": ""
+ },
+ {
+  "id": "n30",
+  "en": "Neutral atoms in a grid, chilled by lasers.",
+  "zh": ""
+ },
+ {
+  "id": "n31",
+  "en": "Photons, particles of light; their builders say light is easier to scale.",
+  "zh": ""
+ },
+ {
+  "id": "n32",
+  "en": "And silicon spins, where each qubit is almost a transistor, so it can be made in chip factories.",
+  "zh": ""
+ },
+ {
+  "id": "n33",
+  "en": "Five kinds, no winner yet. The student can't pick a stall.",
+  "zh": ""
+ },
+ {
+  "id": "n34",
+  "en": "Which raises a question: does every quantum computer live in a freezer?",
+  "zh": ""
+ },
+ {
+  "id": "n35",
+  "en": "The superconducting ones do: about a hundredth of a degree above absolute zero, over 100 times colder than deep space.",
+  "zh": ""
+ },
+ {
+  "id": "n36",
+  "en": "The metal only superconducts when it is cold. Hence the parka. And the others?",
+  "zh": ""
+ },
+ {
+  "id": "n37",
+  "en": "Ions and atoms float in a vacuum, chilled by lasers. The box can stay at room temperature, but some machines cool it anyway for a cleaner vacuum.",
+  "zh": ""
+ },
+ {
+  "id": "n38",
+  "en": "And light doesn't mind the heat, but the detectors that count single photons are kept very cold.",
+  "zh": ""
+ },
+ {
+  "id": "n39",
+  "en": "Her slide ends with one more arrow: the future six years, to a million qubits.",
+  "zh": ""
+ },
+ {
+  "id": "n40",
+  "en": "Company roadmaps do aim at about a million. Plans, not machines: one plans 2 million by 2030; others give no date.",
+  "zh": ""
+ },
+ {
+  "id": "n41",
+  "en": "So here is what changed: real machines, many kinds, all online.",
+  "zh": ""
+ },
+ {
+  "id": "n42",
+  "en": "Now they need people who write and compile programs for them.",
+  "zh": ""
+ },
+ {
+  "id": "n43",
+  "en": "That's why the physicist is holding the door open, and the student walks in, laptop under one arm.",
+  "zh": ""
+ },
+ {
+  "id": "n44",
+  "en": "Next time: what the field has already done.",
+  "zh": ""
+ }
+]

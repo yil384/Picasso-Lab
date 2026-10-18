@@ -1,0 +1,113 @@
+{
+ "episode": "QC01-01",
+ "series": "qc",
+ "drawings": [
+  {
+   "name": "line_qc_thousand_two_qubit_bench",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_lab_2017",
+    "line_tiny_lab",
+    "line_postal_scale"
+   ],
+   "prompt": "In a small, crowded physics lab, the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) sits hunched at a cluttered workbench and peers through a big round magnifying lamp at a tiny square chip held up in a pair of tweezers; on the chip are only two small round dots, clearly visible through the lens. Around him on the bench and behind it: a small optical table with a few little mirrors on posts, a round vacuum chamber with small windows, coils of cable, a soldering iron on its stand, a closed notebook. He looks fond and proud of the tiny chip. Square image 1024x1024; the physicist and the bench fill about 88% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no brand marks on any equipment."
+  },
+  {
+   "name": "line_qc_thousand_locked_lab",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_chat_first",
+    "line_clerk_ladder"
+   ],
+   "prompt": "A lab door in a plain corridor, seen straight from the front: a heavy door with one round window at head height, a big padlock and chain across its handle, and a velvet rope on two short posts in front of it. Through the round window we can see, small, the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) inside, busy at a tall, complicated machine. In the corridor, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) stands on tiptoe with both hands on the door, peering in through the window, curious and left out. Portrait image 1024x1536; the door and the student fill about 80% of the width and about 88% of the height. No text, no letters, no numbers, no logos, no signs on the door or the walls."
+  },
+  {
+   "name": "line_qc_thousand_chip_crowd",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_cluster_chip_trio",
+    "line_tiny_lab",
+    "line_postal_scale"
+   ],
+   "prompt": "Seen from a little above: one enormous square computer chip lies flat on a plain floor like a huge tiled square, its whole surface covered edge to edge by a dense, regular grid of many small identical round pads (about thirty across and thirty deep, all the same size and evenly spaced), with fine straight wiring lines running between the rows. At the near edge of the chip stand two tiny figures: the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) holds up a pair of tweezers with a tiny chip that has only two dots, looking from it to the huge chip, astonished; the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) kneels at the edge and counts the pads with one finger. Landscape image 1536x1024; the chip fills about 90% of the width and about 75% of the height, the two figures small at its front edge. No text, no letters, no numbers, no logos, no brand marks on the chip."
+  },
+  {
+   "name": "line_qc_thousand_cloud_access",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_chat_first",
+    "line_tiny_lab",
+    "line_round_table"
+   ],
+   "prompt": "In the top middle of the picture floats one big puffy cloud; standing on the cloud is a small plain building with its front wall cut away, showing inside a dilution refrigerator drawn generically: a tall open frame from which hangs a stack of five round metal plates, each a little smaller than the one above, joined by thin rods and many thin coiled cables, with a tiny square chip at the very bottom. From the bottom of the cloud, four thin wavy cables hang down to four small separate home scenes in a row along the bottom of the picture: the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) at a kitchen table with a laptop; an invented elderly man in a cardigan in an armchair with a laptop on his knees; an invented child lying on a rug with a tablet; an invented woman with a ponytail at a small cafe table with a laptop. Every screen faces away from us. All four look delighted. Landscape image 1536x1024; the cloud and the four scenes fill about 94% of the width and about 88% of the height. No text, no letters, no numbers, no logos, nothing shown on any screen, no brand marks, no maps or globes."
+  },
+  {
+   "name": "line_qc_thousand_cold_vs_room",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_lab_2017",
+    "line_tiny_lab",
+    "line_balance"
+   ],
+   "prompt": "A picture in two halves side by side, with clear space between them. Left half: a dilution refrigerator drawn generically: a tall open frame from which hangs a stack of five round metal plates, each a little smaller than the one above, joined by thin rods and many thin coiled cables, with a tiny square chip at the very bottom, with frost crystals and a few small icicles on its lowest plates; beside it the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) is wrapped in a puffy winter parka over his lab coat, with earmuffs and mittens, shivering and holding a steaming mug. Right half: a round metal vacuum chamber on a small table, with several small round windows and a short pipe to a small pump; through the biggest window a short straight row of five tiny dots floats between two parallel rods, and a thin straight laser beam enters from the side; beside it the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) in just the striped T-shirt, relaxed, adjusts one small knob. Landscape image 1536x1024; each half fills most of its side; together they fill about 94% of the width and about 82% of the height. No text, no letters, no numbers, no logos, no thermometer scales, no brand marks."
+  },
+  {
+   "name": "line_qc_thousand_tech_fair",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_round_table",
+    "line_lab_2017",
+    "line_tiny_lab"
+   ],
+   "prompt": "A science fair in a hall, seen from the front: five stalls side by side in one row, each a simple table under a small striped awning with a blank banner, each showing a different kind of machine, and behind each one invented presenter (simple round faces, dot eyes, five different hairstyles and outfits) proudly gesturing at it. From left to right: first, a tall hanging stack of round metal plates joined by coiled cables, getting smaller towards the bottom; second, a round silicon wafer on a small stand next to a microscope; third, a round vacuum chamber with small windows, a short straight row of tiny dots floating between two rods inside; fourth, a small square glass cell holding a neat little grid of tiny dots, each dot at the tip of a thin beam of light coming down from a lens above; fifth, a flat optical table with small mirrors on posts and little cubes, one thin straight beam bouncing between them in a zigzag. In front, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) walks along the row with a tote bag, looking from stall to stall, undecided. Landscape image 1536x1024; the five stalls and the student fill about 94% of the width and about 78% of the height. No text, no letters, no numbers, no logos, the banners blank, no flags, no brand marks."
+  },
+  {
+   "name": "line_qc_thousand_open_door",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_tiny_lab",
+    "line_lab_2017",
+    "line_reader_writer"
+   ],
+   "prompt": "A heavy lab door with one round window stands wide open; a padlock and chain hang loose from its handle and a velvet rope lies on the floor beside two short posts. In the doorway the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) beams and waves the visitor in with a big welcoming sweep of the arm; the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) steps in carrying a laptop under one arm and rolling up a sleeve with the other hand, eager. Behind them, inside the lab, a big tangle of machines, racks and cables waits. Landscape image 1536x1024; the door, the two characters and the glimpse of the lab fill about 85% of the width and about 85% of the height. No text, no letters, no numbers, no logos, no signs, no brand marks."
+  },
+  {
+   "name": "line_qc_cover_01_01",
+   "kind": "line",
+   "group": "COVER",
+   "role": "cover",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_qc_thousand_two_qubit_bench",
+    "line_qc_thousand_chip_crowd",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are line drawings made earlier for this series (black ink on white). The first two show this lecture's two characters, the physicist and the student: draw the same characters (same faces, hair and clothes) in the new cover composition described. Match the line weight, pen feel, simple round faces with dot eyes and level of detail exactly; do not copy the poses, backgrounds or layout.",
+   "prompt": "On the left, the physicist (an older invented scientist with a simple round face and dot eyes, a round bald head with a fluffy fringe of hair over the ears, a big bushy moustache, safety goggles pushed up on the forehead, and a long lab coat with two pens in the breast pocket) holds up a pair of tweezers with a tiny chip carrying only two dots and looks at it fondly. On the right, the student (a young, lanky invented computer-science student with a simple round face and dot eyes, a tall tuft of straight hair sticking up at the front, round glasses, a long-sleeved T-shirt with a few plain horizontal stripes, a messenger bag worn across the body, and sneakers) leans casually with one elbow on the top edge of an enormous upright chip, taller than the student, its whole face covered by a dense, regular grid of small identical round pads. Both full figures stand on one short ground line. Landscape image 1536x1024, made as a cover picture: leave the top third of the picture completely empty, plain white (a title is lettered there later); the whole scene sits in the lower two thirds, centred, about 88% of the width wide, with a white margin on every side. Use few, large, bold, clearly separated shapes with white space between them, so the idea reads at a glance even when the picture is shown only 500 pixels wide: no small clutter, no busy background. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ],
+ "_": "QC01-01 drawings: all eight from the pre-drawn library (art.pre.json), copied unchanged; reused: line_grow, line_course_map."
+}
