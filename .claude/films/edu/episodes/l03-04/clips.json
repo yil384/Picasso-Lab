@@ -1,0 +1,58 @@
+[
+ {
+  "id": "C4",
+  "lecture": "L03",
+  "rec_start": 3158.54,
+  "rec_end": 3161.64,
+  "text": "layer 100 still can give its gradient to layer 1.",
+  "dur": 3.1
+ },
+ {
+  "id": "C1",
+  "lecture": "L03",
+  "rec_start": 2927.66,
+  "rec_end": 2930.5,
+  "dur": 2.84,
+  "text": "You can have a short sentence or you have a longer sentence."
+ },
+ {
+  "id": "C2",
+  "lecture": "L03",
+  "rec_start": 2953.27,
+  "rec_end": 2956.47,
+  "text": "we can think about it as experimental computer science.",
+  "dur": 3.2
+ },
+ {
+  "id": "C8",
+  "lecture": "L03",
+  "rec_start": 3324.39,
+  "rec_end": 3328.59,
+  "text": "Not very challenging, right? And it seems pretty easy to write a paper.",
+  "dur": 4.2
+ },
+ {
+  "id": "C9",
+  "lecture": "L03",
+  "rec_start": 3368.84,
+  "rec_end": 3377.2,
+  "text": "is this the only way you can design the shortcut? Is there another way for us to make the shortcut a little broader?",
+  "dur": 8.36
+ },
+ {
+  "id": "C14",
+  "lecture": "L03",
+  "rec_start": 4201.41,
+  "rec_end": 4204.7,
+  "text": "I make each token like several copies",
+  "dur": 3.29
+ },
+ {
+  "id": "C13",
+  "lecture": "L03",
+  "rec_start": 4008.33,
+  "rec_end": 4012.17,
+  "text": "So each row and each column are still adding up to one.",
+  "dur": 3.84
+ }
+]

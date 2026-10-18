@@ -1,0 +1,2047 @@
+{
+ "id": "l03-04",
+ "lecture": "L03",
+ "facts": "FACTS.md",
+ "title": "L03-04 The Residual Highway",
+ "langs": [
+  "en"
+ ],
+ "voice": {
+  "lines": "vo_lines.json",
+  "clips": "clips.json",
+  "clipDir": "~/picasso-work/clips/l03-04",
+  "rate": "+4%",
+  "slotPad": 0.4
+ },
+ "sound": {
+  "dir": "~/picasso-assets/snd"
+ },
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "slides",
+  "drawings": {
+   "lanes": {
+    "src": "line_res_four_lanes",
+    "w": 1040
+   },
+   "road": {
+    "src": "line_res_bypass_road",
+    "w": 1040
+   },
+   "tailor": {
+    "src": "line_res_tailor_split",
+    "w": 1040
+   },
+   "gate_road": {
+    "src": "line_res_gate_on_road",
+    "w": 1040
+   },
+   "gate_ramp": {
+    "src": "line_res_gate_on_ramp",
+    "w": 1040
+   },
+   "gate_both": {
+    "src": "line_res_gate_both_ends",
+    "w": 1040
+   },
+   "clones": {
+    "src": "line_res_four_clones",
+    "w": 760
+   },
+   "jugs": {
+    "src": "line_res_jugs_glasses",
+    "w": 1000
+   },
+   "snow": {
+    "src": "line_res_snowball",
+    "w": 1040
+   },
+   "whisper": {
+    "src": "line_whisper_line",
+    "w": 960
+   },
+   "table": {
+    "src": "line_round_table",
+    "w": 720
+   },
+   "knobs": {
+    "src": "line_knob_board",
+    "w": 900
+   },
+   "mic": {
+    "src": "line_mic",
+    "w": 240,
+    "boost": 0.3
+   }
+  },
+  "slides": {
+   "s23": {
+    "src": "p23.png"
+   },
+   "s24": {
+    "src": "p24.png"
+   },
+   "s25": {
+    "src": "p25.png"
+   },
+   "s28": {
+    "src": "p28.png"
+   },
+   "s29": {
+    "src": "p29.png"
+   },
+   "s30": {
+    "src": "p30.png"
+   }
+  }
+ },
+ "panels": [
+  {
+   "id": "p0",
+   "note": "cover: four lanes with crossovers; hook (F20, F25)",
+   "items": [
+    {
+     "id": "cover",
+     "t": "draw",
+     "d": "lanes",
+     "xy": [
+      540,
+      1060
+     ],
+     "w": 1040
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cover",
+      0.5,
+      0.3
+     ],
+     "w": 900,
+     "h": 260,
+     "a": 0.28,
+     "rot": 0.0
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "cover",
+      0.5,
+      0.8
+     ],
+     "w": 820,
+     "h": 160,
+     "a": 0.3,
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.0",
+     "xy": [
+      66,
+      350
+     ],
+     "px": 124,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.1",
+     "xy": [
+      84,
+      456
+     ],
+     "px": 96,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "id": "title2"
+    },
+    {
+     "t": "underline",
+     "of": "title2",
+     "dx": 6,
+     "dy": 46,
+     "rise": -8,
+     "bend": 0.03,
+     "at": "title",
+     "dur": 0.6
+    },
+    {
+     "t": "sans",
+     "text": "strip",
+     "xy": [
+      86,
+      540
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left"
+    },
+    {
+     "t": "label",
+     "text": "hA",
+     "xy": [
+      70,
+      626
+     ],
+     "px": 62,
+     "align": "left",
+     "font": "latin",
+     "rot": -0.02,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "hB",
+     "xy": [
+      100,
+      700
+     ],
+     "px": 70,
+     "align": "left",
+     "color": "red",
+     "font": "latin",
+     "rot": -0.02,
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "note": "the residual stream as an express road; blocks as towns on ramps; layer 100 to layer 1 (F1-F4)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h1",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p1+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "road",
+     "t": "draw",
+     "d": "road",
+     "xy": [
+      540,
+      900
+     ],
+     "w": 1040,
+     "at": "p1+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "road",
+      0.5,
+      0.12
+     ],
+     "w": 1000,
+     "h": 70,
+     "a": 0.45,
+     "rot": 0.0,
+     "at": "n2@express"
+    },
+    {
+     "t": "label",
+     "text": "xf",
+     "xy": [
+      70,
+      450
+     ],
+     "px": 106,
+     "align": "left",
+     "color": "red",
+     "at": "n2@plus",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "rd",
+     "xy": [
+      70,
+      555
+     ],
+     "px": 55,
+     "align": "left",
+     "at": "n2@road",
+     "fit": 760,
+     "out": "n3@gradient-0.4"
+    },
+    {
+     "t": "label",
+     "text": "tw",
+     "xy": [
+      70,
+      635
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n2@town",
+     "fit": 760,
+     "out": "n3@gradient-0.4"
+    },
+    {
+     "t": "label",
+     "text": "gr",
+     "xy": [
+      70,
+      555
+     ],
+     "px": 58,
+     "align": "left",
+     "color": "red",
+     "at": "n3@gradient",
+     "fit": 760
+    },
+    {
+     "t": "arrow",
+     "from": [
+      "road",
+      0.97,
+      -0.3
+     ],
+     "to": [
+      "road",
+      0.03,
+      -0.3
+     ],
+     "bend": 0.05,
+     "lw": 7,
+     "at": "n3@backwards",
+     "dur": 1.2
+    },
+    {
+     "t": "label",
+     "text": "l100",
+     "xy": [
+      760,
+      1110
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "c4",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "l1",
+     "xy": [
+      70,
+      1110
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "c4@60%",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "rn",
+     "xy": [
+      70,
+      635
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n4@resnet",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "note": "without the shortcut: a whisper down a line (F1)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h2",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p2+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "wh",
+     "t": "draw",
+     "d": "whisper",
+     "xy": [
+      540,
+      1000
+     ],
+     "w": 900,
+     "at": "p2+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "wh1",
+     "xy": [
+      70,
+      445
+     ],
+     "px": 60,
+     "align": "left",
+     "at": "n5@every",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "wh2",
+     "xy": [
+      70,
+      535
+     ],
+     "px": 66,
+     "align": "left",
+     "color": "red",
+     "at": "n5@mush",
+     "fit": 760
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "wh",
+      0.9,
+      0.3
+     ],
+     "r": [
+      110,
+      150
+     ],
+     "seed": 3,
+     "lw": 6,
+     "at": "n5@mush",
+     "dur": 0.45
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "note": "normalization; BatchNorm across the batch vs LayerNorm one token (F6, F7)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h3",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 73,
+     "align": "left",
+     "at": "p3+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "nm",
+     "xy": [
+      70,
+      445
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n6@shift",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "wg",
+     "xy": [
+      70,
+      525
+     ],
+     "px": 62,
+     "align": "left",
+     "color": "red",
+     "at": "n6@which",
+     "fit": 760
+    },
+    {
+     "id": "tl",
+     "t": "draw",
+     "d": "tailor",
+     "xy": [
+      540,
+      1000
+     ],
+     "w": 980,
+     "at": "p3+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "tl",
+      0.33,
+      0.22
+     ],
+     "w": 680,
+     "h": 130,
+     "a": 0.35,
+     "rot": 0.0,
+     "at": "n7@waist"
+    },
+    {
+     "t": "label",
+     "text": "bn",
+     "xy": [
+      70,
+      605
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n7@batchnorm",
+     "fit": 760
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "tl",
+      0.33,
+      0.22
+     ],
+     "r": [
+      360,
+      70
+     ],
+     "seed": 4,
+     "lw": 6,
+     "at": "n7@waist",
+     "dur": 0.45
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "tl",
+      0.89,
+      0.5
+     ],
+     "w": 230,
+     "h": 560,
+     "a": 0.4,
+     "rot": 0.0,
+     "at": "n8@layernorm"
+    },
+    {
+     "t": "label",
+     "text": "ln",
+     "xy": [
+      70,
+      685
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n8@layernorm",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "note": "her slide 23, title and bullets only (two third-party pictures cropped out); experiments (F7, F8)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs23",
+     "xy": [
+      150,
+      600
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape4+0.4",
+     "rot": -0.06,
+     "fit": 760
+    },
+    {
+     "id": "s23",
+     "t": "printout",
+     "slide": "s23",
+     "xy": [
+      540,
+      820
+     ],
+     "w": 1040,
+     "rot": -0.012,
+     "crop": [
+      0.02,
+      0.02,
+      0.8,
+      0.17
+     ],
+     "at": "p4+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      50,
+      740
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape4"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      1030,
+      736
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape4+0.15"
+    },
+    {
+     "t": "label",
+     "text": "vl",
+     "xy": [
+      70,
+      1010
+     ],
+     "px": 65,
+     "align": "left",
+     "at": "n9@short",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "nb",
+     "xy": [
+      70,
+      1105
+     ],
+     "px": 65,
+     "align": "left",
+     "at": "n9@needs",
+     "fit": 760
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "s23:px",
+       140,
+       218
+      ],
+      [
+       "s23:px",
+       1160,
+       218
+      ]
+     ],
+     "lw": 6,
+     "at": "n9@experiments",
+     "dur": 0.6
+    },
+    {
+     "t": "label",
+     "text": "ex",
+     "xy": [
+      70,
+      1220
+     ],
+     "px": 70,
+     "align": "left",
+     "color": "red",
+     "at": "n9@experiments+0.3",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "note": "her slide 24 left column: LayerNorm vs RMSNorm formulas (the model lists with the PaLM erratum cropped out) (F9-F11)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs24",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape5+0.4",
+     "rot": -0.06,
+     "fit": 760
+    },
+    {
+     "id": "s24",
+     "t": "printout",
+     "slide": "s24",
+     "xy": [
+      540,
+      830
+     ],
+     "w": 680,
+     "rot": 0.01,
+     "crop": [
+      0.0,
+      0.03,
+      0.48,
+      0.93
+     ],
+     "at": "p5+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      250,
+      500
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape5"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      830,
+      498
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape5+0.15"
+    },
+    {
+     "t": "box",
+     "rect": [
+      330,
+      780,
+      800,
+      990
+     ],
+     "on": "s24:px",
+     "lw": 6,
+     "at": "n10@rmsnorm",
+     "dur": 0.8
+    },
+    {
+     "t": "label",
+     "text": "rm1",
+     "xy": [
+      70,
+      1205
+     ],
+     "px": 52,
+     "align": "left",
+     "color": "red",
+     "at": "n10@rescales",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "rm2",
+     "xy": [
+      70,
+      1262
+     ],
+     "px": 48,
+     "align": "left",
+     "at": "n11@percent",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "note": "Post-LN: a toll gate across the road; warm-up (F5, F14)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h6",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "p6+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "gr6",
+     "t": "draw",
+     "d": "gate_road",
+     "xy": [
+      540,
+      960
+     ],
+     "w": 1040,
+     "at": "p6+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "po",
+     "xy": [
+      70,
+      445
+     ],
+     "px": 58,
+     "align": "left",
+     "at": "n13@transformer",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "pof",
+     "xy": [
+      70,
+      539
+     ],
+     "px": 73,
+     "align": "left",
+     "color": "red",
+     "at": "n13@normalized",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "gr6",
+      0.86,
+      0.42
+     ],
+     "r": [
+      150,
+      190
+     ],
+     "seed": 5,
+     "lw": 6,
+     "at": "n13@gate",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "wu",
+     "xy": [
+      70,
+      635
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n14@warmup",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "xi",
+     "xy": [
+      70,
+      715
+     ],
+     "px": 42,
+     "align": "left",
+     "color": "pencil",
+     "at": "n14@xiong",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p7",
+   "note": "Pre-LN: the gate on the ramp, the road untouched (F13, F15)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h7",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "p7+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "prf",
+     "xy": [
+      70,
+      459
+     ],
+     "px": 73,
+     "align": "left",
+     "color": "red",
+     "at": "n15@copy",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "id": "gp7",
+     "t": "draw",
+     "d": "gate_ramp",
+     "xy": [
+      540,
+      1000
+     ],
+     "w": 1040,
+     "at": "p7+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "gp7",
+      0.5,
+      0.2
+     ],
+     "w": 1000,
+     "h": 110,
+     "a": 0.4,
+     "rot": 0.0,
+     "at": "n15@road"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "gp7",
+      0.22,
+      0.68
+     ],
+     "r": [
+      120,
+      110
+     ],
+     "seed": 6,
+     "lw": 6,
+     "at": "n15@gate",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "un",
+     "xy": [
+      70,
+      605
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "n15@untouched",
+     "fit": 760
+    },
+    {
+     "t": "tick",
+     "xy": [
+      "gp7",
+      0.92,
+      0.12
+     ],
+     "s": 50,
+     "lw": 6,
+     "at": "n15@untouched+0.3"
+    }
+   ]
+  },
+  {
+   "id": "p8",
+   "note": "her slide 25, right half (the paper figure cropped out): only earlier models such as BERT used Post-LN (F13, F15, F16)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs25",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape8+0.4",
+     "rot": -0.06,
+     "fit": 760
+    },
+    {
+     "id": "s25",
+     "t": "printout",
+     "slide": "s25",
+     "xy": [
+      540,
+      800
+     ],
+     "w": 900,
+     "rot": -0.01,
+     "crop": [
+      0.47,
+      0.18,
+      0.53,
+      0.66
+     ],
+     "at": "p8+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      110,
+      460
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape8"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      970,
+      458
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape8+0.15"
+    },
+    {
+     "t": "label",
+     "text": "nw",
+     "xy": [
+      70,
+      1190
+     ],
+     "px": 50,
+     "align": "left",
+     "color": "red",
+     "at": "n16@without",
+     "fit": 760,
+     "out": "n17@matters-0.4"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "s25:px",
+       1010,
+       935
+      ],
+      [
+       "s25:px",
+       1660,
+       935
+      ]
+     ],
+     "lw": 6,
+     "at": "n16@verdict",
+     "dur": 0.6
+    },
+    {
+     "t": "label",
+     "text": "gp",
+     "xy": [
+      70,
+      1250
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n16@bert",
+     "fit": 760,
+     "out": "n17@matters-0.4"
+    },
+    {
+     "t": "label",
+     "text": "mt",
+     "xy": [
+      70,
+      1220
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n17@matters",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p9",
+   "note": "Peri-LN: gates in and out of the ramp (F17-F19); her joke C8",
+   "items": [
+    {
+     "t": "label",
+     "text": "h9",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 72,
+     "align": "left",
+     "at": "p9+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "pef",
+     "xy": [
+      70,
+      459
+     ],
+     "px": 68,
+     "align": "left",
+     "color": "red",
+     "at": "n18@comes",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "id": "gb9",
+     "t": "draw",
+     "d": "gate_both",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 1040,
+     "at": "p9+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "gb9",
+      0.22,
+      0.6
+     ],
+     "r": [
+      110,
+      110
+     ],
+     "seed": 7,
+     "lw": 6,
+     "at": "n18@goes",
+     "dur": 0.45
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "gb9",
+      0.81,
+      0.66
+     ],
+     "r": [
+      110,
+      110
+     ],
+     "seed": 8,
+     "lw": 6,
+     "at": "n18@comes",
+     "dur": 0.45
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "gb9",
+      0.5,
+      0.17
+     ],
+     "w": 1000,
+     "h": 110,
+     "a": 0.4,
+     "rot": 0.0,
+     "at": "n18@clean"
+    },
+    {
+     "t": "label",
+     "text": "gm",
+     "xy": [
+      70,
+      605
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n19@gemma",
+     "fit": 760,
+     "out": "n20@cheap-0.4"
+    },
+    {
+     "t": "label",
+     "text": "yr",
+     "xy": [
+      70,
+      685
+     ],
+     "px": 45,
+     "align": "left",
+     "color": "pencil",
+     "at": "n19@shipped",
+     "fit": 760,
+     "out": "n20@cheap-0.4"
+    },
+    {
+     "t": "label",
+     "text": "ch",
+     "xy": [
+      70,
+      605
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n20@cheap",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p10",
+   "note": "hyper-connections: four lanes, learned crossovers (F20); her C9, C14",
+   "items": [
+    {
+     "t": "label",
+     "text": "h10",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "p10+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "group",
+     "fadeOut": [
+      "n22-1.0",
+      "n22-0.5"
+     ],
+     "items": [
+      {
+       "id": "rd10",
+       "t": "draw",
+       "d": "road",
+       "xy": [
+        540,
+        960
+       ],
+       "w": 1040,
+       "at": "p10+0.4",
+       "dur": 2.4
+      },
+      {
+       "t": "wash",
+       "c": "cobalt",
+       "xy": [
+        "rd10",
+        0.5,
+        0.12
+       ],
+       "w": 1000,
+       "h": 70,
+       "a": 0.45,
+       "rot": 0.0,
+       "at": "c9@40%"
+      },
+      {
+       "t": "ring",
+       "xy": [
+        "rd10",
+        0.5,
+        0.12
+       ],
+       "r": [
+        520,
+        80
+       ],
+       "seed": 12,
+       "lw": 6,
+       "at": "c9@70%",
+       "dur": 0.45
+      }
+     ]
+    },
+    {
+     "id": "ln10",
+     "t": "draw",
+     "d": "lanes",
+     "xy": [
+      540,
+      1000
+     ],
+     "w": 1040,
+     "at": "n22-0.6",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "hc",
+     "xy": [
+      70,
+      445
+     ],
+     "px": 55,
+     "align": "left",
+     "at": "n22@hyperconnections",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "hc4",
+     "xy": [
+      70,
+      525
+     ],
+     "px": 58,
+     "align": "left",
+     "color": "red",
+     "at": "n22@four",
+     "fit": 760
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "ln10",
+      0.5,
+      0.2
+     ],
+     "w": 1000,
+     "h": 260,
+     "a": 0.3,
+     "rot": 0.0,
+     "at": "n22@four"
+    },
+    {
+     "t": "label",
+     "text": "mx",
+     "xy": [
+      70,
+      605
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n22@mix",
+     "fit": 760
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "ln10",
+      0.36,
+      0.15
+     ],
+     "r": [
+      90,
+      60
+     ],
+     "seed": 9,
+     "lw": 6,
+     "at": "n22@mix",
+     "dur": 0.45
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "ln10",
+      0.64,
+      0.3
+     ],
+     "r": [
+      90,
+      60
+     ],
+     "seed": 10,
+     "lw": 6,
+     "at": "n22@mix+0.3",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "once",
+     "xy": [
+      70,
+      685
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n23@once",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p11",
+   "note": "her toy gradient boxes from slides 28 and 29 (the paper figure and plot cropped out); 1.8 times in tokens (F21, F22)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs28",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 62,
+     "align": "left",
+     "color": "red",
+     "at": "tape11+0.4",
+     "rot": -0.06,
+     "fit": 760
+    },
+    {
+     "id": "t28",
+     "t": "printout",
+     "slide": "s28",
+     "xy": [
+      400,
+      570
+     ],
+     "w": 720,
+     "rot": -0.02,
+     "crop": [
+      0.565,
+      0.73,
+      0.38,
+      0.2
+     ],
+     "at": "p11+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      60,
+      520
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape11"
+    },
+    {
+     "t": "label",
+     "text": "fg",
+     "xy": [
+      70,
+      735
+     ],
+     "px": 50,
+     "align": "left",
+     "color": "red",
+     "at": "n24@full",
+     "fit": 760
+    },
+    {
+     "id": "t29",
+     "t": "printout",
+     "slide": "s29",
+     "xy": [
+      640,
+      880
+     ],
+     "w": 720,
+     "rot": 0.02,
+     "crop": [
+      0.545,
+      0.355,
+      0.375,
+      0.195
+     ],
+     "at": "n25-0.5"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      990,
+      850
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "n25-0.3"
+    },
+    {
+     "t": "label",
+     "text": "sc",
+     "xy": [
+      70,
+      1035
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n25@scaled",
+     "fit": 760
+    },
+    {
+     "id": "kb",
+     "t": "draw",
+     "d": "knobs",
+     "xy": [
+      540,
+      1185
+     ],
+     "w": 560,
+     "at": "n25@weights",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "fs",
+     "xy": [
+      70,
+      1090
+     ],
+     "px": 48,
+     "align": "left",
+     "at": "n26@faster",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p12",
+   "note": "weights multiply: 1.1 and 0.9 a hundred times; HC gain about 3000 (F23, F24)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h12",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p12+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "sn",
+     "t": "draw",
+     "d": "snow",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 1040,
+     "at": "p12+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "m11",
+     "xy": [
+      70,
+      445
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n27@11",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "m09",
+     "xy": [
+      70,
+      525
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n27@09",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "g3k",
+     "xy": [
+      70,
+      615
+     ],
+     "px": 50,
+     "align": "left",
+     "color": "red",
+     "at": "n28@gain",
+     "fit": 760
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "sn",
+      0.62,
+      0.55
+     ],
+     "r": [
+      230,
+      230
+     ],
+     "seed": 11,
+     "lw": 6,
+     "at": "n27@11+0.4",
+     "dur": 0.45
+    }
+   ]
+  },
+  {
+   "id": "p13",
+   "note": "mHC: doubly stochastic mixing as jugs and pots (F25, F28)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h13",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p13+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "xie",
+     "xy": [
+      70,
+      435
+     ],
+     "px": 42,
+     "align": "left",
+     "color": "pencil",
+     "at": "n29@xie",
+     "fit": 760
+    },
+    {
+     "id": "jg",
+     "t": "draw",
+     "d": "jugs",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 920,
+     "at": "n29@jugs",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "col",
+     "xy": [
+      70,
+      515
+     ],
+     "px": 45,
+     "align": "left",
+     "at": "n30@column",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "row",
+     "xy": [
+      70,
+      595
+     ],
+     "px": 45,
+     "align": "left",
+     "at": "n30@row",
+     "fit": 760
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "jg",
+      0.5,
+      0.15
+     ],
+     "w": 940,
+     "h": 160,
+     "a": 0.3,
+     "rot": 0.0,
+     "at": "n30@jug"
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "jg",
+      0.5,
+      0.78
+     ],
+     "w": 940,
+     "h": 200,
+     "a": 0.35,
+     "rot": 0.0,
+     "at": "n30@pot"
+    },
+    {
+     "t": "label",
+     "text": "ds",
+     "xy": [
+      70,
+      695
+     ],
+     "px": 66,
+     "align": "left",
+     "color": "red",
+     "at": "n30@doubly",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p14",
+   "note": "her slide 30 matrices (the mislabelled plot cropped out): product still doubly stochastic; gain 1.6; 6.7%; 27B; n = 1 (F26-F33)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs30",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape14+0.4",
+     "rot": -0.06,
+     "fit": 760
+    },
+    {
+     "id": "m30",
+     "t": "printout",
+     "slide": "s30",
+     "xy": [
+      290,
+      760
+     ],
+     "w": 520,
+     "rot": -0.01,
+     "crop": [
+      0.07,
+      0.29,
+      0.36,
+      0.47
+     ],
+     "at": "p14+0.7"
+    },
+    {
+     "id": "m30r",
+     "t": "printout",
+     "slide": "s30",
+     "xy": [
+      800,
+      700
+     ],
+     "w": 520,
+     "rot": 0.012,
+     "crop": [
+      0.52,
+      0.25,
+      0.43,
+      0.39
+     ],
+     "at": "p14+0.9"
+    },
+    {
+     "t": "box",
+     "rect": [
+      1060,
+      280,
+      1890,
+      390
+     ],
+     "on": "m30r:px",
+     "lw": 5,
+     "at": "c13",
+     "dur": 0.8
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      50,
+      560
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape14"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      1030,
+      520
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape14+0.15"
+    },
+    {
+     "t": "label",
+     "text": "ab",
+     "xy": [
+      70,
+      1060
+     ],
+     "px": 62,
+     "align": "left",
+     "color": "red",
+     "at": "n31@another",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "st",
+     "xy": [
+      70,
+      1130
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n32@stretch",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "16",
+     "xy": [
+      70,
+      1195
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n32@gain",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "n1",
+     "xy": [
+      70,
+      1258
+     ],
+     "px": 45,
+     "align": "left",
+     "at": "n33@lane",
+     "fit": 760,
+     "out": "n33@price-0.4"
+    },
+    {
+     "t": "label",
+     "text": "67",
+     "xy": [
+      70,
+      1258
+     ],
+     "px": 45,
+     "align": "left",
+     "color": "pencil",
+     "at": "n33@price",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p15",
+   "note": "her slide 31 analogy: attention = a meeting; hyper-connections = one person's four clones (F31)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h15",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p15+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "group",
+     "items": [
+      {
+       "id": "tb",
+       "t": "draw",
+       "d": "table",
+       "xy": [
+        540,
+        1000
+       ],
+       "w": 640,
+       "at": "p15+0.4",
+       "dur": 2.4
+      },
+      {
+       "t": "label",
+       "text": "at",
+       "xy": [
+        70,
+        445
+       ],
+       "px": 52,
+       "align": "left",
+       "at": "n34@attention",
+       "fit": 760
+      }
+     ],
+     "fadeOut": [
+      "n35-0.4",
+      "n35"
+     ]
+    },
+    {
+     "id": "cl",
+     "t": "draw",
+     "d": "clones",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 660,
+     "at": "n35",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "hcl",
+     "xy": [
+      70,
+      445
+     ],
+     "px": 50,
+     "align": "left",
+     "color": "red",
+     "at": "n35+0.3",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p16",
+   "note": "honest limit and takeaway (F22, F13, F25)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h16",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "p16+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "lim",
+     "xy": [
+      70,
+      445
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n36@tokens",
+     "fit": 760
+    },
+    {
+     "id": "rd16",
+     "t": "draw",
+     "d": "road",
+     "xy": [
+      540,
+      1000
+     ],
+     "w": 1040,
+     "at": "p16+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "t1",
+     "xy": [
+      70,
+      525
+     ],
+     "px": 58,
+     "align": "left",
+     "at": "n37@adds",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "t2",
+     "xy": [
+      70,
+      605
+     ],
+     "px": 60,
+     "align": "left",
+     "color": "red",
+     "at": "n37@gates",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "t3",
+     "xy": [
+      70,
+      685
+     ],
+     "px": 45,
+     "align": "left",
+     "at": "n37@lanes",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "nx",
+     "xy": [
+      70,
+      1200
+     ],
+     "px": 52,
+     "align": "left",
+     "color": "red",
+     "at": "n38",
+     "fit": 760
+    }
+   ]
+  }
+ ]
+}
