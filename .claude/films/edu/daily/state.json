@@ -132,7 +132,8 @@
    "morning": "2026-10-19",
    "run": "2026-10-18_120002",
    "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-19_QC01-01/QC01-01_two_qubits_to_a_thousand_en.mp4",
-   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-19_QC01-01"
+   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-19_QC01-01",
+   "note": "kept delivered over a same-run failed mark: run.sh: no checked mp4 after 4 round(s), exit 0; exit 0; session 0ee4227d-b81f-4256-beda-fa467880ae69 | success: Tonight's episode is still delivered; there was nothing to redo. run.sh keeps restarting this session ev"
   }
  },
  "about": "Daily-episode state, read and written by next.py (mark). guest_policy: 'skip' (default) or 'narration-only' for guest lectures whose speaker has not said yes; speaker_ok: {'L09': {'voice_clips': true, 'slides_on_screen': true, 'date': 'YYYY-MM-DD', 'note': '...'}}; skip: episode ids the user dropped."
