@@ -97,8 +97,9 @@ working on this episode** (renders, ffmpeg, the art batch), and counts an mp4 on
   job (`run_in_background` without a Monitor) running when you end a turn: it is killed.
 - A foreground Bash call may take up to 10 minutes (timeout 600000). `tools/film.py` resumes (frames on disk are
   skipped), so a render can also be driven by repeated foreground calls.
-- Subagents (the Task/Agent tool) for research sweeps, the two script drafts, the judge and the reviewer. Launch
-  parallel ones in one message and wait for all of them. Give each a complete brief (paths, rules, output file); they
+- Token budget is tight (owner, 2026-10-19): no Workflow tool, no fan-out. At most two subagents a night: one research
+  helper when there are many facts, and the reviewer (step 8). Prefer a light model for them (Agent `model: "haiku"`)
+  unless a task truly needs more. Launch parallel ones in one message and wait for all of them. Give each a complete brief (paths, rules, output file); they
   do not see this prompt. **Every brief ends with these lines**: "Do not run git (no commit, checkout, stash, merge or
   push), whatever CLAUDE.md says; write only the files named here. Run Python as ~/miniforge3/bin/python3. Never
   write the name of an AI model or assistant into any file."
@@ -138,8 +139,8 @@ the work order's `work_dir`, `DELIVER` = its `deliver_dir`, `Lnn` = the lecture.
 - Check each number at its primary source with web search and fetch. Where a fact can be computed (token counts,
   memory sizes, FLOPs), compute it: make a venv in `~/picasso-work/venv` for any package you need (never install
   into the base Python), and record the command and output in FACTS.md.
-- Split the checking over 2-3 research subagents by topic when there are many facts; merge their tables yourself
-  and resolve conflicts by going to the source.
+- Check the facts yourself; when there are many, hand one topic to a single research helper and merge its table,
+  resolving conflicts at the source.
 
 ### 3. Her clips (`EP/clips.json`; audio in `~/picasso-work/clips/<episode folder>/`, never in the repo)
 - From the transcript window pick 8-12 candidates (2-12 s each): her own framing of the idea, a crisp definition,
@@ -159,17 +160,11 @@ the work order's `work_dir`, `DELIVER` = its `deliver_dir`, `Lnn` = the lecture.
   ear: say so).
 - 3-7 clips in a Prof. Ding episode, at most a quarter of the runtime. The captions show `text` exactly.
 
-### 4. Script: two drafts, a judge, a synthesis
-- Two drafting subagents in parallel, each with the full brief (work order, FACTS.md safe wording, the passing
-  clips with their text, the craft rules below, L01-01's SCRIPT.md as the format, the previous episode) and a
-  different angle: **A** story or analogy first (one concrete everyday picture carries the idea); **B** the worked
-  example first (the slide's own example, e.g. a trace or a calculation, is the spine). Each writes
-  `EP/drafts/script_A.md` / `script_B.md`: beats with planned times, every narration line, where each clip sits,
-  what each panel shows, the drawing list.
-- A judge subagent reads both and writes `EP/drafts/judge.md`: scores (hook in the first 5 s; clarity for a smart
-  first-year student who has not taken the course; accuracy against FACTS.md; use of her voice and slides; pace;
-  the craft rules), the winner, and what to graft from the other.
-- You write the synthesis: `EP/SCRIPT.md` (L01-01's format: header, beats table, narration notes with the FACTS rows
+### 4. Script: one draft, written by you
+- No drafting or judge subagents (token budget). Pick the stronger angle yourself: story or analogy first (one
+  concrete everyday picture carries the idea) or the worked example first (the slide's own example is the spine);
+  check it against the hook, clarity for a smart first-year, FACTS.md, her voice and slides, pace and the craft rules.
+- Write: `EP/SCRIPT.md` (L01-01's format: header, beats table, narration notes with the FACTS rows
   each line uses, clip table, facts, art list), `EP/vo_lines.json` (`[{"id": "n0", "en": "...", "zh": ""}, ...]`).
 - Length: the work order's `target_min` ± 1 min, always 4-10 min; narration at most 160 words per minute.
 - The hook: the first 5 s pose one concrete puzzle (start from the work order's `hook`), and frame 0 is the finished

@@ -79,7 +79,7 @@ SERIES = {
         'brief': 'PROMPT.md, with its section "The quantum series (QC)" over the LLM-specific details',
     },
 }
-DEFAULT_SCHEDULE = {'pattern': ['llm', 'qc'], 'start': '2026-10-16', 'when_empty': 'other'}
+DEFAULT_SCHEDULE = {'pattern': ['llm', 'qc'], 'start': '2026-10-16', 'when_empty': 'other', 'every': 1}
 
 
 def load_schedule():
@@ -99,6 +99,8 @@ def load_schedule():
         return None, f'{SCHEDULE}: "start" must be a date (YYYY-MM-DD), not {sched["start"]!r}'
     if sched['when_empty'] not in ('other', 'none'):
         return None, f'{SCHEDULE}: "when_empty" must be "other" or "none"'
+    if not isinstance(sched['every'], int) or sched['every'] < 1:
+        return None, f'{SCHEDULE}: "every" must be a whole number of days (1 = daily)'
     return sched, None
 
 
@@ -326,7 +328,12 @@ def qc_recording(ep):
 
 
 # ------------------------------------------------------------------ the choice
-def mornings(now, state):
+def video_day(d, sched):
+    """Whether a morning gets a video: from the schedule's start, one morning in every `every` days."""
+    return (d - sched['start']).days % sched['every'] == 0
+
+
+def mornings(now, state, sched=None):
     """Candidate delivery mornings and the ones already taken. Returns ((open list, taken dict), None)."""
     today = now.date()
     first = today if now.time() < CUTOFF else today + dt.timedelta(days=1)
@@ -337,7 +344,8 @@ def mornings(now, state):
     days = []
     d = first
     while d <= today + dt.timedelta(days=BUFFER_DAYS):
-        days.append(d.isoformat())
+        if sched is None or video_day(d, sched):
+            days.append(d.isoformat())
         d += dt.timedelta(days=1)
     return ([d for d in days if d not in taken], taken), None
 
@@ -348,7 +356,7 @@ def series_for(morning, sched):
     if d < sched['start']:
         return 'llm'
     pat = sched['pattern']
-    return pat[(d - sched['start']).days % len(pat)]
+    return pat[(d - sched['start']).days // sched['every'] % len(pat)]
 
 
 def pick(syl, state, src='syllabus.json'):
@@ -415,7 +423,7 @@ def work_order(now=None, write=True, assume=()):
     if err:
         return None, err
     books, state, sched = res
-    (open_days, taken), _ = mornings(now, state)
+    (open_days, taken), _ = mornings(now, state, sched)
     if not open_days:
         return {'id': None, 'why': f'buffer full: videos exist for {", ".join(sorted(taken))}'}, None
     morning = open_days[0]
@@ -620,7 +628,7 @@ def status(now=None, assume=()):
     if err:
         return None, err
     books, state, sched = res
-    (open_days, taken), _ = mornings(now, state)
+    (open_days, taken), _ = mornings(now, state, sched)
     lines = [f'now {now:%Y-%m-%d %H:%M}; open mornings: {", ".join(open_days) or "none (buffer full)"}',
              f'schedule: {" / ".join(sched["pattern"])} from {sched["start"]} (mornings before it: llm); '
              f'a series with nothing left: {sched["when_empty"]} ({SCHEDULE})']
