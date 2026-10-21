@@ -76,3 +76,27 @@ test('soak-compare: a kind new tonight or worse starts a fix run; the same kinds
   assert.deepEqual(compare(prev, night([['g3', 'no portal', []], ['g4', 'nether and back', []]])), ['worse: 1 of 2 games got to the Nether and back (2 the night before)']);
   assert.deepEqual(compare(null, night([['g3', 'nether and back', ['X y']]])), ['new: X y (1 in 1 game)'], 'no night before: all new');
 });
+
+test('soak-compare: a soak that started at night is not held against a day start (2026-10-21: 3 night starts, 0 stone pickaxes)', async () => {
+  const { main, notComparable, startedAtNight, isNightClock } = await import('../scripts/soak-compare.mjs');
+  const { reportText } = await import('../scripts/soak.mjs');
+  const night = (clocks, kinds = []) => ({ games: clocks.map((clock, i) => ({ game: `g${i}`, outcome: 'no portal', clock, seconds: 60, steps: 1, stuck: [], deaths: 0, milestones: [], notes: [], failures: kinds.map((kind) => ({ kind, skill: 'go_to', args: {}, at: 1, result: '' })) })) });
+  assert.equal(isNightClock(12120), false);
+  assert.equal(isNightClock(14000), true);
+  assert.equal(isNightClock(23100), false);
+  assert.equal(startedAtNight(night([14000, 15000, 3000])), true);
+  assert.equal(startedAtNight(night([undefined])), null, 'older soaks carry no clock');
+  const day = night([1000, 2000, 3000]);
+  const dark = night([14000, 15000, 16000], ['DIED you died at # # #']);
+  assert.match(notComparable(day, dark), /started at night/);
+  assert.equal(notComparable(dark, day), null, 'a day start is always compared');
+  assert.equal(notComparable(night([undefined]), dark), null, 'no clock the night before: compared as before');
+  assert.equal(notComparable(dark, dark), null, 'night with night');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'soak-cmp-'));
+  fs.writeFileSync(path.join(dir, 'a.json'), JSON.stringify(day));
+  fs.writeFileSync(path.join(dir, 'b.json'), JSON.stringify(dark));
+  const out = [];
+  assert.equal(main([path.join(dir, 'a.json'), path.join(dir, 'b.json')], (l) => out.push(l)), 3);
+  assert.match(out[0], /not compared/);
+  assert.match(reportText({ url: 'u', date: 'd', games: dark.games }), /\| 14000 \(night\) \|/);
+});
