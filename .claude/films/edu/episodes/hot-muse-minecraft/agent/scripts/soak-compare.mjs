@@ -19,6 +19,22 @@ export function kindsOf(result) {
   return out;
 }
 
+/** Hostile mobs spawn on the surface from dusk to dawn (ticks 13000-23000): a game that starts then fights all along. */
+export const isNightClock = (t) => Number.isFinite(t) && t >= 13000 && t < 23000;
+
+/** Did most of a night's games start at night? null when its games carry no clock (soaks before 2026-10-21). */
+export function startedAtNight(result) {
+  const clocks = (result?.games ?? []).map((g) => g.clock).filter(Number.isFinite);
+  return clocks.length ? clocks.filter(isNightClock).length * 2 > clocks.length : null;
+}
+
+/** Why tonight cannot be held against the night before, or null: games that start at night fight mobs from the
+ * first minute (2026-10-21: all 3 died before a stone pickaxe), so they are compared with night starts only. */
+export function notComparable(previous, tonight) {
+  return startedAtNight(tonight) === true && startedAtNight(previous) === false
+    ? "tonight's games started at night, the night before's by day: not compared (the next night start is)" : null;
+}
+
 /** What is new or worse tonight: [line]. A missing previous night makes every kind new. */
 export function compare(previous, tonight) {
   const before = kindsOf(previous);
@@ -39,7 +55,10 @@ export function main(argv = process.argv.slice(2), print = console.log) {
   const read = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
   const tonight = read(argv[1]);
   if (!tonight) { print(`no soak result at ${argv[1]}`); return 64; }
-  const lines = compare(read(argv[0]), tonight);
+  const previous = read(argv[0]);
+  const why = notComparable(previous, tonight);
+  if (why) { print(why); return 3; }
+  const lines = compare(previous, tonight);
   for (const l of lines) print(l);
   return lines.length ? 0 : 3;
 }

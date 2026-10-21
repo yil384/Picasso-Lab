@@ -17,6 +17,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
+import { isNightClock } from './soak-compare.mjs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
@@ -48,7 +49,7 @@ export async function playGame({ url, name = 'e2e-soak', minutes = 29, print = (
   const t0 = Date.now();
   const deadline = t0 + minutes * 60_000;
   const at = () => Math.round((Date.now() - t0) / 1000);
-  const rec = { game: null, calls: 0, steps: 0, failures: [], stuck: [], deaths: 0, milestones: [], outcome: 'running', notes: [] };
+  const rec = { game: null, calls: 0, steps: 0, failures: [], stuck: [], deaths: 0, milestones: [], outcome: 'running', notes: [], clock: null };
   const c = new Client({ name, version: '1' });
   await c.connect(new StreamableHTTPClientTransport(new URL(`${String(url).replace(/\/+$/, '')}/mcp`)));
   let state = {};
@@ -138,8 +139,10 @@ export async function playGame({ url, name = 'e2e-soak', minutes = 29, print = (
     rec.game = /game (g\w+)/.exec(r.text)?.[1] ?? null;
     if (!state.pos) await call('get_state', {});
     const home = pick(state.pos);
+    // the staging clock runs (and stops while nobody plays), so a soak may start at night: the report says so
+    rec.clock = Number.isFinite(state.time) ? state.time : null;
     const wood = /\b((?:dark_|pale_)?[a-z]+)_log \d/.exec(/^nearby blocks[^\n]*/m.exec(lastText)?.[0] ?? '')?.[1] ?? 'oak';
-    print(`[${at()} s] game ${rec.game} at ${JSON.stringify(home)}, wood ${wood}`);
+    print(`[${at()} s] game ${rec.game} at ${JSON.stringify(home)}, wood ${wood}, clock ${rec.clock ?? '?'}${isNightClock(rec.clock) ? ' (night)' : ''}`);
     const pickaxe = (tier) => has(tier) || (BETTER[tier] ?? []).some((b) => has(b));
 
     await stage('wood', () => count(`${wood}_log`) >= 6 || pickaxe('wooden_pickaxe'), async (k) => {
@@ -207,8 +210,8 @@ export async function playGame({ url, name = 'e2e-soak', minutes = 29, print = (
 /** The night's report in Markdown, from the games' records. */
 export function reportText({ url, date, games }) {
   const lines = [`# Soak ${date}`, '', `Staging: ${url}. ${games.length} games in parallel, scripted (no model), goal nether_and_back.`, ''];
-  lines.push('| Game | Outcome | Time | Steps | Failed | Stuck | Deaths |', '| --- | --- | --- | --- | --- | --- | --- |');
-  for (const g of games) lines.push(`| ${g.game ?? '-'} | ${g.outcome} | ${Math.floor(g.seconds / 60)}:${String(g.seconds % 60).padStart(2, '0')} | ${g.steps} | ${g.failures.length} | ${g.stuck.length} | ${g.deaths} |`);
+  lines.push('| Game | Outcome | Time | Steps | Failed | Stuck | Deaths | Clock at start |', '| --- | --- | --- | --- | --- | --- | --- | --- |');
+  for (const g of games) lines.push(`| ${g.game ?? '-'} | ${g.outcome} | ${Math.floor(g.seconds / 60)}:${String(g.seconds % 60).padStart(2, '0')} | ${g.steps} | ${g.failures.length} | ${g.stuck.length} | ${g.deaths} | ${g.clock ?? '-'}${isNightClock(g.clock) ? ' (night)' : ''} |`);
   const keys = [...new Set(games.flatMap((g) => g.milestones.map((m) => m.key)))];
   if (keys.length) {
     lines.push('', '## Milestones (minutes into each game)', '', `| Milestone | ${games.map((g) => g.game ?? '-').join(' | ')} |`, `| --- | ${games.map(() => '---').join(' | ')} |`);
