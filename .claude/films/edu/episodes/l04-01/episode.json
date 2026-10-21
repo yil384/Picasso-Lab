@@ -1,0 +1,1607 @@
+{
+ "id": "l04-01",
+ "lecture": "L04",
+ "facts": "FACTS.md",
+ "title": "L04-01 584 Years on One GPU",
+ "langs": [
+  "en"
+ ],
+ "voice": {
+  "lines": "vo_lines.json",
+  "clips": "clips.json",
+  "clipDir": "~/picasso-work/clips/l04-01",
+  "rate": "+4%",
+  "slotPad": 0.4
+ },
+ "sound": {
+  "dir": "~/picasso-assets/snd"
+ },
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "slides",
+  "drawings": {
+   "order": {
+    "src": "line_train_giant_order",
+    "w": 1040
+   },
+   "mgr": {
+    "src": "line_manager_2",
+    "w": 640
+   },
+   "grow": {
+    "src": "line_grow",
+    "w": 1000
+   },
+   "env": {
+    "src": "line_train_envelope_sums",
+    "w": 880
+   },
+   "pots": {
+    "src": "line_train_two_pots",
+    "w": 1040
+   },
+   "mount": {
+    "src": "line_train_chef_mountain",
+    "w": 720
+   },
+   "beard": {
+    "src": "line_train_long_beard",
+    "w": 680
+   },
+   "cal": {
+    "src": "line_train_calendar_flurry",
+    "w": 560
+   },
+   "hall": {
+    "src": "line_train_kitchen_hall",
+    "w": 1040
+   },
+   "wait": {
+    "src": "line_train_waiting_chefs",
+    "w": 1040
+   },
+   "fuse": {
+    "src": "line_train_blown_fuse",
+    "w": 900
+   },
+   "scoop": {
+    "src": "line_train_scoop_spoon",
+    "w": 1040
+   },
+   "gpu": {
+    "src": "line_gpu",
+    "w": 1000
+   },
+   "mic": {
+    "src": "line_mic",
+    "w": 240,
+    "boost": 0.3
+   }
+  },
+  "slides": {
+   "s11": {
+    "src": "p11.png"
+   },
+   "s12": {
+    "src": "p12.png"
+   },
+   "s13": {
+    "src": "p13.png"
+   }
+  }
+ },
+ "panels": [
+  {
+   "id": "p0",
+   "note": "cover: the manager hands the young chef an endless order ticket; hook (F1, F11)",
+   "items": [
+    {
+     "id": "cover",
+     "t": "draw",
+     "d": "order",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 1040
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "cover",
+      0.55,
+      0.8
+     ],
+     "w": 960,
+     "h": 220,
+     "a": 0.3,
+     "rot": -0.02
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "cover",
+      0.3,
+      0.35
+     ],
+     "w": 300,
+     "h": 300,
+     "a": 0.25,
+     "rot": 0.0
+    },
+    {
+     "t": "label",
+     "text": "title.0",
+     "xy": [
+      66,
+      350
+     ],
+     "px": 132,
+     "align": "left",
+     "rot": -0.03
+    },
+    {
+     "t": "label",
+     "text": "title.1",
+     "xy": [
+      84,
+      460
+     ],
+     "px": 100,
+     "color": "red",
+     "align": "left",
+     "rot": -0.03,
+     "id": "title2"
+    },
+    {
+     "t": "underline",
+     "of": "title2",
+     "dx": 6,
+     "dy": 48,
+     "rise": -8,
+     "bend": 0.03,
+     "at": "title",
+     "dur": 0.6
+    },
+    {
+     "t": "sans",
+     "text": "strip",
+     "xy": [
+      86,
+      548
+     ],
+     "px": 28,
+     "a": 0.8,
+     "align": "left"
+    },
+    {
+     "t": "label",
+     "text": "hA",
+     "xy": [
+      70,
+      630
+     ],
+     "px": 65,
+     "align": "left",
+     "font": "latin",
+     "rot": -0.02,
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p1",
+   "note": "her classroom scenario, slide 10; her C1 (F1)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h1",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 72,
+     "align": "left",
+     "color": "red",
+     "at": "p1+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "s1",
+     "xy": [
+      70,
+      440
+     ],
+     "px": 65,
+     "align": "left",
+     "at": "n1@training",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "s2",
+     "xy": [
+      70,
+      520
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "n1@huge",
+     "fit": 760
+    },
+    {
+     "id": "mg",
+     "t": "draw",
+     "d": "mgr",
+     "xy": [
+      540,
+      1040
+     ],
+     "w": 640,
+     "at": "p1+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "mg",
+      0.5,
+      0.45
+     ],
+     "w": 520,
+     "h": 520,
+     "a": 0.25,
+     "rot": 0.0,
+     "at": "c1"
+    }
+   ]
+  },
+  {
+   "id": "p2",
+   "note": "scaling laws: bigger models + more data -> lower loss (F2); slide 9 plot not shown",
+   "items": [
+    {
+     "t": "label",
+     "text": "h2",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "p2+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "g1",
+     "xy": [
+      70,
+      440
+     ],
+     "px": 65,
+     "align": "left",
+     "at": "n2@bigger",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "g2",
+     "xy": [
+      70,
+      520
+     ],
+     "px": 66,
+     "align": "left",
+     "color": "red",
+     "at": "n2@lower",
+     "fit": 760
+    },
+    {
+     "id": "gr",
+     "t": "draw",
+     "d": "grow",
+     "xy": [
+      540,
+      1020
+     ],
+     "w": 1000,
+     "at": "p2+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "gr",
+      0.5,
+      0.5
+     ],
+     "w": 900,
+     "h": 380,
+     "a": 0.25,
+     "rot": 0.0,
+     "at": "n2@scaling"
+    },
+    {
+     "t": "label",
+     "text": "g3",
+     "xy": [
+      70,
+      600
+     ],
+     "px": 50,
+     "align": "left",
+     "color": "pencil",
+     "at": "n2@scaling",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p3",
+   "note": "first step: count the FLOPs; 405B params, 15T tokens; Chinchilla 20, Llama 3 37 (F3, F4)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h3",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p3+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "ev",
+     "t": "draw",
+     "d": "env",
+     "xy": [
+      540,
+      990
+     ],
+     "w": 800,
+     "at": "p3+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "fl",
+     "xy": [
+      70,
+      440
+     ],
+     "px": 58,
+     "align": "left",
+     "at": "n4@flops",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "pp",
+     "xy": [
+      70,
+      520
+     ],
+     "px": 62,
+     "align": "left",
+     "color": "red",
+     "at": "n4@405",
+     "out": "n5-0.3",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "tk",
+     "xy": [
+      70,
+      600
+     ],
+     "px": 62,
+     "align": "left",
+     "color": "red",
+     "at": "n4@trillion",
+     "out": "n5-0.3",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "ch",
+     "xy": [
+      70,
+      520
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n5@chinchilla",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "l3",
+     "xy": [
+      70,
+      600
+     ],
+     "px": 68,
+     "align": "left",
+     "color": "red",
+     "at": "n5@37",
+     "fit": 760
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "ev",
+      0.6,
+      0.45
+     ],
+     "r": [
+      170,
+      120
+     ],
+     "seed": 2,
+     "lw": 6,
+     "at": "n5@37",
+     "dur": 0.45
+    }
+   ]
+  },
+  {
+   "id": "p4",
+   "note": "forward 2 + backward 4 = 6 (F5, F8, F9); her C11 (L05)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h4",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 73,
+     "align": "left",
+     "at": "p4+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "r6",
+     "xy": [
+      70,
+      440
+     ],
+     "px": 52,
+     "align": "left",
+     "at": "n6@six",
+     "fit": 760
+    },
+    {
+     "id": "pt",
+     "t": "draw",
+     "d": "pots",
+     "xy": [
+      540,
+      1040
+     ],
+     "w": 1040,
+     "at": "p4+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "label",
+     "text": "fw",
+     "xy": [
+      70,
+      530
+     ],
+     "px": 58,
+     "align": "left",
+     "at": "n7@forward",
+     "fit": 760
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "pt",
+      0.2,
+      0.65
+     ],
+     "r": [
+      170,
+      150
+     ],
+     "seed": 3,
+     "lw": 6,
+     "at": "n7@two",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "bw",
+     "xy": [
+      70,
+      610
+     ],
+     "px": 58,
+     "align": "left",
+     "color": "red",
+     "at": "n8@backward",
+     "fit": 760
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "pt",
+      0.73,
+      0.62
+     ],
+     "r": [
+      230,
+      160
+     ],
+     "seed": 4,
+     "lw": 6,
+     "at": "c11@60%",
+     "dur": 0.45
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "pt",
+      0.25,
+      0.6
+     ],
+     "w": 340,
+     "h": 420,
+     "a": 0.25,
+     "rot": 0.0,
+     "at": "n7@forward"
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "pt",
+      0.75,
+      0.6
+     ],
+     "w": 440,
+     "h": 420,
+     "a": 0.3,
+     "rot": 0.0,
+     "at": "n8@backward"
+    },
+    {
+     "t": "label",
+     "text": "six",
+     "xy": [
+      560,
+      680
+     ],
+     "px": 73,
+     "align": "left",
+     "color": "red",
+     "at": "n9@six",
+     "font": "latin",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p5",
+   "note": "her slide 11, scenario + the compute line (F6, F7, F23)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs11",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape5+0.4",
+     "rot": -0.06,
+     "fit": 760
+    },
+    {
+     "id": "s11",
+     "t": "printout",
+     "slide": "s11",
+     "xy": [
+      540,
+      730
+     ],
+     "w": 1040,
+     "rot": -0.012,
+     "crop": [
+      0.02,
+      0.23,
+      0.82,
+      0.57
+     ],
+     "at": "p5+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      60,
+      540
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape5"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      1020,
+      536
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape5+0.15"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "s11:px",
+       66,
+       892
+      ],
+      [
+       "s11:px",
+       1640,
+       892
+      ]
+     ],
+     "lw": 6,
+     "at": "n10@multiply",
+     "dur": 0.9
+    },
+    {
+     "t": "label",
+     "text": "eq",
+     "xy": [
+      70,
+      1020
+     ],
+     "px": 79,
+     "align": "left",
+     "at": "n10@six",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "eq2",
+     "xy": [
+      70,
+      1105
+     ],
+     "px": 73,
+     "align": "left",
+     "color": "red",
+     "at": "n10@3645",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "pap",
+     "xy": [
+      70,
+      1180
+     ],
+     "px": 50,
+     "align": "left",
+     "at": "n11@reports",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "est",
+     "xy": [
+      70,
+      1235
+     ],
+     "px": 48,
+     "align": "left",
+     "color": "pencil",
+     "at": "n11@estimate",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p6",
+   "note": "the work as a mountain, one GPU = one cook (picture only)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h6",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "p6+0.3",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "mt",
+     "t": "draw",
+     "d": "mount",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 720,
+     "at": "p6+0.3",
+     "dur": 3.0
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "mt",
+      0.5,
+      0.35
+     ],
+     "w": 640,
+     "h": 600,
+     "a": 0.25,
+     "rot": 0.0,
+     "at": "n12@mountain"
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "mt",
+      0.62,
+      0.86
+     ],
+     "r": [
+      110,
+      140
+     ],
+     "seed": 5,
+     "lw": 6,
+     "at": "n12@cook",
+     "dur": 0.45
+    }
+   ]
+  },
+  {
+   "id": "p7",
+   "note": "her slide 12 (references cropped out): 1,979 TFLOPS FP8 peak; 1.84e10 s; 584 years (F10, F11); her C4",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs12",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape7+0.4",
+     "rot": -0.06,
+     "fit": 760
+    },
+    {
+     "id": "s12",
+     "t": "printout",
+     "slide": "s12",
+     "xy": [
+      540,
+      790
+     ],
+     "w": 1040,
+     "rot": -0.012,
+     "crop": [
+      0.02,
+      0.23,
+      0.84,
+      0.57
+     ],
+     "at": "p7+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      60,
+      600
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape7"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      1020,
+      596
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape7+0.15"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "s12:px",
+       1380,
+       340
+      ],
+      [
+       "s12:px",
+       1495,
+       340
+      ]
+     ],
+     "lw": 6,
+     "at": "n13@1979",
+     "dur": 0.6
+    },
+    {
+     "t": "label",
+     "text": "pk",
+     "xy": [
+      70,
+      1040
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "n13@1979",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "pk2",
+     "xy": [
+      70,
+      1092
+     ],
+     "px": 50,
+     "align": "left",
+     "color": "pencil",
+     "at": "n13@sparsity",
+     "fit": 760
+    },
+    {
+     "id": "cl",
+     "t": "draw",
+     "d": "cal",
+     "xy": [
+      810,
+      1180
+     ],
+     "w": 400,
+     "at": "n14",
+     "dur": 1.6
+    },
+    {
+     "t": "label",
+     "text": "sec",
+     "xy": [
+      70,
+      1148
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "n14@184",
+     "font": "latin",
+     "fit": 560
+    },
+    {
+     "t": "label",
+     "text": "yr",
+     "xy": [
+      70,
+      1222
+     ],
+     "px": 79,
+     "align": "left",
+     "color": "red",
+     "at": "n14@years",
+     "font": "latin",
+     "fit": 560
+    }
+   ]
+  },
+  {
+   "id": "p8",
+   "note": "584 years: started in the 1440s (F12)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h8",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 66,
+     "align": "left",
+     "at": "n15@1440s",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "h8b",
+     "xy": [
+      70,
+      450
+     ],
+     "px": 66,
+     "align": "left",
+     "color": "red",
+     "at": "n15@finishing",
+     "fit": 760
+    },
+    {
+     "id": "bd",
+     "t": "draw",
+     "d": "beard",
+     "xy": [
+      540,
+      1010
+     ],
+     "w": 680,
+     "at": "p8+0.3",
+     "dur": 3.0
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "bd",
+      0.55,
+      0.8
+     ],
+     "w": 520,
+     "h": 300,
+     "a": 0.25,
+     "rot": 0.0,
+     "at": "n15@finishing"
+    }
+   ]
+  },
+  {
+   "id": "p9",
+   "note": "up to 16,000 H100s: about 13 days (F13, F14); her C6",
+   "items": [
+    {
+     "t": "label",
+     "text": "h9",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 70,
+     "align": "left",
+     "at": "n16@16000",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "hl",
+     "t": "draw",
+     "d": "hall",
+     "xy": [
+      540,
+      990
+     ],
+     "w": 1040,
+     "at": "p9+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "hl",
+      0.5,
+      0.6
+     ],
+     "w": 980,
+     "h": 400,
+     "a": 0.2,
+     "rot": 0.0,
+     "at": "n16@split"
+    },
+    {
+     "t": "label",
+     "text": "d13",
+     "xy": [
+      70,
+      450
+     ],
+     "px": 62,
+     "align": "left",
+     "color": "red",
+     "at": "n16@13",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "rl",
+     "xy": [
+      70,
+      540
+     ],
+     "px": 62,
+     "align": "left",
+     "at": "c6",
+     "out": "n18-0.5",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "d54",
+     "xy": [
+      600,
+      540
+     ],
+     "px": 66,
+     "align": "left",
+     "color": "red",
+     "at": "c6@85%",
+     "font": "latin",
+     "out": "n18-0.5",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p10",
+   "note": "her slide 13, lower half: the factor of four; errata 13.5 -> 13 and FP16 -> BF16 corrected in red (F13, F18)",
+   "items": [
+    {
+     "t": "label",
+     "text": "hs13",
+     "xy": [
+      150,
+      392
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "tape10+0.4",
+     "rot": -0.06,
+     "fit": 760
+    },
+    {
+     "id": "s13",
+     "t": "printout",
+     "slide": "s13",
+     "xy": [
+      540,
+      760
+     ],
+     "w": 1040,
+     "rot": -0.012,
+     "crop": [
+      0.02,
+      0.58,
+      0.62,
+      0.3
+     ],
+     "at": "p10+0.7"
+    },
+    {
+     "t": "tape",
+     "i": 0,
+     "xy": [
+      60,
+      590
+     ],
+     "w": 110,
+     "rot": -0.75,
+     "at": "tape10"
+    },
+    {
+     "t": "tape",
+     "i": 5,
+     "xy": [
+      1020,
+      586
+     ],
+     "w": 110,
+     "rot": 0.7,
+     "at": "tape10+0.15"
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "s13:px",
+       612,
+       706
+      ],
+      [
+       "s13:px",
+       706,
+       706
+      ]
+     ],
+     "lw": 6,
+     "at": "n18@slide",
+     "dur": 0.4
+    },
+    {
+     "t": "label",
+     "text": "c13",
+     "xy": [
+      "s13:px",
+      600,
+      640
+     ],
+     "px": 70,
+     "align": "left",
+     "color": "red",
+     "at": "n18@slide+0.3",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "s13:px",
+      696,
+      816
+     ],
+     "r": [
+      70,
+      34
+     ],
+     "seed": 6,
+     "lw": 6,
+     "at": "n18@missing",
+     "dur": 0.45
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "s13:px",
+      154,
+      906
+     ],
+     "r": [
+      70,
+      32
+     ],
+     "seed": 7,
+     "lw": 6,
+     "at": "n18@four",
+     "dur": 0.45
+    },
+    {
+     "t": "pen",
+     "pts": [
+      [
+       "s13:px",
+       64,
+       954
+      ],
+      [
+       "s13:px",
+       150,
+       954
+      ]
+     ],
+     "lw": 6,
+     "at": "n18@slide+0.2",
+     "dur": 0.3
+    },
+    {
+     "t": "label",
+     "text": "x4",
+     "xy": [
+      70,
+      1010
+     ],
+     "px": 60,
+     "align": "left",
+     "color": "red",
+     "at": "n18@four",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "bf",
+     "xy": [
+      70,
+      1100
+     ],
+     "px": 50,
+     "align": "left",
+     "color": "pencil",
+     "at": "n18@first",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p11",
+   "note": "MFU 38-43%, call it 40: about 2x (F15, F16)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h11",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "n19@mfu",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "m1",
+     "xy": [
+      70,
+      450
+     ],
+     "px": 70,
+     "align": "left",
+     "color": "red",
+     "at": "n19@38",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "m2",
+     "xy": [
+      70,
+      540
+     ],
+     "px": 65,
+     "align": "left",
+     "at": "n19@40",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "id": "wc",
+     "t": "draw",
+     "d": "wait",
+     "xy": [
+      540,
+      1060
+     ],
+     "w": 1040,
+     "at": "p11+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "wc",
+      0.42,
+      0.45
+     ],
+     "r": [
+      240,
+      200
+     ],
+     "seed": 8,
+     "lw": 6,
+     "at": "n20@wait",
+     "dur": 0.45
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "wc",
+      0.75,
+      0.45
+     ],
+     "r": [
+      240,
+      200
+     ],
+     "seed": 9,
+     "lw": 6,
+     "at": "n20@wait+0.3",
+     "dur": 0.45
+    },
+    {
+     "t": "label",
+     "text": "m3",
+     "xy": [
+      70,
+      630
+     ],
+     "px": 50,
+     "align": "left",
+     "color": "pencil",
+     "at": "n20@memory",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p12",
+   "note": "54-day stretch: 466 interruptions, 419 unexpected, ~78% hardware (F17, F20)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h12",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "n21@break",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "f1",
+     "xy": [
+      70,
+      450
+     ],
+     "px": 55,
+     "align": "left",
+     "at": "n21@466",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "f2",
+     "xy": [
+      70,
+      540
+     ],
+     "px": 62,
+     "align": "left",
+     "color": "red",
+     "at": "n21@419",
+     "fit": 760
+    },
+    {
+     "id": "fz",
+     "t": "draw",
+     "d": "fuse",
+     "xy": [
+      540,
+      1050
+     ],
+     "w": 880,
+     "at": "p12+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "ring",
+     "xy": [
+      "fz",
+      0.78,
+      0.33
+     ],
+     "r": [
+      120,
+      120
+     ],
+     "seed": 10,
+     "lw": 6,
+     "at": "n21@hardware",
+     "dur": 0.45
+    },
+    {
+     "t": "wash",
+     "c": "yellow",
+     "xy": [
+      "fz",
+      0.62,
+      0.35
+     ],
+     "w": 280,
+     "h": 280,
+     "a": 0.3,
+     "rot": 0.0,
+     "at": "n21@hardware"
+    }
+   ]
+  },
+  {
+   "id": "p13",
+   "note": "16-bit not FP8: half the peak (F18); 13 x 2 x 2 close to 54 (F19)",
+   "items": [
+    {
+     "t": "label",
+     "text": "h13",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "n22@16bit",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "b1",
+     "xy": [
+      70,
+      450
+     ],
+     "px": 65,
+     "align": "left",
+     "color": "red",
+     "at": "n22@half",
+     "font": "latin",
+     "fit": 760
+    },
+    {
+     "id": "sc",
+     "t": "draw",
+     "d": "scoop",
+     "xy": [
+      540,
+      980
+     ],
+     "w": 1040,
+     "at": "p13+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "peach",
+     "xy": [
+      "sc",
+      0.28,
+      0.6
+     ],
+     "w": 420,
+     "h": 380,
+     "a": 0.25,
+     "rot": 0.0,
+     "at": "n22@16bit"
+    },
+    {
+     "t": "label",
+     "text": "tt2",
+     "xy": [
+      70,
+      630
+     ],
+     "px": 58,
+     "align": "left",
+     "at": "n23@nearer",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "tot",
+     "xy": [
+      70,
+      540
+     ],
+     "px": 62,
+     "align": "left",
+     "color": "red",
+     "at": "n23@13",
+     "font": "latin",
+     "fit": 760
+    }
+   ]
+  },
+  {
+   "id": "p14",
+   "note": "count the FLOPs first; one GPU is hopeless; next: the cluster (F21, F22); her C10",
+   "items": [
+    {
+     "t": "label",
+     "text": "h14",
+     "xy": [
+      70,
+      350
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "n24@count",
+     "rot": -0.03,
+     "fit": 760
+    },
+    {
+     "id": "gp",
+     "t": "draw",
+     "d": "gpu",
+     "xy": [
+      540,
+      1030
+     ],
+     "w": 1000,
+     "at": "p14+0.4",
+     "dur": 2.4
+    },
+    {
+     "t": "wash",
+     "c": "cobalt",
+     "xy": [
+      "gp",
+      0.5,
+      0.5
+     ],
+     "w": 900,
+     "h": 420,
+     "a": 0.25,
+     "rot": 0.0,
+     "at": "c10"
+    },
+    {
+     "t": "label",
+     "text": "t1",
+     "xy": [
+      70,
+      450
+     ],
+     "px": 68,
+     "align": "left",
+     "at": "n25@hopeless",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "t2",
+     "xy": [
+      70,
+      540
+     ],
+     "px": 68,
+     "align": "left",
+     "color": "red",
+     "at": "n25@spread",
+     "fit": 760
+    },
+    {
+     "t": "label",
+     "text": "nx",
+     "xy": [
+      70,
+      630
+     ],
+     "px": 55,
+     "align": "left",
+     "color": "red",
+     "at": "n25@next",
+     "fit": 760
+    }
+   ]
+  }
+ ]
+}

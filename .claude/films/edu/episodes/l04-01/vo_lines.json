@@ -1,0 +1,137 @@
+[
+ {
+  "id": "n0",
+  "en": "End of 2023. In her scenario, your job is to train a 405-billion-parameter model in four months.",
+  "zh": ""
+ },
+ {
+  "id": "n0b",
+  "en": "On one GPU, even at full speed, it would take 584 years. How can you know that before you start?",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "It's a scenario Prof. Ding gives in her course, CSE 291P, as it turns to training: you, a huge job, and a deadline.",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "Why so huge? Bigger models and more data give lower loss. Those are the scaling laws, from 2020. So the jobs only grow.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "Before you touch a single GPU, there is a quicker first step.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "FLOPs are floating-point operations: the multiplies and adds a chip does. This model has 405 billion parameters, the numbers it learns, and it reads about 15 trillion tokens, pieces of words.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "A 2022 rule of thumb, Chinchilla, says about 20 tokens per parameter. Llama 3 used about 37.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "Now the rule. Training costs about six operations per parameter, per token. Where does six come from?",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "Going forward, every weight does a multiply and an add for every token. That's two.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "Going backward costs twice that. Here is why, in her words.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "One gradient for the input, one for the weights: how each number should change. Two plus four makes six.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "So multiply. Six, times 405 billion, times 15 trillion. That's 3.645 times ten to the 25 operations.",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "The paper itself reports 3.8 times ten to the 25: the same rule, with its 15.6 trillion tokens. It's an estimate. It counts the big matrix multiplies and little else.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "Picture that work as a mountain of ingredients, and one GPU as one cook at one stove.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "One H100 GPU, using 8-bit numbers called FP8, peaks at 1,979 trillion operations a second. That's without sparsity, a trick for skipping zeros, and at 100 percent, all the time.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "Divide. About 1.84 times ten to the ten seconds. About 584 years.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "A GPU that started in the 1440s would just about be finishing.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "But Llama 3 was trained on up to 16,000 H100s. Split the mountain that many ways, at full speed, and it's about 13 days.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "Thirteen days. Easy? Then she asks the class.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "Her slide hunts for the missing factor of four. First.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "MFU, model FLOPs utilization, is the share of the peak you actually use. Llama 3 kept 38 to 43 percent. At 40 percent, it runs two and a half times slower.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "Why not 100 percent? Cooks wait on each other, and on memory. Her list.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "And things break. The paper gives no single total time. It reports a 54-day stretch of pre-training with 466 interruptions. 419 were unexpected, and about 78 percent of those were hardware, GPUs most of all.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "Second. Llama 3 trained in 16-bit numbers, not FP8, and in 16-bit the H100 peaks at half its FP8 speed. Another two times.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "Her slide rounds both factors to two: 13 days times four, about 54 days. With two and a half, it's nearer two months. Either way, weeks, not centuries.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "The lesson. Count the FLOPs first, and the rest follows.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "And the count says one GPU is hopeless. Training has to be spread over thousands of them. Next: what is inside a cluster like that.",
+  "zh": ""
+ }
+]
