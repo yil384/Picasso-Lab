@@ -1,0 +1,142 @@
+{
+ "episode": "L04-01",
+ "made": "2026-10-14",
+ "drawings": [
+  {
+   "name": "line_train_giant_order",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_manager_2",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content. The second image shows the recurring manager (a woman with a neat bun, a waistcoat and a small bow tie): when she appears, draw the same person.",
+   "prompt": "In a kitchen, the manager (an invented woman with her hair in a neat bun, a waistcoat over a shirt and a small bow tie) hands the young chef with short curly hair (tall white chef hat, double-breasted chef jacket, apron) an order ticket that is absurdly long: it unrolls from her hand down to the floor and snakes across the whole kitchen floor in loops. The chef holds the top end with both hands, eyes wide, mouth open. Landscape image 1536x1024; the two characters and the ticket fill about 90% of the width and about 85% of the height. The ticket is blank paper. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_train_chef_mountain",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "The young chef with short curly hair (tall white chef hat, double-breasted chef jacket, apron) stands at one small stove with one pot near the bottom of the picture, holding a wooden spoon and looking up at an enormous mountain of ingredients behind: sacks of flour, crates of vegetables, baskets of eggs, wheels of cheese, piled in a huge heap that rises almost to the top of the picture and spreads from side to side. Portrait image 1024x1536; the mountain fills about 90% of the width and about 85% of the height; the chef is small at the bottom. No labels on the sacks or crates. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_train_long_beard",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "The young chef with short curly hair (tall white chef hat, double-breasted chef jacket, apron), now very, very old: a long white beard flows down to the floor and coils in loops around the stove; still patiently stirring the same pot with a wooden spoon; cobwebs hang from the tall hat and the stove hood, with a small spider on a thread; on the wall behind, a calendar with its pages flying off. Portrait image 1024x1536; the chef and the stove fill about 70% of the width and about 85% of the height. The calendar pages are blank. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_train_calendar_flurry",
+   "kind": "line",
+   "group": "B",
+   "sweep": "y",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "A wall calendar hanging on a nail, seen from the front, its blank pages tearing off one after another and flying away to the right in a long swirling flurry of dozens of loose sheets that fills the right side of the picture. Square image 1024x1024; the calendar and the flurry fill about 90% of the width. The pages are blank, with no grids. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_train_kitchen_hall",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "An enormous kitchen hall seen from a raised viewpoint near one end, stretching away to a far vanishing point: dozens of long straight rows of identical small cooking stations, each with a stove and one chef in a tall white chef hat, row after row receding into the distance until the chefs are tiny dots. Landscape image 1536x1024; the hall fills the width with margins and about 85% of the height. No signs. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_train_two_pots",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "Two scenes side by side with a gap between them. Left: the chef with round glasses and curly hair (tall white chef hat, double-breasted chef jacket, apron) calmly stirs one pot on a stove with one hand. Right: the same chef stirs two pots at once, one in each hand, on a stove with two rings, sweating, with small motion lines. Landscape image 1536x1024; the scene fills about 90% of the width and about 80% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_train_waiting_chefs",
+   "kind": "line",
+   "group": "A",
+   "sweep": "x",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "A row of six cooking stations seen from the front, one chef at each: the six recurring chefs of this series (all with tall white chef hats, double-breasted chef jackets and aprons, simple round faces with dot eyes): the young chef with short curly hair, the woman with a low hair bun, the round chef with a curly moustache, the chef with round glasses and curly hair, the woman with a bob and a fringe, and the old chef with a white beard. Only two of them are cooking busily (the young chef tosses a pan, the woman with the bun stirs a pot); the other four are waiting: one with arms crossed, one yawning, one tapping a foot and looking at a wristwatch, one leaning on the counter with chin in hand. Landscape image 1536x1024; the row fills about 92% of the width and about 75% of the height. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_train_blown_fuse",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "The round chef with a curly moustache (tall white chef hat, double-breasted chef jacket, apron) stands in front of an open fuse box on a kitchen wall, holding up a lit candle in a holder and peering at a row of switches; one switch is flipped down with a small puff of smoke; beside him a stove with a pot that has stopped steaming. Square image 1024x1024; the scene fills about 80% of the width and about 85% of the height. No warning signs. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_train_scoop_spoon",
+   "kind": "line",
+   "group": "B",
+   "sweep": "x",
+   "refs": [
+    "line_balance",
+    "line_postal_scale",
+    "line_tiny_lab"
+   ],
+   "prompt": "Two hands at a kitchen counter, side by side with a gap between them. Left: a hand scoops flour from an open sack with a big rough metal scoop in one quick motion, with short motion lines. Right: a hand carefully levels a tiny measuring spoon of flour with the back of a knife above a small precise scale. Landscape image 1536x1024; the scene fills about 85% of the width and about 65% of the height. No labels on the sack, no numbers on the scale. No text, no letters, no numbers, no symbols, no logos anywhere."
+  },
+  {
+   "name": "line_train_envelope_sums",
+   "kind": "line",
+   "group": "A",
+   "sweep": "y",
+   "people": true,
+   "refs": [
+    "line_d_chefs",
+    "line_d_kitchen",
+    "line_tiny_lab"
+   ],
+   "refnote": "The attached images are references made earlier for this series (black ink on white). The first image is the recurring cast of six chefs: whenever a chef appears, draw them as one of these same six characters (same faces, hair, moustache, beard, glasses, tall hats, double-breasted jackets and aprons) in the new poses described, never copying the line-up itself. Match the line weight, pen feel, simple round faces with dot eyes and level of detail of all the images exactly; do not copy their content.",
+   "prompt": "The young chef with short curly hair (tall white chef hat, double-breasted chef jacket, apron) sits at a small kitchen table with a cup of tea, the chef hat pushed back, holding a used envelope turned over and scribbling a quick sum on its back with a pencil (only loose wavy scribble lines, no digits), the tip of the tongue out in concentration. Beside the cup lies the end of a very long curled-up order ticket. Above the chef floats a round thought bubble holding a small mountain of flour sacks and crates. Square image 1024x1024; the chef, the table and the bubble fill about 85% of the width and about 88% of the height. The envelope and ticket are blank apart from the scribbles; no stamps. No text, no letters, no numbers, no symbols, no logos anywhere."
+  }
+ ]
+}

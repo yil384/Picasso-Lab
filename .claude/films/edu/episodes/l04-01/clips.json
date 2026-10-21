@@ -1,0 +1,43 @@
+[
+ {
+  "id": "C1",
+  "lecture": "L04",
+  "rec_start": 740.5,
+  "rec_end": 745.65,
+  "dur": 5.15,
+  "text": "I think you should be excited. Usually like getting the resources is the first step."
+ },
+ {
+  "id": "C4",
+  "lecture": "L04",
+  "rec_start": 970.05,
+  "rec_end": 973.6,
+  "dur": 3.55,
+  "text": "I guess no matter what is the result, you cannot bear with it, right?"
+ },
+ {
+  "id": "C6",
+  "lecture": "L04",
+  "rec_start": 1016.8,
+  "rec_end": 1021.95,
+  "dur": 5.15,
+  "text": "Do you know what is the real time they are having there? 54 days."
+ },
+ {
+  "id": "C10",
+  "lecture": "L04",
+  "rec_start": 1148.25,
+  "rec_end": 1151.6,
+  "dur": 3.35,
+  "text": "So you do the calculation, you only use flops, you get the final result.",
+  "text_was": "you do the calculation, you only use flops, you get the final result."
+ },
+ {
+  "id": "C11",
+  "lecture": "L05",
+  "rec_start": 514.6,
+  "rec_end": 523.15,
+  "dur": 8.55,
+  "text": "So that's why in the forward, you have one time. In the backward, because you are doing the computation for both input and weight. So that's why you have two copies."
+ }
+]

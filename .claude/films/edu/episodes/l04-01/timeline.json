@@ -1,0 +1,285 @@
+{
+ "_": "L04-01 timeline, written by ~/picasso-work/daily/L04-01/scripts/plan.py from plan.json, the TTS takes and the clips.",
+ "fps": 30,
+ "dur": 292.5,
+ "cue": {
+  "p1": 17.6,
+  "p2": 34.45,
+  "p3": 44.88,
+  "p4": 74.8,
+  "p5": 111.68,
+  "p6": 137.45,
+  "p7": 144.98,
+  "p8": 173.88,
+  "p9": 180.2,
+  "p10": 201.95,
+  "p11": 206.98,
+  "p12": 226.48,
+  "p13": 245.03,
+  "p14": 269.18,
+  "title": 5.25,
+  "eqcue": 118.54,
+  "yrcue": 172.25,
+  "totcue": 261.94,
+  "endCard": 288.5,
+  "dur": 292.5,
+  "tape5": 112.68,
+  "tape7": 145.98,
+  "tape10": 202.95
+ },
+ "vo": [
+  {
+   "id": "n0",
+   "t": 0.4
+  },
+  {
+   "id": "n0b",
+   "t": 9.18
+  },
+  {
+   "id": "n1",
+   "t": 18.2
+  },
+  {
+   "id": "c1",
+   "t": 28.1
+  },
+  {
+   "id": "n2",
+   "t": 35.05
+  },
+  {
+   "id": "n3",
+   "t": 45.48
+  },
+  {
+   "id": "n4",
+   "t": 50.68
+  },
+  {
+   "id": "n5",
+   "t": 65.73
+  },
+  {
+   "id": "n6",
+   "t": 75.4
+  },
+  {
+   "id": "n7",
+   "t": 83.1
+  },
+  {
+   "id": "n8",
+   "t": 89.73
+  },
+  {
+   "id": "c11",
+   "t": 94.6
+  },
+  {
+   "id": "n9",
+   "t": 104.35
+  },
+  {
+   "id": "n10",
+   "t": 112.28
+  },
+  {
+   "id": "n11",
+   "t": 123.6
+  },
+  {
+   "id": "n12",
+   "t": 138.05
+  },
+  {
+   "id": "n13",
+   "t": 145.58
+  },
+  {
+   "id": "c4",
+   "t": 161.58
+  },
+  {
+   "id": "n14",
+   "t": 166.33
+  },
+  {
+   "id": "n15",
+   "t": 174.48
+  },
+  {
+   "id": "n16",
+   "t": 180.8
+  },
+  {
+   "id": "n17",
+   "t": 191.45
+  },
+  {
+   "id": "c6",
+   "t": 195.6
+  },
+  {
+   "id": "n18",
+   "t": 202.55
+  },
+  {
+   "id": "n19",
+   "t": 207.58
+  },
+  {
+   "id": "n20",
+   "t": 220.88
+  },
+  {
+   "id": "n21",
+   "t": 227.08
+  },
+  {
+   "id": "n22",
+   "t": 245.63
+  },
+  {
+   "id": "n23",
+   "t": 257.4
+  },
+  {
+   "id": "n24",
+   "t": 269.78
+  },
+  {
+   "id": "c10",
+   "t": 274.13
+  },
+  {
+   "id": "n25",
+   "t": 278.78
+  }
+ ],
+ "sfx": [
+  {
+   "t": 17.8,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 34.65,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 45.08,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 75.0,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 111.88,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 112.68,
+   "f": "rpg/Audio/cloth3.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 118.54,
+   "f": "imp/Audio/impactPlank_medium_002.ogg",
+   "g": 0.28
+  },
+  {
+   "t": 137.65,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 145.18,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 145.98,
+   "f": "rpg/Audio/cloth3.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 172.25,
+   "f": "imp/Audio/impactPlank_medium_002.ogg",
+   "g": 0.28
+  },
+  {
+   "t": 174.08,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 180.4,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 202.15,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 202.95,
+   "f": "rpg/Audio/cloth3.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 207.18,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 226.68,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 245.23,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 261.94,
+   "f": "imp/Audio/impactPlank_medium_002.ogg",
+   "g": 0.28
+  },
+  {
+   "t": 269.38,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 288.5,
+   "f": "rpg/Audio/bookPlace1.ogg",
+   "g": 0.3
+  }
+ ],
+ "music": [
+  {
+   "f": "music/Investigations.mp3",
+   "start": 0,
+   "from": 0,
+   "gain": 0.26,
+   "duck": 0.4,
+   "loop": [
+    22.19,
+    32.3
+   ],
+   "xfade": 2.0,
+   "fadeOut": [
+    290.0,
+    292.5
+   ]
+  }
+ ]
+}
