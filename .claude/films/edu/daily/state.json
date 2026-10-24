@@ -144,6 +144,15 @@
    "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-21_L04-01/L04-01_584_years_en.mp4",
    "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-21_L04-01",
    "note": "kept delivered over a same-run failed mark: run.sh: no checked mp4 after 4 round(s), exit 0; exit 0; session 07621cae-8b55-4f0d-aa41-dadbc65c0fba | success: L04-01 \"584 Years on One GPU\" 已交付：成片 4:52，1080x1920，30 fps，响度 -14.5 LUFS，`next.py verify` 通过。文件在 `~/Down"
+  },
+  "QC01-02": {
+   "status": "failed",
+   "updated": "2026-10-24 16:24",
+   "episode_dir": "episodes/qc01-02",
+   "morning": "2026-10-24",
+   "run": "2026-10-22_020004",
+   "note": "the 10-22 02:00 run stopped at 02:18 (no mp4, no error logged); owner wanted L03-05 first: QC01-02 moves to 10-28",
+   "attempts": 1
   }
  },
  "about": "Daily-episode state, read and written by next.py (mark). guest_policy: 'skip' (default) or 'narration-only' for guest lectures whose speaker has not said yes; speaker_ok: {'L09': {'voice_clips': true, 'slides_on_screen': true, 'date': 'YYYY-MM-DD', 'note': '...'}}; skip: episode ids the user dropped."
