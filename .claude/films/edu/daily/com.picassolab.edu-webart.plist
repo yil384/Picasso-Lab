@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Explainer art: web_art.sh draws 10 missing pictures in the chat web app, 4 rounds a day. Copy to
+     ~/Library/LaunchAgents and load it (launchctl load). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.picassolab.edu-webart</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/linyichen/UCSD/Picasso-Lab/.claude/films/edu/daily/web_art.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Hour</key><integer>13</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>30</integer></dict>
+  </array>
+  <key>ProcessType</key><string>Interactive</string>
+  <key>StandardOutPath</key><string>/Users/linyichen/picasso-work/logs/daily/webart.out</string>
+  <key>StandardErrorPath</key><string>/Users/linyichen/picasso-work/logs/daily/webart.err</string>
+</dict>
+</plist>
