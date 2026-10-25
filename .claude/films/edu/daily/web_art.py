@@ -6,6 +6,7 @@ same prompt text, one picture saved per card into ~/Downloads/edu-art-drop/<epis
     ~/miniforge3/bin/python3 .claude/films/edu/daily/web_art.py login            once: log in by hand, then close
     ~/miniforge3/bin/python3 .claude/films/edu/daily/web_art.py list [EP ...]    the queue, nothing sent
     ~/miniforge3/bin/python3 .claude/films/edu/daily/web_art.py run [EP ...] [--max N] [--gap 180-360]
+    bash .claude/films/edu/daily/web_art.sh                                      what launchd runs (4 times a day)
 
 EP is an episode folder name (l03-05); none = every episode with missing drawings, LLM first. A picture already in
 the drop folder or the library is skipped, so a run can be stopped and started again. It stops at once on a usage-limit
@@ -16,7 +17,7 @@ import argparse, glob, json, os, random, re, shutil, sys, time
 import art
 
 PROFILE = os.path.expanduser('~/picasso-work/chatgpt-profile')
-DROP = os.path.expanduser('~/Downloads/edu-art-drop')
+DROP = os.path.expanduser(os.environ.get('WEB_ART_DROP') or '~/Downloads/edu-art-drop')   # launchd cannot see ~/Downloads
 LOG = os.path.expanduser('~/picasso-work/logs/web_art.log')
 URL = 'https://chatgpt.com/'
 LIMIT = re.compile(r"hit (?:the|your) (?:plan|usage|image|free)[a-z ]*limit|reached (?:our|your) limit|limit resets|"
@@ -188,10 +189,32 @@ def save(page, src, path):
 
 
 def run(eps, max_n, gap):
-    from playwright.sync_api import sync_playwright
     q, err = queue(eps)
     if err:
         return None, err
+    touched = set()
+    try:
+        return draw(q, max_n, gap, touched)
+    finally:
+        for ep in sorted(touched):
+            pack(ep)
+
+
+def pack(ep):
+    """Pack an episode's new drawings in the library (art.py pack). Returns (output, None) or (None, 'error')."""
+    import subprocess
+    r = subprocess.run([sys.executable, os.path.join(art.HERE, 'art.py'), 'pack',
+                        os.path.join(art.EDU, 'episodes', ep, 'art.pre.json')], capture_output=True, text=True,
+                       env=dict(os.environ, EDU_ART_DIR=art.LIB))
+    if r.returncode:
+        say(f'{ep}: pack FAILED {r.stderr[-200:]}')
+        return None, r.stderr[-300:]
+    say(f'{ep}: packed in the library')
+    return r.stdout, None
+
+
+def draw(q, max_n, gap, touched):
+    from playwright.sync_api import sync_playwright
     made = 0
     with sync_playwright() as pw:
         ctx = browser(pw)
@@ -237,6 +260,7 @@ def run(eps, max_n, gap):
                     return made, f'{ep}/{d["name"]}: {err}'
                 shutil.copy(out, os.path.join(art.LIB, 'src', d['name'] + '.png'))   # into the library (pack later)
                 made += 1
+                touched.add(ep)
                 first = False
                 say(f'{ep}/{d["name"]}: saved {out} ({made} this run)')
                 pause = random.uniform(*gap)
