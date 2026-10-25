@@ -124,7 +124,7 @@ def generated(page):
 
 def send(page, text, files):
     """Attach files, type the prompt, send. Returns (None, None) or (None, 'error')."""
-    box = page.locator(BOX).first
+    box = page.locator(BOX).filter(visible=True).last   # the composer; earlier messages hold hidden editors
     try:
         box.wait_for(timeout=30000)
     except Exception:
