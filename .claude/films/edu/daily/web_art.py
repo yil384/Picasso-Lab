@@ -12,7 +12,7 @@ the drop folder or the library is skipped, so a run can be stopped and started a
 message, a login page or anything it does not recognise (and says so); it never retries in a loop. No password is
 handled here: the login stays in the browser profile (~/picasso-work/chatgpt-profile).
 """
-import argparse, glob, json, os, random, re, sys, time
+import argparse, glob, json, os, random, re, shutil, sys, time
 import art
 
 PROFILE = os.path.expanduser('~/picasso-work/chatgpt-profile')
@@ -135,7 +135,7 @@ def send(page, text, files):
     return None, None
 
 
-def wait_image(page, before, timeout=420):
+def wait_image(page, before, timeout=900):
     """Wait for one new generated image. Returns (src, None) or (None, 'why')."""
     t0 = time.time()
     while time.time() - t0 < timeout:
@@ -214,6 +214,7 @@ def run(eps, max_n, gap):
                 if err:
                     ctx.close()
                     return made, f'{ep}/{d["name"]}: {err}'
+                shutil.copy(out, os.path.join(art.LIB, 'src', d['name'] + '.png'))   # into the library (pack later)
                 made += 1
                 first = False
                 say(f'{ep}/{d["name"]}: saved {out} ({made} this run)')
