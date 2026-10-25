@@ -147,12 +147,21 @@
   },
   "QC01-02": {
    "status": "failed",
-   "updated": "2026-10-24 16:24",
+   "updated": "2026-10-25 02:17",
    "episode_dir": "episodes/qc01-02",
-   "morning": "2026-10-24",
-   "run": "2026-10-22_020004",
-   "note": "the 10-22 02:00 run stopped at 02:18 (no mp4, no error logged); owner wanted L03-05 first: QC01-02 moves to 10-28",
-   "attempts": 1
+   "morning": "2026-10-27",
+   "run": "2026-10-25_020005",
+   "note": "weekly limit (resets 10-27 09:00), not the episode: attempts cleared 10-25; pipeline paused until 10-27 09:05",
+   "attempts": 0
+  },
+  "L03-05": {
+   "status": "failed",
+   "updated": "2026-10-24 16:42",
+   "episode_dir": "episodes/l03-05",
+   "morning": "2026-10-25",
+   "run": "2026-10-24_162500",
+   "note": "weekly limit (resets 10-27 09:00), not the episode: attempts cleared 10-25; pipeline paused until 10-27 09:05",
+   "attempts": 0
   }
  },
  "about": "Daily-episode state, read and written by next.py (mark). guest_policy: 'skip' (default) or 'narration-only' for guest lectures whose speaker has not said yes; speaker_ok: {'L09': {'voice_clips': true, 'slides_on_screen': true, 'date': 'YYYY-MM-DD', 'note': '...'}}; skip: episode ids the user dropped."
