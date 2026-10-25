@@ -152,19 +152,20 @@ def send(page, text, files):
 
 
 def wait_image(page, before, timeout=900):
-    """Wait for one new generated image. Returns (src, None) or (None, 'why')."""
-    t0 = time.time()
+    """Wait for one new generated image whose src stays the same for two checks in a row (the final picture replaces
+    the preview). Not keyed on a stop button: one stays on the page for minutes after the picture is done.
+    Returns (src, None) or (None, 'why')."""
+    t0, last = time.time(), None
     while time.time() - t0 < timeout:
-        time.sleep(10)
+        time.sleep(5)
         why = page_problem(page)
         if why:
             return None, why
         new = [s for s in generated(page) if s not in before]
-        busy = page.locator('[data-testid="stop-button"], button[aria-label*="停止"], button[aria-label*="Stop"]').count()
-        if new and not busy:
-            time.sleep(5)                                # the final image replaces the preview
-            new = [s for s in generated(page) if s not in before]
-            return new[-1], None
+        cur = new[-1] if new else None
+        if cur and cur == last:
+            return cur, None
+        last = cur
     return None, f'no image after {timeout} s'
 
 
