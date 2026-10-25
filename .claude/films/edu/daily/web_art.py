@@ -248,6 +248,7 @@ def draw(q, max_n, gap, touched):
                 say(f'{ep}/{d["name"]}: sending ({len(files)} refs)')
                 _, err = send(page, message(d, first), files)
                 if err:
+                    page.screenshot(path=os.path.join(os.path.dirname(LOG), 'web_art_stop.png'))   # what the page showed
                     ctx.close()
                     return made, f'{ep}/{d["name"]}: {err}'
                 src, err = wait_image(page, before)
