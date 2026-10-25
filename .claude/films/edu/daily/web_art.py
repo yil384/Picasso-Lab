@@ -98,6 +98,22 @@ def page_problem(page):
     return f'limit message: "{m.group(0)}"' if m else None
 
 
+def instant(page):
+    """Set the composer's thinking strength to its lowest step (Instant): pictures need no thinking and come faster.
+    Returns (label, None) or (None, 'why')."""
+    try:
+        page.locator('button:has-text("思考强度"), button:has-text("Thinking")').last.click(timeout=10000)
+        time.sleep(1.5)
+        page.locator('[role="slider"], input[type="range"]').first.focus()
+        page.keyboard.press('Home')
+        time.sleep(1.5)
+        label = page.locator('text=Instant').count()
+        page.keyboard.press('Escape')
+    except Exception as e:
+        return None, f'could not set Instant mode: {e}'
+    return ('Instant', None) if label else (None, 'could not set Instant mode (no "Instant" label)')
+
+
 def generated(page):
     """The generated images in the conversation so far (their src)."""
     srcs = page.eval_on_selector_all('img[alt^="已生成图像"], img[alt^="Generated image"], img[alt*="enerated image"]',
@@ -186,6 +202,10 @@ def run(eps, max_n, gap):
             if why:
                 ctx.close()
                 return made, why
+            _, err = instant(page)
+            if err:
+                ctx.close()
+                return made, err
             first = True
             for d in ds:
                 out = os.path.join(DROP, ep, d['name'] + '.png')
