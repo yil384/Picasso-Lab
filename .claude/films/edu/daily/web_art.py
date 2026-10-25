@@ -12,7 +12,7 @@ the drop folder or the library is skipped, so a run can be stopped and started a
 message, a login page or anything it does not recognise (and says so); it never retries in a loop. No password is
 handled here: the login stays in the browser profile (~/picasso-work/chatgpt-profile).
 """
-import argparse, glob, os, random, re, sys, time
+import argparse, glob, json, os, random, re, sys, time
 import art
 
 PROFILE = os.path.expanduser('~/picasso-work/chatgpt-profile')
@@ -48,8 +48,15 @@ def queue(eps):
                        key=lambda p: (not os.path.basename(os.path.dirname(p)).startswith('l'), p))
     else:
         plans = [os.path.join(art.EDU, 'episodes', e, 'art.pre.json') for e in eps]
+    try:                                                 # published episodes need no new pictures
+        shipped = {k.lower() for k, v in json.load(open(os.path.join(art.HERE, 'state.json')))['episodes'].items()
+                   if v.get('status') == 'delivered'}
+    except (OSError, ValueError, KeyError):
+        shipped = set()
     out = []
     for p in plans:
+        if os.path.basename(os.path.dirname(p)) in shipped:
+            continue
         a, err = art.load(p)
         if err:
             return None, err
