@@ -1,5 +1,21 @@
 [
  {
+  "title": "PuzzRL: Piecing Together Concurrent RL Pipelines for Cost-Efficient LLM Post-Training",
+  "tags": [
+   "HPCA'27"
+  ],
+  "authors": "Zhengding Hu, Hehua Ouyang, Chang Chen, Zaifeng Pan, Yue Guan, Zhongkai Yu, Zhen Wang, Steven Swanson, Yufei Ding",
+  "links": []
+ },
+ {
+  "title": "Factorize to Parallelize: Unlocking Motion Concurrency in Neutral-Atom Architectures",
+  "tags": [
+   "HPCA'27"
+  ],
+  "authors": "Jixuan Ruan, Zhuo Chen, Keyi Yin, Hezi Zhang, Xiang Fang, Hengyun (Harry) Zhou, Sheng-Tao Wang, Yufei Ding",
+  "links": []
+ },
+ {
   "title": "Qubrio: High-Performance Quantum Compilation via Multi-Agent LLM Collaboration",
   "tags": [
    "NeurIPS'26"
@@ -146,16 +162,6 @@
   "authors": "Yue Guan, Hongtao Yu, Peng Chen, Daohang Shi, Karthik Manivannan, Nicholas J Riasanovsky, Manman Ren, Lei Wang, Shane Nay, Partha Kanuparthy, Zaifeng Pan, Zhengding Hu, Yufei Ding",
   "links": [
    "https://arxiv.org/abs/2605.10905"
-  ]
- },
- {
-  "title": "JigsawRL: Assembling RL Pipelines for Efficient LLM Post-Training",
-  "tags": [
-   "arXiv"
-  ],
-  "authors": "Zhengding Hu, Hehua Ouyang, Chang Chen, Zaifeng Pan, Yue Guan, Zhongkai Yu, Zhen Wang, Steven Swanson, Yufei Ding",
-  "links": [
-   "https://arxiv.org/abs/2604.23838"
   ]
  },
  {
@@ -717,7 +723,7 @@
   ]
  },
  {
-  "title": "A 28nm 15.59\u03bcJ/Token Full-Digital Bitline-Transpose CIM-based Sparse Transformer Accelerator with Pipeline/Parallel Reconfigurable Modes",
+  "title": "A 28nm 15.59μJ/Token Full-Digital Bitline-Transpose CIM-based Sparse Transformer Accelerator with Pipeline/Parallel Reconfigurable Modes",
   "tags": [
    "ISSCC'22"
   ],
@@ -1277,7 +1283,7 @@
   ]
  },
  {
-  "title": "Effective and Ef\ufb01cient Batch Normalization Using Few Uncorrelated Data for Statistics Estimation",
+  "title": "Effective and Efﬁcient Batch Normalization Using Few Uncorrelated Data for Statistics Estimation",
   "tags": [
    "TNNLS'20"
   ],
