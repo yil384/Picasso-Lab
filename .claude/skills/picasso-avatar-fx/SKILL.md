@@ -28,6 +28,10 @@ Every avatar on https://yufeiding.ucsd.edu/people/team is its own Google Sites e
   so the viewport size comes from `document.body` there.
 - `people/fx/<name>.js` — the scene: `export default { title, exit, still, plate, async build(k) { return { update(t, e, dt), draw2d(q, t, e), dispose() } } }`.
   `t` = seconds since the click, `e` = exit progress 0 -> 1. Pure functions of (t, e).
+- `people/static/<name>.webp` — the photo: a full **square** 512 px webp (the circle is only the snippet's CSS
+  `border-radius`, so visitors who save the picture get the square). Never bake a transparent circle into it.
+  The 2026-11 squares were rebuilt from the original uploads in git history (SIFT alignment, the circle kept
+  pixel-exact, the corners colour-matched); Haotian's and Ohm's originals were not in git, theirs are still round.
 - `people/static/fx/<name>-cut.webp` / `-plate.webp` — the person cut out / the photo with the person
   inpainted out. Make them with `python3 people/fx/tools/make_layers.py <name> --grid` (BiRefNet portrait
   matte via rembg; the `--grid` image is how you read landmarks — red lines every 128 photo px, labels every 64).
